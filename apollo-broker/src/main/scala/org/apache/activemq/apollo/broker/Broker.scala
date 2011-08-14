@@ -220,7 +220,7 @@ class Broker() extends BaseService {
     rc
   })
   config.connectors.add({
-    val rc = new ConnectorDTO
+    val rc = new AcceptingConnectorDTO()
     rc.id = "default"
     rc.bind = "tcp://0.0.0.0:0"
     rc
@@ -380,28 +380,44 @@ class Broker() extends BaseService {
             virtual_hosts_by_hostname.remove(ascii(name))
           }
 
-          host.update(config, tracker.task("update: "+host))
+          if( host.config.getClass == config.getClass ) {
+            host.update(config, tracker.task("update: "+host))
+            config.host_names.foreach { name =>
+              virtual_hosts_by_hostname += ascii(name) -> host
+            }
+          } else {
+            // The dto type changed.. so we have to re-create
+            val on_completed = tracker.task("recreate virtual host: "+id)
+            host.stop(^{
+              val host = VirtualHostFactory.create(this, config)
+              if( host == null ) {
+                console_log.warn("Could not create virtual host: "+config.id);
+                on_completed.run()
+              } else {
+                config.host_names.foreach { name =>
+                  virtual_hosts_by_hostname += ascii(name) -> host
+                }
+                host.start(on_completed)
+              }
+            })
 
-          config.host_names.foreach { name =>
-            virtual_hosts_by_hostname += ascii(name) -> host
           }
-
         }
       }
 
       added.foreach { id=>
         for( config <- host_config_by_id.get(id) ) {
-
-          val host = new VirtualHost(this, config.id)
-          host.config = config
-          virtual_hosts += ascii(config.id) -> host
-
-          // add all the host names of the virtual host to the virtual_hosts_by_hostname map..
-          config.host_names.foreach { name =>
-            virtual_hosts_by_hostname += ascii(name) -> host
+          val host = VirtualHostFactory.create(this, config)
+          if( host == null ) {
+            console_log.warn("Could not create virtual host: "+config.id);
+          } else {
+            virtual_hosts += ascii(config.id) -> host
+            // add all the host names of the virtual host to the virtual_hosts_by_hostname map..
+            config.host_names.foreach { name =>
+              virtual_hosts_by_hostname += ascii(name) -> host
+            }
+            tracker.start(host)
           }
-
-          tracker.start(host)
         }
       }
     }
@@ -412,12 +428,13 @@ class Broker() extends BaseService {
     }
 
 
-    val connector_config_by_id = HashMap[String, ConnectorDTO]()
+    val connector_config_by_id = HashMap[String, ConnectorTypeDTO]()
     config.connectors.foreach{ value =>
       connector_config_by_id += value.id -> value
     }
 
     diff(connectors.keySet.toSet, connector_config_by_id.keySet.toSet) match { case (added, updated, removed) =>
+
       removed.foreach { id =>
         for( connector <- connectors.remove(id) ) {
           tracker.stop(connector)
@@ -426,16 +443,34 @@ class Broker() extends BaseService {
 
       updated.foreach { id=>
         for( connector <- connectors.get(id); config <- connector_config_by_id.get(id) ) {
-          connector.update(config,  tracker.task("update: "+connector))
+          if( connector.config.getClass == config.getClass ) {
+            connector.update(config,  tracker.task("update: "+connector))
+          } else {
+            // The dto type changed.. so we have to re-create the connector.
+            val on_completed = tracker.task("recreate connector: "+id)
+            connector.stop(^{
+              val connector = ConnectorFactory.create(this, config)
+              if( connector == null ) {
+                console_log.warn("Could not create connector: "+config.id);
+                on_completed.run()
+              } else {
+                connectors += config.id -> connector
+                connector.start(on_completed)
+              }
+            })
+          }
         }
       }
 
       added.foreach { id=>
         for( config <- connector_config_by_id.get(id) ) {
-          val connector = new AcceptingConnector(this, config.id)
-          connector.config = config
-          connectors += config.id -> connector
-          tracker.start(connector)
+          val connector = ConnectorFactory.create(this, config)
+          if( connector == null ) {
+            console_log.warn("Could not create connector: "+config.id);
+          } else {
+            connectors += config.id -> connector
+            tracker.start(connector)
+          }
         }
       }
     }
@@ -463,6 +498,7 @@ class Broker() extends BaseService {
               val service = CustomServiceFactory.create(this, new_dto)
               if( service == null ) {
                 console_log.warn("Could not create service: "+new_dto.id);
+                task.run()
               } else {
                 // start it again..
                 services += new_dto.id -> (new_dto, service)

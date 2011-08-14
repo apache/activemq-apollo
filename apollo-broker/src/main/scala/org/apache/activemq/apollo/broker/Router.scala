@@ -50,37 +50,6 @@ trait Router extends Service {
 }
 
 /**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object RouterFactory {
-
-  trait Provider {
-    def create(host:VirtualHost):Router
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/router-factory.index", classOf[Provider])
-
-  def create(host:VirtualHost):Router = {
-    val config = host.config.router;
-    if( config==null ) {
-      return new LocalRouter(host)
-    }
-    providers.singletons.foreach { provider=>
-      val rc = provider.create(host)
-      if( rc!=null ) {
-        return rc
-      }
-    }
-    throw new IllegalArgumentException("Uknonwn router type: "+config.getClass)
-  }
-
-}
-
-
-/**
  * An object which produces deliveries to which allows new DeliveryConsumer
  * object to bind so they can also receive those deliveries.
  *

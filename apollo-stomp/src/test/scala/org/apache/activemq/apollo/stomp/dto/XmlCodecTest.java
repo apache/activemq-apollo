@@ -42,7 +42,7 @@ public class XmlCodecTest {
         assertNotNull(dto);
 
         assertEquals(1, dto.connectors.size());
-        ConnectorDTO connector = dto.connectors.get(0);
+        AcceptingConnectorDTO connector = (AcceptingConnectorDTO)dto.connectors.get(0);
         assertEquals(1, connector.protocols.size());
         ProtocolDTO stomp = connector.protocols.get(0);
         assertTrue(stomp instanceof StompDTO);

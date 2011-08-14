@@ -18,13 +18,13 @@ package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.{Dispatch}
-import org.apache.activemq.apollo.dto.{ConnectorDTO}
 import protocol.{ProtocolFactory, Protocol}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.net.SocketAddress
-
+import org.apache.activemq.apollo.util.{Log, Service, ClassFinder}
+import org.apache.activemq.apollo.dto._
 
 /**
  * <p>
@@ -40,12 +40,57 @@ trait Connector extends BaseService {
   def broker:Broker
   def id:String
   def stopped(connection:BrokerConnection):Unit
-  def config:ConnectorDTO
+  def config:ConnectorTypeDTO
   def accepted:LongCounter
   def connected:LongCounter
-  def update(config: ConnectorDTO, on_complete:Runnable):Unit
+  def update(config: ConnectorTypeDTO, on_complete:Runnable):Unit
   def socket_address:SocketAddress
+  def status:ServiceStatusDTO
+}
 
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object ConnectorFactory {
+
+  trait Provider {
+    def create(broker:Broker, dto:ConnectorTypeDTO):Connector
+  }
+
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/connector-factory.index",classOf[Provider])
+
+  def create(broker:Broker, dto:ConnectorTypeDTO):Connector = {
+    if( dto == null ) {
+      return null
+    }
+    providers.singletons.foreach { provider=>
+      val connector = provider.create(broker, dto)
+      if( connector!=null ) {
+        return connector;
+      }
+    }
+    return null
+  }
+}
+
+object AcceptingConnectorFactory extends ConnectorFactory.Provider with Log {
+
+  def create(broker: Broker, dto: ConnectorTypeDTO): Connector = dto match {
+    case dto:AcceptingConnectorDTO =>
+      if( dto.getClass != classOf[AcceptingConnectorDTO] ) {
+        // ignore sub classes of AcceptingConnectorDTO
+        null;
+      } else {
+        val rc = new AcceptingConnector(broker, dto.id)
+        rc.config = dto
+        rc
+      }
+    case _ =>
+      null
+  }
 }
 
 /**
@@ -60,7 +105,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   override val dispatch_queue = broker.dispatch_queue
 
-  var config:ConnectorDTO = new ConnectorDTO
+  var config = new AcceptingConnectorDTO
   config.id = id
   config.bind = "tcp://0.0.0.:0"
 
@@ -72,6 +117,20 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   override def toString = "connector: "+config.id
 
   def socket_address = Option(transport_server).map(_.getSocketAddress).getOrElse(null)
+
+  def status = {
+    val result = new ConnectorStatusDTO
+    result.id = id.toString
+    result.state = service_state.toString
+    result.state_since = service_state.since
+    result.connection_counter = accepted.get
+    result.connected = connected.get
+    result.protocol = Option(config.protocol).getOrElse("any")
+    result.local_address = Option(socket_address).map(_.toString).getOrElse("any")
+    result
+  }
+
+
 
   object BrokerAcceptListener extends TransportAcceptListener {
     def onAcceptError(e: Exception): Unit = {
@@ -115,15 +174,15 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   /**
    */
-  def update(config: ConnectorDTO, on_completed:Runnable) = dispatch_queue {
+  def update(config: ConnectorTypeDTO, on_completed:Runnable) = dispatch_queue {
     if ( !service_state.is_started || this.config == config ) {
-      this.config = config
+      this.config = config.asInstanceOf[AcceptingConnectorDTO]
       on_completed.run
     } else {
       // if the connector config is updated.. lets stop, apply config, then restart
       // the connector.
       stop(^{
-        this.config = config
+        this.config = config.asInstanceOf[AcceptingConnectorDTO]
         start(on_completed)
       })
     }

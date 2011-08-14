@@ -17,7 +17,7 @@
 BrokerDTO
 BrokerStatusDTO
 ConnectionStatusDTO
-ConnectorDTO
+AcceptingConnectorDTO
 ConnectorStatusDTO
 TopicStatusDTO
 EntryStatusDTO

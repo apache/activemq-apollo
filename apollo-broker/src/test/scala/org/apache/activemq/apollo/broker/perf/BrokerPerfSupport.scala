@@ -27,7 +27,7 @@ import org.fusesource.hawtbuf.AsciiBuffer
 import java.net.URL
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ArrayBuffer, ListBuffer}
-import org.apache.activemq.apollo.dto.{DestinationDTO, BrokerDTO}
+import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, DestinationDTO, BrokerDTO}
 
 /**
  *
@@ -199,7 +199,7 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
 
   def createBrokerConfig(name: String, bindURI: String, connectUri: String): BrokerDTO = {
     val config = (new Broker).config
-    val connector = config.connectors.get(0)
+    val connector = config.connectors.get(0).asInstanceOf[AcceptingConnectorDTO]
     connector.bind = bindURI
     connector.protocol = getBrokerProtocolName
 

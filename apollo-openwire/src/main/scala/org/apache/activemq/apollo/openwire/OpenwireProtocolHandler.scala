@@ -40,7 +40,7 @@ import tcp.TcpTransport
 import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
-import org.apache.activemq.apollo.dto.{TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
+import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
 
 object OpenwireProtocolHandler extends Log {
 
@@ -123,7 +123,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     import collection.JavaConversions._
 
     codec = connection.transport.getProtocolCodec.asInstanceOf[OpenwireCodec]
-    config = connection.connector.config.protocols.find( _.isInstanceOf[OpenwireDTO]).map(_.asInstanceOf[OpenwireDTO]).getOrElse(new OpenwireDTO)
+    var connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
+    config = connector_config.protocols.find( _.isInstanceOf[OpenwireDTO]).map(_.asInstanceOf[OpenwireDTO]).getOrElse(new OpenwireDTO)
 
 //    protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
 //

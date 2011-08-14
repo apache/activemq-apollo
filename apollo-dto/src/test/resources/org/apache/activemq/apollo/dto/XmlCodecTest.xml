@@ -36,4 +36,6 @@
 
   <topic id="topic1"/>
 
+  <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
+
 </broker>

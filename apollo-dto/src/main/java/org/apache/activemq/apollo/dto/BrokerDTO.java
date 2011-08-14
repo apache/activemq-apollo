@@ -38,14 +38,14 @@ public class BrokerDTO {
     /**
      * A broker can service many virtual hosts.
      */
-    @XmlElement(name="virtual_host")
+    @XmlElementRef
     public List<VirtualHostDTO> virtual_hosts = new ArrayList<VirtualHostDTO>();
 
     /**
      * A broker accepts connections via it's configured connectors.
      */
-    @XmlElement(name="connector")
-    public List<ConnectorDTO> connectors = new ArrayList<ConnectorDTO>();
+    @XmlElementRef
+    public List<ConnectorTypeDTO> connectors = new ArrayList<ConnectorTypeDTO>();
 
     /**
      * The clients should use to connect to this

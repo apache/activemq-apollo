@@ -496,7 +496,8 @@ class StompProtocolHandler extends ProtocolHandler {
     import collection.JavaConversions._
 
     codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-    config = connection.connector.config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
+    val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
+    config = connector_config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
     protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
 

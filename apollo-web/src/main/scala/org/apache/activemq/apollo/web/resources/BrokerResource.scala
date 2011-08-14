@@ -565,32 +565,20 @@ case class BrokerResource() extends Resource {
     with_broker { broker =>
       monitoring(broker) {
         val records = broker.connectors.values.map { value =>
-          Success(status(value))
+          Success(value.status)
         }
-        FutureResult(narrow(classOf[ConnectorStatusDTO], records, f, q, p, ps, o))
+        FutureResult(narrow(classOf[ServiceStatusDTO], records, f, q, p, ps, o))
       }
     }
   }
 
   @GET @Path("connectors/{id}")
-  def connector(@PathParam("id") id : String):ConnectorStatusDTO = {
+  def connector(@PathParam("id") id : String):ServiceStatusDTO = {
     with_connector(id) { connector =>
       monitoring(connector.broker) {
-        status(connector)
+        connector.status
       }
     }
-  }
-
-  def status(connector: Connector): ConnectorStatusDTO = {
-    val result = new ConnectorStatusDTO
-    result.id = connector.id.toString
-    result.state = connector.service_state.toString
-    result.state_since = connector.service_state.since
-    result.connection_counter = connector.accepted.get
-    result.connected = connector.connected.get
-    result.protocol = Option(connector.config.protocol).getOrElse("any")
-    result.local_address = Option(connector.socket_address).map(_.toString).getOrElse("any")
-    result
   }
 
   @POST @Path("connectors/{id}/action/stop")

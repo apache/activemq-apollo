@@ -55,6 +55,10 @@ public class XmlCodecTest {
         assertTrue(dto.acl.admins.contains(new PrincipalDTO("hiram")));
         assertTrue(dto.acl.admins.contains(new PrincipalDTO("james")));
         assertTrue(dto.acl.admins.contains(new PrincipalDTO("admins", "org.apache.activemq.jaas.GroupPrincipal")));
+
+        AcceptingConnectorDTO connector = (AcceptingConnectorDTO)dto.connectors.get(0);
+        assertNotNull(connector);
+
     }
 
 
@@ -68,7 +72,7 @@ public class XmlCodecTest {
         host.host_names.add("example.com");
         broker.virtual_hosts.add(host);
 
-        ConnectorDTO connector = new ConnectorDTO();
+        AcceptingConnectorDTO connector = new AcceptingConnectorDTO();
         connector.id = "port-61616";
         connector.bind = "tcp://0.0.0.0:61616";
         broker.connectors.add(connector);

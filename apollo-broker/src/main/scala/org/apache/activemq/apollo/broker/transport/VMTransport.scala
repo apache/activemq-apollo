@@ -30,8 +30,7 @@ import org.apache.activemq.apollo.transport.pipe.PipeTransport
 import org.apache.activemq.apollo.transport.pipe.PipeTransportServer
 import org.apache.activemq.apollo.util._
 import java.lang.String
-import org.apache.activemq.apollo.dto.ConnectorDTO
-
+import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, ConnectorTypeDTO}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -128,7 +127,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
       if (server == null && create) {
 
         // This is the connector that the broker needs.
-        val connector = new ConnectorDTO
+        val connector = new AcceptingConnectorDTO
         connector.id = "vm"
         connector.bind = "vm://" + name
 
@@ -143,7 +142,11 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
           // Use the user specified config
           broker = BrokerFactory.createBroker(brokerURI);
           // we need to add in the connector if it was not in the config...
-          if (broker.config.connectors.toList.filter(_.bind == connector.bind).isEmpty) {
+          val found = broker.config.connectors.toList.find { _ match {
+            case dto:AcceptingConnectorDTO=> dto.bind == connector.bind
+            case _ => false
+          }}
+          if (found.isEmpty) {
             broker.config.connectors.add(connector)
           }
         }

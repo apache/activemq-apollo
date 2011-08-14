@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.broker.jaxb
 
 import org.apache.activemq.apollo.broker.BrokerFactory
 import org.apache.activemq.apollo.util.FunSuiteSupport
+import org.apache.activemq.apollo.dto.AcceptingConnectorDTO
 
 /**
  * <p>
@@ -36,11 +37,11 @@ class XMLBrokerFactoryTest extends FunSuiteSupport {
     }
 
     expect("pipe://test1") {
-      broker.config.connectors.get(0).bind
+      broker.config.connectors.get(0).asInstanceOf[AcceptingConnectorDTO].bind
     }
 
     expect("tcp://127.0.0.1:61616") {
-      broker.config.connectors.get(1).bind
+      broker.config.connectors.get(1).asInstanceOf[AcceptingConnectorDTO].bind
     }
 
     expect(2) {

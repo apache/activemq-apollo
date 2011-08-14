@@ -34,6 +34,51 @@ import org.apache.activemq.apollo.broker.store.{ZeroCopyBufferAllocator, Store, 
 import org.apache.activemq.apollo.dto._
 
 /**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object VirtualHostFactory {
+
+  trait Provider {
+    def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
+  }
+
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/virtual-host-factory.index",classOf[Provider])
+
+  def create(broker:Broker, dto:VirtualHostDTO):VirtualHost = {
+    if( dto == null ) {
+      return null
+    }
+    providers.singletons.foreach { provider=>
+      val connector = provider.create(broker, dto)
+      if( connector!=null ) {
+        return connector;
+      }
+    }
+    return null
+  }
+}
+
+object DefaultVirtualHostFactory extends VirtualHostFactory.Provider with Log {
+
+  def create(broker: Broker, dto: VirtualHostDTO): VirtualHost = dto match {
+    case dto:VirtualHostDTO =>
+      if( dto.getClass != classOf[VirtualHostDTO] ) {
+        // ignore sub classes of AcceptingVirtualHostDTO
+        null;
+      } else {
+        val rc = new VirtualHost(broker, dto.id)
+        rc.config = dto
+        rc
+      }
+    case _ =>
+      null
+  }
+}
+
+/**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object VirtualHost extends Log {
@@ -48,7 +93,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
 
   var config:VirtualHostDTO = _
-  var router:Router = _
+  val router:Router = new LocalRouter(this)
 
   var names:List[String] = Nil;
 
@@ -77,7 +122,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     } else {
 
       // in some cases we have to restart the virtual host..
-      if( config.store != this.config.store || config.router != this.config.router) {
+      if( config.store != this.config.store ) {
         stop(^{
           this.config = config
           start(on_completed)
@@ -117,10 +162,8 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   }
 
   override protected def _start(on_completed:Runnable):Unit = {
-
     apply_update
 
-    router = RouterFactory.create(this)
     store = StoreFactory.create(config.store)
 
     val tracker = new LoggingTracker("virtual host startup", console_log)

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +28,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name = "virtual_host")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 public class VirtualHostDTO extends ServiceDTO {
 
     @XmlElement(name="host_name", required=true)
@@ -77,9 +80,6 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;
 
-    @XmlElementRef
-    public RouterDTO router;
-
     @XmlElement(name="log_category")
     public LogCategoryDTO log_category;
 
@@ -111,7 +111,6 @@ public class VirtualHostDTO extends ServiceDTO {
         if (queues != null ? !queues.equals(that.queues) : that.queues != null) return false;
         if (regroup_connections != null ? !regroup_connections.equals(that.regroup_connections) : that.regroup_connections != null)
             return false;
-        if (router != null ? !router.equals(that.router) : that.router != null) return false;
         if (store != null ? !store.equals(that.store) : that.store != null) return false;
         if (topics != null ? !topics.equals(that.topics) : that.topics != null) return false;
 
@@ -131,7 +130,6 @@ public class VirtualHostDTO extends ServiceDTO {
         result = 31 * result + (regroup_connections != null ? regroup_connections.hashCode() : 0);
         result = 31 * result + (acl != null ? acl.hashCode() : 0);
         result = 31 * result + (authentication != null ? authentication.hashCode() : 0);
-        result = 31 * result + (router != null ? router.hashCode() : 0);
         result = 31 * result + (log_category != null ? log_category.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
