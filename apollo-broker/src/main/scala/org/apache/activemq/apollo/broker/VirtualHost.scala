@@ -110,6 +110,10 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   var connection_log:Log = _
   var console_log:Log = _
 
+  // This gets set if client should get redirected to another address.
+  @volatile
+  var client_redirect:Option[String] = None
+
   override def toString = if (config==null) "virtual-host" else "virtual-host: "+config.id
 
   /**

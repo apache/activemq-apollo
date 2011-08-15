@@ -548,6 +548,12 @@ class StompProtocolHandler extends ProtocolHandler {
     case x:Break=>
   }
 
+  private def async_die(headers:HeaderMap, body:String) = try {
+    die(headers, body)
+  } catch {
+    case x:Break=>
+  }
+
   private def die[T](msg:String, e:Throwable=null):T = {
     if( e!=null) {
       debug(e, "Shutting connection down due to: "+msg)
@@ -800,6 +806,11 @@ class StompProtocolHandler extends ProtocolHandler {
 
       if(host==null) {
         async_die("Invalid virtual host: "+host_header.get)
+        noop
+      } else if(!host.service_state.is_started) {
+        var headers = (MESSAGE_HEADER, encode_header("Virtual host stopped")) :: Nil
+        host.client_redirect.foreach(x=> headers ::= REDIRECT_HEADER->encode_header(x) )
+        async_die(headers, "")
         noop
       } else {
         this.host=host

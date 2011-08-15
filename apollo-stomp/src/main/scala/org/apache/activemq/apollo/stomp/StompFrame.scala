@@ -400,6 +400,7 @@ object Stomp {
   val SESSION = ascii("session")
   val RESPONSE_ID = ascii("response-id")
   val SERVER = ascii("server")
+  val REDIRECT_HEADER = ascii("redirect")
 
   val BROWSER = ascii("browser")
   val EXCLUSIVE = ascii("exclusive")

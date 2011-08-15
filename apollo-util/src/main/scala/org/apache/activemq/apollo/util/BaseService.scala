@@ -144,6 +144,8 @@ trait BaseService extends Service with Dispatched {
               _service_state = new FAILED
               done
           }
+        case state:CREATED =>
+          done
         case state:STOPPED =>
           done
         case state:STOPPING =>
