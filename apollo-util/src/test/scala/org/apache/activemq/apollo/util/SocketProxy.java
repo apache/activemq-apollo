@@ -105,7 +105,7 @@ public class SocketProxy {
      * pause accepting new connecitons and data transfer through existing proxy
      * connections. All sockets remain open
      */
-    public void pause() {
+    public void suspend() {
         synchronized(connections) {
             LOG.info("pause, numConnectons=" + connections.size());
             acceptor.pause();
@@ -118,7 +118,7 @@ public class SocketProxy {
     /*
      * continue after pause
      */
-    public void goOn() {
+    public void resume() {
         synchronized(connections) {
             LOG.info("goOn, numConnectons=" + connections.size());
             for (Connection con : connections) {
@@ -138,7 +138,6 @@ public class SocketProxy {
 
     private URI urlFromSocket(URI uri, ServerSocket serverSocket) throws Exception {
         int listenPort = serverSocket.getLocalPort();
-
         return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), listenPort, uri.getPath(), uri.getQuery(), uri.getFragment());
     }
 
