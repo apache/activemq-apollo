@@ -92,9 +92,6 @@ object LocalRouter extends Log {
   val QUEUE_DOMAIN = "queue"
   val DSUB_DOMAIN = "dsub"
 
-  val TEMP_TOPIC_DOMAIN = "temp-topic"
-  val TEMP_QUEUE_DOMAIN = "temp-queue"
-
   val QUEUE_KIND = "queue"
   val DEFAULT_QUEUE_PATH = "default"
 

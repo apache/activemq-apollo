@@ -16,6 +16,10 @@
   */
 package org.apache.activemq.apollo.util.path
 
+object Path {
+  def apply(value:String*):Path = Path(value.toList.map(LiteralPart(_)))
+}
+
 /**
   * <p>
   * </p>
@@ -31,5 +35,7 @@ case class Path(parts: List[Part]) {
   def toString(pp: PathParser): String = {
     return pp.encode_path(this)
   }
+
+  def +(other:Path) = Path(parts ::: other.parts)
 
 }

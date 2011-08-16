@@ -28,7 +28,6 @@ import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.apache.activemq.apollo.openwire.support.advisory.AdvisorySupport;
 import org.apache.activemq.apollo.filter.FilterException;
 import org.apache.activemq.apollo.filter.Filterable;
-import org.apache.activemq.apollo.openwire.support.broker.region.MessageReference;
 import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayInputStream;
@@ -39,7 +38,7 @@ import org.fusesource.hawtbuf.ByteArrayOutputStream;
  * 
  * @openwire:marshaller
  */
-public abstract class Message extends BaseCommand implements MarshallAware, MessageReference {
+public abstract class Message extends BaseCommand implements MarshallAware {
 
     /**
      * The default minimum amount of memory a message is assumed to use

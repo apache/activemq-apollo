@@ -36,13 +36,16 @@ import java.util.Map.Entry
 import protocol._
 import scala.util.continuations._
 import security.SecurityContext
+import support.advisory.AdvisorySupport
 import tcp.TcpTransport
 import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
+import org.apache.activemq.apollo.openwire.DestinationConverter._
 
 object OpenwireProtocolHandler extends Log {
+  def unit:Unit = {}
 
   val DEFAULT_DIE_DELAY = 5 * 1000L
   var die_delay = DEFAULT_DIE_DELAY
@@ -175,6 +178,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   }
 
   override def on_transport_connected():Unit = {
+    security_context.connection_id = Some(connection.id)
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
 
@@ -259,19 +263,19 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           case info:KeepAliveInfo=> ack(info)
           case info:ShutdownInfo=> ack(info); connection.stop
           case info:FlushCommand=> ack(info)
+          case info:DestinationInfo=> on_destination_info(info)
 
           // case info:ConnectionControl=>
           // case info:ConnectionError=>
           // case info:ConsumerControl=>
-          // case info:DestinationInfo=>
           // case info:RemoveSubscriptionInfo=>
           // case info:ControlCommand=>
 
           ///////////////////////////////////////////////////////////////////
           // Methods for cluster operations
           // These commands are sent to the broker when it's acting like a
-          //client to another broker.
-          // /////////////////////////////////////////////////////////////////
+          // client to another broker.
+          ///////////////////////////////////////////////////////////////////
           // case info:BrokerInfo=>
           // case info:MessageDispatch=>
           // case info:MessageDispatchNotification=>
@@ -476,6 +480,27 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
   }
 
+  def on_destination_info(info:DestinationInfo) = {
+    val destinations = to_destination_dto(info.getDestination)
+    if( info.getDestination.isTemporary ) {
+      destinations.foreach(_.temp_owner = connection.id)
+    }
+    reset{
+      val rc = info.getOperationType match {
+        case DestinationInfo.ADD_OPERATION_TYPE=>
+          host.router.create(destinations, security_context)
+        case DestinationInfo.REMOVE_OPERATION_TYPE=>
+          host.router.delete(destinations, security_context)
+      }
+      rc match {
+        case None =>
+          ack(info)
+        case Some(error)=>
+          ack(info)
+      }
+    }
+  }
+
   def on_remove_info(info: RemoveInfo) = {
     info.getObjectId match {
       case id: ConnectionId => all_connections.get(id).foreach(_.dettach)
@@ -544,7 +569,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def perform_send(msg:ActiveMQMessage, uow:StoreUOW=null): Unit = {
 
-    val destiantion = msg.getDestination.toDestination
+    val destiantion = to_destination_dto(msg.getDestination)
     val key = destiantion.toList
     producerRoutes.get(key) match {
       case null =>
@@ -728,8 +753,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def attach = {
 
       if( info.getDestination == null ) fail("destination was not set")
+      destination = to_destination_dto(info.getDestination)
 
-      destination = info.getDestination.toDestination
+      // if they are temp dests.. attach our owner id so that we don't
+      // get rejected.
+      if( info.getDestination.isTemporary ) {
+        destination.foreach(_.temp_owner = connection.get.id)
+      }
+
       parent.consumers.put(info.getConsumerId, this)
       all_consumers.put(info.getConsumerId, this)
       var is_durable_sub = info.getSubscriptionName!=null
@@ -843,52 +874,20 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           }
         }
       }
-//      def close = {
-//
-//        assert(producer.dispatch_queue.isExecuting)
-//        if( !closed ) {
-//          closed = true
-//          if( browser ) {
-//            // Then send the end of browse message.
-//            var dispatch = new MessageDispatch
-//            dispatch.setConsumerId(this.consumer.info.getConsumerId)
-//            dispatch.setMessage(null)
-//            dispatch.setDestination(null)
-//
-//            if( downstream.full ) {
-//              // session is full so use an overflow sink so to hold the message,
-//              // and then trigger closing the session once it empties out.
-//              val sink = new OverflowSink(downstream)
-//              sink.refiller = ^{
-//                outbound_sessions.close(downstream)
-//                release
-//              }
-//              sink.offer(dispatch)
-//            } else {
-//              downstream.offer(dispatch)
-//              outbound_sessions.close(downstream)
-//              release
-//            }
-//          } else {
-//            outbound_sessions.close(downstream)
-//            release
-//          }
-//        }
-//      }
 
       def dispose = {
         session_manager.close(downstream)
-//        if( auto_delete ) {
-//          reset {
-//            val rc = host.router.delete(destination, security_context)
-//            rc match {
-//              case Some(error) =>
-//                async_die(error)
-//              case None =>
-//                unit
-//            }
-//          }
-//        }
+        if( info.getDestination.isTemporary ) {
+          reset {
+            val rc = host.router.delete(destination, security_context)
+            rc match {
+              case Some(error) =>
+                async_die(error)
+              case None =>
+                unit
+            }
+          }
+        }
         release
       }
 

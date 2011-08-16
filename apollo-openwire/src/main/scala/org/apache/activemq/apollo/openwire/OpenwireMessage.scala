@@ -51,8 +51,6 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   def expiration = message.getExpiration
 
-  def destination = message.getDestination.toDestination
-
   def getBodyAs[T](toType : Class[T]) = {
     (message match {
       case x:ActiveMQTextMessage =>
