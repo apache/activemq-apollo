@@ -38,6 +38,15 @@ abstract public class DestinationDTO {
     @XmlElement(name = "path")
     public List<String> path = new ArrayList<String>();
 
+    /**
+     * If the destination is a temporary destination, then it
+     * will have temp_owner set to the owner of the connection
+     * id which owns the destination.  Only the owner will be allowed
+     * to consume from the destination.
+     */
+    @XmlAttribute(name="temp_owner")
+    public Long temp_owner;
+
     public DestinationDTO() {
     }
 
@@ -60,27 +69,33 @@ abstract public class DestinationDTO {
         return sb.toString();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof DestinationDTO)) return false;
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof DestinationDTO)) return false;
 
-        DestinationDTO that = (DestinationDTO) o;
+    DestinationDTO that = (DestinationDTO) o;
 
-        if (path != null ? !path.equals(that.path) : that.path != null) return false;
+    if (path != null ? !path.equals(that.path) : that.path != null)
+      return false;
+    if (temp_owner != null ? !temp_owner.equals(that.temp_owner) : that.temp_owner != null)
+      return false;
 
-        return true;
-    }
+    return true;
+  }
 
-    @Override
-    public int hashCode() {
-        return path != null ? path.hashCode() : 0;
-    }
+  @Override
+  public int hashCode() {
+    int result = path != null ? path.hashCode() : 0;
+    result = 31 * result + (temp_owner != null ? temp_owner.hashCode() : 0);
+    return result;
+  }
 
-    @Override
-    public String toString() {
-        return "DestinationDTO{" +
-                "path=" + path +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "DestinationDTO{" +
+            "path=" + path +
+            ", temp_owner=" + temp_owner +
+            '}';
+  }
 }

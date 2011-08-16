@@ -29,6 +29,42 @@ import java.util.{Arrays, ArrayList}
 import collection.mutable.{LinkedHashMap, HashMap}
 import collection.{Iterable, JavaConversions}
 
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+trait RouterListener {
+  def on_create(path:Path, destination:DestinationDTO, security:SecurityContext)
+  def on_destroy(path:Path, destination:DestinationDTO, security:SecurityContext)
+  def close
+}
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object RouterListenerFactory {
+
+  trait Provider {
+    def create(router:Router):RouterListener
+  }
+
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/router-listener-factory.index",classOf[Provider])
+
+  def create(router:Router):List[RouterListener] = {
+    providers.singletons.map(_.create(router))
+  }
+}
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 trait DomainDestination {
 
   def id:String
@@ -112,6 +148,8 @@ object LocalRouter extends Log {
 class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router with Dispatched {
   import LocalRouter._
 
+  val router_listeners = RouterListenerFactory.create(this)
+
   def dispatch_queue:DispatchQueue = virtual_host.dispatch_queue
 
   def auto_create_destinations = {
@@ -146,7 +184,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def can_destroy_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
-    def destroy_destination(path:Path, destination:DestinationDTO):Unit
+    def destroy_destination(path:Path, destination:DestinationDTO, security: SecurityContext):Unit
 
     def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
     def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]
@@ -182,6 +220,15 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean
     def can_bind_all(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
+
+      // Only allow the owner to bind.
+      if( destination.temp_owner != null ) {
+        for( connection <- consumer.connection) {
+          if( connection.id != destination.temp_owner.longValue() ) {
+            return Some("Not authorized to receive from the temporary destination.")
+          }
+        }
+      }
 
       val wildcard = PathParser.containsWildCards(path)
       var matches = get_destination_matches(path)
@@ -369,11 +416,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       Some("Topic destroy not yet implemented.")
     }
 
-    def destroy_destination(path:Path, destination: DestinationDTO): Unit = {
+    def destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Unit = {
       val matches = get_destination_matches(path)
-//        matches.foreach { dest =>
-//          remove_destination(dest.path, dest)
-//        }
+      matches.foreach { dest =>
+        for( l <- router_listeners) {
+          l.on_destroy(path, destination, security)
+        }
+//        remove_destination(dest.path, dest)
+      }
     }
 
     def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String] = {
@@ -402,6 +452,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], ()=>topic_config(path), path.toString(destination_parser), path)
       add_destination(path, topic)
+
+      for( l <- router_listeners) {
+        l.on_create(path, destination, security)
+      }
       Success(topic)
     }
 
@@ -656,10 +710,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def destroy_destination(path:Path, destination: DestinationDTO): Unit = {
+    def destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Unit = {
       val matches = get_destination_matches(path)
-      matches.foreach { dest =>
-        _destroy_queue(dest)
+      matches.foreach { queue =>
+        for( l <- router_listeners) {
+          l.on_destroy(queue.binding.destination, queue.binding.binding_dto, security)
+        }
+        _destroy_queue(queue)
       }
     }
 
@@ -771,12 +828,19 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
               x match {
                 case Some(record)=>
                   if( record.binding_kind == TempQueueBinding.TEMP_KIND ) {
-                    // Drop temp queues on restart..
+                    // These are temp queues create to topic subscriptions which
+                    // avoid blocking producers.
                     virtual_host.store.remove_queue(queue_key){x=> task.run}
                   } else {
-                    dispatch_queue {
-                      _create_queue(QueueBinding.create(record.binding_kind, record.binding_data), queue_key)
-                      task.run
+                    var binding = QueueBinding.create(record.binding_kind, record.binding_data)
+                    if( binding.binding_dto.temp_owner != null ) {
+                      // These are the temp queues clients create.
+                      virtual_host.store.remove_queue(queue_key){x=> task.run}
+                    } else {
+                      dispatch_queue {
+                        _create_queue(binding, queue_key)
+                        task.run
+                      }
                     }
                   }
                 case _ => task.run
@@ -966,7 +1030,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         Some(failures.mkString("; "))
       } else {
         paths.foreach { x=>
-          domain(x._2).destroy_destination(x._1, x._2)
+          domain(x._2).destroy_destination(x._1, x._2, security)
         }
         None
       }

@@ -39,8 +39,8 @@ class SecurityContext {
   var certificates:Array[X509Certificate] = _
   var local_address:SocketAddress = _
   var remote_address:SocketAddress = _
-
   var login_context:LoginContext = _
+  var connection_id:Option[Long] = None
 
   private var _principles = Set[PrincipalDTO]()
   private var _subject:Subject = _

@@ -712,6 +712,7 @@ class StompProtocolHandler extends ProtocolHandler {
       case _ => None
     }
 
+    security_context.connection_id = Some(connection.id)
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
     security_context.user = get(headers, LOGIN).map(decode_header _).getOrElse(null)
