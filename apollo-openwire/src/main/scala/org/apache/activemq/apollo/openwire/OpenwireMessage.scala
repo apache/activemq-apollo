@@ -23,6 +23,7 @@ import org.fusesource.hawtbuf.Buffer._
 import OpenwireConstants._
 import org.fusesource.hawtbuf.{UTF8Buffer, AsciiBuffer, Buffer}
 import command.{ActiveMQBytesMessage, ActiveMQTextMessage, ActiveMQMessage}
+import org.apache.activemq.apollo.broker.protocol.Protocol
 
 /**
  * <p>
@@ -83,4 +84,19 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
     }).asInstanceOf[T]
   }
 
+}
+
+object EndOfBrowseMessage extends Message {
+  def retained(): Int = 0
+  def retain() {}
+  def release() {}
+  def protocol: Protocol = null
+  def producer: AsciiBuffer = null
+  def priority: Byte = 0
+  def persistent: Boolean = false
+  def id: AsciiBuffer = null
+  def expiration: Long = 0L
+  def getProperty(name: String): AnyRef = null
+  def getLocalConnectionId: AnyRef = null
+  def getBodyAs[T](toType : Class[T]) = null.asInstanceOf[T]
 }
