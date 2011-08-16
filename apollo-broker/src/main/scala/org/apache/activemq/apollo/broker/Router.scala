@@ -151,7 +151,7 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
         // only deliver to matching consumers
         if( target.consumer.matches(copy) ) {
 
-          if( copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
+          if( router.virtual_host.store !=null && copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
             if( copy.uow==null ) {
               copy.uow = router.virtual_host.store.create_uow
             } else {
