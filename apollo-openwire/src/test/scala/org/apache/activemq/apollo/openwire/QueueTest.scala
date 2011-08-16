@@ -100,8 +100,8 @@ class QueueTest extends OpenwireTestSupport {
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
-    val producer = session.createProducer(queue("BROWSER.TEST"))
-    var consumer = session.createConsumer(queue("BROWSER.TEST"))
+    val producer = session.createProducer(queue("BROWSER.TEST.RB"))
+    var consumer = session.createConsumer(queue("BROWSER.TEST.RB"))
 
     val outbound = List(session.createTextMessage("First Message"),
                         session.createTextMessage("Second Message"),
@@ -119,7 +119,7 @@ class QueueTest extends OpenwireTestSupport {
 
     consumer.close();
 
-    val browser = session.createBrowser(queue("BROWSER.TEST"))
+    val browser = session.createBrowser(queue("BROWSER.TEST.RB"))
     val enumeration = browser.getEnumeration
 
     // browse the second
@@ -140,7 +140,7 @@ class QueueTest extends OpenwireTestSupport {
     browser.close()
 
     // Re-open the consumer.
-    consumer = session.createConsumer(queue("BROWSER.TEST"));
+    consumer = session.createConsumer(queue("BROWSER.TEST.RB"));
     // Receive the second.
     consumer.receive(200) should be(outbound(1))
     // Receive the third.
@@ -153,7 +153,7 @@ class QueueTest extends OpenwireTestSupport {
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
-    val producer = session.createProducer(queue("BROWSER.TEST"))
+    val producer = session.createProducer(queue("BROWSER.TEST.BR"))
 
     val outbound = List(session.createTextMessage("First Message"),
                         session.createTextMessage("Second Message"),
@@ -162,11 +162,11 @@ class QueueTest extends OpenwireTestSupport {
     producer.send(outbound(0))
 
     // create browser first
-    val browser = session.createBrowser(queue("BROWSER.TEST"))
+    val browser = session.createBrowser(queue("BROWSER.TEST.BR"))
     val enumeration = browser.getEnumeration
 
     // create consumer
-    val consumer = session.createConsumer(queue("BROWSER.TEST"))
+    val consumer = session.createConsumer(queue("BROWSER.TEST.BR"))
 
     // browse the first message
     enumeration.hasMoreElements should be(true)
@@ -233,7 +233,7 @@ class QueueTest extends OpenwireTestSupport {
   test("Browse Close") {
     connect()
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    val destination = queue("BROWSER.TEST")
+    val destination = queue("BROWSER.TEST.BC")
 
     val outbound = List(session.createTextMessage("First Message"),
                         session.createTextMessage("Second Message"),
