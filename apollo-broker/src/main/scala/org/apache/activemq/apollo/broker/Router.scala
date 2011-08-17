@@ -72,11 +72,15 @@ object DeliveryProducerRoute extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained with BindableDeliveryProducer with Sink[Delivery] {
-
+abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with BindableDeliveryProducer with Sink[Delivery] {
   import DeliveryProducerRoute._
 
   var targets = List[DeliverySession]()
+  val store = if(router!=null) {
+    router.virtual_host.store
+  } else {
+    null
+  }
 
   def connected() = dispatch_queue {
     on_connected
@@ -151,9 +155,10 @@ abstract class DeliveryProducerRoute(val router:Router) extends BaseRetained wit
         // only deliver to matching consumers
         if( target.consumer.matches(copy) ) {
 
-          if( router.virtual_host.store !=null && copy.storeKey == -1L && target.consumer.is_persistent && copy.message.persistent ) {
-            if( copy.uow==null ) {
-              copy.uow = router.virtual_host.store.create_uow
+          if ( target.consumer.is_persistent && copy.message.persistent
+                && copy.storeKey == -1L && store != null) {
+            if (copy.uow == null) {
+              copy.uow = store.create_uow
             } else {
               copy.uow.retain
             }
