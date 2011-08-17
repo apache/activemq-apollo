@@ -47,7 +47,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:QueueBinding
 
   def id = binding.id
 
-  override def toString: String =  id
+  override def toString = binding.destination.toString
 
   def virtual_host = router.virtual_host
 

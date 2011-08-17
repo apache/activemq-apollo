@@ -36,8 +36,15 @@ import collection.{Iterable, JavaConversions}
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait RouterListener {
-  def on_create(path:Path, destination:DestinationDTO, security:SecurityContext)
-  def on_destroy(path:Path, destination:DestinationDTO, security:SecurityContext)
+  def on_create(destination:DomainDestination, security:SecurityContext)
+  def on_destroy(destination:DomainDestination, security:SecurityContext)
+
+  def on_connect(destination:DomainDestination, producer:BindableDeliveryProducer, security:SecurityContext)
+  def on_disconnect(destination:DomainDestination, producer:BindableDeliveryProducer)
+
+  def on_bind(destination:DomainDestination, consumer:DeliveryConsumer, security:SecurityContext)
+  def on_unbind(destination:DomainDestination, consumer:DeliveryConsumer, persistent:Boolean)
+
   def close
 }
 /**
@@ -217,11 +224,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean
     def can_bind_all(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
+      if( security==null ) {
+        return None
+      }
 
       // Only allow the owner to bind.
       if( destination.temp_owner != null ) {
-        for( connection <- consumer.connection) {
-          if( connection.id != destination.temp_owner.longValue() ) {
+        for( connection <- security.connection_id) {
+          if( connection != destination.temp_owner.longValue() ) {
             return Some("Not authorized to receive from the temporary destination.")
           }
         }
@@ -257,6 +267,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       matches.foreach { dest=>
         if( can_bind_one(path, destination, consumer, security) ) {
           dest.bind(destination, consumer)
+          for( l <- router_listeners) {
+            l.on_bind(dest, consumer, security)
+          }
         }
       }
       consumer.retain
@@ -268,16 +281,12 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( consumers_by_path.remove(path, new ConsumerContext(destination, consumer, null) ) ) {
         get_destination_matches(path).foreach{ dest=>
           dest.unbind(consumer, persistent)
+          for( l <- router_listeners) {
+            l.on_unbind(dest, consumer, persistent)
+          }
         }
         consumer.release
       }
-
-//      if( persistent ) {
-//          destroy_queue(consumer.binding, security_context).failure_option.foreach{ reason=>
-//            async_die(reason)
-//          }
-//      }
-
     }
 
     def can_connect_one(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean
@@ -322,6 +331,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       get_destination_matches(path).foreach { dest=>
         if( can_connect_one(path, destination, producer, security) ) {
           dest.connect(destination, producer)
+          for( l <- router_listeners) {
+            l.on_connect(dest, producer, security)
+          }
         }
       }
       producers_by_path.put(path, new ProducerContext(destination, producer, security))
@@ -332,6 +344,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       producers_by_path.remove(path, new ProducerContext(destination, producer, null))
       get_destination_matches(path).foreach { dest=>
         dest.disconnect(producer)
+        for( l <- router_listeners) {
+          l.on_disconnect(dest, producer)
+        }
       }
     }
 
@@ -380,6 +395,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           // Connects a producer directly to a durable subscription..
           durable_subscriptions_by_id.get(destination.subscription_id).foreach { dest=>
             dest.connect(destination, producer)
+            for( l <- router_listeners) {
+              l.on_connect(dest, producer, security)
+            }
           }
 
         case _ => super.connect(path, destination, producer, security)
@@ -391,14 +409,29 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         case destination:DurableSubscriptionDestinationDTO =>
           durable_subscriptions_by_id.get(destination.subscription_id).foreach { dest=>
             dest.disconnect(producer)
+            for( l <- router_listeners) {
+              l.on_disconnect(dest, producer)
+            }
           }
         case _ => super.disconnect(destination, producer)
       }
     }
 
     def can_destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Option[String] = {
+      if( security == null ) {
+        return None
+      }
+
+      if( destination.temp_owner != null ) {
+        for( connection <- security.connection_id) {
+          if( connection != destination.temp_owner.longValue() ) {
+            return Some("Not authorized to destroy the temporary destination.")
+          }
+        }
+      }
+
       val matches = get_destination_matches(path)
-      val rc = matches.foldLeft(None:Option[String]) { case (rc,dest) =>
+      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
         rc.orElse {
           if( virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_destroy(security, virtual_host, dest.config)) {
             Some("Not authorized to destroy topic: %s".format(dest.id))
@@ -407,19 +440,36 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           }
         }
       }
-
-      // TODO: destroy not yet supported on topics..  Need to disconnect all
-      // clients and destroy remove any durable subs on the topic.
-      Some("Topic destroy not yet implemented.")
     }
 
     def destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Unit = {
       val matches = get_destination_matches(path)
       matches.foreach { dest =>
         for( l <- router_listeners) {
-          l.on_destroy(path, destination, security)
+          l.on_destroy(dest, security)
         }
-//        remove_destination(dest.path, dest)
+
+        // Disconnect the producers.
+        dest.disconnect_producers
+
+        // Delete the durable subs which
+        for( queue <- dest.durable_subscriptions ) {
+          // we delete the durable sub if it's not wildcard'ed
+          if( !PathParser.containsWildCards(queue.binding.destination) ) {
+            _destroy_queue(queue.id, null)
+          }
+        }
+
+        for( consumer <- dest.consumers ) {
+          consumer match {
+            case queue:Queue =>
+              // Delete any attached queue consumers..
+              _destroy_queue(queue.id, null)
+          }
+        }
+
+        // Un-register the topic.
+        remove_destination(path, dest)
       }
     }
 
@@ -451,7 +501,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       add_destination(path, topic)
 
       for( l <- router_listeners) {
-        l.on_create(path, destination, security)
+        l.on_create(topic, security)
       }
       Success(topic)
     }
@@ -545,6 +595,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
           queue.bind(destination, consumer)
 
+          for( l <- router_listeners) {
+            l.on_bind(queue, consumer, security)
+          }
+
         case _ =>
           super.bind(path, destination, consumer, security)
       }
@@ -557,6 +611,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
             queue.unbind(consumer, persistent)
             if( persistent ) {
               _destroy_queue(queue, security)
+            }
+            for( l <- router_listeners) {
+              l.on_unbind(queue, consumer, persistent)
             }
           }
         case _ =>
@@ -711,7 +768,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       val matches = get_destination_matches(path)
       matches.foreach { queue =>
         for( l <- router_listeners) {
-          l.on_destroy(queue.binding.destination, queue.binding.binding_dto, security)
+          l.on_destroy(queue, security)
         }
         _destroy_queue(queue)
       }
@@ -736,7 +793,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       val binding = QueueDomainQueueBinding.create(dto)
       val config = binding.config(virtual_host)
       if( can_create_queue(config, security) ) {
-        Success(_create_queue(binding))
+        var queue = _create_queue(binding)
+        for( l <- router_listeners) {
+          l.on_create(queue, security)
+        }
+        Success(queue)
       } else {
         Failure("Not authorized to create the queue")
       }

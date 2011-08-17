@@ -49,6 +49,8 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   import OptionSupport._
 
+  override def toString = destination_dto.toString
+
   def virtual_host: VirtualHost = router.virtual_host
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
@@ -204,6 +206,14 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   def disconnect (producer:BindableDeliveryProducer) = {
     producers = producers.filterNot( _ == producer )
     producer.unbind(consumers.toList ::: durable_subscriptions.toList)
+    check_idle
+  }
+
+  def disconnect_producers:Unit ={
+    for( producer <- producers ) {
+      producer.unbind(consumers.toList ::: durable_subscriptions.toList)
+    }
+    producers.clear
     check_idle
   }
 

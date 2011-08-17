@@ -724,6 +724,28 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   class ConsumerContext(val parent: SessionContext, val info: ConsumerInfo) extends BaseRetained with DeliveryConsumer {
 
+//  The following comes in handy if we need to debug the
+//  reference counts of the consumers.
+//    val r = new BaseRetained
+//
+//    def setDisposer(p1: Runnable): Unit = r.setDisposer(p1)
+//    def retained: Int =r.retained
+//
+//    def printST(name:String) = {
+//      val e = new Exception
+//      println(name+": "+connection.map(_.id))
+//      println("  "+e.getStackTrace.drop(1).take(4).mkString("\n  "))
+//    }
+//
+//    def retain: Unit = {
+//      printST("retain")
+//      r.retain
+//    }
+//    def release: Unit = {
+//      printST("release")
+//      r.release
+//    }
+
     var selector_expression:BooleanExpression = _
     var destination:Array[DestinationDTO] = _
 
