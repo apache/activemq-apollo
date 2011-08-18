@@ -35,7 +35,6 @@
       <directory>src/main/release/bin</directory>
       <outputDirectory>/bin</outputDirectory>
       <lineEnding>dos</lineEnding>
-      <filtered>true</filtered>
       <includes>
         <include>*.bat</include>
         <include>*.cmd</include>

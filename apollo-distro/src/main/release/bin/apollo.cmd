@@ -80,8 +80,4 @@ set JVM_FLAGS=%JVM_FLAGS% -classpath "%CLASSPATH%"
 endlocal
 GOTO :EOF
 
-:ADD_CLASSPATH
- set CLASSPATH=%CLASSPATH%;%*
- GOTO :EOF
-
 :EOF
