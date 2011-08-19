@@ -774,7 +774,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
 
-      session_id = encode_header(this.host.config.id + "-"+this.host.session_counter.incrementAndGet)
+      session_id = encode_header("%s-%x".format(this.host.config.id, this.host.session_counter.incrementAndGet))
       connected_headers += SESSION->session_id
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
