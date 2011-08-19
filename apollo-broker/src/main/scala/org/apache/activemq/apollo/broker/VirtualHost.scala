@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.util.path.{Path, PathParser}
 import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
-import org.apache.activemq.apollo.broker.store.{ZeroCopyBufferAllocator, Store, StoreFactory}
 import org.apache.activemq.apollo.dto._
+import store.{PersistentLongCounter, ZeroCopyBufferAllocator, Store, StoreFactory}
 
 /**
  * <p>
@@ -100,7 +100,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   var store:Store = null
   val queue_id_counter = new LongCounter()
 
-  val session_counter = new AtomicLong(0)
+  val session_counter = new PersistentLongCounter("session_counter")
 
   var authenticator:Authenticator = _
   var authorizer:Authorizer = _
@@ -199,7 +199,21 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     }
 
     tracker.callback {
+
       val tracker = new LoggingTracker("virtual host startup", console_log)
+
+      // The default host handles persisting the connection id counter.
+      if(store!=null) {
+        if(session_counter.get == 0) {
+          val task = tracker.task("load session counter")
+          session_counter.init(store) {
+            task.run()
+          }
+        } else {
+          session_counter.connect(store)
+        }
+      }
+
       tracker.start(router)
       tracker.callback(on_completed)
     }
@@ -212,7 +226,11 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
     val tracker = new LoggingTracker("virtual host shutdown", console_log)
     tracker.stop(router);
     if( store!=null ) {
-      tracker.stop(store);
+      val task = tracker.task("store session counter")
+      session_counter.disconnect{
+        tracker.stop(store);
+        task.run()
+      }
     }
     tracker.callback(on_completed)
   }
