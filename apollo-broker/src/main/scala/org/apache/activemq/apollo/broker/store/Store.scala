@@ -21,8 +21,10 @@ import org.apache.activemq.apollo.util._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
+import org.fusesource.hawtbuf.Buffer
 
 trait StreamManager[A] {
+  def using_map_stream(func: (A)=>Unit)
   def using_queue_stream(func: (A)=>Unit)
   def using_message_stream(func: (A)=>Unit)
   def using_queue_entry_stream(func: (A)=>Unit)
@@ -74,6 +76,11 @@ trait Store extends ServiceTrait {
    * Removes a queue. Success is reported via the callback.
    */
   def remove_queue(queueKey:Long)(callback:(Boolean)=>Unit):Unit
+
+  /**
+   * Gets a value of a previously stored map entry.
+   */
+  def get(key:Buffer)(callback:(Option[Buffer])=>Unit )
 
   /**
    * Loads the queue information for a given queue key.

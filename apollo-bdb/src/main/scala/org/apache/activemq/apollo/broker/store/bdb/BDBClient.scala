@@ -31,6 +31,7 @@ import scala.Some
 import java.sql.ClientInfoStatus
 import com.sleepycat.je._
 import javax.management.remote.rmi._RMIConnection_Stub
+import org.fusesource.hawtbuf.Buffer
 
 object BDBClient extends Log
 /**
@@ -160,6 +161,14 @@ class BDBClient(store: BDBStore) {
       _queues_db
     }
 
+    private var _map_db:Database = _
+    def map_db:Database = {
+      if( _map_db==null ) {
+        _map_db = environment.openDatabase(tx, "map", buffer_key_conf)
+      }
+      _map_db
+    }
+
     def close(ok:Boolean) = {
       if( _messages_db!=null ) {
         _messages_db.close
@@ -172,6 +181,9 @@ class BDBClient(store: BDBStore) {
       }
       if( _entries_db!=null ) {
         _entries_db.close
+      }
+      if( _map_db!=null ) {
+        _map_db.close
       }
 
       if(ok){
@@ -324,6 +336,15 @@ class BDBClient(store: BDBStore) {
       import ctx._
       var zcp_files_to_sync = Set[Int]()
       uows.foreach { uow =>
+
+          for((key,value) <- uow.map_actions) {
+            if( value==null ) {
+              map_db.delete(tx, key)
+            } else {
+              map_db.put(tx, key, value)
+            }
+          }
+
           uow.actions.foreach {
             case (msg, action) =>
 
@@ -518,6 +539,14 @@ class BDBClient(store: BDBStore) {
     }
   }
 
+
+  def get(key: Buffer):Option[Buffer] = {
+    with_ctx() { ctx=>
+      import ctx._
+      map_db.get(tx, to_database_entry(key)).map(x=> to_buffer(x))
+    }
+  }
+
   def getLastQueueKey:Long = {
     with_ctx() { ctx=>
       import ctx._
@@ -531,6 +560,16 @@ class BDBClient(store: BDBStore) {
       with_ctx() { ctx=>
         import ctx._
         import PBSupport._
+
+        streams.using_map_stream { stream =>
+          map_db.cursor(tx) { (key,value) =>
+            val record = new MapEntryPB.Bean
+            record.setKey(key)
+            record.setValue(value)
+            record.freeze().writeFramed(stream)
+            true
+          }
+        }
 
         streams.using_queue_stream { queue_stream =>
           queues_db.cursor(tx) { (_, value) =>
@@ -604,6 +643,12 @@ class BDBClient(store: BDBStore) {
 
         var zcp_counter = 0
         val max_ctx = zero_copy_buffer_allocator.contexts.size
+
+        streams.using_map_stream { stream=>
+          foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
+            map_db.put(tx, pb.getKey, pb.getValue)
+          }
+        }
 
         streams.using_message_stream { message_stream=>
           foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>

@@ -96,6 +96,7 @@ class StoreImport extends Action {
           def using_queue_stream(func: (InputStream) => Unit) = entry("queues.dat", func)
           def using_queue_entry_stream(func: (InputStream) => Unit) = entry("queue_entries.dat", func)
           def using_message_stream(func: (InputStream) => Unit) = entry("messages.dat", func)
+          def using_map_stream(func: (InputStream) => Unit) = entry("map.dat", func)
         }
         reset {
           val rc = store.import_pb(manager)

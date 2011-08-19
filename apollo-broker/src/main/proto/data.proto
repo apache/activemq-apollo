@@ -51,3 +51,8 @@ message QueueEntryPB {
   optional sint64 expiration=7;
   optional bytes messageLocator=8;
 }
+
+message MapEntryPB {
+  required bytes key = 1;
+  optional bytes value = 2;
+}

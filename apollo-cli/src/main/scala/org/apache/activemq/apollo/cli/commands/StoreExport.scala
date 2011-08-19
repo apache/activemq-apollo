@@ -91,6 +91,7 @@ class StoreExport extends Action {
           def using_queue_stream(func: (OutputStream) => Unit) = entry("queues.dat", func)
           def using_queue_entry_stream(func: (OutputStream) => Unit) = entry("queue_entries.dat", func)
           def using_message_stream(func: (OutputStream) => Unit) = entry("messages.dat", func)
+          def using_map_stream(func: (OutputStream) => Unit) = entry("map.dat", func)
         }
         reset {
           val rc = store.export_pb(manager)

@@ -25,6 +25,7 @@ import atomic.{AtomicReference, AtomicInteger}
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.{BaseRetained, ListEventAggregator}
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, TimeMetricDTO, IntMetricDTO}
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * <p>
@@ -87,6 +88,12 @@ trait DelayingStoreSupport extends Store with BaseService {
     var flush_listeners = ListBuffer[() => Unit]()
     var disable_delay = false
 
+    var map_actions = Map[Buffer, Buffer]()
+
+    def put(key: Buffer, value: Buffer) = {
+      map_actions += (key -> value)
+    }
+
     def on_flush(callback: =>Unit) = {
       if( this.synchronized {
         if( flushed ) {
@@ -121,7 +128,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     def rm(msg:Long) = {
       actions -= msg
-      if( actions.isEmpty ) {
+      if( actions.isEmpty && map_actions.isEmpty ) {
         cancel
       }
     }

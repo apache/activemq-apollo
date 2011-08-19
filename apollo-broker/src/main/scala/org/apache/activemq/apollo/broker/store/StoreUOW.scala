@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtdispatch.{Retained}
 import org.apache.activemq.apollo.broker.store._
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * A store uow is used to perform persistent
@@ -54,6 +55,12 @@ trait StoreUOW extends Retained {
    * Removes a queue entry
    */
   def dequeue(entry:QueueEntryRecord)
+
+  /**
+   * Creates or updates a map entry.  Set value to null to
+   * remove the entry.
+   */
+  def put(key:Buffer, value:Buffer)
 
   /**
    * Marks this uow as needing to be completed

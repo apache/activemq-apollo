@@ -35,6 +35,9 @@ object HelperTrait {
   implicit def to_queue_record(entry: DatabaseEntry): QueueRecord = entry.getData
   implicit def to_database_entry(v: QueueRecord): DatabaseEntry = new DatabaseEntry(v)
 
+  implicit def to_buffer(entry: DatabaseEntry): Buffer = new Buffer(entry.getData)
+  implicit def to_database_entry(v: Buffer): DatabaseEntry = new DatabaseEntry(v.toByteArray)
+
   implicit def decode_zcp_value(entry: DatabaseEntry): (Int,Long,Int) = {
     val in = new DataByteArrayInputStream(entry.getData)
     (in.readVarInt(), in.readVarLong(), in.readVarInt())
@@ -123,6 +126,11 @@ object HelperTrait {
     }
 
   }
+
+  val buffer_key_conf = new DatabaseConfig();
+  buffer_key_conf.setAllowCreate(true)
+  buffer_key_conf.setTransactional(true);
+  buffer_key_conf.setSortedDuplicates(false);
 
   val long_key_conf = new DatabaseConfig();
   long_key_conf.setAllowCreate(true)

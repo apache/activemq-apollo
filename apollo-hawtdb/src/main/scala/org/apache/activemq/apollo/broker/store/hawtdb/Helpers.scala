@@ -140,6 +140,12 @@ object Helpers {
   QUEUE_INDEX_FACTORY.setValueCodec(QueueRootRecord.FRAMED_CODEC);
   QUEUE_INDEX_FACTORY.setDeferredEncoding(true);
 
+  // maps queue key -> QueueRootRecord
+  val MAP_INDEX_FACTORY = new BTreeIndexFactory[Buffer, Buffer]();
+  MAP_INDEX_FACTORY.setKeyCodec(BufferCodec.INSTANCE);
+  MAP_INDEX_FACTORY.setValueCodec(BufferCodec.INSTANCE);
+  MAP_INDEX_FACTORY.setDeferredEncoding(true);
+
   // maps queue seq -> AddQueueEntry
   val QUEUE_ENTRY_INDEX_FACTORY = new BTreeIndexFactory[jl.Long, AddQueueEntry.Buffer]();
   QUEUE_ENTRY_INDEX_FACTORY.setKeyCodec(VarLongCodec.INSTANCE);

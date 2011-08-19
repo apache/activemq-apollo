@@ -28,6 +28,7 @@ import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricD
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream, File}
 import scala.util.continuations._
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -126,6 +127,12 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
+
+  def get(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
+    read_executor {
+      callback(client.get(key))
+    }
+  }
 
   /**
    * Ges the last queue key identifier stored.

@@ -28,6 +28,7 @@ import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -114,6 +115,12 @@ class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
     }
   }
 
+
+  def get(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
+    executor {
+      callback(client.get(key))
+    }
+  }
 
   /**
    * Ges the last queue key identifier stored.

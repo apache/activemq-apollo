@@ -29,10 +29,7 @@ enum Type {
   ADD_QUEUE = 10;
   REMOVE_QUEUE = 11;
 
-  ADD_MAP = 30;
-  REMOVE_MAP = 31;
-  PUT_MAP_ENTRY = 32;
-  REMOVE_MAP_ENTRY = 33;
+  MAP_ENTRY = 32;
 
   ADD_SUBSCRIPTION = 50;
   REMOVE_SUBSCRIPTION = 51;
@@ -109,24 +106,9 @@ message RemoveSubscription {
   required bytes name = 1 [java_override_type = "AsciiBuffer"];
 }
 
-
-///////////////////////////////////////////////////////////////
-// Map related operations.
-///////////////////////////////////////////////////////////////
-message AddMap {
-  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-}
-message RemoveMap {
-  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-}
-message PutMapEntry {
-  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-  optional bytes id = 2 [java_override_type = "AsciiBuffer"];
-  optional bytes value = 3;
-}
-message RemoveMapEntry {
-  optional bytes mapName = 1 [java_override_type = "AsciiBuffer"];
-  optional bytes id = 2 [java_override_type = "AsciiBuffer"];
+message MapEntry {
+  required bytes key=1;
+  optional bytes value = 2;
 }
 
 ///////////////////////////////////////////////////////////////

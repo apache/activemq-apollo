@@ -28,6 +28,7 @@ import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
+import org.fusesource.hawtbuf.Buffer
 
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
@@ -144,6 +145,11 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
+  def get(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
+    executor_pool {
+      callback(client.get(key))
+    }
+  }
 
   /**
    * Ges the last queue key identifier stored.

@@ -31,6 +31,8 @@ import jdbm.helper._
 import PBSupport._
 import org.fusesource.hawtbuf.proto.PBMessageFactory
 import java.io._
+import org.fusesource.hawtbuf.Buffer
+
 object JDBM2Client extends Log {
 
   object MessageRecordSerializer extends Serializer[MessagePB.Buffer] {
@@ -57,6 +59,19 @@ object JDBM2Client extends Log {
 
     def deserialize(in: SerializerInput) = {
       (in.readPackedInt, in.readPackedLong, in.readPackedInt)
+    }
+  }
+
+  object BufferSerializer extends Serializer[Buffer] {
+    def serialize(out: SerializerOutput, v: Buffer) = {
+      out.writePackedInt(v.length())
+      out.write(v.data, v.offset, v.length)
+    }
+
+    def deserialize(in: SerializerInput) = {
+      val rc = new Buffer(in.readPackedInt());
+      in.readFully(rc.data)
+      rc
     }
   }
 
@@ -150,6 +165,7 @@ class JDBM2Client(store: JDBM2Store) {
   var messages_db:HTree[Long, MessagePB.Buffer] = _
   var zerocp_db:HTree[Long, (Int, Long, Int)] = _
   var message_refs_db:HTree[Long, java.lang.Integer] = _
+  var map_db:HTree[Buffer, Buffer] = _
 
   var last_message_key = 0L
   var last_queue_key = 0L
@@ -203,6 +219,7 @@ class JDBM2Client(store: JDBM2Store) {
 
     transaction {
       messages_db = init_htree("messages", value_serializer = MessageRecordSerializer)
+      map_db = init_htree("map", value_serializer = BufferSerializer, key_serializer = BufferSerializer)
       zerocp_db = init_htree("lobs", value_serializer = ZeroCopyValueSerializer)
       message_refs_db = init_htree("message_refs")
       queues_db = init_htree("queues", value_serializer = QueueRecordSerializer)
@@ -353,6 +370,15 @@ class JDBM2Client(store: JDBM2Store) {
     transaction {
       var zcp_files_to_sync = Set[Int]()
       uows.foreach { uow =>
+
+        for((key,value) <- uow.map_actions) {
+          if( value==null ) {
+            map_db.remove(key)
+          } else {
+            map_db.put(key, value)
+          }
+        }
+
         uow.actions.foreach { case (msg, action) =>
 
           val message_record = action.message_record
@@ -478,10 +504,23 @@ class JDBM2Client(store: JDBM2Store) {
 
   def getLastQueueKey:Long = last_queue_key
 
+  def get(key: Buffer):Option[Buffer] = {
+    Option(map_db.find(key))
+  }
 
   def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
     try {
       import PBSupport._
+
+      streams.using_map_stream { stream=>
+        map_db.cursor { (key, value) =>
+          val record = new MapEntryPB.Bean
+          record.setKey(key)
+          record.setValue(value)
+          record.freeze().writeFramed(stream)
+          true
+        }
+      }
 
       streams.using_queue_stream { queue_stream=>
         queues_db.cursor { (_, value) =>
@@ -551,6 +590,13 @@ class JDBM2Client(store: JDBM2Store) {
 
 
         import PBSupport._
+
+        streams.using_map_stream { stream=>
+          foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
+            map_db.put(pb.getKey, pb.getValue)
+            check_flush(1, 10000)
+          }
+        }
 
         streams.using_queue_stream { queue_stream=>
           foreach[QueuePB.Buffer](queue_stream, QueuePB.FACTORY) { pb =>

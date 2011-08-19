@@ -228,11 +228,18 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
     _store(update, callback)
   }
 
-  def store(txs: Seq[HawtDBStore#DelayableUOW], callback:Runnable) {
+  def store(uows: Seq[HawtDBStore#DelayableUOW], callback:Runnable) {
     var batch = ListBuffer[TypeCreatable]()
-    txs.foreach {
-      tx =>
-        tx.actions.foreach {
+    uows.foreach { uow =>
+
+        for((key,value) <- uow.map_actions) {
+          val entry = new MapEntry.Bean
+          entry.setKey(key)
+          entry.setValue(value)
+          batch += entry
+        }
+
+        uow.actions.foreach {
           case (msg, action) =>
             if (action.message_record != null) {
               val update: AddMessage.Bean = action.message_record
@@ -271,6 +278,14 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
       }
     }
     rc
+  }
+
+  def get(key: Buffer):Option[Buffer] = {
+    withTx { tx =>
+        val helper = new TxHelper(tx)
+        import helper._
+        Option(mapIndex.get(key))
+    }
   }
 
   def getQueue(queueKey: Long): Option[QueueRecord] = {
@@ -897,13 +912,13 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
         cleanup(_tx);
         info("Store purged.");
 
-      case x: AddSubscription.Getter =>
-      case x: RemoveSubscription.Getter =>
-
-      case x: AddMap.Getter =>
-      case x: RemoveMap.Getter =>
-      case x: PutMapEntry.Getter =>
-      case x: RemoveMapEntry.Getter =>
+      case x: MapEntry.Getter =>
+        val value = x.getValue
+        if( value==null ) {
+          mapIndex.remove(x.getKey)
+        } else {
+          mapIndex.put(x.getKey, value)
+        }
 
     }
   }
@@ -996,6 +1011,7 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
   private case class Update(update: TypeCreatable, location: Location)
 
   private class TxHelper(val _tx: Transaction) {
+    lazy val mapIndex = MAP_INDEX_FACTORY.open(_tx, rootBuffer.getMapIndexPage)
     lazy val queueIndex = QUEUE_INDEX_FACTORY.open(_tx, rootBuffer.getQueueIndexPage)
     lazy val dataFileRefIndex = DATA_FILE_REF_INDEX_FACTORY.open(_tx, rootBuffer.getDataFileRefIndexPage)
     lazy val messageKeyIndex = MESSAGE_KEY_INDEX_FACTORY.open(_tx, rootBuffer.getMessageKeyIndexPage)
