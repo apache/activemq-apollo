@@ -122,7 +122,6 @@ object StompCodec extends Log {
           headers.add((name, value))
       } catch {
           case e:Exception=>
-            e.printStackTrace
             throw new IOException("Unable to parser header line [" + line + "]")
       }
       line = read_line
@@ -459,7 +458,6 @@ class StompCodec extends ProtocolCodec {
             headers.add((ascii(name), ascii(value)))
         } catch {
             case e:Exception=>
-              e.printStackTrace
               throw new IOException("Unable to parser header line [" + line + "]")
         }
 
