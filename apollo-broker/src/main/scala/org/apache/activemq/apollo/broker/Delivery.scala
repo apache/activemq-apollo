@@ -22,7 +22,7 @@ import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
 import org.apache.activemq.apollo.broker.store.StoreUOW
 import org.apache.activemq.apollo.util.Log
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 
 object DeliveryProducer extends Log
 
@@ -175,7 +175,7 @@ class Delivery {
    * After the store persists the message he may be able to supply us with  locator handle
    * which will load the message faster than looking it up via the store key.
    */
-  var storeLocator:AtomicLong = null
+  var storeLocator:AtomicReference[Array[Byte]] = null
 
   /**
    * The transaction the delivery is participating in.

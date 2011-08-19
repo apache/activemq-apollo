@@ -139,7 +139,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head, new AtomicLong())(cb) )
+    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head, null)(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
     }

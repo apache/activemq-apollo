@@ -23,7 +23,7 @@ import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
 import util.continuations._
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -162,7 +162,7 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
             } else {
               copy.uow.retain
             }
-            copy.storeLocator = new AtomicLong()
+            copy.storeLocator = new AtomicReference[Array[Byte]]()
             copy.storeKey = copy.uow.store(copy.createMessageRecord)
           }
 

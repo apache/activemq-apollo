@@ -28,7 +28,8 @@ import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseReta
 import OptionSupport._
 import security.SecurityContext
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
-import java.util.concurrent.atomic.{AtomicLong, AtomicReference, AtomicInteger}
+import java.util.concurrent.atomic.{AtomicReference, AtomicLong, AtomicInteger}
+import org.fusesource.hawtbuf.Buffer
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -829,7 +830,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    state = new Swapped(qer.message_key, new AtomicLong(qer.message_locator), qer.size, qer.expiration)
+    val locator = new AtomicReference[Array[Byte]](Option(qer.message_locator).map(_.toByteArray).getOrElse(null))
+    state = new Swapped(qer.message_key, locator, qer.size, qer.expiration)
     this
   }
 
@@ -888,7 +890,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     qer.queue_key = queue.store_id
     qer.entry_seq = seq
     qer.message_key = state.message_key
-    qer.message_locator = Option(state.message_locator).map(_.get).getOrElse(0)
+    qer.message_locator = Option(state.message_locator).flatMap(x=> Option(x.get)).map(new Buffer(_)).getOrElse(null)
     qer.size = state.size
     qer.expiration = expiration
     qer
@@ -979,7 +981,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      */
     def message_key = -1L
 
-    def message_locator: AtomicLong = null
+    def message_locator: AtomicReference[Array[Byte]] = null
 
     /**
      * Attempts to dispatch the current entry to the subscriptions position at the entry.
@@ -1148,7 +1150,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
               delivery.uow = queue.virtual_host.store.create_uow
               val uow = delivery.uow
-              delivery.storeLocator = new AtomicLong()
+              delivery.storeLocator = new AtomicReference[Array[Byte]]()
               delivery.storeKey = uow.store(delivery.createMessageRecord )
               store
               if( asap ) {
@@ -1330,7 +1332,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicLong, override val size:Int, override val expiration:Long) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Array[Byte]], override val size:Int, override val expiration:Long) extends EntryState {
 
     queue.individual_swapped_items += 1
 

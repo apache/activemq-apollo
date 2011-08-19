@@ -165,7 +165,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
   load_source.resume
 
 
-  def load_message(messageKey: Long, locator:AtomicLong)(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long, locator:AtomicReference[Array[Byte]])(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, { (result)=>
         end()

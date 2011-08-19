@@ -29,7 +29,7 @@ class QueueEntryRecord {
   var queue_key = 0L
   var entry_seq = 0L
   var message_key = 0L
-  var message_locator = 0L
+  var message_locator:Buffer = _
   var attachment:Buffer = _
   var size = 0
   var expiration = 0L
