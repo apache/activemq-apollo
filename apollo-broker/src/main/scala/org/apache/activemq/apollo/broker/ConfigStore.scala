@@ -21,9 +21,9 @@ import security.EncryptionSupport
 import org.apache.activemq.apollo.util._
 import FileSupport._
 import java.util.Properties
-import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import java.io.{InputStream, FileInputStream, File}
 import javax.xml.bind.{ValidationEvent, ValidationEventHandler}
+import org.apache.activemq.apollo.dto.{NullStoreDTO, XmlCodec, BrokerDTO}
 
 /**
  * <p>
@@ -42,7 +42,7 @@ object ConfigStore {
   }
 
   def load(is: => InputStream, prop:Properties, func: (String)=>Unit):BrokerDTO = {
-    XmlCodec.decode(classOf[BrokerDTO], is, prop, new ValidationEventHandler(){
+    val rc = XmlCodec.decode(classOf[BrokerDTO], is, prop, new ValidationEventHandler(){
         def handleEvent(event: ValidationEvent): Boolean = {
           val level = event.getSeverity match {
             case 0=> "warning"
@@ -53,6 +53,13 @@ object ConfigStore {
           true
         }
     })
+    import collection.JavaConversions._
+    for( host <- rc.virtual_hosts ) {
+      if( host.store == null ) {
+        func("error: virtual host '%s' does not have valid store configured".format(host.id))
+      }
+    }
+    rc
   }
 
   def config_properties(file:File): Properties = {

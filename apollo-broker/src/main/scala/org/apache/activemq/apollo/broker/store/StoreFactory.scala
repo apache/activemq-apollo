@@ -16,8 +16,8 @@ package org.apache.activemq.apollo.broker.store
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.dto.StoreDTO
 import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.dto.{NullStoreDTO, StoreDTO}
 
 /**
  * <p>
@@ -33,17 +33,17 @@ object StoreFactory {
 
   val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index", classOf[Provider])
 
-  def create(config:StoreDTO):Store = {
-    if( config == null ) {
-      return null
-    }
-    providers.singletons.foreach { provider=>
-      val rc = provider.create(config)
-      if( rc!=null ) {
-        return rc
+  def create(config:StoreDTO):Store = config match {
+    case null => null
+    case config:NullStoreDTO => null
+    case _ =>
+      providers.singletons.foreach { provider=>
+        val rc = provider.create(config)
+        if( rc!=null ) {
+          return rc
+        }
       }
-    }
-    throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
+      throw new IllegalArgumentException("Uknonwn store type: "+config.getClass)
   }
 
 }

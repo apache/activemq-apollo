@@ -21,9 +21,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Placeholder implementation fo a StoreDTO since JAXB
- * seems to fail with:
- * "Type <...> or any of its subclasses are not known to this context."
+ * The null store is used when you do NOT want to persistently
+ * store any of the messages.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */

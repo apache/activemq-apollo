@@ -87,18 +87,18 @@ class Run extends Action {
         broker.config = ConfigStore.load(conf, validation_messages += _)
       } finally {
         if( !validation_messages.isEmpty && broker.config.validation != "hide") {
-          println("")
-          println("Broker configuration file failed the following validations:")
+          Broker.warn("")
+          Broker.warn("Broker configuration file failed the following validations:")
           validation_messages.foreach{ v =>
-            println("")
-            println("  "+v)
+            Broker.warn("")
+            Broker.warn("  "+v)
           }
-          println("")
+          Broker.warn("")
         }
       }
 
       if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
-        session.getConsole.println("Strict validation was configured, shutting down")
+        Broker.error("Strict validation was configured, shutting down")
         return null
       }
 

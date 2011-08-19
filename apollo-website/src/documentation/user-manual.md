@@ -95,6 +95,7 @@ single connector.
 
   <virtual_host id="default">
     <host_name>localhost</host_name>
+    <null_store/>
   </virtual_host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613"/>
@@ -105,8 +106,7 @@ single connector.
 The broker, virtual host, and connector are assigned an id which which
 is used to by the REST based administration console to identify 
 the corresponding runtime resource.  The virtual host will not persist
-any messages sent to it since it does not have a configured messages 
-store.
+any messages sent to it since it is using the `null_store`.
 
 Brokers can be configured with multiple virtual hosts and connectors.
 
