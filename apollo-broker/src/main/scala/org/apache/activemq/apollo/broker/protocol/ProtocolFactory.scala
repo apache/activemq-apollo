@@ -23,6 +23,11 @@ import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
 
+trait ProtocolFactory {
+  def create():Protocol
+  def create(config:String):Protocol
+}
+
 /**
  * <p>
  * </p>
@@ -31,15 +36,10 @@ import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
  */
 object ProtocolFactory {
 
-  trait Provider {
-    def create():Protocol
-    def create(config:String):Protocol
-  }
-
-  val provider = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index",classOf[Provider])
+  val finder = new ClassFinder[ProtocolFactory]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index",classOf[ProtocolFactory])
 
   def get(name:String):Option[Protocol] = {
-    provider.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val rc = provider.create(name)
       if( rc!=null ) {
         return Some(rc)

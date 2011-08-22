@@ -51,7 +51,7 @@ class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   }
 }
 
-class StompProtocolFactory extends ProtocolFactory.Provider {
+class StompProtocolFactory extends ProtocolFactory {
 
   def create() = StompProtocol
 

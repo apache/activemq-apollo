@@ -34,9 +34,9 @@ import org.apache.activemq.apollo.transport.ProtocolCodec.BufferState
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class AnyProtocolFactory extends ProtocolFactory.Provider {
+class AnyProtocolFactory extends ProtocolFactory {
 
-  def all_protocols: Array[Protocol] = ((ProtocolFactory.provider.singletons.map(_.create())).filter(_.isIdentifiable)).toArray
+  def all_protocols: Array[Protocol] = ((ProtocolFactory.finder.singletons.map(_.create())).filter(_.isIdentifiable)).toArray
 
   def create() = {
     new AnyProtocol(()=>all_protocols)

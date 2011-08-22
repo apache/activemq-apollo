@@ -25,7 +25,7 @@ import java.lang.String
 import XmlCodec._
 import org.apache.activemq.apollo.util._
 
-class XmlBrokerFactory extends BrokerFactory.Provider {
+class XmlBrokerFactory extends BrokerFactory {
 
   def createBroker(value: String): Broker = {
     try {

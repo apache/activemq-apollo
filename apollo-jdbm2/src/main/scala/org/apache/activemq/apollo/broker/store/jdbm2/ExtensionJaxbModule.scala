@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.broker.store.bdb
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,11 +14,13 @@ package org.apache.activemq.apollo.broker.store.bdb
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.util.Module
+package org.apache.activemq.apollo.broker.store.jdbm2
+
+import org.apache.activemq.apollo.util.JaxbModule
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ExtensionModule extends Module {
-  override def xml_packages = Array("org.apache.activemq.apollo.broker.store.bdb.dto")
+class ExtensionJaxbModule extends JaxbModule {
+  def xml_package = "org.apache.activemq.apollo.broker.store.jdbm2.dto"
 }

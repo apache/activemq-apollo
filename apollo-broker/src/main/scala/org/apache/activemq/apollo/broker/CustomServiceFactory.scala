@@ -19,6 +19,10 @@ package org.apache.activemq.apollo.broker
 import org.apache.activemq.apollo.dto.CustomServiceDTO
 import org.apache.activemq.apollo.util.{Log, Service, ClassFinder}
 
+trait CustomServiceFactory {
+  def create(broker:Broker, dto:CustomServiceDTO):Service
+}
+
 /**
  * <p>
  * </p>
@@ -27,17 +31,13 @@ import org.apache.activemq.apollo.util.{Log, Service, ClassFinder}
  */
 object CustomServiceFactory {
 
-  trait Provider {
-    def create(broker:Broker, dto:CustomServiceDTO):Service
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/custom-service-factory.index",classOf[Provider])
+  val finder = new ClassFinder[CustomServiceFactory]("META-INF/services/org.apache.activemq.apollo/custom-service-factory.index",classOf[CustomServiceFactory])
 
   def create(broker:Broker, dto:CustomServiceDTO):Service = {
     if( dto == null ) {
       return null
     }
-    providers.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val service = provider.create(broker, dto)
       if( service!=null ) {
         return service;
@@ -48,7 +48,7 @@ object CustomServiceFactory {
 
 }
 
-object ReflectiveCustomServiceFactory extends CustomServiceFactory.Provider with Log {
+object ReflectiveCustomServiceFactory extends CustomServiceFactory with Log {
 
   def create(broker: Broker, dto: CustomServiceDTO): Service = {
     if( dto.getClass != classOf[CustomServiceDTO] ) {

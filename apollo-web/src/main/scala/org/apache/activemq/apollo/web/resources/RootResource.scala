@@ -18,39 +18,23 @@ package org.apache.activemq.apollo.web.resources
 
 import javax.ws.rs._
 import core.Response.Status._
-import core.{Response, UriInfo, Context}
-import org.apache.activemq.apollo.util.ModuleRegistry
-import collection.mutable.HashMap
+import core.Response
 import javax.servlet.http.HttpServletRequest
 import com.sun.jersey.server.impl.ThreadLocalInvoker
+import org.apache.activemq.apollo.web.WebModule
 
-object RootResource {
-
-  // Load up all extension module web resources..
-  val web_resources:Map[String, ()=>AnyRef] = {
-    val rc = HashMap[String, ()=>AnyRef]()
-    for (m <- ModuleRegistry.singletons ) {
-      m.web_resources.foreach { case (key,value) =>
-        rc.put(key, value)
-      }
-    }
-    rc.toMap
-  }
-
-}
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @Path("/")
 case class RootResource() extends Resource() {
-
-  import RootResource._
+  import WebModule._
 
   @GET
   @Produces(Array("application/json", "application/xml","text/xml","text/html"))
   def post_connection_shutdown_and_redirect() = {
-    Response.seeOther(strip_resolve("broker")).build
+    Response.seeOther(strip_resolve(root_redirect)).build
   }
 
   @Path("{name}")

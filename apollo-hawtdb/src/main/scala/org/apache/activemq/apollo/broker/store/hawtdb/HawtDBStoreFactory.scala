@@ -33,7 +33,7 @@ import org.apache.activemq.apollo.util._
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStoreFactory extends StoreFactory.Provider {
+class HawtDBStoreFactory extends StoreFactory {
 
   def create(config: StoreDTO) = config match {
     case config:HawtDBStoreDTO => new HawtDBStore(config)

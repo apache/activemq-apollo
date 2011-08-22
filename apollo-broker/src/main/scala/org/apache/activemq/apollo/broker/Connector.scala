@@ -48,6 +48,10 @@ trait Connector extends BaseService {
   def status:ServiceStatusDTO
 }
 
+trait ConnectorFactory {
+  def create(broker:Broker, dto:ConnectorTypeDTO):Connector
+}
+
 /**
  * <p>
  * </p>
@@ -56,17 +60,13 @@ trait Connector extends BaseService {
  */
 object ConnectorFactory {
 
-  trait Provider {
-    def create(broker:Broker, dto:ConnectorTypeDTO):Connector
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/connector-factory.index",classOf[Provider])
+  val finder = new ClassFinder[ConnectorFactory]("META-INF/services/org.apache.activemq.apollo/connector-factory.index",classOf[ConnectorFactory])
 
   def create(broker:Broker, dto:ConnectorTypeDTO):Connector = {
     if( dto == null ) {
       return null
     }
-    providers.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val connector = provider.create(broker, dto)
       if( connector!=null ) {
         return connector;
@@ -76,7 +76,7 @@ object ConnectorFactory {
   }
 }
 
-object AcceptingConnectorFactory extends ConnectorFactory.Provider with Log {
+object AcceptingConnectorFactory extends ConnectorFactory with Log {
 
   def create(broker: Broker, dto: ConnectorTypeDTO): Connector = dto match {
     case dto:AcceptingConnectorDTO =>

@@ -14,20 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.filter;
+package org.apache.activemq.apollo.broker.store.bdb
 
-import org.apache.activemq.apollo.util.Module;
+import org.apache.activemq.apollo.util.JaxbModule
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ExtensionModule extends Module {
-
-    public String name() {
-        return "apollo-selector";
-    }
-
+class ExtensionJaxbModule extends JaxbModule {
+  def xml_package = "org.apache.activemq.apollo.broker.store.bdb.dto"
 }

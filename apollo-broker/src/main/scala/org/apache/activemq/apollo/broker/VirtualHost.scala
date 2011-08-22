@@ -33,6 +33,10 @@ import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
 import org.apache.activemq.apollo.dto._
 import store.{PersistentLongCounter, ZeroCopyBufferAllocator, Store, StoreFactory}
 
+trait VirtualHostFactory {
+  def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
+}
+
 /**
  * <p>
  * </p>
@@ -41,17 +45,13 @@ import store.{PersistentLongCounter, ZeroCopyBufferAllocator, Store, StoreFactor
  */
 object VirtualHostFactory {
 
-  trait Provider {
-    def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/virtual-host-factory.index",classOf[Provider])
+  val finder = new ClassFinder[VirtualHostFactory]("META-INF/services/org.apache.activemq.apollo/virtual-host-factory.index",classOf[VirtualHostFactory])
 
   def create(broker:Broker, dto:VirtualHostDTO):VirtualHost = {
     if( dto == null ) {
       return null
     }
-    providers.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val connector = provider.create(broker, dto)
       if( connector!=null ) {
         return connector;
@@ -61,7 +61,7 @@ object VirtualHostFactory {
   }
 }
 
-object DefaultVirtualHostFactory extends VirtualHostFactory.Provider with Log {
+object DefaultVirtualHostFactory extends VirtualHostFactory with Log {
 
   def create(broker: Broker, dto: VirtualHostDTO): VirtualHost = dto match {
     case dto:VirtualHostDTO =>

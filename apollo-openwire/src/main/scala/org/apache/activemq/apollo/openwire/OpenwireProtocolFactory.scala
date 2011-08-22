@@ -30,7 +30,7 @@ import org.fusesource.hawtbuf.Buffer
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object OpenwireProtocolFactory extends ProtocolFactory.Provider {
+object OpenwireProtocolFactory extends ProtocolFactory {
 
   def create() = OpenwireProtocol
 

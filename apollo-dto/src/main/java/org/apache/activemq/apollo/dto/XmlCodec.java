@@ -17,8 +17,7 @@
 package org.apache.activemq.apollo.dto;
 
 import org.apache.activemq.apollo.util.ClassFinder;
-import org.apache.activemq.apollo.util.Module;
-import org.apache.activemq.apollo.util.ModuleRegistry;
+import org.apache.activemq.apollo.util.JaxbModule$;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
@@ -90,15 +89,8 @@ public class XmlCodec {
     }
 
     private static JAXBContext createContext() throws JAXBException {
-        HashSet<String> names = new HashSet<String>();
-        for( Module m: ModuleRegistry.jsingletons()) {
-            for( String p:m.xml_packages() ) {
-                names.add(p);
-            }
-        }
-
         String packages = "";
-        for ( String p : names) {
+        for ( String p : JaxbModule$.MODULE$.packages()) {
             if( packages.length() !=0 ) {
                 packages += ":";
             }

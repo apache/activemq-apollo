@@ -19,6 +19,10 @@ package org.apache.activemq.apollo.broker.store
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.dto.{NullStoreDTO, StoreDTO}
 
+trait StoreFactory {
+  def create(config:StoreDTO):Store
+}
+
 /**
  * <p>
  * </p>
@@ -27,17 +31,13 @@ import org.apache.activemq.apollo.dto.{NullStoreDTO, StoreDTO}
  */
 object StoreFactory {
 
-  trait Provider {
-    def create(config:StoreDTO):Store
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/store-factory.index", classOf[Provider])
+  val finder = new ClassFinder[StoreFactory]("META-INF/services/org.apache.activemq.apollo/store-factory.index", classOf[StoreFactory])
 
   def create(config:StoreDTO):Store = config match {
     case null => null
     case config:NullStoreDTO => null
     case _ =>
-      providers.singletons.foreach { provider=>
+      finder.singletons.foreach { provider=>
         val rc = provider.create(config)
         if( rc!=null ) {
           return rc

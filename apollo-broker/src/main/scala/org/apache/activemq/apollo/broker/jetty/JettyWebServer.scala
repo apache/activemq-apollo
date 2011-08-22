@@ -40,7 +40,7 @@ import java.lang.String
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object JettyWebServerFactory extends WebServerFactory.Provider {
+object JettyWebServerFactory extends WebServerFactory {
 
   // Enabled this factory if we can load the jetty classes.
   val enabled = try {

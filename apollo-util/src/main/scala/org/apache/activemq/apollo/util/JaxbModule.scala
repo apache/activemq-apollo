@@ -16,41 +16,26 @@
  */
 package org.apache.activemq.apollo.util
 
-import java.lang.String
-import scala.collection.mutable.ListBuffer
-
-object Module {
-  val MODULE_INDEX_RESOURCE: String = "META-INF/services/org.apache.activemq.apollo/modules.index"
-}
-import Module._
-
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class Module {
-  def xml_packages:Array[String] = Array()
-  def web_resources:Map[String, ()=>AnyRef] = Map()
+trait JaxbModule {
+  def xml_package:String
 }
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object ModuleRegistry {
+object JaxbModule {
 
-  val finder = new ClassFinder[Module](MODULE_INDEX_RESOURCE,classOf[Module])
+  val finder = new ClassFinder[JaxbModule]("META-INF/services/org.apache.activemq.apollo/jaxb-module.index",classOf[JaxbModule])
+  val packages = finder.singletons.map(_.xml_package).toArray
 
-  def singletons = finder.singletons
-  def jsingletons = finder.jsingletons
-
-  private val listeners = ListBuffer[Runnable]()
-
-  finder.on_change = ()=> {
-    val copy = this.synchronized {
-      listeners.toArray
-    }
-    copy.foreach { listener=>
-      listener.run
-    }
-  }
 }
 

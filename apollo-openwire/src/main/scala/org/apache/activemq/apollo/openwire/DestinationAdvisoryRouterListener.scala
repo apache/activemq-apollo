@@ -34,7 +34,7 @@ import org.fusesource.hawtdispatch._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object DestinationAdvisoryRouterListenerFactory extends RouterListenerFactory.Provider {
+object DestinationAdvisoryRouterListenerFactory extends RouterListenerFactory {
   def create(router: Router) = new DestinationAdvisoryRouterListener(router)
 }
 

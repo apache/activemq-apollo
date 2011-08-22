@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.broker.store.hawtdb
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,11 +14,18 @@ package org.apache.activemq.apollo.broker.store.hawtdb
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.util.Module
+package org.apache.activemq.apollo.dto;
+
+import org.apache.activemq.apollo.util.JaxbModule;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ExtensionModule extends Module {
-  override def xml_packages = Array("org.apache.activemq.apollo.broker.store.hawtdb.dto")
+public class PrimaryJaxbModule implements JaxbModule {
+    public String xml_package() {
+        return "org.apache.activemq.apollo.dto";
+    }
 }

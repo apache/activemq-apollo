@@ -29,6 +29,10 @@ trait WebServer extends Service {
   def update(on_complete:Runnable):Unit
 }
 
+trait WebServerFactory {
+  def create(broker:Broker):WebServer
+}
+
 /**
  * <p>
  * </p>
@@ -37,17 +41,13 @@ trait WebServer extends Service {
  */
 object WebServerFactory {
 
-  trait Provider {
-    def create(broker:Broker):WebServer
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index",classOf[Provider])
+  val finder = new ClassFinder[WebServerFactory]("META-INF/services/org.apache.activemq.apollo/web-server-factory.index",classOf[WebServerFactory])
 
   def create(broker:Broker):WebServer = {
     if( broker == null ) {
       return null
     }
-    providers.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val rc = provider.create(broker)
       if( rc!=null ) {
         return rc

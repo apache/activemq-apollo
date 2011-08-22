@@ -24,7 +24,11 @@ import org.apache.activemq.apollo.util.path.Path
 import java.lang.String
 import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
 import Buffer._
-import javax.management.remote.rmi._RMIConnection_Stub
+
+trait BindingFactory {
+  def create(binding_kind:AsciiBuffer, binding_data:Buffer):Binding
+  def create(binding_dto:DestinationDTO):Binding
+}
 
 /**
  * <p>
@@ -32,17 +36,12 @@ import javax.management.remote.rmi._RMIConnection_Stub
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object QueueBinding {
+object BindingFactory {
 
-  trait Provider {
-    def create(binding_kind:AsciiBuffer, binding_data:Buffer):QueueBinding
-    def create(binding_dto:DestinationDTO):QueueBinding
-  }
+  val finder = new ClassFinder[BindingFactory]("META-INF/services/org.apache.activemq.apollo/binding-factory.index",classOf[BindingFactory])
 
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/binding-factory.index",classOf[Provider])
-
-  def create(binding_kind:AsciiBuffer, binding_data:Buffer):QueueBinding = {
-    providers.singletons.foreach { provider=>
+  def create(binding_kind:AsciiBuffer, binding_data:Buffer):Binding = {
+    finder.singletons.foreach { provider=>
       val rc = provider.create(binding_kind, binding_data)
       if( rc!=null ) {
         return rc
@@ -50,8 +49,8 @@ object QueueBinding {
     }
     throw new IllegalArgumentException("Invalid binding type: "+binding_kind);
   }
-  def create(binding_dto:DestinationDTO):QueueBinding = {
-    providers.singletons.foreach { provider=>
+  def create(binding_dto:DestinationDTO):Binding = {
+    finder.singletons.foreach { provider=>
       val rc = provider.create(binding_dto)
       if( rc!=null ) {
         return rc
@@ -68,7 +67,7 @@ object QueueBinding {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait QueueBinding {
+trait Binding {
 
   /**
    * The name of the queue (could be the queue name or a subscription id etc)
@@ -98,7 +97,7 @@ trait QueueBinding {
   override def toString: String = id
 }
 
-object QueueDomainQueueBinding extends QueueBinding.Provider {
+object QueueDomainQueueBinding extends BindingFactory {
 
   val POINT_TO_POINT_KIND = new AsciiBuffer("ptp")
   val DESTINATION_PATH = new AsciiBuffer("default");
@@ -137,7 +136,7 @@ object QueueDomainQueueBinding extends QueueBinding.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDestinationDTO) extends QueueBinding {
+class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDestinationDTO) extends Binding {
 
   import QueueDomainQueueBinding._
 
@@ -167,7 +166,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
 }
 
 
-object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
+object DurableSubscriptionQueueBinding extends BindingFactory {
 
   val DURABLE_SUB_KIND = new AsciiBuffer("ds")
 
@@ -213,7 +212,7 @@ object DurableSubscriptionQueueBinding extends QueueBinding.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionDestinationDTO) extends QueueBinding {
+class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionDestinationDTO) extends Binding {
   import DurableSubscriptionQueueBinding._
 
   val destination = LocalRouter.destination_parser.decode_path(binding_dto.path)
@@ -251,7 +250,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
 }
 
 
-object TempQueueBinding extends QueueBinding.Provider {
+object TempQueueBinding extends BindingFactory {
   val TEMP_DATA = new AsciiBuffer("")
   val TEMP_KIND = new AsciiBuffer("tmp")
   val TEMP_DTO = null
@@ -273,7 +272,7 @@ object TempQueueBinding extends QueueBinding.Provider {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class TempQueueBinding(val key:AnyRef, val id:String) extends QueueBinding {
+class TempQueueBinding(val key:AnyRef, val id:String) extends Binding {
   import TempQueueBinding._
 
   def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress.toString).getOrElse("known") )

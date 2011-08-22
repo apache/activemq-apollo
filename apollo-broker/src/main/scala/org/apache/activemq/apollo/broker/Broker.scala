@@ -42,19 +42,26 @@ import org.fusesource.hawtdispatch.TaskTracker._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+trait BrokerFactory {
+  def createBroker(brokerURI:String):Broker
+}
+
+/**
+ * <p>
+ * The BrokerFactory creates Broker objects from a URI.
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object BrokerFactory {
 
-  trait Provider {
-    def createBroker(brokerURI:String):Broker
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[Provider])
+  val finder = new ClassFinder[BrokerFactory]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[BrokerFactory])
 
   def createBroker(uri:String):Broker = {
     if( uri == null ) {
       return null
     }
-    providers.singletons.foreach { provider=>
+    finder.singletons.foreach { provider=>
       val broker = provider.createBroker(uri)
       if( broker!=null ) {
         return broker;

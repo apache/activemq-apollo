@@ -29,7 +29,7 @@ import org.apache.activemq.apollo.util._
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class JDBM2StoreFactory extends StoreFactory.Provider {
+class JDBM2StoreFactory extends StoreFactory {
 
   def create(config: StoreDTO) = config match {
     case config:JDBM2StoreDTO =>

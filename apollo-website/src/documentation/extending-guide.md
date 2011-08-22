@@ -23,17 +23,17 @@ Example module class:
 
 {pygmentize:: scala}
 package org.example
-import org.apache.activemq.apollo.util.Module
+import org.apache.activemq.apollo.util.JaxbModule
 
-class ExtensionModule extends Module {
-  override def xml_packages = Array("org.example.dto")
+class ExtensionJaxbModule extends JaxbModule {
+  def xml_package = "org.example.dto"
 }
 {pygmentize}
 
 
-Example `META-INF/services/org.apache.activemq.apollo/modules.index` resource:
+Example `META-INF/services/org.apache.activemq.apollo/jaxb-module.index` resource:
 
-    org.example.ExtensionModule
+    org.example.ExtensionJaxbModule
 
 ### Plugging into the Broker Lifecycle
 

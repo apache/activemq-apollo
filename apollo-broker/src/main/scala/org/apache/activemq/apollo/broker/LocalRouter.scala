@@ -47,6 +47,11 @@ trait RouterListener {
 
   def close
 }
+
+trait RouterListenerFactory {
+  def create(router:Router):RouterListener
+}
+
 /**
  * <p>
  * </p>
@@ -55,14 +60,10 @@ trait RouterListener {
  */
 object RouterListenerFactory {
 
-  trait Provider {
-    def create(router:Router):RouterListener
-  }
-
-  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/router-listener-factory.index",classOf[Provider])
+  val finder = new ClassFinder[RouterListenerFactory]("META-INF/services/org.apache.activemq.apollo/router-listener-factory.index",classOf[RouterListenerFactory])
 
   def create(router:Router):List[RouterListener] = {
-    providers.singletons.map(_.create(router))
+    finder.singletons.map(_.create(router))
   }
 }
 
@@ -361,7 +362,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def get_or_create_durable_subscription(destination:DurableSubscriptionDestinationDTO):Queue = {
       val key = destination.subscription_id
       durable_subscriptions_by_id.get( key ).getOrElse {
-        val queue = _create_queue(QueueBinding.create(destination))
+        val queue = _create_queue(BindingFactory.create(destination))
         durable_subscriptions_by_id.put(key, queue)
         queue
       }
@@ -562,7 +563,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
               // We may need to update the bindings...
               if( queue.destination_dto != destination) {
 
-                val binding = QueueBinding.create(destination)
+                val binding = BindingFactory.create(destination)
                 if( queue.tune_persistent && queue.store_id == -1 ) {
 
                   val record = new QueueRecord
@@ -586,7 +587,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
               }
               queue
             case None =>
-              _create_queue(QueueBinding.create(destination))
+              _create_queue(BindingFactory.create(destination))
           }
 
 
@@ -865,7 +866,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           destination.subscription_id = dto.id
           destination.path = Arrays.asList(destination_parser.parts(dto.topic) : _ *)
           destination.selector = dto.selector
-          _create_queue(QueueBinding.create(destination))
+          _create_queue(BindingFactory.create(destination))
         }
 
       }
@@ -890,7 +891,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
                     // avoid blocking producers.
                     virtual_host.store.remove_queue(queue_key){x=> task.run}
                   } else {
-                    var binding = QueueBinding.create(record.binding_kind, record.binding_data)
+                    var binding = BindingFactory.create(record.binding_kind, record.binding_data)
                     if( binding.binding_dto.temp_owner != null ) {
                       // These are the temp queues clients create.
                       virtual_host.store.remove_queue(queue_key){x=> task.run}
@@ -1116,14 +1117,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   //
   /////////////////////////////////////////////////////////////////////////////
 
-  var queues_by_binding = LinkedHashMap[QueueBinding, Queue]()
+  var queues_by_binding = LinkedHashMap[Binding, Queue]()
   var queues_by_id = LinkedHashMap[String, Queue]()
 
   /**
    * Gets an existing queue.
    */
   def get_queue(dto:DestinationDTO) = dispatch_queue ! {
-    queues_by_binding.get(QueueBinding.create(dto))
+    queues_by_binding.get(BindingFactory.create(dto))
   }
 
   /**
@@ -1134,7 +1135,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
 
-  def _create_queue(binding:QueueBinding, id:Long= -1):Queue = {
+  def _create_queue(binding:Binding, id:Long= -1):Queue = {
 
     var qid = id
     if( qid == -1 ) {
@@ -1175,7 +1176,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   def destroy_queue(dto:DestinationDTO, security:SecurityContext) = dispatch_queue ! { _destroy_queue(dto, security) }
 
   def _destroy_queue(dto:DestinationDTO, security:SecurityContext):Option[String] = {
-    queues_by_binding.get(QueueBinding.create(dto)) match {
+    queues_by_binding.get(BindingFactory.create(dto)) match {
       case Some(queue) =>
         _destroy_queue(queue, security)
       case None =>
