@@ -42,6 +42,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class QueueMetricsDTO {
 
     /**
+     * The current time on the broker machine.  In milliseconds since the epoch.
+     */
+	@XmlAttribute(name="current_time")
+	public long current_time;
+
+    /**
      * The number of messages that have been added to the queue.
      * This includes any messages which were recovered from
      * persistent storage when the broker was first started.

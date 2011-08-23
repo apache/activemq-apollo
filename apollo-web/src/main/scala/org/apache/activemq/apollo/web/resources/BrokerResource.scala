@@ -154,17 +154,12 @@ case class BrokerResource() extends Resource {
   @GET
   @Path("queue-metrics")
   def get_queue_metrics(): AggregateQueueMetricsDTO = {
-    with_broker { broker =>
+    val rc:AggregateQueueMetricsDTO = with_broker { broker =>
       monitoring(broker) {
         get_queue_metrics(broker)
       }
     }
-  }
-
-  @GET @Path("virtual-hosts")
-  def virtualHosts = {
-    val rc = new StringListDTO
-    rc.items = get_broker.virtual_hosts
+    rc.current_time = System.currentTimeMillis()
     rc
   }
 
@@ -230,40 +225,65 @@ case class BrokerResource() extends Resource {
   }
 
 
-  @GET @Path("virtual-hosts/{id}")
-  def virtual_host(@PathParam("id") id : String):VirtualHostStatusDTO = {
-    with_virtual_host(id) { host =>
-      monitoring(host) {
-        val result = new VirtualHostStatusDTO
-        result.id = host.id
-        result.state = host.service_state.toString
-        result.state_since = host.service_state.since
-        result.store = host.store!=null
+  @GET @Path("virtual-hosts")
+  @Produces(Array("application/json"))
+  def virtual_host(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
+                  @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
-        val router:LocalRouter = host
-
-        router.queue_domain.destinations.foreach { node=>
-          result.queues.add(node.id)
+    with_broker { broker =>
+      monitoring(broker) {
+        val records = broker.virtual_hosts.values.map { value =>
+          Success(status(value))
         }
-        router.topic_domain.destinations.foreach { node=>
-          result.topics.add(node.id)
-        }
-        router.topic_domain.durable_subscriptions_by_id.keys.foreach { id=>
-          result.dsubs.add(id)
-        }
-
-        result
+        FutureResult(narrow(classOf[VirtualHostStatusDTO], records, f, q, p, ps, o))
       }
     }
   }
 
+  @GET @Path("virtual-hosts/{id}")
+  def virtual_host(@PathParam("id") id : String):VirtualHostStatusDTO = {
+    with_virtual_host(id) { host =>
+      monitoring(host) {
+        status(host)
+      }
+    }
+  }
+
+  def status(host: VirtualHost): VirtualHostStatusDTO = {
+    val result = new VirtualHostStatusDTO
+    result.id = host.id
+    result.state = host.service_state.toString
+    result.state_since = host.service_state.since
+    result.store = host.store != null
+    result.host_names = host.config.host_names
+
+    val router: LocalRouter = host
+
+    router.queue_domain.destinations.foreach { node =>
+      result.queues.add(node.id)
+    }
+    result.queue_count = result.queues.size()
+    router.topic_domain.destinations.foreach { node =>
+      result.topics.add(node.id)
+    }
+    result.topic_count = result.topics.size()
+    router.topic_domain.durable_subscriptions_by_id.keys.foreach { id =>
+      result.dsubs.add(id)
+    }
+    result.dsub_count = result.dsubs.size()
+
+    result
+  }
+
   @GET @Path("virtual-hosts/{id}/queue-metrics")
   def virtual_host_queue_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
-    with_virtual_host(id) { host =>
+    val rc:AggregateQueueMetricsDTO = with_virtual_host(id) { host =>
       monitoring(host) {
         get_queue_metrics(host)
       }
     }
+    rc.current_time = System.currentTimeMillis()
+    rc
   }
 
   @GET @Path("virtual-hosts/{id}/store")
@@ -299,6 +319,18 @@ case class BrokerResource() extends Resource {
     link
   }
 
+  class JosqlHelper {
+    def get(o:AnyRef, name:String):AnyRef = {
+      try {
+        o.getClass().getField(name).get(o)
+      } catch {
+        case e:Throwable =>
+          e.printStackTrace()
+          null
+      }
+    }
+  }
+
   def narrow[T](kind:Class[T], x:Iterable[Result[T, Throwable]], f:java.util.List[String], q:String, p:java.lang.Integer, ps:java.lang.Integer, o:java.util.List[String]) = {
     import collection.JavaConversions._
     try {
@@ -308,7 +340,8 @@ case class BrokerResource() extends Resource {
       val page = if( p !=null ) p.intValue() else 0
 
       val query = new Query
-      val fields = if (f.isEmpty) "*" else f.toList.mkString(",")
+      query.addFunctionHandler(new JosqlHelper)
+      val fields = if (f.isEmpty) "*" else f.toList.map("get(:_currobj, \""+_+"\")").mkString(",")
       val where_clause = if (q != null) q else "1=1"
 
       val orderby_clause = if (o.isEmpty) "" else " ORDER BY "+o.toList.mkString(",")
@@ -322,6 +355,8 @@ case class BrokerResource() extends Resource {
       val rc = new DataPageDTO
       rc.page = page
       rc.page_size = page_size
+
+
 
       def total_pages(x:Int,y:Int) = if(x==0) 1 else { x/y + (if ( x%y == 0 ) 0 else 1) }
       rc.total_pages = total_pages(query_result.getWhereResults.length, rc.page_size)
@@ -506,6 +541,7 @@ case class BrokerResource() extends Resource {
     rc.binding = q.binding.binding_dto
     rc.config = q.config
     rc.metrics = get_queue_metrics(q)
+    rc.metrics.current_time = System.currentTimeMillis()
 
     if( entries ) {
       var cur = q.head_entry
