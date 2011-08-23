@@ -53,7 +53,7 @@ public class VirtualHostStatusDTO extends ServiceStatusDTO {
     /**
      * The number of queues that exist on the virtual host
      */
-    @XmlAttribute(name="topic_count")
+    @XmlAttribute(name="queue_count")
     public int queue_count;
 
     /**
