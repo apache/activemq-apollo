@@ -38,6 +38,7 @@ import javax.management.openmbean.CompositeData
 import javax.management.remote.rmi._RMIConnection_Stub
 import org.josql.{QueryResults, Query}
 import java.util.Collections
+import java.util.regex.Pattern
 
 /**
  * <p>
@@ -322,14 +323,26 @@ case class BrokerResource() extends Resource {
   }
 
   class JosqlHelper {
+
     def get(o:AnyRef, name:String):AnyRef = {
-      try {
-        o.getClass().getField(name).get(o)
-      } catch {
-        case e:Throwable =>
-          e.printStackTrace()
-          null
+
+      def invoke(o:AnyRef, name:String):Option[AnyRef] = {
+        try {
+          if(name.endsWith("()")) {
+            Option(o.getClass().getMethod(name.stripSuffix("()")).invoke(o))
+          } else {
+            Option(o.getClass().getField(name).get(o))
+          }
+        } catch {
+          case e:Throwable =>
+            None
+        }
       }
+
+      var parts = name.split(Pattern.quote("."))
+      parts.foldLeft(Option(o)) { case(memo, field)=>
+        memo.flatMap(invoke(_, field))
+      }.getOrElse(null)
     }
   }
 
