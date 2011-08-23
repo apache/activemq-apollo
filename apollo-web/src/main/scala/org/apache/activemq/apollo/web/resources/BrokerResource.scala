@@ -198,6 +198,8 @@ case class BrokerResource() extends Resource {
       rc.swapped_in_size_max += q.swapped_in_size_max
       rc.producer_counter += q.producer_counter
       rc.consumer_counter += q.consumer_counter
+      rc.producer_count += q.producer_count
+      rc.consumer_count += q.consumer_count
 
       if( q.isInstanceOf[AggregateQueueMetricsDTO] ) {
         rc.queues += q.asInstanceOf[AggregateQueueMetricsDTO].queues
@@ -749,6 +751,9 @@ case class BrokerResource() extends Resource {
 
     rc.producer_counter = q.producer_counter
     rc.consumer_counter = q.consumer_counter
+
+    rc.producer_count = q.producers.size
+    rc.consumer_count = q.all_subscriptions.size
 
     rc
   }

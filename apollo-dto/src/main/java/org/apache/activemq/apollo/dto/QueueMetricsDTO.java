@@ -218,4 +218,19 @@ public class QueueMetricsDTO {
     @XmlAttribute(name="consumer_counter")
     public long consumer_counter;
 
+
+    /**
+     * The current number of producers attached to
+     * the queue.
+     */
+    @XmlAttribute(name="producer_count")
+    public long producer_count;
+
+    /**
+     * The current number of consumers attached to
+     * the queue.
+     */
+    @XmlAttribute(name="consumer_count")
+    public long consumer_count;
+
 }
