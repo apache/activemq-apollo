@@ -139,7 +139,7 @@ A `connector` element can be configured with the following attributes
   this connector will accept before it stops accepting additional
   connections.  If not set, then there is no limit.
 
-* `protocol` : Defaults to `multi` which means that any of the broker's 
+* `protocol` : Defaults to `any` which means that any of the broker's 
    supported protocols can connect via this transport.
 
 Furthermore, the connector element may contain protocol specific
@@ -180,11 +180,11 @@ settings used on the socket.  The supported parameters are:
 
 * `max_read_rate` : Sets the maximum bytes per second that this transport will
   receive data at.  This setting throttles reads so that the rate is not exceeded.
-  Defaults to 0 which disabled throttling.
+  Defaults to 0 which disables throttling.
 
 * `max_write_rate` : Sets the maximum bytes per second that this transport will
   send data at.  This setting throttles writes so that the rate is not exceeded.
-  Defaults to 0 which disabled throttling.
+  Defaults to 0 which disables throttling.
   
 Example which uses a couple of options:
 
@@ -243,32 +243,30 @@ A `queue` element may be configured with the following attributes:
 * `unified` : If set to true, then routing then there is no difference
   between sending to a queue or topic of the same name.  See the
   [Unified Destinations](#Unified_Destinations) documentation for more 
-  details.
+  details.  Defaults to false.
 
 * `queue_buffer` : The amount of memory buffer space allocated for each queue.
-
-* `producer_buffer` : The amount of memory buffer space allocated to each
-producer for receiving messages.
+   Defaults to 32k.
 
 * `consumer_buffer` : The amount of memory buffer space allocated to each
-subscription for receiving messages.
+subscription for receiving messages.  Defaults to 256k.
 
 * `persistent` : If set to false, then the queue will not persistently
-store it's message.
+store it's message.  Defaults to true.
 
 * `swap` : If set to false, then the queue will not swap messages out of 
-memory.
+memory.  Defaults to true.
 
-* `flush_range_size` : The number max number of flushed queue entries to load
+* `swap_range_size` : The number max number of flushed queue entries to load
   from the store at a time. Note that Flushed entires are just reference
   pointers to the actual messages. When not loaded, the batch is referenced
-  as sequence range to conserve memory.
+  as sequence range to conserve memory.  Defaults to 10000.
 
 * `quota` : The maximum amount of disk space the queue is allowed
-  to grow to.  If not set then there is no limit.  You can
+  to grow to.  If set to -1 then there is no limit.  You can
   use settings values like: `500mb` or `1g` just plain byte count
   like `1024000`.  Once the quota is Exceeded, the producers will
-  block until the usage decreases.
+  block until the usage decreases.  Defaults to no limit.
 
 ##### Topics
 
