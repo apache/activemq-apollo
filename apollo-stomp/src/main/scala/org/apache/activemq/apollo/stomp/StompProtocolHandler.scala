@@ -82,6 +82,7 @@ object StompProtocolHandler extends Log {
 class StompProtocolHandler extends ProtocolHandler {
   import StompProtocolHandler._
 
+  var connection_log:Log = StompProtocolHandler
   def protocol = "stomp"
 
   def decode_header(value:Buffer):String = {
@@ -556,9 +557,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
   private def die[T](msg:String, e:Throwable=null):T = {
     if( e!=null) {
-      debug(e, "Shutting connection down due to: "+msg)
+      connection_log.info(e, "STOMP connection '%s' error: %s", security_context.remote_address, msg)
     } else {
-      debug("Shutting connection down due to: "+msg)
+      connection_log.info("STOMP connection '%s' error: %s", security_context.remote_address, msg)
     }
     die((MESSAGE_HEADER, encode_header(msg))::Nil, "")
   }
@@ -585,6 +586,7 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   override def on_transport_connected() = {
+    connection_log = connection.connector.broker.connection_log
     sink_manager = new SinkMux[StompFrame]( connection.transport_sink.map {x=>
       trace("sending frame: %s", x)
       x
@@ -683,13 +685,11 @@ class StompProtocolHandler extends ProtocolHandler {
           }
 
         case _=>
-          warn("Internal Server Error: unexpected command type")
-          die("Internal Server Error");
+          die("Internal Server Error: unexpected command type");
       }
     }  catch {
       case e: Break =>
       case e:Exception =>
-        e.printStackTrace
         async_die("Internal Server Error", e);
     }
   }
@@ -815,13 +815,25 @@ class StompProtocolHandler extends ProtocolHandler {
         noop
       } else {
         this.host=host
+        connection_log = host.connection_log
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspendRead("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
-            async_die("Authentication failed.")
+            var msg = if( security_context.user==null ) {
+              "Authentication failed."
+            } else {
+              "Authentication failed. Username: "+security_context.user
+            }
+            async_die(msg)
             noop // to make the cps compiler plugin happy.
           } else if( !host.authorizer.can_connect_to(security_context, host, connection.connector) ) {
-            async_die("Connect not authorized.")
+
+            var msg = if( security_context.user==null ) {
+              "Connect not authorized."
+            } else {
+              "Connect not authorized. Username: "+security_context.user
+            }
+            async_die(msg)
             noop // to make the cps compiler plugin happy.
           } else {
             resumeRead
@@ -1201,7 +1213,7 @@ class StompProtocolHandler extends ProtocolHandler {
   override def on_transport_failure(error: IOException) = {
     if( !connection.stopped ) {
       suspendRead("shutdown")
-      debug(error, "Shutting connection down due to: %s", error)
+      connection_log.debug(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       super.on_transport_failure(error);
     }
   }
