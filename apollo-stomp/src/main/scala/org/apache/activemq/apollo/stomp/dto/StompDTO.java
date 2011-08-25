@@ -41,6 +41,13 @@ public class StompDTO extends ProtocolDTO {
     @XmlElement(name="add_user_header")
     public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
 
+    /**
+     * If set, it will add the configured header name with the value
+     * set the a timestamp of when the message is recieved.
+     */
+    @XmlAttribute(name="add_timestamp_header")
+    public String add_timestamp_header;
+
     @XmlAttribute(name="max_header_length")
     public Integer max_header_length;
 

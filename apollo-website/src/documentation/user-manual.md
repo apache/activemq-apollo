@@ -969,6 +969,10 @@ following configuration attributes:
 * `add_user_header` :  Name of the header which will be added to every received 
   message received.  The value of the header will be set to the id of user that 
   sent the message.  Not set by default.
+* `add_timestamp_header` :  Name of the header which will be added to every received 
+  message received.  The value of the header will be set to the time the message
+  was received.  The time will be represented as the number of milliseconds elapsed
+  since the UNIX epoch in GMT.  Not set by default.
 * `max_header_length` : The maximum allowed length of a STOMP header. Defaults 
   to 10240 (10k).
 * `max_headers` : The maximum number of allowed headers in a frame.  Defaults 

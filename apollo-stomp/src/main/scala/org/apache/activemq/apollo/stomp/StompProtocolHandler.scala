@@ -938,6 +938,10 @@ class StompProtocolHandler extends ProtocolHandler {
       rc ::= (MESSAGE_ID -> msgid.ascii)
     }
 
+    if( config.add_timestamp_header!=null ) {
+      rc ::= (encode_header(config.add_timestamp_header), ascii(System.currentTimeMillis().toString()))
+    }
+
     // Do we need to add the user id?
     if( host.authenticator!=null ) {
       if( config.add_user_header!=null ) {
