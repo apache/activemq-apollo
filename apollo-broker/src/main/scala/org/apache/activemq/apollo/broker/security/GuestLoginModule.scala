@@ -74,7 +74,7 @@ class GuestLoginModule extends LoginModule {
       val callback = new NameCallback("Username: ")
       callback_handler.handle(Array(callback))
       if( callback.getName!=null && callback.getName.size>=0 ) {
-        throw new LoginException("User supplied a user name, not a guest")
+        return false;
       }
     } catch {
       case ioe: IOException =>
@@ -85,9 +85,7 @@ class GuestLoginModule extends LoginModule {
     try {
       val callback = new PasswordCallback("Password: ", false)
       callback_handler.handle(Array(callback))
-      if( callback.getPassword!=null && callback.getPassword.size>=0 ) {
-        throw new LoginException("User supplied a password, not a guest")
-      }
+      return false;
     } catch {
       case ioe: IOException =>
         throw new LoginException(ioe.getMessage())

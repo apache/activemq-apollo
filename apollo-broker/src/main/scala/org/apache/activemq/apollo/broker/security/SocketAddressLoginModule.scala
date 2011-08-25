@@ -128,7 +128,7 @@ class SocketAddressLoginModule extends LoginModule {
         }
     }
 
-    return true
+    return false
   }
 
   def matches(file:File, address:SocketAddress):Boolean = {

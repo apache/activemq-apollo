@@ -96,9 +96,7 @@ class FileGroupLoginModule extends LoginModule {
     debug("Initialized file=%s, match=%s", file, match_kind)
   }
 
-  def login: Boolean = {
-    false
-  }
+  def login = false
 
   def commit: Boolean = {
 
