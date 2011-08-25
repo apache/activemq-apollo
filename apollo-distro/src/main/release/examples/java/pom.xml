@@ -39,6 +39,7 @@
       <groupId>org.fusesource.stompjms</groupId>
       <artifactId>stompjms-client</artifactId>
       <version>1.2</version>
+      <classifier>uber</classifier>
     </dependency>
 
   </dependencies>
