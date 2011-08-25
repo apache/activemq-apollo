@@ -21,24 +21,18 @@ import java.{lang => jl}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import scala.collection.Iterable
-import scala.Some
-import security.{SecurityContext, Authorizer}
 import org.apache.activemq.apollo.util.path.PathParser
-import org.apache.activemq.apollo.web.resources.Resource._
 import org.apache.activemq.apollo.util._
-import collection.mutable.ListBuffer
 import javax.ws.rs._
-import core.Response
-import Response.Status._
-import org.josql.expressions.SelectItemExpression
-import org.apache.activemq.apollo.util.BaseService._
+import javax.ws.rs.core.Context
+import javax.ws.rs.core.Response.Status._
 import management.ManagementFactory
 import javax.management.ObjectName
 import javax.management.openmbean.CompositeData
-import javax.management.remote.rmi._RMIConnection_Stub
 import org.josql.{QueryResults, Query}
-import java.util.Collections
 import java.util.regex.Pattern
+import javax.servlet.http.HttpServletResponse
+import java.util.ArrayList
 
 /**
  * <p>
@@ -51,6 +45,62 @@ import java.util.regex.Pattern
 @Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
 case class BrokerResource() extends Resource {
 
+  @GET
+  @Path("whoami")
+  def whoami():java.util.List[PrincipalDTO] = {
+    val rc: Set[PrincipalDTO] = with_broker { broker =>
+      val rc = FutureResult[Set[PrincipalDTO]]()
+      if(broker.authenticator!=null) {
+        authenticate(broker.authenticator) { security_context =>
+          if(security_context!=null) {
+            rc.set(Success(security_context.principles))
+          } else {
+            rc.set(Success(Set[PrincipalDTO]()))
+          }
+        }
+      } else {
+        rc.set(Success(Set[PrincipalDTO]()))
+      }
+      rc
+    }
+    new ArrayList[PrincipalDTO](collection.JavaConversions.asJavaCollection(rc))
+  }
+
+  @GET
+  @Path("signin")
+  def get_signin(@Context response:HttpServletResponse, @QueryParam("username") username:String, @QueryParam("password") password:String):Boolean = {
+    post_signin(response, username, password)
+  }
+
+  @POST
+  @Path("signin")
+  def post_signin(@Context response:HttpServletResponse, @FormParam("username") username:String, @FormParam("password") password:String):Boolean =  {
+    val session = http_request.getSession(true)
+    session.setAttribute("username", username);
+    session.setAttribute("password", password);
+    try {
+      unwrap_future_result[Boolean] {
+        with_broker { broker =>
+          monitoring(broker) {
+            true
+          }
+        }
+      }
+    } catch {
+      case e:WebApplicationException => // this happens if user is not authorized
+        false
+    }
+  }
+
+  @GET
+  @Path("signout")
+  def signout():Unit =  {
+    val session = http_request.getSession(false)
+    if( session !=null ) {
+      session.invalidate();
+    }
+  }
+
   @Path("config")
   def config_resource:ConfigurationResource = {
     with_broker { broker =>
@@ -59,6 +109,7 @@ case class BrokerResource() extends Resource {
       }
     }
   }
+
 
   @GET
   def get_broker():BrokerStatusDTO = {

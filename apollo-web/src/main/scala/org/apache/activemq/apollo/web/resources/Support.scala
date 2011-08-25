@@ -96,7 +96,7 @@ abstract class Resource(parent:Resource=null) extends Logging {
   }
 
 
-  protected def authorize[T](authenticator:Authenticator, authorizer:Authorizer, block: =>FutureResult[T])(func: (Authorizer, SecurityContext)=>Boolean):FutureResult[T] = {
+  def authorize[T](authenticator:Authenticator, authorizer:Authorizer, block: =>FutureResult[T])(func: (Authorizer, SecurityContext)=>Boolean):FutureResult[T] = {
     if ( authenticator != null ) {
       val rc = FutureResult[T]()
       authenticate(authenticator) { security_context =>
@@ -169,19 +169,24 @@ abstract class Resource(parent:Resource=null) extends Logging {
       security_context.remote_address = new InetSocketAddress(http_request.getRemoteAddr, http_request.getRemotePort)
       security_context.certificates = http_request.getAttribute("javax.servlet.request.X509Certificate").asInstanceOf[Array[X509Certificate]]
 
-      var auth_header = http_request.getHeader(HEADER_AUTHORIZATION)
-      if (auth_header != null && auth_header.length > 0) {
-        auth_header = auth_header.trim
-        var blank = auth_header.indexOf(' ')
-        if (blank > 0) {
-          var auth_type = auth_header.substring(0, blank)
-          var auth_info = auth_header.substring(blank).trim
-          if (auth_type.equalsIgnoreCase(AUTHENTICATION_SCHEME_BASIC)) {
-            try {
-              var srcString = decode_base64(auth_info)
-              var i = srcString.indexOf(':')
-              var username: String = srcString.substring(0, i)
-              var password: String = srcString.substring(i + 1)
+      val session = http_request.getSession(false)
+      if( session !=null ) {
+        security_context.user = session.getAttribute("username").asInstanceOf[String];
+        security_context.password = session.getAttribute("password").asInstanceOf[String];
+      } else {
+        var auth_header = http_request.getHeader(HEADER_AUTHORIZATION)
+        if (auth_header != null && auth_header.length > 0) {
+          auth_header = auth_header.trim
+          var blank = auth_header.indexOf(' ')
+          if (blank > 0) {
+            var auth_type = auth_header.substring(0, blank)
+            var auth_info = auth_header.substring(blank).trim
+            if (auth_type.equalsIgnoreCase(AUTHENTICATION_SCHEME_BASIC)) {
+              try {
+                var srcString = decode_base64(auth_info)
+                var i = srcString.indexOf(':')
+                var username: String = srcString.substring(0, i)
+                var password: String = srcString.substring(i + 1)
 
 
 //            connection.transport match {
@@ -189,16 +194,16 @@ abstract class Resource(parent:Resource=null) extends Logging {
 //                security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
 //              case _ => None
 //            }
-              security_context.user = username
-              security_context.password = password
+                security_context.user = username
+                security_context.password = password
 
-            } catch {
-              case e: Exception =>
+              } catch {
+                case e: Exception =>
+              }
             }
           }
         }
       }
-
       reset {
         if( authenticator.authenticate(security_context) ) {
           http_request.setAttribute(SECURITY_CONTEXT_ATTRIBUTE, security_context)
@@ -211,12 +216,13 @@ abstract class Resource(parent:Resource=null) extends Logging {
   }
 
   protected def unauthroized = {
-    // TODO: perhaps get the realm from the authenticator
-    var http_realm = "Apollo"
-    throw new WebApplicationException(Response.
-      status(HttpServletResponse.SC_UNAUTHORIZED).
-      header(HEADER_WWW_AUTHENTICATE, AUTHENTICATION_SCHEME_BASIC + " realm=\"" + http_realm + "\"").
-      build())
+    val response = Response.status(HttpServletResponse.SC_UNAUTHORIZED)
+    if( http_request.getHeader("AuthPrompt")!="false" && http_request.getSession(false)==null ) {
+      // TODO: perhaps get the realm from the authenticator
+      var http_realm = "Apollo"
+      response.header(HEADER_WWW_AUTHENTICATE, AUTHENTICATION_SCHEME_BASIC + " realm=\"" + http_realm + "\"")
+    }
+    throw new WebApplicationException(response.build())
   }
 
   type FutureResult[T] = Future[Result[T, Throwable]]
