@@ -43,10 +43,18 @@ public class StompDTO extends ProtocolDTO {
 
     /**
      * If set, it will add the configured header name with the value
-     * set the a timestamp of when the message is recieved.
+     * set the a timestamp of when the message is received.
      */
     @XmlAttribute(name="add_timestamp_header")
     public String add_timestamp_header;
+
+    /**
+     * If set, the configured header will be added to message
+     * sent to consumer if the message is a redelivery.  It will be
+     * set to the number of re-deliveries that have occurred.
+     */
+    @XmlAttribute(name="add_redeliveries_header")
+    public String add_redeliveries_header;
 
     @XmlAttribute(name="max_header_length")
     public Integer max_header_length;

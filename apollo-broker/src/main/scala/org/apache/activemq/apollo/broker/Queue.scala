@@ -30,6 +30,7 @@ import security.SecurityContext
 import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong, AtomicInteger}
 import org.fusesource.hawtbuf.Buffer
+import java.lang.UnsupportedOperationException
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -575,13 +576,19 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     ack_source.getData.foreach {
       case (entry, consumed, uow) =>
         consumed match {
-          case Delivered   =>
+          case Consumed =>
             entry.ack(uow)
-          case Expired     =>
+          case Expired=>
             entry.entry.queue.expired(entry.entry, false)
             entry.ack(uow)
-          case Poisoned    => entry.nack
-          case Undelivered => entry.nack
+          case Delivered =>
+            entry.entry.redelivered
+            entry.nack
+          case Poisoned    =>
+            entry.entry.redelivered
+            entry.nack
+          case Undelivered =>
+            entry.nack
         }
         if( uow!=null ) {
           uow.release()
@@ -831,7 +838,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def init(qer:QueueEntryRecord):QueueEntry = {
     val locator = new AtomicReference[Array[Byte]](Option(qer.message_locator).map(_.toByteArray).getOrElse(null))
-    state = new Swapped(qer.message_key, locator, qer.size, qer.expiration)
+    state = new Swapped(qer.message_key, locator, qer.size, qer.expiration, qer.redeliveries)
     this
   }
 
@@ -927,6 +934,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def count = state.count
   def size = state.size
   def expiration = state.expiration
+  def redeliveries = state.redeliveries
+  def redelivered = state.redelivered
   def messageKey = state.message_key
   def is_swapped_or_swapping_out = state.is_swapped_or_swapping_out
   def dispatch() = state.dispatch
@@ -964,6 +973,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * When the entry expires or 0 if it does not expire.
      */
     def expiration = 0L
+
+    /**
+     * When the entry expires or 0 if it does not expire.
+     */
+    def redeliveries:Short = throw new UnsupportedOperationException()
+
+    /**
+     * Called to increment the redelivery counter
+     */
+    def redelivered:Unit = {}
 
     /**
      * Gets number of messages that this entry represents
@@ -1109,6 +1128,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def expiration = delivery.message.expiration
     override def message_key = delivery.storeKey
     override def message_locator = delivery.storeLocator
+    override def redeliveries = delivery.redeliveries
+
+    override def redelivered = delivery.redeliveries = ((delivery.redeliveries+1).min(Short.MaxValue)).toShort
 
     var remove_pending = false
 
@@ -1184,7 +1206,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swap_out_size_counter += size
         queue.swap_out_item_counter += 1
 
-        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration)
+        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redeliveries)
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext
         }
@@ -1332,12 +1354,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Array[Byte]], override val size:Int, override val expiration:Long) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Array[Byte]], override val size:Int, override val expiration:Long, var _redeliveries:Short) extends EntryState {
 
     queue.individual_swapped_items += 1
 
     var swapping_in = false
 
+    override def redeliveries = _redeliveries
+    override def redelivered = _redeliveries = ((_redeliveries+1).min(Short.MaxValue)).toShort
 
     override def count = 1
 
@@ -1390,6 +1414,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key
         delivery.storeLocator = messageRecord.locator
+        delivery.redeliveries = redeliveries
 
         queue.swapped_in_size += delivery.size
         queue.swapped_in_items += 1
@@ -1629,6 +1654,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       while( next !=null ) {
         val cur = next;
         next = next.getNext
+        cur.entry.redelivered
         cur.nack // this unlinks the entry.
       }
 

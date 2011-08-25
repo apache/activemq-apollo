@@ -39,6 +39,7 @@ import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
+import collection.immutable.List._
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -190,7 +191,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def track(delivery:Delivery) = {
         if( delivery.ack!=null ) {
-          delivery.ack(Delivered, null)
+          delivery.ack(Consumed, null)
         }
         ack_source.merge((delivery.size, 1))
       }
@@ -335,6 +336,11 @@ class StompProtocolHandler extends ProtocolHandler {
       var frame = delivery.message.asInstanceOf[StompFrameMessage].frame
       if( subscription_id != None ) {
         frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
+      }
+      if( config.add_redeliveries_header!=null && delivery.redeliveries > 0) {
+        val header = encode_header(config.add_redeliveries_header)
+        val value = ascii(delivery.redeliveries.toString())
+        frame = frame.append_headers((header, value)::Nil)
       }
       frame
     }, Delivery)
@@ -774,7 +780,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
 
-      session_id = encode_header("%s-%x".format(this.host.config.id, this.host.session_counter.incrementAndGet))
+      session_id = encode_header("%s-%x-".format(this.host.config.id, this.host.session_counter.incrementAndGet))
       connected_headers += SESSION->session_id
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
@@ -1160,11 +1166,11 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def on_stomp_ack(frame:StompFrame):Unit = {
-    on_stomp_ack(frame.headers, Delivered)
+    on_stomp_ack(frame.headers, Consumed)
   }
 
   def on_stomp_nack(frame:StompFrame):Unit = {
-    on_stomp_ack(frame.headers, Undelivered)
+    on_stomp_ack(frame.headers, Delivered)
   }
 
   def on_stomp_ack(headers:HeaderMap, consumed:DeliveryResult):Unit = {

@@ -983,12 +983,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
         val msgid = messageAck.getLastMessageId
         val consumed = messageAck.getAckType match {
-          case MessageAck.DELIVERED_ACK_TYPE => Delivered
-          case MessageAck.INDIVIDUAL_ACK_TYPE => Delivered
-          case MessageAck.STANDARD_ACK_TYPE => Delivered
+          case MessageAck.DELIVERED_ACK_TYPE => Consumed
+          case MessageAck.INDIVIDUAL_ACK_TYPE => Consumed
+          case MessageAck.STANDARD_ACK_TYPE => Consumed
           case MessageAck.POSION_ACK_TYPE => Poisoned
-          case MessageAck.REDELIVERED_ACK_TYPE => Undelivered
-          case MessageAck.UNMATCHED_ACK_TYPE => Delivered
+          case MessageAck.REDELIVERED_ACK_TYPE => Delivered
+          case MessageAck.UNMATCHED_ACK_TYPE => Consumed
         }
 
         if( messageAck.getAckType == MessageAck.INDIVIDUAL_ACK_TYPE) {

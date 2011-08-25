@@ -973,6 +973,10 @@ following configuration attributes:
   message received.  The value of the header will be set to the time the message
   was received.  The time will be represented as the number of milliseconds elapsed
   since the UNIX epoch in GMT.  Not set by default.
+* `add_redeliveries_header` :  Name of the header which will be added to messages
+  sent to consumers if the messages has been redelivered.  The value of the header 
+  will be set to the number of times the message has been redeliverd.  Not set 
+  by default.
 * `max_header_length` : The maximum allowed length of a STOMP header. Defaults 
   to 10240 (10k).
 * `max_headers` : The maximum number of allowed headers in a frame.  Defaults 

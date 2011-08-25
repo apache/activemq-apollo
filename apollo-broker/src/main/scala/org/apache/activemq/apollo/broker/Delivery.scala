@@ -140,19 +140,34 @@ object Delivery extends Sizer[Delivery] {
 }
 
 sealed trait DeliveryResult
-/** message was processed, does not need redelivery */
+
+/**
+ * message was delivered and processed, does not need redelivery
+ */
+object Consumed extends DeliveryResult
+
+/**
+ * The message was delivered but not consumed, it should be redelivered to another consumer ASAP.
+ * The redelivery counter should increment.
+ */
 object Delivered extends DeliveryResult
-/** message expired before it could be processed, does not need redelivery */
-object Expired extends DeliveryResult
+
 /**
-  * The receiver thinks the message was poison message, it was not successfully
-  * processed and it should not get redelivered..
-  */
-object Poisoned extends DeliveryResult
-/**
-  * The message was not consumed, it should be redelivered to another consumer ASAP.
-  */
+ * The message was not delivered so it should be redelivered to another consumer but not effect
+ * it's redelivery counter.
+ */
 object Undelivered extends DeliveryResult
+
+/**
+ * message expired before it could be processed, does not need redelivery
+ */
+object Expired extends DeliveryResult
+
+/**
+ * The receiver thinks the message was poison message, it was not successfully
+ * processed and it should not get redelivered..
+ */
+object Poisoned extends DeliveryResult
 
 class Delivery {
 
@@ -183,6 +198,11 @@ class Delivery {
   var uow:StoreUOW = null
 
   /**
+   * The number of redeliveries that this message has seen.
+   */
+  var redeliveries:Short = 0
+
+  /**
    * Set if the producer requires an ack to be sent back.  Consumer
    * should execute once the message is processed.
    */
@@ -195,6 +215,7 @@ class Delivery {
     message = other.message
     storeKey = other.storeKey
     storeLocator = other.storeLocator
+    redeliveries = other.redeliveries
     this
   }
 

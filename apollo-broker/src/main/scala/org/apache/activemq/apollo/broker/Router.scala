@@ -186,11 +186,11 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
       if (delivery.uow != null) {
         val ack = pendingAck
         delivery.uow.on_complete {
-          ack(Delivered, null)
+          ack(Consumed, null)
         }
 
       } else {
-        pendingAck(Delivered, null)
+        pendingAck(Consumed, null)
       }
       pendingAck==null
     }
