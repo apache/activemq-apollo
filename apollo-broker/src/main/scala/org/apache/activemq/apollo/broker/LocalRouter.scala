@@ -29,6 +29,48 @@ import java.util.{Arrays, ArrayList}
 import collection.mutable.{LinkedHashMap, HashMap}
 import collection.{Iterable, JavaConversions}
 
+object DestinationMetricsSupport {
+
+  def add_destination_metrics(to:DestMetricsDTO, from:DestMetricsDTO) = {
+    to.enqueue_item_counter += from.enqueue_item_counter
+    to.enqueue_size_counter += from.enqueue_size_counter
+    to.enqueue_ts = to.enqueue_ts max from.enqueue_ts
+
+    to.dequeue_item_counter += from.dequeue_item_counter
+    to.dequeue_size_counter += from.dequeue_size_counter
+    to.dequeue_ts = to.dequeue_ts max from.dequeue_ts
+
+    to.producer_counter += from.producer_counter
+    to.consumer_counter += from.consumer_counter
+    to.producer_count += from.producer_count
+    to.consumer_count += from.consumer_count
+
+    to.nack_item_counter += from.nack_item_counter
+    to.nack_size_counter += from.nack_size_counter
+    to.nack_ts = to.nack_ts max from.nack_ts
+
+    to.expired_item_counter += from.expired_item_counter
+    to.expired_size_counter += from.expired_size_counter
+    to.expired_ts = to.expired_ts max from.expired_ts
+
+    to.queue_size += from.queue_size
+    to.queue_items += from.queue_items
+
+    to.swap_out_item_counter += from.swap_out_item_counter
+    to.swap_out_size_counter += from.swap_out_size_counter
+    to.swap_in_item_counter += from.swap_in_item_counter
+    to.swap_in_size_counter += from.swap_in_size_counter
+
+    to.swapping_in_size += from.swapping_in_size
+    to.swapping_out_size += from.swapping_out_size
+
+    to.swapped_in_items += from.swapped_in_items
+    to.swapped_in_size += from.swapped_in_size
+    to.swapped_in_size_max += from.swapped_in_size_max
+  }
+
+}
+
 /**
  * <p>
  * </p>

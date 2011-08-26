@@ -46,7 +46,6 @@ QueueConsumerLinkDTO
 ValueDTO
 StringListDTO
 DataPageDTO
-AggregateTopicMetricsDTO
-AggregateQueueMetricsDTO
-DestinationMetricsDTO
+AggregateDestMetricsDTO
+DestMetricsDTO
 AggregateConnectionMetricsDTO

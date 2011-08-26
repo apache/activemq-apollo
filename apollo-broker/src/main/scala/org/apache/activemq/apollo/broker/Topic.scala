@@ -195,6 +195,14 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       rc.metrics.dequeue_ts = rc.metrics.dequeue_ts max link.enqueue_ts
     }
 
+    // Add in any queue metrics that the topic may own.
+    for(queue <- consumer_queues.values) {
+      val metrics = queue.get_queue_metrics
+      metrics.enqueue_item_counter = 0
+      metrics.enqueue_size_counter = 0
+      metrics.enqueue_ts = 0
+      DestinationMetricsSupport.add_destination_metrics(rc.metrics, metrics)
+    }
     rc
   }
 

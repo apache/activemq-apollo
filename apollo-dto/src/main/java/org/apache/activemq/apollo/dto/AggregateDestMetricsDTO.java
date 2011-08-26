@@ -14,24 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 /**
  * <p>
- *     Collects metrics about the status of a topic since the
- *     time a broker gets started.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="topic_metrics")
+@XmlRootElement(name="aggregate_dest_metrics")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TopicMetricsDTO extends DestinationMetricsDTO {
+public class AggregateDestMetricsDTO extends DestMetricsDTO {
+
+    /**
+     * The number of objects which where aggregated.
+     */
+    @XmlAttribute(name="objects")
+    public int objects;
 
 }

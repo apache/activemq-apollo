@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.web.resources;
 import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.broker._
 import scala.collection.Iterable
 import org.apache.activemq.apollo.util.path.PathParser
 import org.apache.activemq.apollo.util._
@@ -33,6 +32,7 @@ import org.josql.{QueryResults, Query}
 import java.util.regex.Pattern
 import javax.servlet.http.HttpServletResponse
 import java.util.{Collections, ArrayList}
+import org.apache.activemq.apollo.broker._
 
 /**
  * <p>
@@ -205,8 +205,8 @@ case class BrokerResource() extends Resource {
 
   @GET
   @Path("queue-metrics")
-  def get_queue_metrics(): AggregateQueueMetricsDTO = {
-    val rc:AggregateQueueMetricsDTO = with_broker { broker =>
+  def get_queue_metrics(): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_broker { broker =>
       monitoring(broker) {
         get_queue_metrics(broker)
       }
@@ -217,8 +217,8 @@ case class BrokerResource() extends Resource {
 
   @GET
   @Path("topic-metrics")
-  def get_topic_metrics(): AggregateTopicMetricsDTO = {
-    val rc:AggregateTopicMetricsDTO = with_broker { broker =>
+  def get_topic_metrics(): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_broker { broker =>
       monitoring(broker) {
         get_topic_metrics(broker)
       }
@@ -229,8 +229,8 @@ case class BrokerResource() extends Resource {
 
   @GET
   @Path("dsub-metrics")
-  def get_dsub_metrics(): AggregateQueueMetricsDTO = {
-    val rc:AggregateQueueMetricsDTO = with_broker { broker =>
+  def get_dsub_metrics(): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_broker { broker =>
       monitoring(broker) {
         get_dsub_metrics(broker)
       }
@@ -239,14 +239,14 @@ case class BrokerResource() extends Resource {
     rc
   }
 
-  def aggregate(queue:AggregateQueueMetricsDTO, topic:AggregateTopicMetricsDTO, dsub:AggregateQueueMetricsDTO):AggregateQueueMetricsDTO = {
+  def aggregate(queue:AggregateDestMetricsDTO, topic:AggregateDestMetricsDTO, dsub:AggregateDestMetricsDTO):AggregateDestMetricsDTO = {
     // zero out the enqueue stats on the dsubs since they will already be accounted for in the topic
     // stats.
     dsub.enqueue_item_counter = 0
     dsub.enqueue_size_counter = 0
     dsub.enqueue_ts = 0
-    val rc = aggregate_queue_metrics(List(queue, dsub))
-    add_destination_metrics(rc, topic)
+    val rc = aggregate_dest_metrics(List(queue, dsub))
+    DestinationMetricsSupport.add_destination_metrics(rc, topic)
     rc.objects += topic.objects
     rc.current_time = now
     rc
@@ -254,119 +254,67 @@ case class BrokerResource() extends Resource {
 
   @GET
   @Path("dest-metrics")
-  def get_dest_metrics(): AggregateQueueMetricsDTO = {
+  def get_dest_metrics(): AggregateDestMetricsDTO = {
     aggregate(get_queue_metrics(), get_topic_metrics(), get_dsub_metrics())
   }
 
-  def add_destination_metrics(to:DestinationMetricsDTO, from:DestinationMetricsDTO) = {
-    to.enqueue_item_counter += from.enqueue_item_counter
-    to.enqueue_size_counter += from.enqueue_size_counter
-    to.enqueue_ts = to.enqueue_ts max from.enqueue_ts
-
-    to.dequeue_item_counter += from.dequeue_item_counter
-    to.dequeue_size_counter += from.dequeue_size_counter
-    to.dequeue_ts = to.dequeue_ts max from.dequeue_ts
-
-    to.producer_counter += from.producer_counter
-    to.consumer_counter += from.consumer_counter
-    to.producer_count += from.producer_count
-    to.consumer_count += from.consumer_count
-  }
-
-  def aggregate_queue_metrics(metrics:Iterable[QueueMetricsDTO]):AggregateQueueMetricsDTO = {
-    metrics.foldLeft(new AggregateQueueMetricsDTO){ (memo, metric)=>
-      add_destination_metrics(memo, metric)
-
-      memo.nack_item_counter += metric.nack_item_counter
-      memo.nack_size_counter += metric.nack_size_counter
-      memo.nack_ts = memo.nack_ts max metric.nack_ts
-
-      memo.expired_item_counter += metric.expired_item_counter
-      memo.expired_size_counter += metric.expired_size_counter
-      memo.expired_ts = memo.expired_ts max metric.expired_ts
-
-      memo.queue_size += metric.queue_size
-      memo.queue_items += metric.queue_items
-
-      memo.swap_out_item_counter += metric.swap_out_item_counter
-      memo.swap_out_size_counter += metric.swap_out_size_counter
-      memo.swap_in_item_counter += metric.swap_in_item_counter
-      memo.swap_in_size_counter += metric.swap_in_size_counter
-
-      memo.swapping_in_size += metric.swapping_in_size
-      memo.swapping_out_size += metric.swapping_out_size
-
-      memo.swapped_in_items += metric.swapped_in_items
-      memo.swapped_in_size += metric.swapped_in_size
-
-      memo.swapped_in_size_max += metric.swapped_in_size_max
-
-      if( metric.isInstanceOf[AggregateQueueMetricsDTO] ) {
-        memo.objects += metric.asInstanceOf[AggregateQueueMetricsDTO].objects
+  def aggregate_dest_metrics(metrics:Iterable[DestMetricsDTO]):AggregateDestMetricsDTO = {
+    metrics.foldLeft(new AggregateDestMetricsDTO){ (to, from)=>
+      DestinationMetricsSupport.add_destination_metrics(to, from)
+      if( from.isInstanceOf[AggregateDestMetricsDTO] ) {
+        to.objects += from.asInstanceOf[AggregateDestMetricsDTO].objects
       } else {
-        memo.objects += 1
+        to.objects += 1
       }
-      memo
+      to
     }
   }
 
-  def aggregate_topic_metrics(metrics:Iterable[TopicMetricsDTO]):AggregateTopicMetricsDTO = {
-    metrics.foldLeft(new AggregateTopicMetricsDTO){ (memo, metric)=>
-      add_destination_metrics(memo, metric)
-      if( metric.isInstanceOf[AggregateTopicMetricsDTO] ) {
-        memo.objects += metric.asInstanceOf[AggregateTopicMetricsDTO].objects
-      } else {
-        memo.objects += 1
-      }
-      memo
-    }
-  }
-
-  def get_queue_metrics(broker:Broker):FutureResult[AggregateQueueMetricsDTO] = {
+  def get_queue_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
     val metrics = sync_all(broker.virtual_hosts.values) { host =>
       get_queue_metrics(host)
     }
-    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option)) ))
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_queue_metrics(host:VirtualHost):FutureResult[AggregateQueueMetricsDTO] = {
+  def get_queue_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
     val router:LocalRouter = host
     val queues: Iterable[Queue] = router.queue_domain.destinations
     val metrics = sync_all(queues) { queue =>
       queue.get_queue_metrics
     }
-    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option))) )
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
   }
 
 
-  def get_topic_metrics(broker:Broker):FutureResult[AggregateTopicMetricsDTO] = {
+  def get_topic_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
     val metrics = sync_all(broker.virtual_hosts.values) { host =>
       get_topic_metrics(host)
     }
-    metrics.map( x=> Success(aggregate_topic_metrics(x.flatMap(_.success_option)) ))
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_topic_metrics(host:VirtualHost):FutureResult[AggregateTopicMetricsDTO] = {
+  def get_topic_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
     val router:LocalRouter = host
     val topics: Iterable[Topic] = router.topic_domain.destinations
     val metrics = topics.map(_.status.metrics)
-    FutureResult(Success(aggregate_topic_metrics(metrics)))
+    FutureResult(Success(aggregate_dest_metrics(metrics)))
   }
 
-  def get_dsub_metrics(broker:Broker):FutureResult[AggregateQueueMetricsDTO] = {
+  def get_dsub_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
     val metrics = sync_all(broker.virtual_hosts.values) { host =>
       get_dsub_metrics(host)
     }
-    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option)) ))
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_dsub_metrics(host:VirtualHost):FutureResult[AggregateQueueMetricsDTO] = {
+  def get_dsub_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
     val router:LocalRouter = host
     val dsubs: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
     val metrics = sync_all(dsubs) { dsub =>
       dsub.get_queue_metrics
     }
-    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option))) )
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
   }
 
 
@@ -418,8 +366,8 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/queue-metrics")
-  def virtual_host_queue_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
-    val rc:AggregateQueueMetricsDTO = with_virtual_host(id) { host =>
+  def virtual_host_queue_metrics(@PathParam("id") id : String): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_virtual_host(id) { host =>
       monitoring(host) {
         get_queue_metrics(host)
       }
@@ -429,8 +377,8 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/topic-metrics")
-  def virtual_host_topic_metrics(@PathParam("id") id : String): AggregateTopicMetricsDTO = {
-    val rc:AggregateTopicMetricsDTO = with_virtual_host(id) { host =>
+  def virtual_host_topic_metrics(@PathParam("id") id : String): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_virtual_host(id) { host =>
       monitoring(host) {
         get_topic_metrics(host)
       }
@@ -440,8 +388,8 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/dsub-metrics")
-  def virtual_host_dsub_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
-    val rc:AggregateQueueMetricsDTO = with_virtual_host(id) { host =>
+  def virtual_host_dsub_metrics(@PathParam("id") id : String): AggregateDestMetricsDTO = {
+    val rc:AggregateDestMetricsDTO = with_virtual_host(id) { host =>
       monitoring(host) {
         get_dsub_metrics(host)
       }
@@ -451,7 +399,7 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/dest-metrics")
-  def virtual_host_dest_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
+  def virtual_host_dest_metrics(@PathParam("id") id : String): AggregateDestMetricsDTO = {
     aggregate(virtual_host_queue_metrics(id), virtual_host_topic_metrics(id), virtual_host_dsub_metrics(id))
   }
 

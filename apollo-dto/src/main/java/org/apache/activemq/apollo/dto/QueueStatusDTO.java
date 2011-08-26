@@ -37,7 +37,7 @@ public class QueueStatusDTO extends ServiceStatusDTO {
     public DestinationDTO binding;
 
     @XmlElement
-    public QueueMetricsDTO metrics = new QueueMetricsDTO();
+    public DestMetricsDTO metrics = new DestMetricsDTO();
 
     /**
      * Status of the entries in the queue

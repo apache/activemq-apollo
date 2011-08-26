@@ -207,8 +207,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var auto_delete_after = 0
   var idled_at = 0L
 
-  def get_queue_metrics:QueueMetricsDTO = {
-    val rc = new QueueMetricsDTO
+  def get_queue_metrics:DestMetricsDTO = {
+    val rc = new DestMetricsDTO
 
     rc.enqueue_item_counter = this.enqueue_item_counter
     rc.enqueue_size_counter = this.enqueue_size_counter
@@ -1827,7 +1827,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   def refill_prefetch = {
 
-    var next = if( pos.is_tail ) {
+    var cursor = if( pos.is_tail ) {
       null // can't prefetch the tail..
     } else if( pos.is_head ) {
       pos.getNext // can't prefetch the head.
@@ -1836,18 +1836,19 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     }
 
     var remaining = queue.tune_consumer_buffer - acquired_size
-    while( remaining>0 && next!=null ) {
-      remaining -= next.size
-      next.prefetch_flags = (next.prefetch_flags | PREFTCH_LOAD_FLAG).toByte
-      next.load
-      next = next.getNext
+    while( remaining>0 && cursor!=null ) {
+      val next = cursor.getNext
+      remaining -= cursor.size
+      cursor.prefetch_flags = (cursor.prefetch_flags | PREFTCH_LOAD_FLAG).toByte
+      cursor.load
+      cursor = next
     }
 
     remaining = avg_advanced_size
-    while( remaining>0 && next!=null ) {
-      remaining -= next.size
-      next.prefetch_flags = (next.prefetch_flags | PREFTCH_HOLD_FLAG).toByte
-      next = next.getNext
+    while( remaining>0 && cursor!=null ) {
+      remaining -= cursor.size
+      cursor.prefetch_flags = (cursor.prefetch_flags | PREFTCH_HOLD_FLAG).toByte
+      cursor = cursor.getNext
     }
 
   }

@@ -51,7 +51,7 @@ public class TopicStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="dsub")
     public List<String> dsubs = new ArrayList<String>();
 
-    @XmlElement
-    public TopicMetricsDTO metrics = new TopicMetricsDTO();
+    @XmlElement(name="metrics")
+    public DestMetricsDTO metrics = new DestMetricsDTO();
 
 }
