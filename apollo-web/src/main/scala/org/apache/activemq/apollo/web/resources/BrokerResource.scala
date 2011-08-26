@@ -32,7 +32,7 @@ import javax.management.openmbean.CompositeData
 import org.josql.{QueryResults, Query}
 import java.util.regex.Pattern
 import javax.servlet.http.HttpServletResponse
-import java.util.ArrayList
+import java.util.{Collections, ArrayList}
 
 /**
  * <p>
@@ -729,6 +729,33 @@ case class BrokerResource() extends Resource {
     post_connector_start(id)
     result(strip_resolve(".."))
   }
+
+  @GET
+  @Path("connection-metrics")
+  def get_connection_metrics(): AggregateConnectionMetricsDTO = {
+    val f = new ArrayList[String]()
+    f.add("read_counter")
+    f.add("write_counter")
+    f.add("subscription_count")
+    val rs = connections(f, null, null, Integer.MAX_VALUE, Collections.emptyList())
+    val rc = new AggregateConnectionMetricsDTO
+    import collection.JavaConversions._
+    for( row <- rs.rows ) {
+      val info = row.asInstanceOf[java.util.List[_]]
+      def read(index:Int) = try {
+        info.get(0).asInstanceOf[java.lang.Number].longValue()
+      } catch {
+        case e:Throwable => 0L
+      }
+      rc.read_counter += read(0)
+      rc.write_counter += read(1)
+      rc.subscription_count += read(2)
+    }
+    rc.objects = rs.rows.length
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
 
   @GET @Path("connections")
   @Produces(Array("application/json"))

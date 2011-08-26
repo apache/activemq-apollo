@@ -50,12 +50,12 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   def add_counters(to:LinkDTO, from:(Long,Long,Long)):Unit = {
     to.enqueue_item_counter += from._1
     to.enqueue_size_counter += from._2
-    to.enqueue_ts = to.enqueue_ts max from._2
+    to.enqueue_ts = to.enqueue_ts max from._3
   }
   def add_counters(to:Topic, from:(Long,Long,Long)):Unit = {
     to.enqueue_item_counter += from._1
     to.enqueue_size_counter += from._2
-    to.enqueue_ts = to.enqueue_ts max from._2
+    to.enqueue_ts = to.enqueue_ts max from._3
   }
 
   case class ProxyDeliverySession(session:DeliverySession) extends DeliverySession with SinkFilter[Delivery] {
