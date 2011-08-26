@@ -23,8 +23,6 @@ import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
 
-import org.apache.activemq.apollo.broker._
-import BufferConversions._
 import java.io.IOException
 import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
@@ -33,16 +31,19 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import protocol._
 import scala.util.continuations._
-import security.SecurityContext
-import support.advisory.AdvisorySupport
 import tcp.TcpTransport
 import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
 import org.apache.activemq.apollo.openwire.DestinationConverter._
+import org.apache.activemq.apollo.broker._
+import BufferConversions._
+import protocol._
+import security.SecurityContext
+import support.advisory.AdvisorySupport
+
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -86,6 +87,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     last_command_id += 1
     last_command_id
   }
+
+  def broker = connection.connector.broker
 
   var producerRoutes = new LRUCache[List[DestinationDTO], DeliveryProducerRoute](10) {
     override def onCacheEviction(eldest: Entry[List[DestinationDTO], DeliveryProducerRoute]) = {
@@ -195,7 +198,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     resumeRead
     reset {
       suspendRead("virtual host lookup")
-      this.host = connection.connector.broker.get_default_virtual_host
+      this.host = broker.get_default_virtual_host
       resumeRead
       if(host==null) {
         async_die("Could not find default virtual host")
@@ -767,7 +770,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     credit_window_filter.credit(0, info.getPrefetchSize)
 
-    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery)
+    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
+      override def time_stamp = broker.now
+    }
 
     override def exclusive = info.isExclusive
     override def browser = info.isBrowser
@@ -860,17 +865,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def connect(p:DeliveryProducer) = new DeliverySession with SinkFilter[Delivery] {
+    class OpenwireConsumerSession(val producer:DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery] {
+      producer.dispatch_queue.assertExecuting()
       retain
 
-      def producer = p
-      def consumer = ConsumerContext.this
+      val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
       var closed = false
 
-      val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
-      def remaining_capacity = downstream.remaining_capacity
-      def enqueue_item_counter = downstream.accepted_count
-      def enqueue_size_counter = downstream.accepted_size
+      def consumer = ConsumerContext.this
 
       def close = {
         assert(producer.dispatch_queue.isExecuting)
@@ -927,6 +929,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         }
       }
     }
+
+    def connect(p:DeliveryProducer) = new OpenwireConsumerSession(p)
 
     class TrackedAck(val ack:(DeliveryResult, StoreUOW)=>Unit) {
       var credited = false

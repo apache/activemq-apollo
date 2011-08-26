@@ -343,7 +343,7 @@ class Broker() extends BaseService {
 
   }
 
-  def schedule_periodic_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
+  def schedule_periodic_maintenance:Unit = dispatch_queue.after(100, TimeUnit.MILLISECONDS) {
     if( service_state.is_starting_or_started ) {
       now = System.currentTimeMillis
       schedule_periodic_maintenance

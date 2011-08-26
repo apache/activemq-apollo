@@ -75,7 +75,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery)
+  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery) {
+    override def time_stamp = now
+  }
 
   // sequence numbers.. used to track what's in the store.
   var message_seq_counter = 1L
@@ -294,6 +296,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       }
       link.enqueue_item_counter = session.enqueue_item_counter
       link.enqueue_size_counter = session.enqueue_size_counter
+      link.enqueue_ts = session.enqueue_ts
       rc.producers.add(link)
     }
 
@@ -309,8 +312,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
           link.label = "unknown"
       }
       link.position = sub.pos.seq
-      link.enqueue_item_counter = sub.total_dispatched_count
-      link.enqueue_size_counter = sub.total_dispatched_size
+      link.enqueue_item_counter = sub.session.enqueue_item_counter
+      link.enqueue_size_counter = sub.session.enqueue_size_counter
+      link.enqueue_ts = sub.session.enqueue_ts
       link.total_ack_count = sub.total_ack_count
       link.total_nack_count = sub.total_nack_count
       link.acquired_size = sub.acquired_size
@@ -734,30 +738,22 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def is_persistent = tune_persistent
 
-  def connect(p: DeliveryProducer) = new DeliverySession {
+  class QueueDeliverySession(val producer: DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery]{
     retain
 
-
     override def toString = Queue.this.toString
-
     override def consumer = Queue.this
 
-    override def producer = p
-
     val session_max = producer.send_buffer_size
-    val session = session_manager.open(producer.dispatch_queue, session_max)
+    val downstream = session_manager.open(producer.dispatch_queue, session_max)
 
     dispatch_queue {
       inbound_sessions += this
       addCapacity( session_max )
     }
 
-    def remaining_capacity = session.remaining_capacity
-    def enqueue_item_counter = session.accepted_count
-    def enqueue_size_counter = session.accepted_size
-
     def close = {
-      session_manager.close(session)
+      session_manager.close(downstream)
       dispatch_queue {
         addCapacity( -session_max )
         inbound_sessions -= this
@@ -765,27 +761,21 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       release
     }
 
-    // Delegate all the flow control stuff to the session
-    def full = session.full
-
     def offer(delivery: Delivery) = {
-      if (session.full) {
+      if (downstream.full) {
         false
       } else {
         delivery.message.retain
         if( tune_persistent && delivery.uow!=null ) {
           delivery.uow.retain
         }
-        val rc = session.offer(delivery)
+        val rc = downstream.offer(delivery)
         assert(rc, "session should accept since it was not full")
         true
       }
     }
-
-    def refiller = session.refiller
-
-    def refiller_=(value: Runnable) = {session.refiller = value}
   }
+  def connect(p: DeliveryProducer) = new QueueDeliverySession(p)
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -1720,9 +1710,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   var avg_advanced_size = queue.tune_consumer_buffer
   var tail_parkings = 1
 
-  var total_dispatched_count = 0L
-  var total_dispatched_size = 0L
-
   var total_ack_count = 0L
   var total_nack_count = 0L
 
@@ -1834,15 +1821,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   def matches(entry:Delivery) = session.consumer.matches(entry)
   def full = session.full
-  def offer(delivery:Delivery) = {
-    if( session.offer(delivery) ) {
-      total_dispatched_count += 1
-      total_dispatched_size += delivery.size
-      true
-    } else {
-      false
-    }
-  }
+
+  def offer(delivery:Delivery) = session.offer(delivery)
 
   def acquire(entry:QueueEntry) = new AcquiredQueueEntry(entry)
 

@@ -39,7 +39,6 @@ import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
-import collection.immutable.List._
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -85,6 +84,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var connection_log:Log = StompProtocolHandler
   def protocol = "stomp"
+  def broker = connection.connector.broker
 
   def decode_header(value:Buffer):String = {
     var rc = new ByteArrayOutputStream(value.length)
@@ -347,7 +347,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
     credit_window_filter.credit(initial_credit_window._1, initial_credit_window._2)
 
-    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery)
+    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
+      override def time_stamp = broker.now
+    }
 
     override def dispose() = dispatchQueue {
       super.dispose()
@@ -373,25 +375,16 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def connect(p:DeliveryProducer) = new DeliverySession with SinkFilter[Delivery] {
-
-      // This session object should only be used from the dispatch queue context
-      // of the producer.
-
+    class StompConsumerSession(val producer:DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery] {
+      producer.dispatch_queue.assertExecuting()
       retain
-
-      override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
-
-      def producer = p
-      def consumer = StompConsumer.this
-      var closed = false
 
       val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
 
-      def remaining_capacity = downstream.remaining_capacity
-      def enqueue_item_counter = downstream.accepted_count
-      def enqueue_size_counter = downstream.accepted_size
+      override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
 
+      def consumer = StompConsumer.this
+      var closed = false
 
       def close = {
         assert(producer.dispatch_queue.isExecuting)
@@ -456,6 +449,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
     }
+    def connect(p:DeliveryProducer) = new StompConsumerSession(p)
   }
 
 //  var session_manager:SessionSinkMux[StompFrame] = null
@@ -948,7 +942,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     if( config.add_timestamp_header!=null ) {
-      rc ::= (encode_header(config.add_timestamp_header), ascii(System.currentTimeMillis().toString()))
+      rc ::= (encode_header(config.add_timestamp_header), ascii(broker.now.toString()))
     }
 
     // Do we need to add the user id?

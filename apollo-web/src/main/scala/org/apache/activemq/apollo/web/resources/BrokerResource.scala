@@ -119,7 +119,7 @@ case class BrokerResource() extends Resource {
 
         result.id = broker.id
         result.jvm_metrics = create_jvm_metrics
-        result.current_time = System.currentTimeMillis
+        result.current_time = now
         result.state = broker.service_state.toString
         result.state_since = broker.service_state.since
         result.version = Broker.version
@@ -211,7 +211,7 @@ case class BrokerResource() extends Resource {
         get_queue_metrics(broker)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -223,7 +223,7 @@ case class BrokerResource() extends Resource {
         get_topic_metrics(broker)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -235,7 +235,7 @@ case class BrokerResource() extends Resource {
         get_dsub_metrics(broker)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -248,7 +248,7 @@ case class BrokerResource() extends Resource {
     val rc = aggregate_queue_metrics(List(queue, dsub))
     add_destination_metrics(rc, topic)
     rc.objects += topic.objects
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -424,7 +424,7 @@ case class BrokerResource() extends Resource {
         get_queue_metrics(host)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -435,7 +435,7 @@ case class BrokerResource() extends Resource {
         get_topic_metrics(host)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 
@@ -446,7 +446,7 @@ case class BrokerResource() extends Resource {
         get_dsub_metrics(host)
       }
     }
-    rc.current_time = System.currentTimeMillis()
+    rc.current_time = now
     rc
   }
 

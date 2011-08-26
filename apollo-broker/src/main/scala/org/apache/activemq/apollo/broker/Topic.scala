@@ -36,16 +36,16 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   var enqueue_item_counter = 0L
   var enqueue_size_counter = 0L
-  var enqueue_ts = System.currentTimeMillis()
+  var enqueue_ts = now
 
   var dequeue_item_counter = 0L
   var dequeue_size_counter = 0L
-  var dequeue_ts = System.currentTimeMillis()
+  var dequeue_ts = now
 
-  var proxy_sessions = new HashSet[ProxyDeliverySession]()
+  var proxy_sessions = new HashSet[TopicDeliverySession]()
 
   implicit def from_link(from:LinkDTO):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
-  implicit def from_session(from:ProxyDeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
+  implicit def from_session(from:TopicDeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
 
   def add_counters(to:LinkDTO, from:(Long,Long,Long)):Unit = {
     to.enqueue_item_counter += from._1
@@ -58,7 +58,9 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     to.enqueue_ts = to.enqueue_ts max from._3
   }
 
-  case class ProxyDeliverySession(session:DeliverySession) extends DeliverySession with SinkFilter[Delivery] {
+  case class TopicDeliverySession(session:DeliverySession) extends DeliverySession with SessionSinkFilter[Delivery] {
+    def downstream = session
+
     dispatch_queue {
       proxy_sessions.add(this)
     }
@@ -78,22 +80,10 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       }
     }
 
-    var enqueue_ts = now
-    def offer(value: Delivery) = {
-      if( session.offer(value) ) {
-        enqueue_ts = now
-        true
-      } else {
-        false
-      }
-    }
-
-    def downstream = session
-    def remaining_capacity = session.remaining_capacity
     def producer = session.producer
-    def enqueue_size_counter = session.enqueue_size_counter
-    def enqueue_item_counter = session.enqueue_item_counter
     def consumer = session.consumer
+
+    def offer(value: Delivery) = downstream.offer(value)
   }
 
   case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO) extends DeliveryConsumer {
@@ -104,7 +94,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     def is_persistent = consumer.is_persistent
     def dispatch_queue = consumer.dispatch_queue
     def connect(producer: DeliveryProducer) = {
-      new ProxyDeliverySession(consumer.connect(producer))
+      new TopicDeliverySession(consumer.connect(producer))
     }
   }
 
@@ -113,7 +103,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   var durable_subscriptions = ListBuffer[Queue]()
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
   var idled_at = 0L
-  val created_at = System.currentTimeMillis()
+  val created_at = now
   var auto_delete_after = 0
   var producer_counter = 0L
   var consumer_counter = 0L
@@ -230,11 +220,11 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   def check_idle {
     if (producers.isEmpty && consumers.isEmpty && durable_subscriptions.isEmpty) {
       if (idled_at==0) {
-        val now = System.currentTimeMillis()
-        idled_at = now
+        val previously_idle_at = now
+        idled_at = previously_idle_at
         if( auto_delete_after!=0 ) {
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
-            if( now == idled_at ) {
+            if( previously_idle_at == idled_at ) {
               router.topic_domain.remove_destination(path, this)
             }
           }

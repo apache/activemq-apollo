@@ -230,9 +230,33 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
 }
 
 trait SessionSink[T] extends Sink[T] {
-  def accepted_count:Long
-  def accepted_size:Long
+  /**
+   * The number of elements accepted by this session.
+   */
+  def enqueue_item_counter:Long
+
+  /**
+   * The total size of the elements accepted by this session.
+   */
+  def enqueue_size_counter:Long
+
+  /**
+   * The total size of the elements accepted by this session.
+   */
+  def enqueue_ts:Long
+  /**
+   * An estimate of the capacity left in the session before it stops
+   * accepting more elements.
+   */
   def remaining_capacity:Int
+}
+
+trait SessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
+  def downstream:SessionSink[T]
+  def enqueue_item_counter = downstream.enqueue_item_counter
+  def enqueue_size_counter = downstream.enqueue_size_counter
+  def enqueue_ts = downstream.enqueue_ts
+  def remaining_capacity = downstream.remaining_capacity
 }
 
 object SessionSinkMux {
@@ -313,6 +337,7 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
     }
   }
 
+  def time_stamp = 0L
 }
 
 /**
@@ -326,9 +351,11 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   private def downstream = mux.source
 
   @volatile
-  var accepted_count = 0L
+  var enqueue_item_counter = 0L
   @volatile
-  var accepted_size = 0L
+  var enqueue_size_counter = 0L
+  @volatile
+  var enqueue_ts = 0L
 
   // create a source to coalesce credit events back to the producer side...
   val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
@@ -371,8 +398,9 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
     } else {
       val size = sizer.size(value)
 
-      accepted_count += 1
-      accepted_size += size
+      enqueue_item_counter += 1
+      enqueue_size_counter += size
+      enqueue_ts = mux.time_stamp
 
       add_credits(-size)
       downstream.merge((this, value))

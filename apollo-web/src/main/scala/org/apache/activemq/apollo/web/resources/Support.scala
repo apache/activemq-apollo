@@ -275,6 +275,8 @@ abstract class Resource(parent:Resource=null) extends Logging {
     }
   }
 
+  def now = BrokerRegistry.list.headOption.map(_.now).getOrElse(System.currentTimeMillis())
+
   protected def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker)=>FutureResult[T]):FutureResult[T] = {
     BrokerRegistry.list.headOption match {
       case Some(broker)=>
