@@ -828,7 +828,7 @@ class StompProtocolHandler extends ProtocolHandler {
             var msg = if( security_context.user==null ) {
               "Authentication failed."
             } else {
-              "Authentication failed. Username: "+security_context.user
+              "Authentication failed. Username="+security_context.user
             }
             async_die(msg)
             noop // to make the cps compiler plugin happy.
@@ -837,7 +837,7 @@ class StompProtocolHandler extends ProtocolHandler {
             var msg = if( security_context.user==null ) {
               "Connect not authorized."
             } else {
-              "Connect not authorized. Username: "+security_context.user
+              "Connect not authorized. Username="+security_context.user
             }
             async_die(msg)
             noop // to make the cps compiler plugin happy.
