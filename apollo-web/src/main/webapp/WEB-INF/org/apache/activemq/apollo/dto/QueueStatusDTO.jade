@@ -74,28 +74,33 @@ h3 Producers
 p total producers ever : #{metrics.producer_counter}
 ul
   - for( x <- producers )
-    - x.kind match
-      - case "connection" =>
-        li.producer
+    li.producer
+      - x.kind match
+        - case "queue" =>
+          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+        - case "connection" =>
           a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
-      - case _ =>
+        - case _ =>
+      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 
 h3 Consumers
 p total consumers ever : #{metrics.consumer_counter}
 ul
-  - for( consumer <- consumers )
-    - import consumer._
+  - for( x <- consumers )
     li.consumer
-      - if( link !=null )
-        a(href={ path("../../../../connections/"+link.id+".html") }) #{link.label}
-
-      p next message seq: #{position}
-      p acquired: #{acquired_count} messages (#{memory(acquired_size)})
-      p dispatched: #{total_dispatched_count} messages (#{memory(total_dispatched_size)})
-      p acks: #{total_ack_count} messages
-      p naks: #{total_nack_count} messages
-      p waiting on: #{waiting_on}
+      - x.kind match
+        - case "queue" =>
+          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+        - case "connection" =>
+          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
+        - case _ =>
+      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
+      p next message seq: #{x.position}
+      p acquired: #{x.acquired_count} messages (#{memory(x.acquired_size)})
+      p acks: #{x.total_ack_count} messages
+      p naks: #{x.total_nack_count} messages
+      p waiting on: #{x.waiting_on}
 
 - if ( entries.isEmpty )
   h2

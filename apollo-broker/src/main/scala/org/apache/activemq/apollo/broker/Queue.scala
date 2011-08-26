@@ -27,10 +27,10 @@ import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
 import OptionSupport._
 import security.SecurityContext
-import org.apache.activemq.apollo.dto.{DestinationDTO, QueueDTO}
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong, AtomicInteger}
 import org.fusesource.hawtbuf.Buffer
 import java.lang.UnsupportedOperationException
+import org.apache.activemq.apollo.dto._
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -205,6 +205,129 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   var auto_delete_after = 0
   var idled_at = 0L
+
+  def get_queue_metrics:QueueMetricsDTO = {
+    val rc = new QueueMetricsDTO
+
+    rc.enqueue_item_counter = this.enqueue_item_counter
+    rc.enqueue_size_counter = this.enqueue_size_counter
+    rc.enqueue_ts = this.enqueue_ts
+
+    rc.dequeue_item_counter = this.dequeue_item_counter
+    rc.dequeue_size_counter = this.dequeue_size_counter
+    rc.dequeue_ts = this.dequeue_ts
+
+    rc.nack_item_counter = this.nack_item_counter
+    rc.nack_size_counter = this.nack_size_counter
+    rc.nack_ts = this.nack_ts
+
+    rc.expired_item_counter = this.expired_item_counter
+    rc.expired_size_counter = this.expired_size_counter
+    rc.expired_ts = this.expired_ts
+
+    rc.queue_size = this.queue_size
+    rc.queue_items = this.queue_items
+
+    rc.swap_out_item_counter = this.swap_out_item_counter
+    rc.swap_out_size_counter = this.swap_out_size_counter
+    rc.swap_in_item_counter = this.swap_in_item_counter
+    rc.swap_in_size_counter = this.swap_in_size_counter
+
+    rc.swapping_in_size = this.swapping_in_size
+    rc.swapping_out_size = this.swapping_out_size
+
+    rc.swapped_in_items = this.swapped_in_items
+    rc.swapped_in_size = this.swapped_in_size
+
+    rc.swapped_in_size_max = this.swapped_in_size_max
+
+    rc.producer_counter = this.producer_counter
+    rc.consumer_counter = this.consumer_counter
+
+    rc.producer_count = this.producers.size
+    rc.consumer_count = this.all_subscriptions.size
+    rc
+  }
+
+  def status(entries:Boolean=false) = {
+    val rc = new QueueStatusDTO
+    rc.id = this.id
+    rc.state = this.service_state.toString
+    rc.state_since = this.service_state.since
+    rc.binding = this.binding.binding_dto
+    rc.config = this.config
+    rc.metrics = this.get_queue_metrics
+    rc.metrics.current_time = System.currentTimeMillis()
+
+    if( entries ) {
+      var cur = this.head_entry
+      while( cur!=null ) {
+
+        val e = new EntryStatusDTO
+        e.seq = cur.seq
+        e.count = cur.count
+        e.size = cur.size
+        e.consumer_count = cur.parked.size
+        e.is_prefetched = cur.is_prefetched
+        e.state = cur.label
+
+        rc.entries.add(e)
+
+        cur = if( cur == this.tail_entry ) {
+          null
+        } else {
+          cur.nextOrTail
+        }
+      }
+    }
+
+    this.inbound_sessions.foreach { session:DeliverySession =>
+      val link = new LinkDTO()
+      session.producer.connection match {
+        case Some(connection) =>
+          link.kind = "connection"
+          link.id = connection.id.toString
+          link.label = connection.transport.getRemoteAddress.toString
+        case _ =>
+          link.kind = "unknown"
+          link.label = "unknown"
+      }
+      link.enqueue_item_counter = session.enqueue_item_counter
+      link.enqueue_size_counter = session.enqueue_size_counter
+      rc.producers.add(link)
+    }
+
+    this.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
+      val link = new QueueConsumerLinkDTO
+      sub.consumer.connection match {
+        case Some(connection) =>
+          link.kind = "connection"
+          link.id = connection.id.toString
+          link.label = connection.transport.getRemoteAddress.toString
+        case _ =>
+          link.kind = "unknown"
+          link.label = "unknown"
+      }
+      link.position = sub.pos.seq
+      link.enqueue_item_counter = sub.total_dispatched_count
+      link.enqueue_size_counter = sub.total_dispatched_size
+      link.total_ack_count = sub.total_ack_count
+      link.total_nack_count = sub.total_nack_count
+      link.acquired_size = sub.acquired_size
+      link.acquired_count = sub.acquired_count
+      link.waiting_on = if( sub.full ) {
+        "ack"
+      } else if( sub.pos.is_tail ) {
+        "producer"
+      } else if( !sub.pos.is_loaded ) {
+        "load"
+      } else {
+        "dispatch"
+      }
+      rc.consumers.add(link)
+    }
+    rc
+  }
 
   def update(on_completed:Runnable) = dispatch_queue {
 
@@ -630,6 +753,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     }
 
     def remaining_capacity = session.remaining_capacity
+    def enqueue_item_counter = session.accepted_count
+    def enqueue_size_counter = session.accepted_size
 
     def close = {
       session_manager.close(session)

@@ -45,7 +45,6 @@ public class QueueStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="entry")
     public List<EntryStatusDTO> entries = new ArrayList<EntryStatusDTO>();
 
-
     /**
      * Ids of all connections that are producing to the destination
      */
@@ -56,6 +55,6 @@ public class QueueStatusDTO extends ServiceStatusDTO {
      * Ids of all connections that are consuming from the destination
      */
     @XmlElement(name="consumer")
-    public List<QueueConsumerStatusDTO> consumers = new ArrayList<QueueConsumerStatusDTO>();
+    public List<QueueConsumerLinkDTO> consumers = new ArrayList<QueueConsumerLinkDTO>();
 
 }

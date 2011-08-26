@@ -20,9 +20,10 @@ import org.apache.activemq.apollo.util._
 import path.Path
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.dto._
-import collection.mutable.{HashMap, ListBuffer}
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
+import collection.mutable.{HashSet, HashMap, ListBuffer}
+import java.lang.Long
 
 /**
  * <p>
@@ -33,8 +34,82 @@ import org.fusesource.hawtdispatch._
  */
 class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination {
 
-  var producers = ListBuffer[BindableDeliveryProducer]()
-  var consumers = ListBuffer[DeliveryConsumer]()
+  var enqueue_item_counter = 0L
+  var enqueue_size_counter = 0L
+  var enqueue_ts = System.currentTimeMillis()
+
+  var dequeue_item_counter = 0L
+  var dequeue_size_counter = 0L
+  var dequeue_ts = System.currentTimeMillis()
+
+  var proxy_sessions = new HashSet[ProxyDeliverySession]()
+
+  implicit def from_link(from:LinkDTO):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
+  implicit def from_session(from:ProxyDeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
+
+  def add_counters(to:LinkDTO, from:(Long,Long,Long)):Unit = {
+    to.enqueue_item_counter += from._1
+    to.enqueue_size_counter += from._2
+    to.enqueue_ts = to.enqueue_ts max from._2
+  }
+  def add_counters(to:Topic, from:(Long,Long,Long)):Unit = {
+    to.enqueue_item_counter += from._1
+    to.enqueue_size_counter += from._2
+    to.enqueue_ts = to.enqueue_ts max from._2
+  }
+
+  case class ProxyDeliverySession(session:DeliverySession) extends DeliverySession with SinkFilter[Delivery] {
+    dispatch_queue {
+      proxy_sessions.add(this)
+    }
+
+    def close = {
+      session.close
+      dispatch_queue {
+        proxy_sessions.remove(this)
+        consumers.get(session.consumer) match {
+          case Some(proxy) => add_counters(proxy.link, this)
+          case _          => add_counters(Topic.this, this)
+        }
+        producers.get(session.producer.asInstanceOf[BindableDeliveryProducer]) match {
+          case Some(link) => add_counters(link, this)
+          case _          => add_counters(Topic.this, this)
+        }
+      }
+    }
+
+    var enqueue_ts = now
+    def offer(value: Delivery) = {
+      if( session.offer(value) ) {
+        enqueue_ts = now
+        true
+      } else {
+        false
+      }
+    }
+
+    def downstream = session
+    def remaining_capacity = session.remaining_capacity
+    def producer = session.producer
+    def enqueue_size_counter = session.enqueue_size_counter
+    def enqueue_item_counter = session.enqueue_item_counter
+    def consumer = session.consumer
+  }
+
+  case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO) extends DeliveryConsumer {
+    def retained() = consumer.retained()
+    def retain() = consumer.retain()
+    def release() = consumer.release()
+    def matches(message: Delivery) = consumer.matches(message)
+    def is_persistent = consumer.is_persistent
+    def dispatch_queue = consumer.dispatch_queue
+    def connect(producer: DeliveryProducer) = {
+      new ProxyDeliverySession(consumer.connect(producer))
+    }
+  }
+
+  val producers = HashMap[BindableDeliveryProducer, LinkDTO]()
+  val consumers = HashMap[DeliveryConsumer, ProxyDeliveryConsumer]()
   var durable_subscriptions = ListBuffer[Queue]()
   var consumer_queues = HashMap[DeliveryConsumer, Queue]()
   var idled_at = 0L
@@ -52,8 +127,86 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   override def toString = destination_dto.toString
 
   def virtual_host: VirtualHost = router.virtual_host
+  def now = virtual_host.broker.now
+  def dispatch_queue = virtual_host.dispatch_queue
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
+
+  def status:TopicStatusDTO = {
+    dispatch_queue.assertExecuting()
+
+    val rc = new TopicStatusDTO
+    rc.id = this.id
+    rc.state = "STARTED"
+    rc.state_since = this.created_at
+    rc.config = this.config
+
+    rc.metrics.producer_counter = producer_counter
+    rc.metrics.consumer_counter = consumer_counter
+    rc.metrics.producer_count = producers.size
+    rc.metrics.consumer_counter = consumers.size
+
+    this.durable_subscriptions.foreach { q =>
+      rc.dsubs.add(q.id)
+    }
+
+    def copy(o:LinkDTO) = {
+      val rc = new LinkDTO()
+      rc.id = o.id
+      rc.kind = o.kind
+      rc.label = o.label
+      rc.enqueue_ts = o.enqueue_ts
+      add_counters(rc, o);
+      rc
+    }
+
+    // build the list of producer and consumer links..
+    val producer_links = HashMap[BindableDeliveryProducer, LinkDTO]()
+    val consumers_links = HashMap[DeliveryConsumer, LinkDTO]()
+    this.producers.foreach { case (producer, link) =>
+      val o = copy(link)
+      producer_links.put(producer, o)
+      rc.producers.add(o)
+    }
+    this.consumers.foreach { case (consumer, proxy) =>
+      val o = copy(proxy.link)
+      consumers_links.put(consumer, o)
+      rc.consumers.add(o)
+    }
+
+    // Add in the counters from the live sessions..
+    proxy_sessions.foreach{ session =>
+      val stats = from_session(session)
+      for( link <- producer_links.get(session.producer.asInstanceOf[BindableDeliveryProducer]) ) {
+        add_counters(link, stats)
+      }
+      for( link <- consumers_links.get(session.consumer) ) {
+        add_counters(link, stats)
+      }
+    }
+
+    // Now update the topic counters..
+    rc.metrics.enqueue_item_counter = enqueue_item_counter
+    rc.metrics.enqueue_size_counter = enqueue_size_counter
+    rc.metrics.enqueue_ts = enqueue_ts
+
+    rc.metrics.dequeue_item_counter = dequeue_item_counter
+    rc.metrics.dequeue_size_counter = dequeue_size_counter
+    rc.metrics.dequeue_ts = dequeue_ts
+    consumers_links.values.foreach { link =>
+      rc.metrics.enqueue_item_counter += link.enqueue_item_counter
+      rc.metrics.enqueue_size_counter += link.enqueue_size_counter
+      rc.metrics.enqueue_ts = rc.metrics.enqueue_ts max link.enqueue_ts
+    }
+    producer_links.values.foreach { link =>
+      rc.metrics.dequeue_item_counter += link.enqueue_item_counter
+      rc.metrics.dequeue_size_counter += link.enqueue_size_counter
+      rc.metrics.dequeue_ts = rc.metrics.dequeue_ts max link.enqueue_ts
+    }
+
+    rc
+  }
+
 
   def update(on_completed:Runnable) = {
     refresh_config
@@ -80,7 +233,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         val now = System.currentTimeMillis()
         idled_at = now
         if( auto_delete_after!=0 ) {
-          virtual_host.dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
+          dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
             if( now == idled_at ) {
               router.topic_domain.remove_destination(path, this)
             }
@@ -93,15 +246,11 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   }
 
   def bind (destination: DestinationDTO, consumer:DeliveryConsumer) = {
-    destination match {
-      case null=> // unified queue case
 
-        consumers += consumer
-        val list = List(consumer)
-        producers.foreach({ r=>
-          r.bind(list)
-        })
-
+    val target = destination match {
+      case null=>
+        // this is the unified queue case..
+        consumer
       case destination:TopicDestinationDTO=>
         var target = consumer
         slow_consumer_policy match {
@@ -111,64 +260,70 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
             val queue = router._create_queue(new TempQueueBinding(consumer))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
-
             consumer_queues += consumer->queue
-            target = queue
+            queue
 
           case "block" =>
             // just have dispatcher dispatch directly to them..
+            consumer
         }
-
-        consumers += target
-        consumer_counter += 1
-        val list = target :: Nil
-        producers.foreach({ r=>
-          r.bind(list)
-        })
-
     }
+
+    val link = new LinkDTO()
+    target match {
+      case queue:Queue =>
+        link.kind = "queue"
+        link.id = queue.id
+        link.label = queue.id
+      case _ =>
+        target.connection match {
+          case Some(connection) =>
+            link.kind = "connection"
+            link.id = connection.id.toString
+            link.label = connection.transport.getRemoteAddress.toString
+          case _ =>
+            link.kind = "unknown"
+            link.label = "unknown"
+        }
+    }
+
+    val proxy = ProxyDeliveryConsumer(target, link)
+    consumers.put(target, proxy)
+    consumer_counter += 1
+    val list = proxy :: Nil
+    producers.keys.foreach({ r=>
+      r.bind(list)
+    })
     check_idle
   }
 
   def unbind (consumer:DeliveryConsumer, persistent:Boolean) = {
 
-    consumer_queues.remove(consumer) match {
-      case Some(queue)=>
-
-        queue.unbind(List(consumer))
-
-        queue.binding match {
-          case x:TempQueueBinding =>
-
-            val list = List(queue)
-            producers.foreach({ r=>
-              r.unbind(list)
-            })
-            router._destroy_queue(queue.id, null)
-
-        }
-
-      case None=>
-
-        // producers are directly delivering to the consumer..
-        val original = consumers.size
-        consumers -= consumer
-        if( original!= consumers.size ) {
-          val list = List(consumer)
-          producers.foreach({ r=>
-            r.unbind(list)
-          })
-        }
+    for(proxy <- consumers.remove(consumer)) {
+      add_counters(Topic.this, proxy.link)
+      val list = consumer_queues.remove(consumer) match {
+        case Some(queue) =>
+          queue.unbind(List(consumer))
+          queue.binding match {
+            case x:TempQueueBinding =>
+              router._destroy_queue(queue.id, null)
+          }
+          List(queue)
+        case None =>
+          List(consumer)
+      }
+      producers.keys.foreach({ r=>
+        r.unbind(list)
+      })
     }
     check_idle
-
   }
 
   def bind_durable_subscription(destination: DurableSubscriptionDestinationDTO, queue:Queue)  = {
     if( !durable_subscriptions.contains(queue) ) {
       durable_subscriptions += queue
       val list = List(queue)
-      producers.foreach({ r=>
+      producers.keys.foreach({ r=>
         r.bind(list)
       })
       consumer_queues.foreach{case (consumer, q)=>
@@ -184,7 +339,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     if( durable_subscriptions.contains(queue) ) {
       durable_subscriptions -= queue
       val list = List(queue)
-      producers.foreach({ r=>
+      producers.keys.foreach({ r=>
         r.unbind(list)
       })
       consumer_queues.foreach{case (consumer, q)=>
@@ -197,21 +352,32 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   }
 
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
-    producers += producer
+    val link = new LinkDTO()
+    producer.connection match {
+      case Some(connection) =>
+        link.kind = "connection"
+        link.id = connection.id.toString
+        link.label = connection.transport.getRemoteAddress.toString
+      case _ =>
+        link.kind = "unknown"
+        link.label = "unknown"
+    }
+    producers.put(producer, link)
     producer_counter += 1
-    producer.bind(consumers.toList ::: durable_subscriptions.toList)
+    producer.bind(consumers.values.toList ::: durable_subscriptions.toList)
     check_idle
   }
 
   def disconnect (producer:BindableDeliveryProducer) = {
-    producers = producers.filterNot( _ == producer )
-    producer.unbind(consumers.toList ::: durable_subscriptions.toList)
+    for(link <- producers.remove(producer) ) {
+      add_counters(this, link)
+    }
     check_idle
   }
 
   def disconnect_producers:Unit ={
-    for( producer <- producers ) {
-      producer.unbind(consumers.toList ::: durable_subscriptions.toList)
+    for( (_, link) <- producers ) {
+      add_counters(this, link)
     }
     producers.clear
     check_idle

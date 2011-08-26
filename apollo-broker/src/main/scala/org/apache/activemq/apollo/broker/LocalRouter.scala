@@ -957,8 +957,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     // For the topics, just collocate the producers onto the first consumer's thread.
     topic_domain.destinations.foreach { node =>
 
-      node.consumers.headOption.foreach{ consumer =>
-        node.producers.foreach { r=>
+      node.consumers.keys.headOption.foreach{ consumer =>
+        node.producers.keys.foreach { r=>
           r.collocate(consumer.dispatch_queue)
         }
       }

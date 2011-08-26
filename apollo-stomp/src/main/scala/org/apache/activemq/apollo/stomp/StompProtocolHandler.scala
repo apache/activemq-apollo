@@ -389,6 +389,9 @@ class StompProtocolHandler extends ProtocolHandler {
       val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
 
       def remaining_capacity = downstream.remaining_capacity
+      def enqueue_item_counter = downstream.accepted_count
+      def enqueue_size_counter = downstream.accepted_size
+
 
       def close = {
         assert(producer.dispatch_queue.isExecuting)

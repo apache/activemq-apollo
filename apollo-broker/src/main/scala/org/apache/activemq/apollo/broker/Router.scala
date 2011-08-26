@@ -91,12 +91,14 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
     dispatch_queue {
       consumers.foreach{ x=>
         debug("producer route attaching to conusmer.")
-        val target = x.connect(this);
+        val target = connect(x);
         target.refiller = drainer
         targets ::= target
       }
     }
   }
+
+  def connect(x:DeliveryConsumer) = x.connect(this)
 
   def unbind(targets:List[DeliveryConsumer]) = dispatch_queue {
     this.targets = this.targets.filterNot { x=>
@@ -180,6 +182,7 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
       true
     }
   }
+
 
   private def delivered(delivery: Delivery): Unit = {
     if (pendingAck != null) {

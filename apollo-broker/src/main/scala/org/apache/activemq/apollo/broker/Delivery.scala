@@ -76,6 +76,14 @@ trait DeliveryConsumer extends Retained {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait DeliverySession extends Sink[Delivery] {
+  /**
+   * The number of deliveries accepted by this session.
+   */
+  def enqueue_item_counter:Long
+  /**
+   * The total size of the deliveries accepted by this session.
+   */
+  def enqueue_size_counter:Long
   def producer:DeliveryProducer
   def consumer:DeliveryConsumer
   def remaining_capacity:Int

@@ -215,50 +215,110 @@ case class BrokerResource() extends Resource {
     rc
   }
 
-  def aggregate_queue_metrics(queue_metrics:Iterable[QueueMetricsDTO]):AggregateQueueMetricsDTO = {
-    queue_metrics.foldLeft(new AggregateQueueMetricsDTO){ (rc, q)=>
-      rc.enqueue_item_counter += q.enqueue_item_counter
-      rc.enqueue_size_counter += q.enqueue_size_counter
-      rc.enqueue_ts = rc.enqueue_ts max q.enqueue_ts
-
-      rc.dequeue_item_counter += q.dequeue_item_counter
-      rc.dequeue_size_counter += q.dequeue_size_counter
-      rc.dequeue_ts = rc.dequeue_ts max q.dequeue_ts
-
-      rc.nack_item_counter += q.nack_item_counter
-      rc.nack_size_counter += q.nack_size_counter
-      rc.nack_ts = rc.nack_ts max q.nack_ts
-
-      rc.expired_item_counter += q.expired_item_counter
-      rc.expired_size_counter += q.expired_size_counter
-      rc.expired_ts = rc.expired_ts max q.expired_ts
-
-      rc.queue_size += q.queue_size
-      rc.queue_items += q.queue_items
-
-      rc.swap_out_item_counter += q.swap_out_item_counter
-      rc.swap_out_size_counter += q.swap_out_size_counter
-      rc.swap_in_item_counter += q.swap_in_item_counter
-      rc.swap_in_size_counter += q.swap_in_size_counter
-
-      rc.swapping_in_size += q.swapping_in_size
-      rc.swapping_out_size += q.swapping_out_size
-
-      rc.swapped_in_items += q.swapped_in_items
-      rc.swapped_in_size += q.swapped_in_size
-
-      rc.swapped_in_size_max += q.swapped_in_size_max
-      rc.producer_counter += q.producer_counter
-      rc.consumer_counter += q.consumer_counter
-      rc.producer_count += q.producer_count
-      rc.consumer_count += q.consumer_count
-
-      if( q.isInstanceOf[AggregateQueueMetricsDTO] ) {
-        rc.queues += q.asInstanceOf[AggregateQueueMetricsDTO].queues
-      } else {
-        rc.queues += 1
+  @GET
+  @Path("topic-metrics")
+  def get_topic_metrics(): AggregateTopicMetricsDTO = {
+    val rc:AggregateTopicMetricsDTO = with_broker { broker =>
+      monitoring(broker) {
+        get_topic_metrics(broker)
       }
-      rc
+    }
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
+  @GET
+  @Path("dsub-metrics")
+  def get_dsub_metrics(): AggregateQueueMetricsDTO = {
+    val rc:AggregateQueueMetricsDTO = with_broker { broker =>
+      monitoring(broker) {
+        get_dsub_metrics(broker)
+      }
+    }
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
+  def aggregate(queue:AggregateQueueMetricsDTO, topic:AggregateTopicMetricsDTO, dsub:AggregateQueueMetricsDTO):AggregateQueueMetricsDTO = {
+    // zero out the enqueue stats on the dsubs since they will already be accounted for in the topic
+    // stats.
+    dsub.enqueue_item_counter = 0
+    dsub.enqueue_size_counter = 0
+    dsub.enqueue_ts = 0
+    val rc = aggregate_queue_metrics(List(queue, dsub))
+    add_destination_metrics(rc, topic)
+    rc.objects += topic.objects
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
+  @GET
+  @Path("dest-metrics")
+  def get_dest_metrics(): AggregateQueueMetricsDTO = {
+    aggregate(get_queue_metrics(), get_topic_metrics(), get_dsub_metrics())
+  }
+
+  def add_destination_metrics(to:DestinationMetricsDTO, from:DestinationMetricsDTO) = {
+    to.enqueue_item_counter += from.enqueue_item_counter
+    to.enqueue_size_counter += from.enqueue_size_counter
+    to.enqueue_ts = to.enqueue_ts max from.enqueue_ts
+
+    to.dequeue_item_counter += from.dequeue_item_counter
+    to.dequeue_size_counter += from.dequeue_size_counter
+    to.dequeue_ts = to.dequeue_ts max from.dequeue_ts
+
+    to.producer_counter += from.producer_counter
+    to.consumer_counter += from.consumer_counter
+    to.producer_count += from.producer_count
+    to.consumer_count += from.consumer_count
+  }
+
+  def aggregate_queue_metrics(metrics:Iterable[QueueMetricsDTO]):AggregateQueueMetricsDTO = {
+    metrics.foldLeft(new AggregateQueueMetricsDTO){ (memo, metric)=>
+      add_destination_metrics(memo, metric)
+
+      memo.nack_item_counter += metric.nack_item_counter
+      memo.nack_size_counter += metric.nack_size_counter
+      memo.nack_ts = memo.nack_ts max metric.nack_ts
+
+      memo.expired_item_counter += metric.expired_item_counter
+      memo.expired_size_counter += metric.expired_size_counter
+      memo.expired_ts = memo.expired_ts max metric.expired_ts
+
+      memo.queue_size += metric.queue_size
+      memo.queue_items += metric.queue_items
+
+      memo.swap_out_item_counter += metric.swap_out_item_counter
+      memo.swap_out_size_counter += metric.swap_out_size_counter
+      memo.swap_in_item_counter += metric.swap_in_item_counter
+      memo.swap_in_size_counter += metric.swap_in_size_counter
+
+      memo.swapping_in_size += metric.swapping_in_size
+      memo.swapping_out_size += metric.swapping_out_size
+
+      memo.swapped_in_items += metric.swapped_in_items
+      memo.swapped_in_size += metric.swapped_in_size
+
+      memo.swapped_in_size_max += metric.swapped_in_size_max
+
+      if( metric.isInstanceOf[AggregateQueueMetricsDTO] ) {
+        memo.objects += metric.asInstanceOf[AggregateQueueMetricsDTO].objects
+      } else {
+        memo.objects += 1
+      }
+      memo
+    }
+  }
+
+  def aggregate_topic_metrics(metrics:Iterable[TopicMetricsDTO]):AggregateTopicMetricsDTO = {
+    metrics.foldLeft(new AggregateTopicMetricsDTO){ (memo, metric)=>
+      add_destination_metrics(memo, metric)
+      if( metric.isInstanceOf[AggregateTopicMetricsDTO] ) {
+        memo.objects += metric.asInstanceOf[AggregateTopicMetricsDTO].objects
+      } else {
+        memo.objects += 1
+      }
+      memo
     }
   }
 
@@ -271,9 +331,40 @@ case class BrokerResource() extends Resource {
 
   def get_queue_metrics(host:VirtualHost):FutureResult[AggregateQueueMetricsDTO] = {
     val router:LocalRouter = host
-    val queues: Iterable[Queue] = router.queues_by_id.values
+    val queues: Iterable[Queue] = router.queue_domain.destinations
     val metrics = sync_all(queues) { queue =>
-      get_queue_metrics(queue)
+      queue.get_queue_metrics
+    }
+    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option))) )
+  }
+
+
+  def get_topic_metrics(broker:Broker):FutureResult[AggregateTopicMetricsDTO] = {
+    val metrics = sync_all(broker.virtual_hosts.values) { host =>
+      get_topic_metrics(host)
+    }
+    metrics.map( x=> Success(aggregate_topic_metrics(x.flatMap(_.success_option)) ))
+  }
+
+  def get_topic_metrics(host:VirtualHost):FutureResult[AggregateTopicMetricsDTO] = {
+    val router:LocalRouter = host
+    val topics: Iterable[Topic] = router.topic_domain.destinations
+    val metrics = topics.map(_.status.metrics)
+    FutureResult(Success(aggregate_topic_metrics(metrics)))
+  }
+
+  def get_dsub_metrics(broker:Broker):FutureResult[AggregateQueueMetricsDTO] = {
+    val metrics = sync_all(broker.virtual_hosts.values) { host =>
+      get_dsub_metrics(host)
+    }
+    metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option)) ))
+  }
+
+  def get_dsub_metrics(host:VirtualHost):FutureResult[AggregateQueueMetricsDTO] = {
+    val router:LocalRouter = host
+    val dsubs: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
+    val metrics = sync_all(dsubs) { dsub =>
+      dsub.get_queue_metrics
     }
     metrics.map( x=> Success(aggregate_queue_metrics(x.flatMap(_.success_option))) )
   }
@@ -316,15 +407,12 @@ case class BrokerResource() extends Resource {
     router.queue_domain.destinations.foreach { node =>
       result.queues.add(node.id)
     }
-    result.queue_count = result.queues.size()
     router.topic_domain.destinations.foreach { node =>
       result.topics.add(node.id)
     }
-    result.topic_count = result.topics.size()
     router.topic_domain.durable_subscriptions_by_id.keys.foreach { id =>
       result.dsubs.add(id)
     }
-    result.dsub_count = result.dsubs.size()
 
     result
   }
@@ -339,6 +427,34 @@ case class BrokerResource() extends Resource {
     rc.current_time = System.currentTimeMillis()
     rc
   }
+
+  @GET @Path("virtual-hosts/{id}/topic-metrics")
+  def virtual_host_topic_metrics(@PathParam("id") id : String): AggregateTopicMetricsDTO = {
+    val rc:AggregateTopicMetricsDTO = with_virtual_host(id) { host =>
+      monitoring(host) {
+        get_topic_metrics(host)
+      }
+    }
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
+  @GET @Path("virtual-hosts/{id}/dsub-metrics")
+  def virtual_host_dsub_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
+    val rc:AggregateQueueMetricsDTO = with_virtual_host(id) { host =>
+      monitoring(host) {
+        get_dsub_metrics(host)
+      }
+    }
+    rc.current_time = System.currentTimeMillis()
+    rc
+  }
+
+  @GET @Path("virtual-hosts/{id}/dest-metrics")
+  def virtual_host_dest_metrics(@PathParam("id") id : String): AggregateQueueMetricsDTO = {
+    aggregate(virtual_host_queue_metrics(id), virtual_host_topic_metrics(id), virtual_host_dsub_metrics(id))
+  }
+
 
   @GET @Path("virtual-hosts/{id}/store")
   def store(@PathParam("id") id : String):StoreStatusDTO = {
@@ -355,22 +471,6 @@ case class BrokerResource() extends Resource {
         }
       }
     }
-  }
-
-  def link(connection:BrokerConnection) = {
-    val link = new LinkDTO()
-    link.kind = "connection"
-    link.id = connection.id.toString
-    link.label = connection.transport.getRemoteAddress.toString
-    link
-  }
-
-  def link(queue:Queue) = {
-    val link = new LinkDTO()
-    link.kind = "queue"
-    link.id = queue.id
-    link.label = queue.id
-    link
   }
 
   class JosqlHelper {
@@ -564,100 +664,13 @@ case class BrokerResource() extends Resource {
     }
   }
 
-  def status(node: Topic): FutureResult[TopicStatusDTO] = {
-    monitoring(node) {
-      val rc = new TopicStatusDTO
-      rc.id = node.id
-      rc.state = "STARTED"
-      rc.state_since = node.created_at
-      rc.config = node.config
-      rc.producer_counter = node.producer_counter
-      rc.consumer_counter = node.consumer_counter
-
-      node.durable_subscriptions.foreach {
-        q =>
-          rc.dsubs.add(q.id)
-      }
-      node.consumers.foreach {
-        consumer =>
-          consumer match {
-            case queue: Queue =>
-              rc.consumers.add(link(queue))
-            case _ =>
-              consumer.connection.foreach {
-                c =>
-                  rc.consumers.add(link(c))
-              }
-          }
-      }
-      node.producers.flatMap(_.connection).foreach {
-        connection =>
-          rc.producers.add(link(connection))
-      }
-
-      rc
-    }
+  def status(node: Topic): FutureResult[TopicStatusDTO] = monitoring(node) {
+    node.status
   }
 
   def status(q:Queue, entries:Boolean=false) = monitoring(q) {
-    val rc = new QueueStatusDTO
-    rc.id = q.id
-    rc.state = q.service_state.toString
-    rc.state_since = q.service_state.since
-    rc.binding = q.binding.binding_dto
-    rc.config = q.config
-    rc.metrics = get_queue_metrics(q)
-    rc.metrics.current_time = System.currentTimeMillis()
-
-    if( entries ) {
-      var cur = q.head_entry
-      while( cur!=null ) {
-
-        val e = new EntryStatusDTO
-        e.seq = cur.seq
-        e.count = cur.count
-        e.size = cur.size
-        e.consumer_count = cur.parked.size
-        e.is_prefetched = cur.is_prefetched
-        e.state = cur.label
-
-        rc.entries.add(e)
-
-        cur = if( cur == q.tail_entry ) {
-          null
-        } else {
-          cur.nextOrTail
-        }
-      }
-    }
-
-    q.inbound_sessions.flatMap( _.producer.connection ).foreach { connection=>
-      rc.producers.add(link(connection))
-    }
-    q.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
-      val status = new QueueConsumerStatusDTO
-      sub.consumer.connection.foreach(x=> status.link = link(x))
-      status.position = sub.pos.seq
-      status.total_dispatched_count = sub.total_dispatched_count
-      status.total_dispatched_size = sub.total_dispatched_size
-      status.total_ack_count = sub.total_ack_count
-      status.total_nack_count = sub.total_nack_count
-      status.acquired_size = sub.acquired_size
-      status.acquired_count = sub.acquired_count
-      status.waiting_on = if( sub.full ) {
-        "ack"
-      } else if( sub.pos.is_tail ) {
-        "producer"
-      } else if( !sub.pos.is_loaded ) {
-        "load"
-      } else {
-        "dispatch"
-      }
-      rc.consumers.add(status)
-    }
-    rc
+    q.status(entries)
   }
-
 
   @GET @Path("connectors")
   @Produces(Array("application/json"))
@@ -777,51 +790,5 @@ case class BrokerResource() extends Resource {
       }
     }
   }
-
-  def get_queue_metrics(q:Queue):QueueMetricsDTO = {
-    val rc = new QueueMetricsDTO
-
-    rc.enqueue_item_counter = q.enqueue_item_counter
-    rc.enqueue_size_counter = q.enqueue_size_counter
-    rc.enqueue_ts = q.enqueue_ts
-
-    rc.dequeue_item_counter = q.dequeue_item_counter
-    rc.dequeue_size_counter = q.dequeue_size_counter
-    rc.dequeue_ts = q.dequeue_ts
-
-    rc.nack_item_counter = q.nack_item_counter
-    rc.nack_size_counter = q.nack_size_counter
-    rc.nack_ts = q.nack_ts
-
-    rc.expired_item_counter = q.expired_item_counter
-    rc.expired_size_counter = q.expired_size_counter
-    rc.expired_ts = q.expired_ts
-
-    rc.queue_size = q.queue_size
-    rc.queue_items = q.queue_items
-
-    rc.swap_out_item_counter = q.swap_out_item_counter
-    rc.swap_out_size_counter = q.swap_out_size_counter
-    rc.swap_in_item_counter = q.swap_in_item_counter
-    rc.swap_in_size_counter = q.swap_in_size_counter
-
-    rc.swapping_in_size = q.swapping_in_size
-    rc.swapping_out_size = q.swapping_out_size
-
-    rc.swapped_in_items = q.swapped_in_items
-    rc.swapped_in_size = q.swapped_in_size
-
-    rc.swapped_in_size_max = q.swapped_in_size_max
-
-    rc.producer_counter = q.producer_counter
-    rc.consumer_counter = q.consumer_counter
-
-    rc.producer_count = q.producers.size
-    rc.consumer_count = q.all_subscriptions.size
-
-    rc
-  }
-
-
 
 }

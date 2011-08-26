@@ -14,36 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
+ * <p>
+ *     Collects metrics about the status of a topic since the
+ *     time a broker gets started.
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="queue_consumer_status")
+@XmlRootElement(name="topic_metrics")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class QueueConsumerStatusDTO {
+public class TopicMetricsDTO extends DestinationMetricsDTO {
 
-    /**
-     * link to who is consuming from the queue.
-     */
-    public LinkDTO link;
-
-    public long position = 0;
-
-    public int acquired_count;
-    public long acquired_size;
-
-    public long total_dispatched_count;
-    public long total_dispatched_size;
-
-    public long total_ack_count;
-    public long total_nack_count;
-
-    /**
-     * What the consumer is currently waiting on
-     */
-    @XmlAttribute(name="waiting_on")
-	public String waiting_on;
 }

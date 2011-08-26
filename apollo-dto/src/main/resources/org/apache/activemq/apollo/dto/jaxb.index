@@ -42,7 +42,10 @@ NullStoreDTO
 QueueDTO
 TopicDTO
 LinkDTO
-QueueConsumerStatusDTO
+QueueConsumerLinkDTO
 ValueDTO
 StringListDTO
 DataPageDTO
+AggregateTopicMetricsDTO
+AggregateQueueMetricsDTO
+DestinationMetricsDTO

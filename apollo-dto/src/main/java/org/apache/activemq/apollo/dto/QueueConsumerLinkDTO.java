@@ -16,43 +16,26 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
 import javax.xml.bind.annotation.*;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="link")
+@XmlRootElement(name="queue_consumer_link")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LinkDTO {
+public class QueueConsumerLinkDTO extends LinkDTO {
 
-    @XmlAttribute
-    public String kind;
+    public long position = 0;
 
-    @XmlAttribute
-    public String id;
+    public int acquired_count;
+    public long acquired_size;
 
-    @XmlAttribute
-    public String label;
-
-    /**
-     * The number of messages that have been dispatched over the link
-     */
-    @XmlAttribute(name="enqueue_item_counter")
-    public long enqueue_item_counter;
+    public long total_ack_count;
+    public long total_nack_count;
 
     /**
-     * The total size in bytes of messages that have been dispatched
-     * over the link
+     * What the consumer is currently waiting on
      */
-    @XmlAttribute(name="enqueue_size_counter")
-    public long enqueue_size_counter;
-
-    /**
-     * Timestamp of when a message last went over the link.
-     */
-    @XmlAttribute(name="enqueue_tsr")
-    public long enqueue_ts;
-
+    @XmlAttribute(name="waiting_on")
+	public String waiting_on;
 }

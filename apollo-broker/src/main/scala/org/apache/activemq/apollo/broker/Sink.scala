@@ -21,6 +21,7 @@ import org.fusesource.hawtdispatch._
 import java.util.LinkedList
 import org.apache.activemq.apollo.transport.Transport
 import collection.mutable.HashSet
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * <p>
@@ -229,6 +230,8 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
 }
 
 trait SessionSink[T] extends Sink[T] {
+  def accepted_count:Long
+  def accepted_size:Long
   def remaining_capacity:Int
 }
 
@@ -322,6 +325,11 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   private def sizer = mux.sizer
   private def downstream = mux.source
 
+  @volatile
+  var accepted_count = 0L
+  @volatile
+  var accepted_size = 0L
+
   // create a source to coalesce credit events back to the producer side...
   val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
   credit_adder.onEvent{
@@ -361,7 +369,12 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
     if( _full || closed ) {
       false
     } else {
-      add_credits(-sizer.size(value))
+      val size = sizer.size(value)
+
+      accepted_count += 1
+      accepted_size += size
+
+      add_credits(-size)
       downstream.merge((this, value))
       true
     }

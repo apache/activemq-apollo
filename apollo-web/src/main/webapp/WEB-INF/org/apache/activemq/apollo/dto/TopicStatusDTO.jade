@@ -26,27 +26,30 @@ p state: #{state} #{ uptime(state_since) } ago
 h3 Topic Domain
 
 h4 Producers
-p total producers ever : #{producer_counter}
+p total producers ever : #{metrics.producer_counter}
 ul
   - for( x <- producers )
-    - x.kind match
-      - case "connection" =>
-        li
+    li.producer
+      - x.kind match
+        - case "queue" =>
+          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+        - case "connection" =>
           a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
-      - case _ =>
+        - case _ =>
+      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 h4 Consumers
-p total consumers ever : #{consumer_counter}
+p total consumers ever : #{metrics.producer_counter}
 ul
   - for( x <- consumers )
-    - x.kind match
-      - case "queue" =>
-        li
+    li.consumer
+      - x.kind match
+        - case "queue" =>
           a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
-      - case "connection" =>
-        li
+        - case "connection" =>
           a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
-      - case _ =>
+        - case _ =>
+      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 h4 Durable Subscribers
 ul

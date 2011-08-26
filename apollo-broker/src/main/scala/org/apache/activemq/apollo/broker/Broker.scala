@@ -34,6 +34,8 @@ import management.ManagementFactory
 import org.apache.activemq.apollo.dto._
 import javax.management.ObjectName
 import org.fusesource.hawtdispatch.TaskTracker._
+import java.util.concurrent.TimeUnit
+import collection.mutable.ListBuffer._
 
 /**
  * <p>
@@ -250,6 +252,9 @@ class Broker() extends BaseService {
 
   var web_server:WebServer = _
 
+  @volatile
+  var now = System.currentTimeMillis()
+
   var config_log:Log = Log(new MemoryLogger(Broker.log))
   var audit_log:Log = Broker
   var security_log:Log  = Broker
@@ -292,7 +297,9 @@ class Broker() extends BaseService {
     log_versions
     check_file_limit
     init_dispatch_queue(dispatch_queue)
+
     BrokerRegistry.add(this)
+    schedule_periodic_maintenance
 
     val tracker = new LoggingTracker("broker startup", console_log, SERVICE_TIMEOUT)
     apply_update(tracker)
@@ -333,6 +340,14 @@ class Broker() extends BaseService {
 
     BrokerRegistry.remove(this)
     tracker.callback(on_completed)
+
+  }
+
+  def schedule_periodic_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
+    if( service_state.is_started ) {
+      now = System.currentTimeMillis
+      schedule_periodic_maintenance
+    }
   }
 
   protected def init_logs = {

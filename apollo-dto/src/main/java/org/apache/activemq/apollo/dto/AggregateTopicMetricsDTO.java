@@ -16,43 +16,25 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="link")
+@XmlRootElement(name="aggregate_topic_metrics")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LinkDTO {
-
-    @XmlAttribute
-    public String kind;
-
-    @XmlAttribute
-    public String id;
-
-    @XmlAttribute
-    public String label;
+public class AggregateTopicMetricsDTO extends TopicMetricsDTO {
 
     /**
-     * The number of messages that have been dispatched over the link
+     * The number of topics which where aggregated.
      */
-    @XmlAttribute(name="enqueue_item_counter")
-    public long enqueue_item_counter;
-
-    /**
-     * The total size in bytes of messages that have been dispatched
-     * over the link
-     */
-    @XmlAttribute(name="enqueue_size_counter")
-    public long enqueue_size_counter;
-
-    /**
-     * Timestamp of when a message last went over the link.
-     */
-    @XmlAttribute(name="enqueue_tsr")
-    public long enqueue_ts;
+    @XmlAttribute(name="objects")
+    public int objects;
 
 }
