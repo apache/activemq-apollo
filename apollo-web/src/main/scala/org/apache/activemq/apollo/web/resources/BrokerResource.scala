@@ -561,6 +561,18 @@ case class BrokerResource() extends Resource {
     }
   }
 
+  @GET @Path("virtual-hosts/{id}/topic-queues/{name:.*}/{qid}")
+  def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
+    with_virtual_host(id) { host =>
+      val router:LocalRouter = host
+      val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
+      monitoring(node) {
+        queue.status(entries)
+      }
+    }
+  }
+
   @GET @Path("virtual-hosts/{id}/queues")
   @Produces(Array("application/json"))
   def queues(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],

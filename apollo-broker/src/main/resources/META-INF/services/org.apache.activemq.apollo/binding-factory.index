@@ -16,4 +16,3 @@
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.broker.QueueDomainQueueBinding
 org.apache.activemq.apollo.broker.DurableSubscriptionQueueBinding
-org.apache.activemq.apollo.broker.TempQueueBinding

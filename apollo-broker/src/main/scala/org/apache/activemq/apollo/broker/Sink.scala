@@ -355,7 +355,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   @volatile
   var enqueue_size_counter = 0L
   @volatile
-  var enqueue_ts = 0L
+  var enqueue_ts = mux.time_stamp
 
   // create a source to coalesce credit events back to the producer side...
   val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)

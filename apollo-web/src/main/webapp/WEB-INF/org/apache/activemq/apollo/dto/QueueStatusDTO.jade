@@ -23,23 +23,35 @@
   - else
     - "%,.2f %%".format(n.toFloat*100.0/d)
 
-.breadcumbs
-  a(href={strip_resolve("..")+".html"}) Back
 
 - binding match
   - case x:QueueDestinationDTO =>
+    .breadcumbs
+      a(href={strip_resolve("..")+".html"}) Back
+
     h1 Queue #{id}
+    p state: #{state} #{ uptime(state_since) } ago
+    - if( state == "STARTED" )
+      form(method="post" action={path("action/delete")})
+        input(type="submit" value="delete")
   - case x:DurableSubscriptionDestinationDTO =>
+    .breadcumbs
+      a(href={strip_resolve("..")+".html"}) Back
+
     h1 Durable Subscription on #{id}
     - if( x.selector != null )
       p selector: ${x.selector}
-  - case _ =>
-    h1 Temporary Queue
+    p state: #{state} #{ uptime(state_since) } ago
+    - if( state == "STARTED" )
+      form(method="post" action={path("action/delete")})
+        input(type="submit" value="delete")
 
-p state: #{state} #{ uptime(state_since) } ago
-- if( state == "STARTED" )
-  form(method="post" action={path("action/delete")})
-    input(type="submit" value="delete")
+  - case _ =>
+    .breadcumbs
+      a(href={strip_resolve("../..")+".html"}) Back
+    h1 Temporary Queue
+    p state: #{state} #{ uptime(state_since) } ago
+
 
 h2 Current Size
 

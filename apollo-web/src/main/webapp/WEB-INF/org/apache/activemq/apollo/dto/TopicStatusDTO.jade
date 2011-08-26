@@ -44,6 +44,8 @@ ul
   - for( x <- consumers )
     li.consumer
       - x.kind match
+        - case "topic-queue" =>
+          a(href={ path("../../topic-queues/"+id+"/"+x.id+".html") }) #{x.label}
         - case "queue" =>
           a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
         - case "connection" =>

@@ -250,20 +250,19 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
 }
 
 
-object TempQueueBinding extends BindingFactory {
+object TempQueueBinding {
   val TEMP_DATA = new AsciiBuffer("")
   val TEMP_KIND = new AsciiBuffer("tmp")
-  val TEMP_DTO = null
 
-  def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
-    if( binding_kind == TEMP_KIND ) {
-      new TempQueueBinding("", "")
-    } else {
-      null
-    }
-  }
-
-  def create(binding_dto:DestinationDTO) = throw new UnsupportedOperationException
+//  def create(binding_kind:AsciiBuffer, binding_data:Buffer) = {
+//    if( binding_kind == TEMP_KIND ) {
+//      new TempQueueBinding("", "")
+//    } else {
+//      null
+//    }
+//  }
+//
+//  def create(binding_dto:DestinationDTO) = throw new UnsupportedOperationException
 }
 
 /**
@@ -272,28 +271,24 @@ object TempQueueBinding extends BindingFactory {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class TempQueueBinding(val key:AnyRef, val id:String) extends Binding {
+class TempQueueBinding(val key:AnyRef, val destination:Path, val binding_dto:DestinationDTO) extends Binding {
   import TempQueueBinding._
 
-  def this(c:DeliveryConsumer) = this(c, c.connection.map(_.transport.getRemoteAddress.toString).getOrElse("known") )
-
-  val destination = null
   def binding_kind = TEMP_KIND
-  def binding_dto = TEMP_DTO
   def binding_data = TEMP_DATA
 
-  def unbind(router: LocalRouter, queue: Queue) = {
-  }
-
-  def bind(router: LocalRouter, queue: Queue) = {
-  }
+  def unbind(router: LocalRouter, queue: Queue) = {}
+  def bind(router: LocalRouter, queue: Queue) = {}
 
   override def hashCode = if(key==null) 0 else key.hashCode
+
+  def id = key.toString
+
+  def config(host: VirtualHost) = new QueueDTO
 
   override def equals(o:Any):Boolean = o match {
     case x: TempQueueBinding => x.key == key
     case _ => false
   }
 
-  def config(host: VirtualHost) = new QueueDTO
 }

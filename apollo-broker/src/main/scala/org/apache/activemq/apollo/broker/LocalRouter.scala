@@ -375,7 +375,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         durable_subscriptions_by_path.remove(path, queue)
         var matches = get_destination_matches(path)
         matches.foreach( _.unbind_durable_subscription(destination, queue) )
-        _destroy_queue(queue.id, null)
+        _destroy_queue(queue)
       }
     }
 
@@ -457,7 +457,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         for( queue <- dest.durable_subscriptions ) {
           // we delete the durable sub if it's not wildcard'ed
           if( !PathParser.containsWildCards(queue.binding.destination) ) {
-            _destroy_queue(queue.id, null)
+            _destroy_queue(queue)
           }
         }
 
@@ -465,7 +465,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           consumer match {
             case queue:Queue =>
               // Delete any attached queue consumers..
-              _destroy_queue(queue.id, null)
+              _destroy_queue(queue)
           }
         }
 
@@ -928,7 +928,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   protected def _stop(on_completed: Runnable) = {
 //    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
-    queues_by_id.valuesIterator.foreach { queue=>
+    queues_by_store_id.valuesIterator.foreach { queue=>
       queue.stop
 //      tracker.stop(queue)
     }
@@ -1118,7 +1118,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /////////////////////////////////////////////////////////////////////////////
 
   var queues_by_binding = LinkedHashMap[Binding, Queue]()
-  var queues_by_id = LinkedHashMap[String, Queue]()
+  var queues_by_store_id = LinkedHashMap[Long, Queue]()
 
   /**
    * Gets an existing queue.
@@ -1130,8 +1130,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Gets an existing queue.
    */
-  def get_queue(id:String) = dispatch_queue ! {
-    queues_by_id.get(id)
+  def get_queue(id:Long) = dispatch_queue ! {
+    queues_by_store_id.get(id)
   }
 
 
@@ -1148,7 +1148,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     queue.start
     queues_by_binding.put(binding, queue)
-    queues_by_id.put(queue.id, queue)
+    queues_by_store_id.put(qid, queue)
 
     // this causes the queue to get registered in the right location in
     // the router.
@@ -1159,10 +1159,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(id:String, security:SecurityContext) = dispatch_queue ! { _destroy_queue(id,security) }
+  def destroy_queue(id:Long, security:SecurityContext) = dispatch_queue ! { _destroy_queue(id,security) }
 
-  def _destroy_queue(id:String, security:SecurityContext):Option[String] = {
-    queues_by_id.get(id) match {
+  def _destroy_queue(id:Long, security:SecurityContext):Option[String] = {
+    queues_by_store_id.get(id) match {
       case Some(queue) =>
         _destroy_queue(queue,security)
       case None =>
@@ -1201,7 +1201,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       queue.binding.unbind(this, queue)
       queues_by_binding.remove(queue.binding)
-      queues_by_id.remove(queue.id)
+      queues_by_store_id.remove(queue.store_id)
       if (queue.tune_persistent) {
         queue.dispatch_queue {
           virtual_host.store.remove_queue(queue.store_id) {

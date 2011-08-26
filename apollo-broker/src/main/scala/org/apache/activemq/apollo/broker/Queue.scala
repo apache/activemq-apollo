@@ -46,7 +46,6 @@ import Queue._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
-
   def id = binding.id
 
   override def toString = binding.destination.toString

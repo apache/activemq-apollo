@@ -693,6 +693,11 @@ class StompProtocolHandler extends ProtocolHandler {
     }  catch {
       case e: Break =>
       case e:Exception =>
+        // To avoid double logging to the same log category..
+        if( connection_log!=StompProtocolHandler ) {
+          // but we also want the error on the apollo.log file.
+          warn("Internal Server Error", e)
+        }
         async_die("Internal Server Error", e);
     }
   }

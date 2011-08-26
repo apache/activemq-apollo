@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import collection.mutable.{HashSet, HashMap, ListBuffer}
 import java.lang.Long
+import com.sun.jdi.connect.spi.TransportService.ListenKey
 
 /**
  * <p>
@@ -134,7 +135,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     rc.metrics.producer_counter = producer_counter
     rc.metrics.consumer_counter = consumer_counter
     rc.metrics.producer_count = producers.size
-    rc.metrics.consumer_counter = consumers.size
+    rc.metrics.consumer_count = consumers.size
 
     this.durable_subscriptions.foreach { q =>
       rc.dsubs.add(q.id)
@@ -247,7 +248,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(new TempQueueBinding(consumer))
+            val queue = router._create_queue(new TempQueueBinding(consumer, path, destination_dto))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
             consumer_queues += consumer->queue
@@ -260,25 +261,37 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     }
 
     val link = new LinkDTO()
+    link.kind = "unknown"
+    link.label = "unknown"
+    link.enqueue_ts = now
     target match {
       case queue:Queue =>
-        link.kind = "queue"
-        link.id = queue.id
-        link.label = queue.id
+        queue.binding match {
+          case x:TempQueueBinding =>
+            link.kind = "topic-queue"
+            link.id = queue.store_id.toString()
+            x.key match {
+              case target:DeliveryConsumer=>
+                for(connection <- target.connection) {
+                  link.label = connection.transport.getRemoteAddress.toString
+                }
+              case _ =>
+            }
+          case x:QueueDomainQueueBinding =>
+            link.kind = "queue"
+            link.id = queue.id
+            link.label = queue.id
+        }
       case _ =>
-        target.connection match {
-          case Some(connection) =>
-            link.kind = "connection"
-            link.id = connection.id.toString
-            link.label = connection.transport.getRemoteAddress.toString
-          case _ =>
-            link.kind = "unknown"
-            link.label = "unknown"
+        for(connection <- target.connection) {
+          link.kind = "connection"
+          link.id = connection.id.toString
+          link.label = connection.transport.getRemoteAddress.toString
         }
     }
 
     val proxy = ProxyDeliveryConsumer(target, link)
-    consumers.put(target, proxy)
+    consumers.put(consumer, proxy)
     consumer_counter += 1
     val list = proxy :: Nil
     producers.keys.foreach({ r=>
@@ -296,7 +309,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
           queue.unbind(List(consumer))
           queue.binding match {
             case x:TempQueueBinding =>
-              router._destroy_queue(queue.id, null)
+              router._destroy_queue(queue)
           }
           List(queue)
         case None =>
