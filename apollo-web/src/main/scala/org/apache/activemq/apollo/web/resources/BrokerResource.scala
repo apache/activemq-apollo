@@ -743,7 +743,7 @@ case class BrokerResource() extends Resource {
     for( row <- rs.rows ) {
       val info = row.asInstanceOf[java.util.List[_]]
       def read(index:Int) = try {
-        info.get(0).asInstanceOf[java.lang.Number].longValue()
+        info.get(index).asInstanceOf[java.lang.Number].longValue()
       } catch {
         case e:Throwable => 0L
       }
