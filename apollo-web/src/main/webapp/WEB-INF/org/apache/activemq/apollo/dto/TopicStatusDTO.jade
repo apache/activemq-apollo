@@ -39,7 +39,7 @@ ul
       p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 h4 Consumers
-p total consumers ever : #{metrics.producer_counter}
+p total consumers ever : #{metrics.consumer_counter}
 ul
   - for( x <- consumers )
     li.consumer
