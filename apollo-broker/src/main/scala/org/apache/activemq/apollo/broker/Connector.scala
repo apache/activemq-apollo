@@ -17,14 +17,14 @@
 package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
-import org.fusesource.hawtdispatch.{Dispatch}
 import protocol.{ProtocolFactory, Protocol}
 import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.net.SocketAddress
-import org.apache.activemq.apollo.util.{Log, Service, ClassFinder}
+import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.dto._
+import security.SecuredResource
 
 /**
  * <p>
@@ -35,7 +35,7 @@ import org.apache.activemq.apollo.dto._
 object Connector extends Log {
 }
 
-trait Connector extends BaseService {
+trait Connector extends BaseService with SecuredResource {
 
   def broker:Broker
   def id:String
@@ -46,6 +46,7 @@ trait Connector extends BaseService {
   def update(config: ConnectorTypeDTO, on_complete:Runnable):Unit
   def socket_address:SocketAddress
   def status:ServiceStatusDTO
+  def resource_kind = SecuredResource.ConnectorKind
 }
 
 trait ConnectorFactory {
@@ -148,8 +149,6 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       connection.dispatch_queue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
       connection.protocol_handler = protocol.createProtocolHandler
       connection.transport = transport
-
-      broker.init_dispatch_queue(connection.dispatch_queue)
 
       broker.connections.put(connection.id, connection)
       try {

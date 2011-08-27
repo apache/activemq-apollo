@@ -24,49 +24,39 @@ import javax.xml.bind.annotation.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+@XmlRootElement(name="principal")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PrincipalDTO {
 
     @XmlAttribute
-    public String allow;
-
-    @XmlAttribute
-    public String deny;
+    public String name;
 
     @XmlAttribute
     public String kind;
 
-
     public PrincipalDTO() {
     }
-
-    public PrincipalDTO(String allow) {
-        this.allow = allow;
-    }
-
-    public PrincipalDTO(String allow, String kind) {
-        this.allow = allow;
+    public PrincipalDTO(String kind, String name) {
         this.kind = kind;
+        this.name = name;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof PrincipalDTO)) return false;
 
         PrincipalDTO that = (PrincipalDTO) o;
 
-        if (allow != null ? !allow.equals(that.allow) : that.allow != null) return false;
-        if (deny != null ? !deny.equals(that.deny) : that.deny != null) return false;
         if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
+        if (name != null ? !name.equals(that.name) : that.name != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = allow != null ? allow.hashCode() : 0;
-        result = 31 * result + (deny != null ? deny.hashCode() : 0);
+        int result = name != null ? name.hashCode() : 0;
         result = 31 * result + (kind != null ? kind.hashCode() : 0);
         return result;
     }

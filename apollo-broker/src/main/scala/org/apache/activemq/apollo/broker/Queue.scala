@@ -26,11 +26,12 @@ import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
 import OptionSupport._
-import security.SecurityContext
-import java.util.concurrent.atomic.{AtomicReference, AtomicLong, AtomicInteger}
+import java.util.concurrent.atomic.{AtomicReference, AtomicInteger}
 import org.fusesource.hawtbuf.Buffer
 import java.lang.UnsupportedOperationException
 import org.apache.activemq.apollo.dto._
+import security.SecuredResource._
+import security.{SecuredResource, SecurityContext}
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -45,12 +46,18 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched {
+class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
   def id = binding.id
 
   override def toString = binding.destination.toString
 
   def virtual_host = router.virtual_host
+
+  val resource_kind = binding match {
+    case x:DurableSubscriptionQueueBinding=> DurableSubKind
+    case x:QueueDomainQueueBinding=> QueueKind
+    case _ => OtherKind
+  }
 
   var producers = ListBuffer[BindableDeliveryProducer]()
   var inbound_sessions = Set[DeliverySession]()
@@ -60,7 +67,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   def filter = binding.message_filter
 
   override val dispatch_queue: DispatchQueue = createQueue(id);
-  virtual_host.broker.init_dispatch_queue(dispatch_queue)
 
   def destination_dto: DestinationDTO = binding.binding_dto
 
@@ -785,14 +791,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def connected() = {}
 
-  def bind(value: DeliveryConsumer, security:SecurityContext): Result[Zilch, String] = {
-    if(  virtual_host.authorizer!=null && security!=null ) {
+  def bind(value: DeliveryConsumer, ctx:SecurityContext): Result[Zilch, String] = {
+    if( ctx!=null ) {
       if( value.browser ) {
-        if( !virtual_host.authorizer.can_receive_from(security, virtual_host, config) ) {
+        if( !virtual_host.authorizer.can(ctx, "receive", this) ) {
           return new Failure("Not authorized to browse the queue")
         }
       } else {
-        if( !virtual_host.authorizer.can_consume_from(security, virtual_host, config) ) {
+        if( !virtual_host.authorizer.can(ctx, "consume", this) ) {
           return new Failure("Not authorized to consume from the queue")
         }
       }

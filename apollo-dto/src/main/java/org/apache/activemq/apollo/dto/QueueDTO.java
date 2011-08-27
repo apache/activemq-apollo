@@ -83,9 +83,6 @@ public class QueueDTO extends StringIdDTO {
     @XmlAttribute(name="swap_range_size")
     public Integer swap_range_size;
 
-    @XmlElement(name="acl")
-    public QueueAclDTO acl;
-
     /**
      * The maximum amount of disk space the queue is allowed
      * to grow to.  If not set then there is no limit.  You can
@@ -108,7 +105,6 @@ public class QueueDTO extends StringIdDTO {
 
         QueueDTO queueDTO = (QueueDTO) o;
 
-        if (acl != null ? !acl.equals(queueDTO.acl) : queueDTO.acl != null) return false;
         if (auto_delete_after != null ? !auto_delete_after.equals(queueDTO.auto_delete_after) : queueDTO.auto_delete_after != null)
             return false;
         if (consumer_buffer != null ? !consumer_buffer.equals(queueDTO.consumer_buffer) : queueDTO.consumer_buffer != null)
@@ -135,7 +131,6 @@ public class QueueDTO extends StringIdDTO {
         result = 31 * result + (persistent != null ? persistent.hashCode() : 0);
         result = 31 * result + (swap != null ? swap.hashCode() : 0);
         result = 31 * result + (swap_range_size != null ? swap_range_size.hashCode() : 0);
-        result = 31 * result + (acl != null ? acl.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }

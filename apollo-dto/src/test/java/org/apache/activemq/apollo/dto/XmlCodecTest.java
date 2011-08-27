@@ -42,7 +42,6 @@ public class XmlCodecTest {
         assertEquals(1, dto.other.size());
 
         VirtualHostDTO host = dto.virtual_hosts.get(0);
-        assertNotNull(host.acl);
         assertEquals("vh-local", host.id);
         assertEquals("localhost", host.host_names.get(0));
         assertEquals("example.com", host.host_names.get(1));
@@ -50,11 +49,6 @@ public class XmlCodecTest {
         assertEquals("queue1", host.queues.get(0).id);
         assertEquals("topic1", host.topics.get(0).id);
         assertEquals("durable_subscription1", host.dsubs.get(0).id);
-
-        assertNotNull(dto.acl);
-        assertTrue(dto.acl.admins.contains(new PrincipalDTO("hiram")));
-        assertTrue(dto.acl.admins.contains(new PrincipalDTO("james")));
-        assertTrue(dto.acl.admins.contains(new PrincipalDTO("admins", "org.apache.activemq.jaas.GroupPrincipal")));
 
         AcceptingConnectorDTO connector = (AcceptingConnectorDTO)dto.connectors.get(0);
         assertNotNull(connector);

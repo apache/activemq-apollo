@@ -23,51 +23,42 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * 
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlType (name = "connector_type")
+@XmlType(name = "connector_type")
 @XmlAccessorType(XmlAccessType.FIELD)
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 abstract public class ConnectorTypeDTO extends ServiceDTO {
 
-  @XmlElement(name="acl")
-  public ConnectorAclDTO acl;
+    @XmlAttribute(name = "connection_limit")
+    public Integer connection_limit;
 
-  @XmlAttribute(name="connection_limit")
-  public Integer connection_limit;
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax = true)
+    public List<Object> other = new ArrayList<Object>();
 
-//  /**
-//   * To hold any other non-matching XML elements
-//   */
-//  @XmlAnyElement(lax=true)
-//  public List<Object> other = new ArrayList<Object>();
-//
-//  @Override
-//  public boolean equals(Object o) {
-//    if (this == o) return true;
-//    if (!(o instanceof ConnectorTypeDTO)) return false;
-//    if (!super.equals(o)) return false;
-//
-//    ConnectorTypeDTO that = (ConnectorTypeDTO) o;
-//
-//    if (acl != null ? !acl.equals(that.acl) : that.acl != null) return false;
-//    if (connection_limit != null ? !connection_limit.equals(that.connection_limit) : that.connection_limit != null)
-//      return false;
-//    if (other != null ? !other.equals(that.other) : that.other != null)
-//      return false;
-//
-//    return true;
-//  }
-//
-//  @Override
-//  public int hashCode() {
-//    int result = super.hashCode();
-//    result = 31 * result + (acl != null ? acl.hashCode() : 0);
-//    result = 31 * result + (connection_limit != null ? connection_limit.hashCode() : 0);
-//    result = 31 * result + (other != null ? other.hashCode() : 0);
-//    return result;
-//  }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ConnectorTypeDTO)) return false;
+        if (!super.equals(o)) return false;
+
+        ConnectorTypeDTO that = (ConnectorTypeDTO) o;
+
+        if (connection_limit != null ? !connection_limit.equals(that.connection_limit) : that.connection_limit != null)
+            return false;
+        if (other != null ? !other.equals(that.other) : that.other != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (connection_limit != null ? connection_limit.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
+        return result;
+    }
 }

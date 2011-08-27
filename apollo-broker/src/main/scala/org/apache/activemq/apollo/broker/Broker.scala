@@ -22,10 +22,9 @@ import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
 import collection.JavaConversions
 import JavaConversions._
-import security.{AclAuthorizer, Authorizer, JaasAuthenticator, Authenticator}
+import security._
 import org.apache.activemq.apollo.broker.web._
 import collection.mutable.{HashSet, LinkedHashMap, HashMap}
-import scala.util.Random
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtbuf.AsciiBuffer._
 import CollectionsSupport._
@@ -35,8 +34,7 @@ import org.apache.activemq.apollo.dto._
 import javax.management.ObjectName
 import org.fusesource.hawtdispatch.TaskTracker._
 import java.util.concurrent.TimeUnit
-import collection.mutable.ListBuffer._
-
+import security.SecuredResource.BrokerKind
 /**
  * <p>
  * The BrokerFactory creates Broker objects from a URI.
@@ -215,7 +213,7 @@ object Broker extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Broker() extends BaseService {
+class Broker() extends BaseService with SecuredResource {
 
   import Broker._
 
@@ -265,16 +263,9 @@ class Broker() extends BaseService {
   override def toString() = "broker: "+id
 
   var authenticator:Authenticator = _
-  var authorizer:Authorizer = _
+  var authorizer = Authorizer()
 
-  def init_dispatch_queue(dispatch_queue:DispatchQueue) = {
-    import OptionSupport._
-    if( config.sticky_dispatching.getOrElse(true) ) {
-      val queues = getThreadQueues()
-      val queue = queues(Random.nextInt(queues.length));
-      dispatch_queue.setTargetQueue(queue)
-    }
-  }
+  def resource_kind = SecuredResource.BrokerKind
 
   /**
    * Validates and then applies the configuration.
@@ -296,7 +287,6 @@ class Broker() extends BaseService {
     init_logs
     log_versions
     check_file_limit
-    init_dispatch_queue(dispatch_queue)
 
     BrokerRegistry.add(this)
     schedule_periodic_maintenance
@@ -374,10 +364,10 @@ class Broker() extends BaseService {
 
     if (config.authentication != null && config.authentication.enabled.getOrElse(true)) {
       authenticator = new JaasAuthenticator(config.authentication, security_log)
-      authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
+      authorizer=Authorizer(config.access_rules.toList, authenticator.acl_principal_kinds)
     } else {
       authenticator = null
-      authorizer = null
+      authorizer=Authorizer()
     }
 
     val host_config_by_id = HashMap[AsciiBuffer, VirtualHostDTO]()

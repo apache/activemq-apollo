@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.web.resources;
 
-import org.apache.activemq.apollo.dto._
 import java.{lang => jl}
 import org.fusesource.hawtdispatch._
 import scala.collection.Iterable
@@ -33,6 +32,8 @@ import java.util.regex.Pattern
 import javax.servlet.http.HttpServletResponse
 import java.util.{Collections, ArrayList}
 import org.apache.activemq.apollo.broker._
+import java.security.Principal
+import org.apache.activemq.apollo.dto._
 
 /**
  * <p>
@@ -48,22 +49,23 @@ case class BrokerResource() extends Resource {
   @GET
   @Path("whoami")
   def whoami():java.util.List[PrincipalDTO] = {
-    val rc: Set[PrincipalDTO] = with_broker { broker =>
-      val rc = FutureResult[Set[PrincipalDTO]]()
+    val rc: Set[Principal] = with_broker { broker =>
+      val rc = FutureResult[Set[Principal]]()
       if(broker.authenticator!=null) {
         authenticate(broker.authenticator) { security_context =>
           if(security_context!=null) {
             rc.set(Success(security_context.principles))
           } else {
-            rc.set(Success(Set[PrincipalDTO]()))
+            rc.set(Success(Set[Principal]()))
           }
         }
       } else {
-        rc.set(Success(Set[PrincipalDTO]()))
+        rc.set(Success(Set[Principal]()))
       }
       rc
     }
-    new ArrayList[PrincipalDTO](collection.JavaConversions.asJavaCollection(rc))
+    import collection.JavaConversions._
+    new ArrayList[PrincipalDTO](rc.map(x=>new PrincipalDTO(x.getClass.getName, x.getName)))
   }
 
   @GET

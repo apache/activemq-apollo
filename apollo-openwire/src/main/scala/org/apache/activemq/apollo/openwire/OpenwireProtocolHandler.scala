@@ -437,7 +437,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           if( !host.authenticator.authenticate(security_context) ) {
             async_die("Authentication failed.", info)
             noop
-          } else if( !host.authorizer.can_connect_to(security_context, host, connection.connector) ) {
+          } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
             async_die("Connect not authorized.", info)
             noop
           } else {

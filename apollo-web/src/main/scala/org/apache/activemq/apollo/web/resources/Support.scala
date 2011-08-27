@@ -28,8 +28,8 @@ import org.fusesource.scalate.{NoValueSetException, RenderContext}
 import com.sun.jersey.core.util.Base64
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import java.io.UnsupportedEncodingException
-import org.apache.activemq.apollo.broker.security.{Authorizer, SecurityContext, Authenticator}
 import org.apache.activemq.apollo.broker._
+import security.{SecuredResource, Authorizer, SecurityContext, Authenticator}
 import util.continuations._
 import org.apache.activemq.apollo.util._
 import java.net.{InetSocketAddress, URI}
@@ -96,20 +96,16 @@ abstract class Resource(parent:Resource=null) extends Logging {
   }
 
 
-  def authorize[T](authenticator:Authenticator, authorizer:Authorizer, block: =>FutureResult[T])(func: (Authorizer, SecurityContext)=>Boolean):FutureResult[T] = {
+  def authorize[T](authenticator:Authenticator, authorizer:Authorizer, action:String, resource:SecuredResource, block: =>FutureResult[T]):FutureResult[T] = {
     if ( authenticator != null ) {
       val rc = FutureResult[T]()
       authenticate(authenticator) { security_context =>
         try {
           if (security_context != null) {
-            if (authorizer == null) {
+            if (authorizer.can(security_context, action, resource)) {
               block.onComplete(rc)
             } else {
-              if (func(authorizer, security_context)) {
-                block.onComplete(rc)
-              } else {
-                unauthroized
-              }
+              unauthroized
             }
           } else {
             unauthroized
@@ -126,36 +122,36 @@ abstract class Resource(parent:Resource=null) extends Logging {
   }
 
   protected def monitoring[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, func) {  _.can_monitor(_, broker) }
+    authorize(broker.authenticator, broker.authorizer, "monitor", broker, func)
   }
 
   protected def admining[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, func) {  _.can_admin(_, broker) }
+    authorize(broker.authenticator, broker.authorizer, "admin", broker, func)
   }
 
   protected def configing[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, func) {  _.can_config(_, broker) }
+    authorize(broker.authenticator, broker.authorizer, "config", broker, func)
   }
 
   protected def admining[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(host.authenticator, host.authorizer, func) {  _.can_admin(_, host) }
+    authorize(host.authenticator, host.authorizer, "admin", host, func)
   }
   protected def monitoring[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(host.authenticator, host.authorizer, func) {  _.can_monitor(_, host) }
+    authorize(host.authenticator, host.authorizer, "monitor", host, func)
   }
 
   protected def admining[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, func) {  _.can_admin(_, dest.virtual_host, dest.config) }
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "admin", dest, func)
   }
   protected def monitoring[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, func) {  _.can_monitor(_, dest.virtual_host, dest.config) }
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest, func)
   }
 
   protected def admining[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, func) {  _.can_admin(_, dest.virtual_host, dest.config) }
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer,"admin", dest, func)
   }
   protected def monitoring[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, func) {  _.can_monitor(_, dest.virtual_host, dest.config) }
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest, func)
   }
 
   protected def authenticate[T](authenticator:Authenticator)(func: (SecurityContext)=>Unit): Unit = {

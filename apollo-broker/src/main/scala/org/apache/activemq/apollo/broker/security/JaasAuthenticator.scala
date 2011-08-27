@@ -27,7 +27,7 @@ import javax.security.auth.callback.UnsupportedCallbackException
 import org.apache.activemq.jaas._
 import org.apache.activemq.apollo.broker.Broker.BLOCKABLE_THREAD_POOL
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.dto.{PrincipalDTO, AuthenticationDTO}
+import org.apache.activemq.apollo.dto.AuthenticationDTO
 import org.apache.activemq.apollo.util.Log
 import collection.JavaConversions._
 
@@ -55,6 +55,7 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
 
   val jass_realm = Option(config.domain).getOrElse("apollo")
   val user_principal_kinds = config.user_principal_kinds()
+  val acl_principal_kinds = config.acl_principal_kinds().toSet
 
   /*
    * The 'BLOCKABLE_THREAD_POOL ! { ... }' magic makes the code block

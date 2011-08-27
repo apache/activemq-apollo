@@ -22,7 +22,6 @@ import javax.security.auth.Subject
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
-import org.apache.activemq.apollo.dto.PrincipalDTO
 import javax.security.auth.login.LoginContext
 import java.net.SocketAddress
 
@@ -42,94 +41,31 @@ class SecurityContext {
   var login_context:LoginContext = _
   var connection_id:Option[Long] = None
 
-  private var _principles = Set[PrincipalDTO]()
   private var _subject:Subject = _
 
   def subject = _subject
 
-  def subject_= (value:Subject) {
-    _subject = value
-    _principles = Set[PrincipalDTO]()
-    if( value!=null ) {
-      import collection.JavaConversions._
-      value.getPrincipals.foreach { x=>
-        _principles += new PrincipalDTO(x.getName, x.getClass.getName)
-      }
-    }
-  }
-
+  private var _principles = Set[Principal]()
   def principles = _principles
 
-  def principles(kind:String) = {
+  def subject_= (value:Subject) {
+    _subject = value
+    _principles = Set()
+    if( value!=null ) {
+      import collection.JavaConversions._
+      _principles = value.getPrincipals.toSet
+    }
+  }
+
+  def principles(kind:String):Set[Principal] = {
     kind match {
       case "+"=>
-        _principles
+        principles
       case "*"=>
-        _principles
+        principles
       case kind=>
-        _principles.filter(_.kind == kind)
+        principles.filter(_.getClass.getName == kind)
     }
   }
-
-  def is_allowed(acl:List[PrincipalDTO], default_kinds:List[String]):Boolean = {
-
-    def kind_matches(kind:String):Boolean = {
-      kind match {
-        case null=>
-          return !_principles.map(_.kind).intersect(default_kinds.toSet).isEmpty
-        case "+"=>
-          return !_principles.isEmpty
-        case "*"=>
-          return true;
-        case kind=>
-          return _principles.map(_.kind).contains(kind)
-      }
-    }
-
-    def principal_matches(p:PrincipalDTO):Boolean = {
-      p.kind match {
-        case null=>
-          default_kinds.foreach { kind=>
-            if( _principles.contains(new PrincipalDTO(p.allow, kind)) ) {
-              return true;
-            }
-          }
-          return false;
-        case "+"=>
-          return _principles.map(_.allow).contains(p.allow)
-        case "*"=>
-          return _principles.map(_.allow).contains(p.allow)
-        case kind=>
-          return _principles.contains(p)
-      }
-    }
-
-    acl.foreach { p =>
-      p.deny match {
-        case null =>
-        case "*"=>
-          return false;
-        case "+"=>
-          return !kind_matches(p.kind)
-        case id =>
-          if( principal_matches(new PrincipalDTO(id, p.kind)) ) {
-            return false;
-          }
-      }
-      p.allow match {
-        case null =>
-        case "*"=>
-          return true;
-        case "+"=>
-          return kind_matches(p.kind)
-        case id =>
-          if( principal_matches(new PrincipalDTO(id, p.kind)) ) {
-            return true
-          }
-      }
-    }
-    return false
-  }
-
 
 }

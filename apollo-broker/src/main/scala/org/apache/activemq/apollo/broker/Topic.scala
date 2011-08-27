@@ -24,8 +24,7 @@ import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import collection.mutable.{HashSet, HashMap, ListBuffer}
 import java.lang.Long
-import com.sun.jdi.connect.spi.TransportService.ListenKey
-
+import security.SecuredResource
 /**
  * <p>
  * A logical messaging topic
@@ -33,7 +32,7 @@ import com.sun.jdi.connect.spi.TransportService.ListenKey
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination {
+class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination with SecuredResource {
 
   var enqueue_item_counter = 0L
   var enqueue_size_counter = 0L
@@ -42,6 +41,8 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   var dequeue_item_counter = 0L
   var dequeue_size_counter = 0L
   var dequeue_ts = now
+
+  val resource_kind =SecuredResource.TopicKind
 
   var proxy_sessions = new HashSet[TopicDeliverySession]()
 

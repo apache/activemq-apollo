@@ -17,11 +17,9 @@
 -->
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
-  <acl>
-    <admin allow="hiram"/>
-    <admin allow="james"/>
-    <admin allow="admins" kind="org.apache.activemq.jaas.GroupPrincipal"/>
-  </acl>
+  <access_rule principal="hiram" action="admin"/>
+  <access_rule principal="james" action="admin"/>
+  <access_rule principal="admins" action="admin"/>
 
   <virtual_host id="vh-local">
     <acl/>

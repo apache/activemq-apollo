@@ -38,4 +38,6 @@ trait Authenticator {
    */
   def user_name(ctx:SecurityContext):Option[String]
 
+  def acl_principal_kinds:Set[String]
+
 }

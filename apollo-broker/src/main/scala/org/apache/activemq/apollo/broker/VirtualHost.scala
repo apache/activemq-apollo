@@ -16,22 +16,16 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import _root_.java.util.{ArrayList, HashMap}
-import _root_.java.lang.{String}
+import _root_.java.lang.String
 import _root_.scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch._
 
-import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
-import path.PathFilter
-import org.fusesource.hawtbuf.{Buffer, AsciiBuffer}
-import collection.JavaConversions
-import java.util.concurrent.atomic.AtomicLong
 import org.apache.activemq.apollo.util.OptionSupport._
-import org.apache.activemq.apollo.util.path.{Path, PathParser}
-import security.{AclAuthorizer, JaasAuthenticator, Authenticator, Authorizer}
 import org.apache.activemq.apollo.dto._
-import store.{PersistentLongCounter, ZeroCopyBufferAllocator, Store, StoreFactory}
+import security._
+import security.SecuredResource.VirtualHostKind
+import store.{PersistentLongCounter, Store, StoreFactory}
 
 trait VirtualHostFactory {
   def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
@@ -87,7 +81,7 @@ object VirtualHost extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VirtualHost(val broker: Broker, val id:String) extends BaseService {
+class VirtualHost(val broker: Broker, val id:String) extends BaseService with SecuredResource {
   import VirtualHost._
   
   override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
@@ -103,14 +97,15 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
   val session_counter = new PersistentLongCounter("session_counter")
 
   var authenticator:Authenticator = _
-  var authorizer:Authorizer = _
+  var authorizer = Authorizer()
 
   var audit_log:Log = _
   var security_log:Log  = _
   var connection_log:Log = _
   var console_log:Log = _
 
-  // This gets set if client should get redirected to another address.
+  def resource_kind = VirtualHostKind
+
   @volatile
   var client_redirect:Option[String] = None
 
@@ -151,18 +146,20 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService {
       if (config.authentication.enabled.getOrElse(true)) {
         // Virtual host has it's own settings.
         authenticator = new JaasAuthenticator(config.authentication, security_log)
-        authorizer = new AclAuthorizer(config.authentication.acl_principal_kinds().toList, security_log)
       } else {
         // Don't use security on this host.
         authenticator = null
-        authorizer = null
       }
     } else {
       // use the broker's settings..
       authenticator = broker.authenticator
-      authorizer = broker.authorizer
     }
-
+    if( authenticator!=null ) {
+      val rules = config.access_rules.toList ::: broker.config.access_rules.toList
+      authorizer = Authorizer(rules, authenticator.acl_principal_kinds)
+    } else {
+      authorizer = Authorizer()
+    }
   }
 
   override protected def _start(on_completed:Runnable):Unit = {

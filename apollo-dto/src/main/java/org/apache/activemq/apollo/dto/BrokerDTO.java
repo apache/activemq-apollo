@@ -61,8 +61,8 @@ public class BrokerDTO {
     @XmlElementRef
     public KeyStorageDTO key_storage;
 
-    @XmlElement(name="acl")
-    public BrokerAclDTO acl;
+    @XmlElement(name="access_rule")
+    public List<AccessRuleDTO> access_rules = new ArrayList<AccessRuleDTO>();
 
     @XmlElement(name="web_admin")
     public List<WebAdminDTO> web_admins = new ArrayList<WebAdminDTO>();
@@ -80,10 +80,6 @@ public class BrokerDTO {
     @XmlElement(name="service")
     public List<CustomServiceDTO> services = new ArrayList<CustomServiceDTO>();
 
-    @Deprecated
-    @XmlAttribute(name="sticky_dispatching")
-    public Boolean sticky_dispatching;
-
     /**
      * If set to strict, then the broker will not start up if there
      * are any validation errors in the configuration file.
@@ -97,6 +93,7 @@ public class BrokerDTO {
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -104,7 +101,8 @@ public class BrokerDTO {
 
         BrokerDTO brokerDTO = (BrokerDTO) o;
 
-        if (acl != null ? !acl.equals(brokerDTO.acl) : brokerDTO.acl != null) return false;
+        if (access_rules != null ? !access_rules.equals(brokerDTO.access_rules) : brokerDTO.access_rules != null)
+            return false;
         if (authentication != null ? !authentication.equals(brokerDTO.authentication) : brokerDTO.authentication != null)
             return false;
         if (client_address != null ? !client_address.equals(brokerDTO.client_address) : brokerDTO.client_address != null)
@@ -117,8 +115,6 @@ public class BrokerDTO {
         if (notes != null ? !notes.equals(brokerDTO.notes) : brokerDTO.notes != null) return false;
         if (other != null ? !other.equals(brokerDTO.other) : brokerDTO.other != null) return false;
         if (services != null ? !services.equals(brokerDTO.services) : brokerDTO.services != null) return false;
-        if (sticky_dispatching != null ? !sticky_dispatching.equals(brokerDTO.sticky_dispatching) : brokerDTO.sticky_dispatching != null)
-            return false;
         if (validation != null ? !validation.equals(brokerDTO.validation) : brokerDTO.validation != null) return false;
         if (virtual_hosts != null ? !virtual_hosts.equals(brokerDTO.virtual_hosts) : brokerDTO.virtual_hosts != null)
             return false;
@@ -134,14 +130,14 @@ public class BrokerDTO {
         result = 31 * result + (connectors != null ? connectors.hashCode() : 0);
         result = 31 * result + (client_address != null ? client_address.hashCode() : 0);
         result = 31 * result + (key_storage != null ? key_storage.hashCode() : 0);
-        result = 31 * result + (acl != null ? acl.hashCode() : 0);
+        result = 31 * result + (access_rules != null ? access_rules.hashCode() : 0);
         result = 31 * result + (web_admins != null ? web_admins.hashCode() : 0);
         result = 31 * result + (authentication != null ? authentication.hashCode() : 0);
         result = 31 * result + (log_category != null ? log_category.hashCode() : 0);
         result = 31 * result + (services != null ? services.hashCode() : 0);
-        result = 31 * result + (sticky_dispatching != null ? sticky_dispatching.hashCode() : 0);
         result = 31 * result + (validation != null ? validation.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
+
 }

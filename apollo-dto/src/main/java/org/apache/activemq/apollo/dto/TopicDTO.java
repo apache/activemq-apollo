@@ -43,9 +43,6 @@ public class TopicDTO extends StringIdDTO {
     @XmlAttribute(name="slow_consumer_policy")
     public String slow_consumer_policy;
 
-    @XmlElement(name="acl")
-    public TopicAclDTO acl;
-
     /**
      * To hold any other non-matching XML elements
      */
@@ -60,7 +57,6 @@ public class TopicDTO extends StringIdDTO {
 
         TopicDTO topicDTO = (TopicDTO) o;
 
-        if (acl != null ? !acl.equals(topicDTO.acl) : topicDTO.acl != null) return false;
         if (auto_delete_after != null ? !auto_delete_after.equals(topicDTO.auto_delete_after) : topicDTO.auto_delete_after != null)
             return false;
         if (other != null ? !other.equals(topicDTO.other) : topicDTO.other != null) return false;
@@ -75,7 +71,6 @@ public class TopicDTO extends StringIdDTO {
         int result = super.hashCode();
         result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
         result = 31 * result + (slow_consumer_policy != null ? slow_consumer_policy.hashCode() : 0);
-        result = 31 * result + (acl != null ? acl.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }

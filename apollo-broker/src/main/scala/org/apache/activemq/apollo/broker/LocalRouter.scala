@@ -21,13 +21,14 @@ import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.QueueRecord
 import path._
 import path.PathParser.PathException
-import security.SecurityContext
 import java.util.concurrent.TimeUnit
 import scala.Array
 import org.apache.activemq.apollo.dto._
 import java.util.{Arrays, ArrayList}
 import collection.mutable.{LinkedHashMap, HashMap}
 import collection.{Iterable, JavaConversions}
+import security.SecuredResource.{TopicKind, QueueKind}
+import security.{SecuredResource, SecurityContext}
 
 object DestinationMetricsSupport {
 
@@ -115,7 +116,7 @@ object RouterListenerFactory {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait DomainDestination {
+trait DomainDestination extends SecuredResource {
 
   def id:String
   def virtual_host:VirtualHost
@@ -129,6 +130,7 @@ trait DomainDestination {
   def disconnect (producer:BindableDeliveryProducer)
 
   def update(on_completed:Runnable):Unit
+
 }
 
 /**
@@ -206,6 +208,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   private val ALL = new Path(List(AnyDescendantPart))
 
+  def authorizer = virtual_host.authorizer
+
   trait Domain[D <: DomainDestination] {
 
     // holds all the destinations in the domain by id
@@ -230,9 +234,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def can_destroy_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
-    def destroy_destination(path:Path, destination:DestinationDTO, security: SecurityContext):Unit
-
     def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String]
     def create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Result[D,String]
 
@@ -249,12 +250,12 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       // binds any matching wild card subs and producers...
       import JavaConversions._
       consumers_by_path.get( path ).foreach { x=>
-        if( can_bind_one(path, x.destination, x.consumer, x.security) ) {
+        if( authorizer.can(x.security, bind_action(x.consumer), dest) ) {
           dest.bind(x.destination, x.consumer)
         }
       }
       producers_by_path.get( path ).foreach { x=>
-        if( can_connect_one(path, x.destination, x.producer, x.security) ) {
+        if( authorizer.can(x.security, "send", dest) ) {
           dest.connect(x.destination, x.producer)
         }
       }
@@ -265,7 +266,34 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       destination_by_id.remove(dest.id)
     }
 
-    def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean
+    def can_destroy_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String] = {
+      if( security==null ) {
+        return None
+      }
+
+      if( destination.temp_owner != null ) {
+        for( connection <- security.connection_id) {
+          if( connection != destination.temp_owner.longValue() ) {
+            return Some("Not authorized to destroy the destination.")
+          }
+        }
+      }
+
+      val matches = get_destination_matches(path)
+      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
+        rc.orElse {
+          if( authorizer.can(security, "destroy", dest) ) {
+            None
+          } else {
+            Some("Not authorized to destroy destination: %s".format(dest.id))
+          }
+        }
+      }
+    }
+    def destroy_destination(path:Path, destination:DestinationDTO, security: SecurityContext):Unit
+
+    def bind_action(consumer:DeliveryConsumer):String
+
     def can_bind_all(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
       if( security==null ) {
         return None
@@ -297,7 +325,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         }
 
         matches.foreach { dest =>
-          if( !can_bind_one(path, destination, consumer, security) ) {
+          if( !authorizer.can(security, bind_action(consumer), dest) ) {
             return Some("Not authorized to receive from the destination.")
           }
         }
@@ -308,7 +336,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def bind(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Unit = {
       var matches = get_destination_matches(path)
       matches.foreach { dest=>
-        if( can_bind_one(path, destination, consumer, security) ) {
+        if( authorizer.can(security, bind_action(consumer), dest) ) {
           dest.bind(destination, consumer)
           for( l <- router_listeners) {
             l.on_bind(dest, consumer, security)
@@ -331,8 +359,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         consumer.release
       }
     }
-
-    def can_connect_one(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean
 
     def can_connect_all(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Option[String] = {
 
@@ -362,8 +388,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
         // since this is not a wild card, we should have only matched one..
         assert( matches.size == 1 )
-        if( !can_connect_one(path, destination, producer, security) ) {
-          return Some("Not authorized to send to the destination.")
+        for( dest <- matches ) {
+          if( !authorizer.can(security, "send", dest) ) {
+            return Some("Not authorized to send to the destination.")
+          }
         }
 
         None
@@ -372,7 +400,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def connect(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Unit = {
       get_destination_matches(path).foreach { dest=>
-        if( can_connect_one(path, destination, producer, security) ) {
+        if( authorizer.can(security, "send", dest) ) {
           dest.connect(destination, producer)
           for( l <- router_listeners) {
             l.on_connect(dest, producer, security)
@@ -460,31 +488,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def can_destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Option[String] = {
-      if( security == null ) {
-        return None
-      }
-
-      if( destination.temp_owner != null ) {
-        for( connection <- security.connection_id) {
-          if( connection != destination.temp_owner.longValue() ) {
-            return Some("Not authorized to destroy the temporary destination.")
-          }
-        }
-      }
-
-      val matches = get_destination_matches(path)
-      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
-        rc.orElse {
-          if( virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_destroy(security, virtual_host, dest.config)) {
-            Some("Not authorized to destroy topic: %s".format(dest.id))
-          } else {
-            None
-          }
-        }
-      }
-    }
-
     def destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Unit = {
       val matches = get_destination_matches(path)
       matches.foreach { dest =>
@@ -517,12 +520,19 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def can_create_destination(path:Path, destination:DestinationDTO, security:SecurityContext):Option[String] = {
+      if (security==null) {
+        return None;
+      }
+
       // We can't create a wild card destination.. only wild card subscriptions.
       assert( !PathParser.containsWildCards(path) )
       // A new destination is being created...
-      val dto = topic_config(path)
 
-      if(  virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_create(security, virtual_host, dto)) {
+      val resource = new SecuredResource() {
+        def resource_kind = TopicKind
+        def id = destination_parser.encode_path(path)
+      }
+      if( !authorizer.can(security, "create", resource)) {
         Some("Not authorized to create the destination")
       } else {
         None
@@ -536,7 +546,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       // A new destination is being created...
       val dto = topic_config(path)
 
-      if(  virtual_host.authorizer!=null && security!=null && !virtual_host.authorizer.can_create(security, virtual_host, dto)) {
+      val resource = new SecuredResource() {
+        def resource_kind = TopicKind
+        def id = destination_parser.encode_path(path)
+      }
+      if( !authorizer.can(security, "create", resource)) {
         return new Failure("Not authorized to create the destination")
       }
 
@@ -549,20 +563,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       Success(topic)
     }
 
-    def can_bind_one(path:Path, destination:DestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Boolean = {
-      val config = topic_config(path)
-      val authorizer = virtual_host.authorizer
-      if( authorizer!=null && security!=null && !authorizer.can_receive_from(security, virtual_host, config) ) {
-        return false;
-      }
-      true
-    }
-
-    def can_connect_one(path:Path, destination:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
-      val config = topic_config(path)
-      val authorizer = virtual_host.authorizer
-      !(authorizer!=null && security!=null && !authorizer.can_send_to(security, virtual_host, config) )
-    }
+    def bind_action(consumer:DeliveryConsumer):String = "receive"
 
     def bind_dsub(queue:Queue) = {
       assert_executing
@@ -709,9 +710,16 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
 
+    def get_dsub_secured_resource(config: DurableSubscriptionDTO):SecuredResource = {
+      durable_subscriptions_by_id.get(config.id).getOrElse(new SecuredResource() {
+        def resource_kind = SecuredResource.DurableSubKind
+        def id = config.id
+      })
+    }
+
     def can_create_dsub(config:DurableSubscriptionDTO, security:SecurityContext) = {
-      val authorizer = virtual_host.authorizer
-      if( authorizer!=null && security!=null && !authorizer.can_create(security, virtual_host, config) ) {
+      val resource = get_dsub_secured_resource(config)
+      if( !authorizer.can(security, "create", resource) ) {
         Some("Not authorized to create the durable subscription.")
       } else {
         None
@@ -719,8 +727,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def can_connect_dsub(config:DurableSubscriptionDTO, security:SecurityContext):Option[String] = {
-      val authorizer = virtual_host.authorizer
-      if( authorizer!=null && security!=null && !authorizer.can_send_to(security, virtual_host, config) ) {
+      val resource = get_dsub_secured_resource(config)
+      if( !authorizer.can(security, "send", resource) ) {
         Some("Not authorized to send to the durable subscription.")
       } else {
         None
@@ -728,21 +736,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def can_bind_dsub(config:DurableSubscriptionDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
-      val authorizer = virtual_host.authorizer
-      if( authorizer!=null && security!=null ) {
-        if ( consumer.browser ) {
-          if( !authorizer.can_receive_from(security, virtual_host, config) ) {
-            Some("Not authorized to receive from the durable subscription.")
-          } else {
-            None
-          }
-        } else {
-          if( !authorizer.can_consume_from(security, virtual_host, config) ) {
-            Some("Not authorized to consume from the durable subscription.")
-          } else {
-            None
-          }
-        }
+      val resource = get_dsub_secured_resource(config)
+      val action = if ( consumer.browser ) "receive" else "consume"
+      if( !authorizer.can(security, action, resource) ) {
+        Some("Not authorized to "+action+" from the durable subscription.")
       } else {
         None
       }
@@ -751,22 +748,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   val queue_domain = new QueueDomain
   class QueueDomain extends Domain[Queue] {
-
-    def can_create_queue(config:QueueDTO, security:SecurityContext) = {
-      if( virtual_host.authorizer==null || security==null) {
-        true
-      } else {
-        virtual_host.authorizer.can_create(security, virtual_host, config)
-      }
-    }
-
-    def can_destroy_queue(config:QueueDTO, security:SecurityContext) = {
-      if( virtual_host.authorizer==null || security==null) {
-        true
-      } else {
-        virtual_host.authorizer.can_destroy(security, virtual_host, config)
-      }
-    }
 
     def bind(queue:Queue) = {
       val path = queue.binding.destination
@@ -794,19 +775,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def can_destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Option[String] = {
-      val matches = get_destination_matches(path)
-      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
-        rc.orElse {
-          if( can_destroy_queue(dest.config, security) ) {
-            None
-          } else {
-            Some("Not authorized to destroy queue: %s".format(dest.id))
-          }
-        }
-      }
-    }
-
     def destroy_destination(path:Path, destination: DestinationDTO, security: SecurityContext): Unit = {
       val matches = get_destination_matches(path)
       matches.foreach { queue =>
@@ -818,11 +786,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def can_create_destination(path: Path, destination:DestinationDTO, security: SecurityContext):Option[String] = {
-      val dto = new QueueDestinationDTO
-      dto.path.addAll(destination.path)
-      val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(virtual_host)
-      if( can_create_queue(config, security) ) {
+      val resource = new SecuredResource() {
+        def resource_kind = QueueKind
+        def id = destination_parser.encode_path(path)
+      }
+      if( authorizer.can(security, "create", resource)) {
         None
       } else {
         Some("Not authorized to create the queue")
@@ -832,10 +800,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def create_destination(path: Path, destination:DestinationDTO, security: SecurityContext) = {
       val dto = new QueueDestinationDTO
       dto.path.addAll(destination.path)
-
       val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(virtual_host)
-      if( can_create_queue(config, security) ) {
+
+      val resource = new SecuredResource() {
+        def resource_kind = QueueKind
+        def id = destination_parser.encode_path(path)
+      }
+      if( authorizer.can(security, "create", resource)) {
         var queue = _create_queue(binding)
         for( l <- router_listeners) {
           l.on_create(queue, security)
@@ -846,29 +817,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
 
     }
-
-    def can_bind_one(path:Path, dto:DestinationDTO, consumer:DeliveryConsumer, security: SecurityContext):Boolean = {
-      val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(virtual_host)
-      if(  virtual_host.authorizer!=null && security!=null ) {
-        if( consumer.browser ) {
-          if( !virtual_host.authorizer.can_receive_from(security, virtual_host, config) ) {
-            return false;
-          }
-        } else {
-          if( !virtual_host.authorizer.can_consume_from(security, virtual_host, config) ) {
-            return false
-          }
-        }
-      }
-      return true;
-    }
-
-    def can_connect_one(path:Path, dto:DestinationDTO, producer:BindableDeliveryProducer, security:SecurityContext):Boolean = {
-      val binding = QueueDomainQueueBinding.create(dto)
-      val config = binding.config(virtual_host)
-      val authorizer = virtual_host.authorizer
-      !( authorizer!=null && security!=null && !authorizer.can_send_to(security, virtual_host, config) )
+    def bind_action(consumer:DeliveryConsumer):String = if(consumer.browser) {
+      "receive"
+    } else {
+      "consume"
     }
 
   }
@@ -1227,11 +1179,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def _destroy_queue(queue:Queue, security:SecurityContext):Option[String] = {
-
-    if( security!=null && queue.config.acl!=null ) {
-      if( !virtual_host.authorizer.can_destroy(security, virtual_host, queue.config) ) {
-        return Some("Not authorized to destroy")
-      }
+    if( !authorizer.can(security, "destroy", queue) ) {
+      return Some("Not authorized to destroy")
     }
     _destroy_queue(queue)
     None

@@ -23,9 +23,7 @@
   <virtual_host id="default" purge_on_startup="true">
     <host_name>localhost</host_name>
 
-    <acl>
-      <connect allow="connect_group"/>
-    </acl>
+    <access_rule principal="connect_group" action="connect"/>
 
   </virtual_host>
 

@@ -50,6 +50,9 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlAttribute(name="purge_on_startup")
     public Boolean purge_on_startup;
 
+    @XmlElement(name="access_rule")
+    public List<AccessRuleDTO> access_rules = new ArrayList<AccessRuleDTO>();
+
     /**
      * Holds the configuration for the destinations.
      */
@@ -74,9 +77,6 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlAttribute(name="regroup_connections")
     public Boolean regroup_connections;
 
-    @XmlElement(name="acl")
-    public VirtualHostAclDTO acl;
-
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;
 
@@ -89,6 +89,7 @@ public class VirtualHostDTO extends ServiceDTO {
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -97,7 +98,7 @@ public class VirtualHostDTO extends ServiceDTO {
 
         VirtualHostDTO that = (VirtualHostDTO) o;
 
-        if (acl != null ? !acl.equals(that.acl) : that.acl != null) return false;
+        if (access_rules != null ? !access_rules.equals(that.access_rules) : that.access_rules != null) return false;
         if (authentication != null ? !authentication.equals(that.authentication) : that.authentication != null)
             return false;
         if (auto_create_destinations != null ? !auto_create_destinations.equals(that.auto_create_destinations) : that.auto_create_destinations != null)
@@ -124,11 +125,11 @@ public class VirtualHostDTO extends ServiceDTO {
         result = 31 * result + (store != null ? store.hashCode() : 0);
         result = 31 * result + (auto_create_destinations != null ? auto_create_destinations.hashCode() : 0);
         result = 31 * result + (purge_on_startup != null ? purge_on_startup.hashCode() : 0);
+        result = 31 * result + (access_rules != null ? access_rules.hashCode() : 0);
         result = 31 * result + (topics != null ? topics.hashCode() : 0);
         result = 31 * result + (queues != null ? queues.hashCode() : 0);
         result = 31 * result + (dsubs != null ? dsubs.hashCode() : 0);
         result = 31 * result + (regroup_connections != null ? regroup_connections.hashCode() : 0);
-        result = 31 * result + (acl != null ? acl.hashCode() : 0);
         result = 31 * result + (authentication != null ? authentication.hashCode() : 0);
         result = 31 * result + (log_category != null ? log_category.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);

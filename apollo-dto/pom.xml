@@ -108,7 +108,7 @@
                   <classpath refid="maven.compile.classpath" />
                 </taskdef>
                 <mkdir dir="${project.build.directory}/schema/org/apache/activemq/apollo/dto" />
-                <schemagen srcdir="${basedir}/.." destdir="${project.build.directory}/schema/org/apache/activemq/apollo/dto">
+                <schemagen srcdir="${basedir}/.." destdir="${project.build.directory}/schema/org/apache/activemq/apollo/dto" includeantruntime="false">
                   <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo.xsd" />
                   <classpath refid="maven.compile.classpath" />
                   <include name="**/package-info.java" />

@@ -834,7 +834,7 @@ class StompProtocolHandler extends ProtocolHandler {
             }
             async_die(msg)
             noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can_connect_to(security_context, host, connection.connector) ) {
+          } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
 
             var msg = if( security_context.user==null ) {
               "Connect not authorized."
@@ -964,9 +964,9 @@ class StompProtocolHandler extends ProtocolHandler {
           if( !matches.isEmpty ) {
             h.separator match {
               case null=>
-                rc ::= (encode_header(h.name.trim), encode_header(matches.head.allow))
+                rc ::= (encode_header(h.name.trim), encode_header(matches.head.getName))
               case separator =>
-                rc ::= (encode_header(h.name.trim), encode_header(matches.map(_.allow).mkString(separator)))
+                rc ::= (encode_header(h.name.trim), encode_header(matches.map(_.getName).mkString(separator)))
             }
           }
         }

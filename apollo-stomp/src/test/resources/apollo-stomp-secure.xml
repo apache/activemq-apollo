@@ -22,39 +22,21 @@
   <virtual_host id="default" purge_on_startup="true">
     <host_name>localhost</host_name>
 
-    <acl>
-      <connect allow="connect_group"/>
-    </acl>
+    <access_rule principal="connect_group" action="connect"/>
 
-    <!-- queue security -->
-    <queue name="**" kind="ptp">
-      <acl>
-        <create  allow="can_send_create_queue"/>
-        <send    allow="can_send_create_queue"/>
-        <send    allow="can_send_queue"/>
-        <receive allow="can_receive_queue"/>
-        <consume allow="can_consume_queue"/>
-      </acl>
-    </queue>
+    <access_rule principal="can_send_create_queue" kind="queue" action="send,create"/>
+    <access_rule principal="can_send_queue"        kind="queue" action="send"/>
+    <access_rule principal="can_receive_queue"     kind="queue" action="receive"/>
+    <access_rule principal="can_consume_queue"     kind="queue" action="consume"/>
 
-    <!-- topic security -->
-    <destination name="**">
-      <acl>
-        <create  allow="can_send_create_topic"/>
-        <send    allow="can_send_create_topic"/>
-        <send    allow="can_send_topic"/>
-        <receive allow="can_recieve_topic"/>
-      </acl>
-    </destination>
+    <access_rule principal="can_send_create_topic" kind="topic" action="send,create"/>
+    <access_rule principal="can_send_topic"        kind="topic" action="send"/>
+    <access_rule principal="can_recieve_topic"     kind="topic" action="receive"/>
 
-    <!-- durable sub security -->
-    <queue name="**" kind="ds">
-      <acl>
-        <create  allow="can_consume_create_ds"/>
-        <consume allow="can_consume_create_ds"/>
-        <consume allow="can_consume_ds"/>
-      </acl>
-    </queue>
+    <access_rule principal="can_consume_create_ds" kind="dsub" action="consume,create"/>
+    <access_rule principal="can_consume_ds"        kind="dsub" action="consume"/>
+    <access_rule principal="can_recieve_topic"     kind="dsub" action="receive"/>
+
   </virtual_host>
 
   <connector id="tcp" protocol="stomp" bind="tcp://0.0.0.0:0">
