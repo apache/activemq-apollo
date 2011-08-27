@@ -32,12 +32,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class AccessRuleDTO {
 
     /**
-     * Is this a negative rule which denies access.  If not set, defaults to false.
-     */
-    @XmlAttribute
-    public Boolean deny;
-
-    /**
      * The class name of the JAAS principle that this rule will mach against.  If not set
      * the this defaults to the default principal kinds configured on the broker or virtual host.
      * If set to "*" then it matches all principal classes.
@@ -46,14 +40,20 @@ public class AccessRuleDTO {
     public String principal_kind;
 
     /**
-     * The principal which we are matching against.  If set to "+" then it matches all principals
+     * The principal which are allowed access to the action.  If set to "+" then it matches all principals
      * but requires at at least one.  If set to "*" the it matches all principals and even matches
      * the case where there are no principals associated with the subject.
-     *
-     * Defaults to "+" if not set.
      */
     @XmlAttribute
-    public String principal;
+    public String allow;
+
+    /**
+     * The principal which are denied access to the action  If set to "+" then it matches all principals
+     * but requires at at least one.  If set to "*" the it matches all principals and even matches
+     * the case where there are no principals associated with the subject.
+     */
+    @XmlAttribute
+    public String deny;
 
     /**
      * If the separator is set, then the principal field will be interpreted as a list of
@@ -96,29 +96,57 @@ public class AccessRuleDTO {
 
         AccessRuleDTO that = (AccessRuleDTO) o;
 
-        if (action != null ? !action.equals(that.action) : that.action != null) return false;
-        if (deny != null ? !deny.equals(that.deny) : that.deny != null) return false;
+        if (action != null ? !action.equals(that.action) : that.action != null)
+            return false;
+        if (allow != null ? !allow.equals(that.allow) : that.allow != null)
+            return false;
+        if (deny != null ? !deny.equals(that.deny) : that.deny != null)
+            return false;
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (id_regex != null ? !id_regex.equals(that.id_regex) : that.id_regex != null) return false;
-        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
-        if (principal != null ? !principal.equals(that.principal) : that.principal != null) return false;
+        if (id_regex != null ? !id_regex.equals(that.id_regex) : that.id_regex != null)
+            return false;
+        if (kind != null ? !kind.equals(that.kind) : that.kind != null)
+            return false;
         if (principal_kind != null ? !principal_kind.equals(that.principal_kind) : that.principal_kind != null)
             return false;
-        if (separator != null ? !separator.equals(that.separator) : that.separator != null) return false;
+        if (separator != null ? !separator.equals(that.separator) : that.separator != null)
+            return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = deny != null ? deny.hashCode() : 0;
-        result = 31 * result + (principal_kind != null ? principal_kind.hashCode() : 0);
-        result = 31 * result + (principal != null ? principal.hashCode() : 0);
+        int result = principal_kind != null ? principal_kind.hashCode() : 0;
+        result = 31 * result + (allow != null ? allow.hashCode() : 0);
+        result = 31 * result + (deny != null ? deny.hashCode() : 0);
         result = 31 * result + (separator != null ? separator.hashCode() : 0);
         result = 31 * result + (action != null ? action.hashCode() : 0);
         result = 31 * result + (kind != null ? kind.hashCode() : 0);
         result = 31 * result + (id != null ? id.hashCode() : 0);
         result = 31 * result + (id_regex != null ? id_regex.hashCode() : 0);
         return result;
+    }
+
+    private static String attr(String name, Object value) {
+        if(value!=null) {
+            return " "+name+"='" + value +"'";
+        } else {
+            return "";
+        }
+
+    }
+    @Override
+    public String toString() {
+        return "<access_rule" +
+            attr("allow",allow)+
+            attr("deny",deny)+
+            attr("principal_kind",principal_kind)+
+            attr("separator",separator)+
+            attr("action",action)+
+            attr("kind",kind)+
+            attr("id",kind)+
+            attr("id_regex",id_regex)+
+            "/>";
     }
 }

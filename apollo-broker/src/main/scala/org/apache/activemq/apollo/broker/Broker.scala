@@ -364,7 +364,7 @@ class Broker() extends BaseService with SecuredResource {
 
     if (config.authentication != null && config.authentication.enabled.getOrElse(true)) {
       authenticator = new JaasAuthenticator(config.authentication, security_log)
-      authorizer=Authorizer(config.access_rules.toList, authenticator.acl_principal_kinds)
+      authorizer=Authorizer(this)
     } else {
       authenticator = null
       authorizer=Authorizer()

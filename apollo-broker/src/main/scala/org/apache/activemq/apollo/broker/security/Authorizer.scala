@@ -1,25 +1,57 @@
 package org.apache.activemq.apollo.broker.security
 
 import java.lang.Boolean
-import collection.mutable.{ListBuffer, HashMap}
-import org.apache.activemq.apollo.broker.LocalRouter
-import org.apache.activemq.apollo.dto.{QueueDTO, AccessRuleDTO}
-import org.apache.activemq.apollo.util.path.PathParser._
+import org.apache.activemq.apollo.dto.AccessRuleDTO
 import java.util.regex.Pattern
-import org.apache.activemq.apollo.broker.security.Authorizer.ResourceMatcher
 import java.util.concurrent.atomic.AtomicLong
+import org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.util.Log
 
 object SecuredResource {
   case class SecurityRules(version:Long, rules: Seq[(String,SecurityContext)=>Option[Boolean]])
 
-  sealed trait ResourceKind
-  object BrokerKind extends ResourceKind
-  object VirtualHostKind extends ResourceKind
-  object ConnectorKind extends ResourceKind
-  object QueueKind extends ResourceKind
-  object TopicKind extends ResourceKind
-  object DurableSubKind extends ResourceKind
-  object OtherKind extends ResourceKind
+  val ADMIN   = "admin"
+  val MONITOR = "monitor"
+  val CONFIG  = "config"
+  val CONNECT = "connect"
+  val CREATE  = "create"
+  val DESTROY = "destroy"
+  val SEND    = "send"
+  val RECEIVE = "receive"
+  val CONSUME = "consume"
+
+  sealed trait ResourceKind {
+    val id:String
+    def actions:Set[String]
+  }
+  object BrokerKind extends ResourceKind {
+    val id = "broker"
+    val actions = Set(ADMIN, MONITOR, CONFIG)
+  }
+  object VirtualHostKind extends ResourceKind{
+    val id = "virtual-host"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CONNECT)
+  }
+  object ConnectorKind extends ResourceKind{
+    val id = "connector"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CONNECT)
+  }
+  object TopicKind extends ResourceKind{
+    val id = "topic"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE)
+  }
+  object QueueKind extends ResourceKind{
+    val id = "queue"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE, CONSUME)
+  }
+  object DurableSubKind extends ResourceKind{
+    val id = "dsub"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE, CONSUME)
+  }
+  object OtherKind extends ResourceKind{
+    val id = "other"
+    val actions = Set[String]()
+  }
 }
 import SecuredResource._
 
@@ -49,13 +81,34 @@ object Authorizer {
     def can(ctx: SecurityContext, action: String, resource: SecuredResource) = true
   }
 
-  def apply(config:Seq[AccessRuleDTO], default_principal_kinds:Set[String]):Authorizer = {
-    new RulesAuthorizer(version_counter.incrementAndGet(), config.map(ResourceMatcher(_, default_principal_kinds)))
+  def apply(broker:Broker, host:VirtualHost=null):Authorizer = {
+    import collection.JavaConversions._
+
+    val rules = if( host==null ) {
+      val pk = broker.authenticator.acl_principal_kinds
+      broker.config.access_rules.toList.flatMap(parse(broker.console_log, _,pk))
+    } else {
+      val pk = host.authenticator.acl_principal_kinds
+      host.config.access_rules.toList.flatMap(parse(host.console_log, _,pk, host)) :::
+      broker.config.access_rules.toList.flatMap(parse(broker.console_log, _,pk))
+    }
+    new RulesAuthorizer(version_counter.incrementAndGet(), rules.toArray )
   }
 
-  case class ResourceMatcher(rule:AccessRuleDTO, default_principal_kinds:Set[String]) {
-
+  def parse(log:Log, rule:AccessRuleDTO, default_principal_kinds:Set[String], host:VirtualHost=null):Option[ResourceMatcher] ={
+    import log._
     var resource_matchers = List[(SecuredResource)=>Boolean]()
+
+    val actions = Option(rule.action).map(_.trim().toLowerCase).getOrElse("*") match {
+      case "*" => null
+      case action =>
+        val rc = action.split("\\s").map(_.trim()).toSet
+        // Not all actions can apply to all resource types.
+        resource_matchers ::= ((resource:SecuredResource) => {
+          !(resource.resource_kind.actions & rc).isEmpty
+        })
+        rc
+    }
 
     for(id_regex <- Option(rule.id_regex)) {
       val reg_ex = Pattern.compile(id_regex)
@@ -67,7 +120,7 @@ object Authorizer {
     Option(rule.id).getOrElse("*") match {
       case "*" =>
       case id =>
-        if(rule.kind == "queue" || rule.kind == "topic") {
+        if(rule.kind == QueueKind.id || rule.kind == TopicKind.id ) {
           val filter = LocalRouter.destination_parser.decode_filter(id)
           resource_matchers ::= ((resource:SecuredResource) => {
             filter.matches(LocalRouter.destination_parser.decode_path(resource.id))
@@ -81,16 +134,37 @@ object Authorizer {
 
     Option(rule.kind).map(_.trim().toLowerCase).getOrElse("*") match {
       case "*" =>
+        if( host!=null) {
+          resource_matchers ::= ((resource:SecuredResource) => {
+            resource.resource_kind match {
+              case BrokerKind=> false
+              case ConnectorKind=> false
+              case _ => true
+            }
+          })
+        }
       case kind =>
-        val kinds = (kind.split(",").map(_.trim()).map{ v=>
+        val kinds = (kind.split("\\s").map(_.trim()).map{ v=>
           val kind:ResourceKind = v match {
-            case "broker"=>BrokerKind
-            case "virtual-host"=>VirtualHostKind
-            case "connector"=>ConnectorKind
-            case "queue"=>QueueKind
-            case "topic"=>TopicKind
-            case "dsub"=>DurableSubKind
-            case _ => OtherKind
+            case BrokerKind.id =>
+              if(host!=null) {
+                warn("Ignoring invalid access rule. kind='broker' can only be configured at the broker level: "+rule)
+                return None
+              }
+              BrokerKind
+            case ConnectorKind.id =>
+              if(host!=null) {
+                warn("Ignoring invalid access rule. kind='connector' can only be configured at the broker level: "+rule)
+                return None
+              }
+              ConnectorKind
+            case VirtualHostKind.id =>VirtualHostKind
+            case QueueKind.id =>QueueKind
+            case TopicKind.id =>TopicKind
+            case DurableSubKind.id =>DurableSubKind
+            case _ =>
+              warn("Ignoring invalid access rule. Unknown kind '"+v+"' "+rule)
+              return None
           }
           kind
         }).toSet
@@ -99,75 +173,90 @@ object Authorizer {
         })
     }
 
+    val principal_kinds = Option(rule.principal_kind).map(_.trim().toLowerCase).getOrElse(null) match {
+      case null => Some(default_principal_kinds)
+      case "*" => None
+      case principal_kind => Some(principal_kind.split("\\s").map(_.trim()).toSet)
+    }
+
+    def parse_principals(value:String): Option[(SecurityContext)=>Boolean] = {
+      Option(value).map(_.trim() match {
+        case "*" =>
+          ((ctx:SecurityContext) => { true })
+        case "+" =>
+          // user has to have at least one of the principle kinds
+          ((ctx:SecurityContext) => {
+            principal_kinds match {
+              case Some(principal_kinds)=>
+                ctx.principles.find(p=> principal_kinds.contains(p.getClass.getName) ).isDefined
+              case None =>
+                !ctx.principles.isEmpty
+            }
+          })
+        case principal =>
+          val principals = if(rule.separator!=null) {
+            principal.split(Pattern.quote(rule.separator)).map(_.trim()).toSet
+          } else {
+            Set(principal)
+          }
+          ((ctx:SecurityContext) => {
+            principal_kinds match {
+              case Some(principal_kinds)=>
+                ctx.principles.find{ p=>
+                  val km = principal_kinds.contains(p.getClass.getName)
+                  val nm = principals.contains(p.getName)
+                  km && nm
+                }.isDefined
+              case None =>
+                ctx.principles.find(p=> principals.contains(p.getName) ).isDefined
+            }
+          })
+      })
+    }
+
+    val allow = parse_principals(rule.allow)
+    val deny = parse_principals(rule.deny)
+
+    if( allow.isEmpty && deny.isEmpty ) {
+      warn("Ignoring invalid access rule. Either the 'allow' or 'deny' attribute must be declared.")
+      return None
+    }
+
+    Some(ResourceMatcher(resource_matchers, actions, allow, deny))
+  }
+
+  case class ResourceMatcher(
+    resource_matchers:List[(SecuredResource)=>Boolean],
+    actions:Set[String],
+    allow:Option[(SecurityContext)=>Boolean],
+    deny:Option[(SecurityContext)=>Boolean]
+  ) {
+
     def resource_matches(resource:SecuredResource):Boolean = {
       // Looking for a matcher that does not match so we can
       // fail the match quickly.
       !resource_matchers.find(_(resource)==false).isDefined
     }
 
-    var action_matchers = List[(String, SecurityContext)=>Boolean]()
-
-    val principal_kinds = Option(rule.principal_kind).map(_.trim().toLowerCase).getOrElse(null) match {
-      case null => Some(default_principal_kinds)
-      case "*" => None
-      case principal_kind => Some(principal_kind.split(",").map(_.trim()).toSet)
-    }
-
-    Option(rule.principal).map(_.trim().toLowerCase).getOrElse("+") match {
-      case "*" =>
-      case "+" =>
-        // user has to have at least one of the principle kinds
-        action_matchers ::= ((action:String, ctx:SecurityContext) => {
-          principal_kinds match {
-            case Some(principal_kinds)=>
-              ctx.principles.find(p=> principal_kinds.contains(p.getClass.getName) ).isDefined
-            case None =>
-              !ctx.principles.isEmpty
-          }
-        })
-
-      case principal =>
-        val principals = if(rule.separator!=null) {
-          principal.split(Pattern.quote(rule.separator)).map(_.trim()).toSet
-        } else {
-          Set(principal)
-        }
-        action_matchers ::= ((action:String, ctx:SecurityContext) => {
-          principal_kinds match {
-            case Some(principal_kinds)=>
-              ctx.principles.find{ p=>
-                val km = principal_kinds.contains(p.getClass.getName)
-                val nm = principals.contains(p.getName)
-                km && nm
-              }.isDefined
-            case None =>
-              ctx.principles.find(p=> principals.contains(p.getName) ).isDefined
-          }
-        })
-    }
-
-    Option(rule.action).map(_.trim().toLowerCase).getOrElse("*") match {
-      case "*" =>
-      case action =>
-        val actions = Set(action.split(",").map(_.trim()): _* )
-        action_matchers ::= ((action:String, ctx:SecurityContext) => {
-          actions.contains(action)
-        })
-    }
-
-    val deny = Option(rule.deny).map(_.booleanValue()).getOrElse(false)
-
     def action_matches(action:String, ctx:SecurityContext):Option[Boolean] = {
-      for(matcher <- action_matchers) {
-        if ( !matcher(action, ctx) ) {
-          return None
+      if(actions!=null && !actions.contains(action)) {
+        return None
+      }
+      for(matcher <- deny) {
+        if ( matcher(ctx) ) {
+          return Some(false)
         }
       }
-      return Some(!deny)
+      for(matcher <- allow) {
+        if ( matcher(ctx) ) {
+          return Some(true)
+        }
+      }
+      return None
     }
   }
 
-  case class RulesAuthorizer(version:Long, config:Seq[ResourceMatcher]) extends Authorizer {
+  case class RulesAuthorizer(version:Long, config:Array[ResourceMatcher]) extends Authorizer {
 
     def can(ctx:SecurityContext, action:String, resource:SecuredResource):Boolean = {
       if (ctx==null) {

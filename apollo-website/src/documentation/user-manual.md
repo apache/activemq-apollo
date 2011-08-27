@@ -587,136 +587,108 @@ Example of customizing the principal kinds used:
 #### Authorization
 
 User authorization to broker resources is accomplished by configuring an
-access control list using an `acl` element on the `broker`, `connector`,
-`virtual_host`, `topic`, `dsub`, or `queue` resources. The
-acl defines which principals are allowed or denied access to perform actions
-against the resources. An example of `acl` is shown below:
+access control rules using a `access_rule` elements in the `broker` or
+`virtual_host` elements. The rules defines which principals are allowed or
+denied access to perform actions against server resources. An example list of
+rule is shown below:
 
 {pygmentize:: xml}
-<acl>
-  <send deny="guest"/>
-  <send allow="*"/>
-  <receive allow="app1"/>
-</acl>
+<broker>
+  <access_rule deny="guest" action="send"/>
+  <access_rule allow="*"    action="send"/>
+  <access_rule allow="app1" action="receive"/>
+</broker>
 {pygmentize}
 
-If a configuration resource does not have an `acl` element defined within
-it, then the resource allows access if the containing resource would allow
-access to the action.  If the action is not defined in the containing
-resource then it allows anyone to access. The `acl`
-is made up of a list of authorization rule entries. Each entry defines
-that action the rule applies to and if the rule is allowing or denying
-access to a user principal. 
 
-Users can have many principals of many different kinds associated with
-them. The rules will only match up against principals of type
-`org.apache.activemq.jaas.GroupPrincipal` since that is the default
-setting of the `acl_principal_kind` of the `authentication` domain.
+The `allow` and `deny` attributes define the principals which are allowed or
+denied access. If set to "+" then it matches all principals but requires at
+at least one. If set to "*" the it matches all principals and even matches
+the case where there are no principals associated with the subject.
 
-If you want the rule to match against more/different kinds of principals,
-you should update the `authentication` element's configuration or you
-explicitly state the kind you want to match against in your rule
-definition. Example:
+Either `allow` or `deny` must be defined. You can optionally define one or
+more of the following attributes to further narrow down when the rule matches
+an authorization check:
+
+* `separator`: If set, then the `allow` and `deny` fields will be interpreted
+  to be a list of principles separated by the separator value.
+
+* `principal_kind`: A space separated list of class names of which will be
+  matched against the principle type. If set to `*` then it matches all
+  principal classes. Defaults to the default principal kinds configured on
+  the broker or virtual host.
+
+* `action`: A space separated list of actions that will match the rule.
+  Example 'create,destroy'. You can use `*` to match all actions.  Defaults
+  to `*`.
+
+* `kind`: A space separated list of broker resource types that will match
+  this rule. You can use `*` to match all key. Example values 'broker,queue'.
+  Defaults to `*`.
+
+* `id`: The identifier of the resource that will match this rule. You can use
+  `*` to match all resources. Defaults to `*`
+
+* `id_regex`: A regular expression to be applied against the id of the
+  resource.
+
+If no access rules match an authorization check then access is denied. 
+
+##### Ordering
+
+The order in which rules are defined are significant. The first entry that
+matches determines if he will have access. For example, lets say a user is
+groups 'blue' and 'red', and you are matching against the following 
+rules:
 
 {pygmentize:: xml}
-<acl>
-  <send deny="chirino" kind="org.apache.activemq.jaas.UserPrincipal"/>
-  <send allow="*"/>
-</acl>
+<access_rule deny="blue" action="send"/>
+<access_rule allow="red" action="send"/>
 {pygmentize}
 
-#### Wildcards
-
-Wild cards can be used in the `deny`, `allow`, and `kind` attributes to match 
-multiple values.  Two types of wildcards are supported:
-
-> `*` : Matches any value on zero or more principles. 
-> `+` : Matches any value on one or more principles.
-
-Examples of using the `*` wild card:
-
-{pygmentize:: xml}
-<acl>
-  <connect allow="*"/>
-</acl>
-{pygmentize}
-
-The previous example allows anyone to connect even if the subject they 
-authenticated with has no principles associated with it.
-
-Examples of using the `+` wild card:
-
-{pygmentize:: xml}
-<acl>
-  <connect allow="+" kind="org.apache.activemq.jaas.UserPrincipal"/>
-</acl>
-{pygmentize}
-
-The previous example allows an `UserPrincipal` principal to connect. It
-would reject the connection if subject that has no `UserPrincipals`.
-
-You can also use the wildcard on the kind attribute.  When the wild
-card is used on the kind attribute, then `*` acts like the `+` wild 
-card and only matches for one or more principles.
-
-For example:
-
-{pygmentize:: xml}
-<acl>
-  <connect allow="Hiram" kind="*"/>
-</acl>
-{pygmentize}
-
-The previous example allows a subject with at least one `hiram` to 
-principal connect.  The principal can be of any type..
-
-#### Ordering
-
-The order in which rule entries are defined are significant when the user
-matches multiple entries. The first entry the user matches determines if he
-will have access to the action. For example, lets say a user is groups
-'blue' and 'red', and you are matching against an ACL list defined as:
-
-{pygmentize:: xml}
-<acl>
-  <send deny="blue"/>
-  <send allow="red"/>
-</acl>
-{pygmentize}
-
-Then the user would not be allowed to send since `<send deny="blue"/>` was
-defined first. If the order in the ACL list were reversed, like
+Then the user would not be allowed to send since the deny rule was
+matched first. If the order in the ACL list were reversed, like
 so:
 
 {pygmentize:: xml}
-<acl>
-  <send allow="red"/>
-  <send deny="blue"/>
-</acl>
+<access_rule allow="red" action="send"/>
+<access_rule deny="blue" action="send"/>
 {pygmentize}
 
-Then the user would be allowed access to the resource since the first rule
-which matches the user is `<send allow="red"/>`.
+Then the user would be allowed access to the resource since the allow
+rule matched first.  When a single rule defines both `allow` and
+`deny` attributes and they both match then the action is denied.
 
-The type of resource being secured determines the types of actions that
-can be secured by the acl rule entries. Here is listing of which actions
-can be secured on which resources:
+{pygmentize:: xml}
+<access_rule deny="blue" allow="red" action="send"/>
+{pygmentize}
 
-* `broker`, `virtual_host`, `topic`, `queue`, and `dsub`
-  * `admin` : use of the administrative web interface
-  * `monitor` : read only use of the administrative web interface
-  * `config` : use of the administrative web interface to access and change the broker
-     configuration.
-* `connector` and `virtual_host`
-  * `connect` : allows connections to the connector or virtual host
-* `topic`, `queue` and `dsub`
-  * `create` : allows creation
-  * `destroy` : allows destruction
-  * `send` : allows the user to send to the destination
-  * `receive` : allows the user to send to do non_destructive read 
-    from the destination
-* `queue` and `dsub`
-  * `consume` : allows the user to do destructive reads against the queue.
+#### Resource Actions
+
+You can configure the `action` attribute of an access rules with
+one or more of the following values:
+
+* `admin` : use of the administrative web interface
+* `monitor` : read only use of the administrative web interface
+* `config` : use of the administrative web interface to access and change the
+  broker configuration.
+* `connect` : allows connections to the connector or virtual host
+* `create` : allows creation
+* `destroy` : allows destruction
+* `send` : allows the user to send to the destination
+* `receive` : allows the user to send to do non-destructive reads from the
+  destination
+* `consume` : allows the user to do destructive reads against a destination
+* `*` : All actions
+
+#### Resource Kinds
+
+You can configure the `kind` attribute of an access rules with one or more of
+the following values: `broker`, `connector`, `virtual_host`, `topic`,
+`queue`, `dsub`, or `*`. `*` matches all resource kinds.
+
+The `broker` and `connector` kinds can only be configured in rules
+defined in the `broker` element.
 
 #### Encrypting Passwords in the Configuration
 

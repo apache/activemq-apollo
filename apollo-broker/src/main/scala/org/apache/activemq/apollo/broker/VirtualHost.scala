@@ -156,7 +156,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
     }
     if( authenticator!=null ) {
       val rules = config.access_rules.toList ::: broker.config.access_rules.toList
-      authorizer = Authorizer(rules, authenticator.acl_principal_kinds)
+      authorizer = Authorizer(broker, this)
     } else {
       authorizer = Authorizer()
     }

@@ -51,20 +51,17 @@ class Create extends Action {
   val home: String = System.getProperty("apollo.home")
 
   var broker_security_config =
-  """<!-- used to secure the web admin interface -->
-  <authentication domain="apollo"/>
-  <acl>
-    <admin allow="admins"/>
-    <config allow="admins"/>
-  </acl>
   """
+  <authentication domain="apollo"/>
+  <!-- Give admins full access -->
+  <access_rule allow="admins" action="*"/>
+  <access_rule allow="*" action="connect" kind="connector"/>
+  """
+
   var host_security_config =
     """<!-- Uncomment to disable security for the virtual host -->
     <!-- <authentication enabled="false"/> -->
-    <acl>
-      <admin allow="admins"/>
-      <connect allow="admins"/>
-    </acl>
+    <access_rule allow="users" action="connect create destroy send receive consume"/>
     """
 
   var create_login_config = true
