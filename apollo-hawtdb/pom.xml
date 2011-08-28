@@ -53,7 +53,7 @@
     
     <dependency>
       <groupId>org.fusesource.hawtbuf</groupId>
-      <artifactId>hawtbuf-proto</artifactId>
+      <artifactId>hawtbuf</artifactId>
       <version>${hawtbuf-version}</version>
     </dependency>
 
@@ -125,22 +125,6 @@
 
   <build>
     <plugins>
-
-      <plugin>
-        <groupId>org.fusesource.hawtbuf</groupId>
-        <artifactId>hawtbuf-protoc</artifactId>
-        <version>${hawtbuf-version}</version>
-        <configuration>
-          <type>alt</type>
-        </configuration>
-         <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
 
       <plugin>
         <groupId>org.fusesource.scalate</groupId>

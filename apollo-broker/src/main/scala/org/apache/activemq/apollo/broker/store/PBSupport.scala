@@ -1,6 +1,7 @@
 package org.apache.activemq.apollo.broker.store
 
 import java.io.{OutputStream, InputStream}
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -50,9 +51,11 @@ object PBSupport {
   def encode_message_record(out: OutputStream, v: MessageRecord) = to_pb(v).writeUnframed(out)
   def decode_message_record(in: InputStream):MessageRecord = MessagePB.FACTORY.parseUnframed(in)
 
-  implicit def encode_message_record(v: MessageRecord) = to_pb(v).toUnframedByteArray
+  implicit def encode_message_record(v: MessageRecord):Array[Byte] = to_pb(v).toUnframedByteArray
   implicit def decode_message_record(data: Array[Byte]):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
 
+  implicit def encode_message_record_buffer(v: MessageRecord) = to_pb(v).toUnframedBuffer
+  implicit def decode_message_record_buffer(data: Buffer):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
 
 
   implicit def to_pb(v: QueueRecord):QueuePB.Buffer = {
@@ -64,11 +67,7 @@ object PBSupport {
   }
 
   implicit def from_pb(pb: QueuePB.Getter):QueueRecord = {
-    val rc = new QueueRecord
-    rc.key = pb.getKey
-    rc.binding_data = pb.getBindingData
-    rc.binding_kind = pb.getBindingKind
-    rc
+    QueueRecord(pb.getKey, pb.getBindingKind, pb.getBindingData)
   }
 
   def encode_queue_record(out: OutputStream, v: QueueRecord) = to_pb(v).writeUnframed(out)
@@ -77,6 +76,8 @@ object PBSupport {
   implicit def encode_queue_record(v: QueueRecord) = to_pb(v).toUnframedByteArray
   implicit def decode_queue_record(data: Array[Byte]):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
 
+  implicit def encode_queue_record_buffer(v: QueueRecord) = to_pb(v).toUnframedBuffer
+  implicit def decode_queue_record_buffer(data: Buffer):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
 
   implicit def to_pb(v: QueueEntryRecord):QueueEntryPB.Buffer = {
     val pb = new QueueEntryPB.Bean
@@ -112,5 +113,8 @@ object PBSupport {
 
   implicit def encode_queue_entry_record(v: QueueEntryRecord) = to_pb(v).toUnframedByteArray
   implicit def decode_queue_entry_record(data: Array[Byte]):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
+
+  implicit def encode_queue_entry_record_buffer(v: QueueEntryRecord) = to_pb(v).toUnframedBuffer
+  implicit def decode_queue_entry_record_buffer(data: Buffer):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
 
 }

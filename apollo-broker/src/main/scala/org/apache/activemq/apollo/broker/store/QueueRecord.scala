@@ -17,14 +17,9 @@
 package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtbuf.AsciiBuffer;
-import org.fusesource.hawtbuf.Buffer;
-
+import org.fusesource.hawtbuf.Buffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class QueueRecord {
-  var key = -1L
-  var binding_kind: AsciiBuffer = _
-  var binding_data: Buffer = _
-}
+case class QueueRecord(key:Long, binding_kind: AsciiBuffer, binding_data:Buffer)

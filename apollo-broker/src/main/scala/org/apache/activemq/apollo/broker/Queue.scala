@@ -144,10 +144,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
 
     if( tune_persistent ) {
-      val record = new QueueRecord
-      record.key = store_id
-      record.binding_data = binding.binding_data
-      record.binding_kind = binding.binding_kind
+      val record = QueueRecord(store_id, binding.binding_kind, binding.binding_data)
       virtual_host.store.add_queue(record) { rc => Unit }
     }
 

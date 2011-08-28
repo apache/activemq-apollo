@@ -41,4 +41,22 @@ public class HawtDBStoreStatusDTO extends StoreStatusDTO {
     @XmlElement(name="message_load_batch_size")
     public IntMetricDTO message_load_batch_size;
 
+    @XmlElement(name="last_checkpoint_pos")
+    public long index_snapshot_pos;
+
+    @XmlElement(name="last_gc_ts")
+    public long last_gc_ts;
+
+    @XmlElement(name="in_gc")
+    public boolean in_gc;
+
+    @XmlElement(name="last_gc_duration")
+    public long last_gc_duration;
+
+    @XmlElement(name="last_append_pos")
+    public long log_append_pos;
+
+    @XmlElement(name="log_stats")
+    public String log_stats;
+
 }

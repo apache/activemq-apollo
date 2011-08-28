@@ -16,72 +16,134 @@
  */
 package org.apache.activemq.apollo.broker.store.hawtdb
 
-import dto.HawtDBStoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
-import java.io.File
-import java.io.IOException
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
-import org.fusesource.hawtdb.internal.journal.{JournalListener, Journal, Location}
-import org.apache.activemq.apollo.broker.store.hawtdb.model.Type._
-import org.apache.activemq.apollo.broker.store.hawtdb.model._
-import org.fusesource.hawtbuf._
-import org.fusesource.hawtdispatch._
-import collection.mutable.{LinkedHashMap, ListBuffer}
-import collection.JavaConversions
-import ju.{TreeSet, HashSet}
+import org.fusesource.hawtbuf.proto.PBMessageFactory
+import org.apache.activemq.apollo.broker.store.PBSupport._
 
-import java.util.concurrent.TimeUnit
-import org.fusesource.hawtdb.api._
 import org.apache.activemq.apollo.broker.store._
+import java.io._
+import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
-import OptionSupport._
+import collection.mutable.ListBuffer
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
+import collection.immutable.TreeMap
+import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
+import java.util.concurrent.atomic.AtomicReference
+import scala.Predef._
+import org.fusesource.hawtdb.api._
+import org.fusesource.hawtbuf.Buffer._
+import org.fusesource.hawtdb.internal.page.LFUPageCache
+import org.fusesource.hawtdispatch._
 
-
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object HawtDBClient extends Log {
-  val BEGIN = -1
-  val COMMIT = -2
-  val ROLLBACK = -3
 
-  val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000
+  final val message_prefix = 'm'.toByte
+  final val queue_prefix = 'q'.toByte
+  final val queue_entry_prefix = 'e'.toByte
+  final val map_prefix = 'p'.toByte
 
-  val CLOSED_STATE = 1
-  val OPEN_STATE = 2
+  final val message_prefix_array = new Buffer(Array(message_prefix))
+  final val queue_prefix_array = new Buffer(Array(queue_prefix))
+  final val map_prefix_array = new Buffer(Array(map_prefix))
+  final val queue_entry_prefix_array = new Buffer(Array(queue_entry_prefix))
+  final val dirty_index_key = ascii(":dirty")
+  final val FALSE = ascii("false")
+  final val TRUE = ascii("true")
+
+  final val LOG_ADD_QUEUE           = 1.toByte
+  final val LOG_REMOVE_QUEUE        = 2.toByte
+  final val LOG_ADD_MESSAGE         = 3.toByte
+  final val LOG_REMOVE_MESSAGE      = 4.toByte
+  final val LOG_ADD_QUEUE_ENTRY     = 5.toByte
+  final val LOG_REMOVE_QUEUE_ENTRY  = 6.toByte
+  final val LOG_MAP_ENTRY           = 7.toByte
+
+  final val LOG_SUFFIX  = ".log"
+  final val INDEX_SUFFIX  = ".index"
+
+  import FileSupport._
+  def create_sequence_file(directory:File, id:Long, suffix:String) = directory / ("%016x%s".format(id, suffix))
+
+  def find_sequence_files(directory:File, suffix:String):TreeMap[Long, File] = {
+    TreeMap((directory.list_files.flatMap { f=>
+      if( f.getName.endsWith(suffix) ) {
+        try {
+          val base = f.getName.stripSuffix(suffix)
+          val position = java.lang.Long.parseLong(base, 16);
+          Some(position -> f)
+        } catch {
+          case e:NumberFormatException => None
+        }
+      } else {
+        None
+      }
+    }): _* )
+  }
+
+  case class UsageCounter() {
+    var count = 0L
+    var size = 0L
+    def increment(value:Int) = {
+      count += 1
+      size += value
+    }
+  }
+
+  trait Link {
+    def apply(source:File, target:File, tmp:File);
+  }
+
+
+  object ExecLnLink extends Link {
+    def apply(source: File, target: File, tmp: File) = {
+      val p = sys.process.Process(Array("ln", source.getCanonicalPath, target.getCanonicalPath))
+      if( (p.!) !=0 ) {
+        // Fallback to a copying..
+        CopyLink(source, target, tmp)
+      }
+    }
+  }
+
+  object CopyLink extends Link {
+    def apply(source: File, target: File, tmp: File) = {
+      try {
+        source.copy_to(tmp)
+        tmp.renameTo(target)
+      } finally {
+        tmp.delete()
+      }
+    }
+  }
+
+  val ON_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
+  var link:Link = if(ON_WINDOWS) {
+    // We know we can use ln on windows..
+    CopyLink
+  } else {
+    // We can probably use the ln command.
+    ExecLnLink
+  }
+
+
 }
 
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBClient(hawtDBStore: HawtDBStore) {
+class HawtDBClient(store: HawtDBStore) {
+
+  import Helper._
   import HawtDBClient._
-  import Helpers._
+  import FileSupport._
 
-  def dispatchQueue = hawtDBStore.dispatch_queue
-
-
-  private val indexFileFactory = new TxPageFileFactory()
-  private var journal: Journal = null
-
-  private var lockFile: LockFile = null
-  private val trackingGen = new AtomicLong(0)
-  private val lockedDatatFiles = new HashSet[jl.Integer]()
-
-  private var recovering = false
-  private var nextRecoveryPosition: Location = null
-  private var lastRecoveryPosition: Location = null
-  private var recoveryCounter = 0
-
-  @volatile
-  var rootBuffer = (new DatabaseRootRecord.Bean()).freeze
-
-  @volatile
-  var storedRootBuffer = (new DatabaseRootRecord.Bean()).freeze
-
-
-  val next_batch_counter = new AtomicInteger(0)
-  private var batches = new LinkedHashMap[Int, (Location, ListBuffer[Update])]()
+  def dispatchQueue = store.dispatch_queue
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -89,18 +151,8 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
   //
   /////////////////////////////////////////////////////////////////////
 
-
+  def config = store.config
   def directory = config.directory
-  def journal_log_size = config.journal_log_size.getOrElse(1024*1024*64)
-  def journal_batch_size = config.journal_batch_size.getOrElse(1024*256)
-  def index_flush_interval = config.index_flush_interval.getOrElse(5L * 1000L)
-  def cleanup_interval = config.cleanup_interval.getOrElse(30 * 1000L)
-  def fail_if_locked = config.fail_if_locked.getOrElse(false)
-  def index_page_size = config.index_page_size.getOrElse(512.toShort)
-  def index_cache_size = config.index_cache_size.getOrElse(5000)
-
-  private def index_file = indexFileFactory.getTxPageFile()
-
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -108,1004 +160,751 @@ class HawtDBClient(hawtDBStore: HawtDBStore) {
   //
   /////////////////////////////////////////////////////////////////////
 
-  var config: HawtDBStoreDTO = null
+  var verify_checksums = false;
 
-  def lock(func: => Unit) {
-    val lockFileName = new File(directory, "lock")
-    lockFile = new LockFile(lockFileName, true)
-    if (fail_if_locked) {
-      lockFile.lock()
-      func
-    } else {
-      val locked = try {
-        lockFile.lock()
-        true
-      } catch {
-        case e: IOException =>
-          false
+  var log:RecordLog = _
+
+  var last_index_snapshot_pos:Long = _
+  val snapshot_rw_lock = new ReentrantReadWriteLock(true)
+
+  var last_gc_ts = 0L
+  var last_gc_duration = 0L
+  var in_gc = false
+  var gc_detected_log_usage = Map[Long, UsageCounter]()
+
+  def dirty_index_file = directory / ("dirty"+INDEX_SUFFIX)
+  def temp_index_file = directory / ("temp"+INDEX_SUFFIX)
+  def snapshot_index_file(id:Long) = create_sequence_file(directory,id, INDEX_SUFFIX)
+
+  private val index_file_factory = new TxPageFileFactory()
+  var lock_file:LockFile = _
+
+  def create_log: RecordLog = {
+    new RecordLog(directory, LOG_SUFFIX)
+  }
+
+  def log_size = {
+    import OptionSupport._
+    config.log_size.getOrElse(1024 * 1024 * 100)
+  }
+
+  def retry_using_index[T](func: (RichBTreeIndex)=>T):T = retry(using_index(func))
+
+  def using_index[T](func: (RichBTreeIndex)=>T):T = {
+    val lock = snapshot_rw_lock.readLock();
+    lock.lock()
+    try {
+      val tx = index_file_factory.getTxPageFile.tx
+      var ok = false
+      try {
+        val rc = func(new RichBTreeIndex(INDEX_FACTORY.openOrCreate(tx)))
+        ok = true
+        rc
+      } finally {
+        if (ok) {
+          tx.commit
+        } else {
+          tx.rollback
+        }
+        tx.close
       }
-      if (locked) {
-        func
-      } else {
-        info("Database " + lockFileName + " is locked... waiting " + (DATABASE_LOCKED_WAIT_DELAY / 1000) + " seconds for the database to be unlocked.")
-        dispatchQueue.executeAfter(DATABASE_LOCKED_WAIT_DELAY, TimeUnit.MILLISECONDS, ^ {
-          hawtDBStore.executor_pool {
-            lock(func _)
-          }
-        })
-      }
+    } finally {
+      lock.unlock()
     }
   }
 
+  def retry[T](func: => T): T = {
+    var error:Throwable = null
+    var rc:Option[T] = None
 
-  def start(onComplete:Runnable) = {
-    lock {
+    // We will loop until the tx succeeds.  Perhaps it's
+    // failing due to a temporary condition like low disk space.
+    while(!rc.isDefined) {
 
-      journal = new Journal()
-      journal.setDirectory(directory)
-      journal.setMaxFileLength(journal_log_size)
-      journal.setMaxWriteBatchSize(journal_batch_size);
-      journal.setChecksum(true);
-      journal.setListener( new JournalListener{
-        def synced(writes: Array[JournalListener.Write]) = {
-          var onCompletes = List[Runnable]()
-          withTx { tx=>
-            val helper = new TxHelper(tx)
-            writes.foreach { write=>
-              val func = write.getAttachment.asInstanceOf[(TxHelper, Location)=>List[Runnable]]
-              onCompletes = onCompletes ::: func(helper, write.getLocation)
-            }
-            helper.storeRootBean
+      try {
+        rc = Some(func)
+      } catch {
+        case e:Throwable =>
+          if( error==null ) {
+            warn(e, "DB operation failed. (entering recovery mode)")
           }
-          onCompletes.foreach( _.run )
+          error = e
+      }
+
+      if (!rc.isDefined) {
+        // We may need to give up if the store is being stopped.
+        if ( !store.service_state.is_started ) {
+          throw error
         }
-      })
-
-      if( config.archive_directory!=null ) {
-        journal.setDirectoryArchive(config.archive_directory)
-        journal.setArchiveDataLogs(true)
+        Thread.sleep(1000)
       }
-      journal.start
+    }
 
-      indexFileFactory.setFile(new File(directory, "db"))
-      indexFileFactory.setDrainOnClose(false)
-      indexFileFactory.setSync(true)
-      indexFileFactory.setUseWorkerThread(true)
-      indexFileFactory.setPageSize(index_page_size)
-      indexFileFactory.setCacheSize(index_cache_size);
+    if( error!=null ) {
+      info("DB recovered from failure.")
+    }
+    rc.get
+  }
 
-      indexFileFactory.open
+  def start() = {
+    import OptionSupport._
 
-      val initialized = withTx { tx =>
-          if (!tx.allocator().isAllocated(0)) {
-            val helper = new TxHelper(tx)
-            import helper._
+    lock_file = new LockFile(directory / "lock", true)
+    if (config.fail_if_locked.getOrElse(false)) {
+      lock_file.lock()
+    } else {
+      retry {
+        lock_file.lock()
+      }
+    }
 
-            val rootPage = tx.alloc()
-            assert(rootPage == 0)
 
-            rootBean.setQueueIndexPage(alloc(QUEUE_INDEX_FACTORY))
-            rootBean.setMessageKeyIndexPage(alloc(MESSAGE_KEY_INDEX_FACTORY))
-            rootBean.setDataFileRefIndexPage(alloc(DATA_FILE_REF_INDEX_FACTORY))
-            rootBean.setMessageRefsIndexPage(alloc(MESSAGE_REFS_INDEX_FACTORY))
-            rootBean.setSubscriptionIndexPage(alloc(SUBSCRIPTIONS_INDEX_FACTORY))
-            storedRootBuffer = rootBean.freeze
-            helper.storeRootBean
+    verify_checksums = config.verify_checksums.getOrElse(false);
+    index_file_factory.setFile(dirty_index_file)
+    index_file_factory.setDrainOnClose(true)
+    index_file_factory.setSync(false)
+    index_file_factory.setUseWorkerThread(false)
 
-            true
-          } else {
-            rootBuffer = tx.get(DATABASE_ROOT_RECORD_ACCESSOR, 0)
-            storedRootBuffer = rootBuffer;
-            false
+    index_file_factory.setPageSize(config.index_page_size.getOrElse(1024*4).toShort)
+    val cache_size = ((config.index_cache_size.getOrElse(1024*1024*256L)) / index_file_factory.getPageSize()).toInt
+    index_file_factory.setPageCache(new LFUPageCache(cache_size, 0.90.toFloat));
+
+    log = create_log
+    log.write_buffer_size = config.log_write_buffer_size.getOrElse(1024*1024*4)
+    log.log_size = log_size
+    log.on_log_rotate = ()=> {
+      // lets queue a request to checkpoint when
+      // the logs rotate.. queue it on the GC thread since GC's lock
+      // the index for a long time.
+      store.gc_executor {
+        snapshot_index
+      }
+    }
+
+    retry {
+      log.open
+    }
+
+    // Find out what was the last snapshot.
+    val snapshots = find_sequence_files(directory, INDEX_SUFFIX)
+    var last_snapshot_index = snapshots.lastOption
+    last_index_snapshot_pos = last_snapshot_index.map(_._1).getOrElse(0)
+
+    // Only keep the last snapshot..
+    snapshots.filterNot(_._1 == last_index_snapshot_pos).foreach( _._2.recursive_delete )
+    temp_index_file.delete
+
+    retry {
+
+      // Delete the dirty indexes
+      dirty_index_file.delete()
+
+      // Resume log replay from a snapshot of the index..
+      for( last <- last_snapshot_index ) {
+        try {
+          link(last._2, dirty_index_file, temp_index_file)
+        } catch {
+          case e:Exception =>
+            warn(e, "Could not recover snapshot of the index: "+e)
+            last_snapshot_index = None
+        }
+      }
+
+      index_file_factory.open
+      using_index { index=>
+        index.put(dirty_index_key, TRUE)
+        // Update the index /w what was stored on the logs..
+        var pos = last_index_snapshot_pos;
+
+        // Replay the log from the last update position..
+        while (pos < log.appender_limit) {
+          log.read(pos).map {
+            case (kind, data, len) =>
+              kind match {
+                case LOG_ADD_MESSAGE =>
+                  val record: MessageRecord = data
+                  index.put(encode(message_prefix, record.key), encode_long(pos))
+                case LOG_ADD_QUEUE_ENTRY =>
+                  val record: QueueEntryRecord = data
+                  index.put(encode(queue_entry_prefix, record.queue_key, record.entry_seq), new Buffer(data))
+                case LOG_REMOVE_QUEUE_ENTRY =>
+                  index.delete(new Buffer(data))
+                case LOG_ADD_QUEUE =>
+                  val record: QueueRecord = data
+                  index.put(encode(queue_prefix, record.key), new Buffer(data))
+                case LOG_REMOVE_QUEUE =>
+                  val queue_key = decode_long(new Buffer(data))
+                  index.delete(encode(queue_prefix, queue_key))
+                  index.cursor_keys_prefixed(encode(queue_entry_prefix, queue_key)) { key =>
+                    index.delete(key)
+                    true
+                  }
+                case LOG_MAP_ENTRY =>
+                  val entry = MapEntryPB.FACTORY.parseUnframed(data)
+                  if (entry.getValue == null) {
+                    index.delete(encode(map_prefix, entry.getKey))
+                  } else {
+                    index.put(encode(map_prefix, entry.getKey), entry.getValue)
+                  }
+                case _ =>
+                // Skip unknown records like the RecordLog headers.
+              }
+              pos += len
           }
+        }
       }
-
-      if( initialized ) {
-        index_file.flush()
-      }
-
-      recover(onComplete)
     }
   }
 
   def stop() = {
-    journal.close
-    indexFileFactory.close
-    lockFile.unlock
+    // this blocks until all io completes..
+    // Suspend also deletes the index.
+    suspend()
+
+    if (log != null) {
+      log.close
+    }
+    copy_dirty_index_to_snapshot
+    log = null
+
+    lock_file.unlock()
+    lock_file=null
+  }
+
+  /**
+   * TODO: expose this via management APIs, handy if you want to
+   * do a file system level snapshot and want the data to be consistent.
+   */
+  def suspend() = {
+
+    // Make sure we are the only ones accessing the index. since
+    // we will be closing it to create a consistent snapshot.
+    snapshot_rw_lock.writeLock().lock()
+
+    // Close the index so that it's files are not changed async on us.
+    using_index { index=>
+      index.put(dirty_index_key, FALSE)
+    }
+    index_file_factory.close()
+  }
+
+  /**
+   * TODO: expose this via management APIs, handy if you want to
+   * do a file system level snapshot and want the data to be consistent.
+   */
+  def resume() = {
+    // re=open it..
+    retry {
+      index_file_factory.open()
+      using_index { index=>
+        index.put(dirty_index_key, TRUE)
+      }
+    }
+    snapshot_rw_lock.writeLock().unlock()
+  }
+
+  def copy_dirty_index_to_snapshot {
+    if( log.appender_limit == last_index_snapshot_pos  ) {
+      // no need to snapshot again...
+      return
+    }
+
+    // Where we start copying files into.  Delete this on
+    // restart.
+    try {
+
+      val new_snapshot_index_pos = log.appender_limit
+      link(dirty_index_file, snapshot_index_file(new_snapshot_index_pos), temp_index_file)
+      snapshot_index_file(last_index_snapshot_pos).delete()
+      last_index_snapshot_pos = new_snapshot_index_pos
+
+    } catch {
+      case e: Exception => warn(e, "Could not snapshot the index: " + e)
+    }
+  }
+
+  def snapshot_index:Unit = {
+    if( log.appender_limit == last_index_snapshot_pos  ) {
+      // no need to snapshot again...
+      return
+    }
+    suspend()
+    try {
+      copy_dirty_index_to_snapshot
+    } finally {
+      resume()
+    }
+  }
+
+  def purge() = {
+    suspend()
+    try{
+      log.close
+      directory.list_files.foreach(_.recursive_delete)
+    } finally {
+      retry {
+        log.open
+      }
+      resume()
+    }
   }
 
   def addQueue(record: QueueRecord, callback:Runnable) = {
-    val update = new AddQueue.Bean()
-    update.setKey(record.key)
-    update.setBindingKind(record.binding_kind)
-    update.setBindingData(record.binding_data)
-    _store(update, callback)
+    retry_using_index { index =>
+      log.appender { appender =>
+        val buffer:Buffer = record
+        appender.append(LOG_ADD_QUEUE, buffer)
+        index.put(encode(queue_prefix, record.key), buffer)
+      }
+    }
+    callback.run
   }
 
-  def removeQueue(queueKey: Long, callback:Runnable) = {
-    val update = new RemoveQueue.Bean()
-    update.setKey(queueKey)
-    _store(update, callback)
+  def removeQueue(queue_key: Long, callback:Runnable) = {
+    retry_using_index { index =>
+      log.appender { appender =>
+        appender.append(LOG_REMOVE_QUEUE, encode_long(queue_key))
+        index.delete(encode(queue_prefix, queue_key))
+        index.cursor_keys_prefixed(encode(queue_entry_prefix, queue_key)) { key=>
+          index.delete(key)
+          true
+        }
+      }
+    }
+    callback.run
   }
 
   def store(uows: Seq[HawtDBStore#DelayableUOW], callback:Runnable) {
-    var batch = ListBuffer[TypeCreatable]()
-    uows.foreach { uow =>
+    retry_using_index { index =>
+      log.appender { appender =>
 
-        for((key,value) <- uow.map_actions) {
-          val entry = new MapEntry.Bean
-          entry.setKey(key)
-          entry.setValue(value)
-          batch += entry
-        }
+        var sync_needed = false
+        uows.foreach { uow =>
 
-        uow.actions.foreach {
-          case (msg, action) =>
-            if (action.message_record != null) {
-              val update: AddMessage.Bean = action.message_record
-              batch += update
+          for((key,value) <- uow.map_actions) {
+            val entry = new MapEntryPB.Bean()
+            entry.setKey(key)
+            if( value==null ) {
+              index.delete(encode(map_prefix, key))
+            } else {
+              entry.setValue(value)
+              index.put(encode(map_prefix, key), value)
             }
-            action.enqueues.foreach {
-              queueEntry =>
-                val update: AddQueueEntry.Bean = queueEntry
-                batch += update
-            }
-            action.dequeues.foreach {
-              queueEntry =>
-                val queueKey = queueEntry.queue_key
-                val queueSeq = queueEntry.entry_seq
-                batch += new RemoveQueueEntry.Bean().setQueueKey(queueKey).setQueueSeq(queueSeq)
-            }
-        }
-    }
-    _store(batch, callback)
-  }
-
-
-  def purge(callback: Runnable) = {
-    _store(new Purge.Bean(), callback)
-  }
-
-  def listQueues: Seq[Long] = {
-    val rc = ListBuffer[Long]()
-    withTx { tx =>
-      val helper = new TxHelper(tx)
-      import JavaConversions._
-      import helper._
-
-      queueIndex.iterator.foreach { entry =>
-        rc += entry.getKey.longValue
-      }
-    }
-    rc
-  }
-
-  def get(key: Buffer):Option[Buffer] = {
-    withTx { tx =>
-        val helper = new TxHelper(tx)
-        import helper._
-        Option(mapIndex.get(key))
-    }
-  }
-
-  def getQueue(queueKey: Long): Option[QueueRecord] = {
-    withTx { tx =>
-        val helper = new TxHelper(tx)
-        import helper._
-
-        val queueRecord = queueIndex.get(queueKey)
-        if (queueRecord != null) {
-          val record = new QueueRecord
-          record.key = queueKey
-          record.binding_kind = queueRecord.getInfo.getBindingKind
-          record.binding_data = queueRecord.getInfo.getBindingData
-          Some(record)
-        } else {
-          None
-        }
-    }
-  }
-
-  def listQueueEntryGroups(queueKey: Long, limit: Int) : Seq[QueueEntryRange] = {
-    withTx { tx =>
-        val helper = new TxHelper(tx)
-        import JavaConversions._
-        import helper._
-        val queueRecord = queueIndex.get(queueKey)
-        if (queueRecord != null) {
-          val entryIndex = queueEntryIndex(queueRecord)
-
-          var rc = ListBuffer[QueueEntryRange]()
-          var group:QueueEntryRange = null
-
-          entryIndex.iterator.foreach { entry =>
-            if( group == null ) {
-              group = new QueueEntryRange
-              group.first_entry_seq = entry.getKey.longValue
-            }
-            group.last_entry_seq = entry.getKey.longValue
-            group.count += 1
-            group.size += entry.getValue.getSize
-
-// TODO:
-//            if(group.expiration == 0){
-//              group.expiration = entry.expiration
-//            } else {
-//              if( entry.expiration != 0 ) {
-//                group.expiration = entry.expiration.min(group.expiration)
-//              }
-//            }
-
-            if( group.count == limit) {
-              rc += group
-              group = null
-            }
+            appender.append(LOG_MAP_ENTRY, entry.freeze().toUnframedBuffer)
           }
 
-          if( group!=null ) {
-            rc += group
+          uow.actions.foreach { case (msg, action) =>
+            val message_record = action.message_record
+            var pos = 0L
+            var pos_buffer:Buffer = null
+
+            if (message_record != null) {
+              pos = appender.append(LOG_ADD_MESSAGE, message_record)
+              val pos_encoded = encode_long(pos)
+              pos_buffer = new Buffer(pos_encoded)
+              if( message_record.locator !=null ) {
+                message_record.locator.set(pos_encoded.toByteArray);
+              }
+              index.put(encode(message_prefix, action.message_record.key), pos_encoded)
+            }
+
+            action.dequeues.foreach { entry =>
+              if( pos_buffer==null && entry.message_locator!=null ) {
+                pos_buffer = entry.message_locator
+              }
+              val key = encode(queue_entry_prefix, entry.queue_key, entry.entry_seq)
+              appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
+              index.delete(key)
+            }
+
+            action.enqueues.foreach { entry =>
+              entry.message_locator = pos_buffer
+              val encoded:Buffer = entry
+              appender.append(LOG_ADD_QUEUE_ENTRY, encoded)
+              index.put(encode(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
+            }
           }
-          rc
-        } else {
-          null
+          if( !uow.complete_listeners.isEmpty ) {
+            sync_needed = true
+          }
         }
-    }
-  }
-
-  def getQueueEntries(queueKey: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
-    var rc = ListBuffer[QueueEntryRecord]()
-    withTx { tx =>
-      val helper = new TxHelper(tx)
-      import JavaConversions._
-      import helper._
-      import Predicates._
-
-      val queueRecord = queueIndex.get(queueKey)
-      if (queueRecord != null) {
-        val entryIndex = queueEntryIndex(queueRecord)
-
-        val where = and(gte(new jl.Long(firstSeq)), lte(new jl.Long(lastSeq)))
-        entryIndex.iterator( where ).foreach {
-          entry =>
-            val record: QueueEntryRecord = entry.getValue
-            rc += record
+        if( sync_needed ) {
+          appender.flush
+          appender.sync
         }
-      } else {
-        rc = null
       }
     }
-    rc
+    callback.run
   }
 
   val metric_load_from_index_counter = new TimeCounter
   var metric_load_from_index = metric_load_from_index_counter(false)
 
-  val metric_load_from_journal_counter = new TimeCounter
-  var metric_load_from_journal = metric_load_from_journal_counter(false)
+  def loadMessages(requests: ListBuffer[(Long, AtomicReference[Array[Byte]], (Option[MessageRecord])=>Unit)]):Unit = {
 
-  def loadMessages(requests: ListBuffer[(Long, (Option[MessageRecord])=>Unit)]) = {
-    val locations = withTx { tx =>
-      val helper = new TxHelper(tx)
-      import helper._
-      requests.flatMap { case (messageKey, callback)=>
-        val location = metric_load_from_index_counter.time {
-          messageKeyIndex.get(messageKey)
+    val missing = retry_using_index { index =>
+      requests.flatMap { x =>
+        val (message_key, locator, callback) = x
+        val record = metric_load_from_index_counter.time {
+          var pos = 0L
+          var pos_array:Array[Byte] = null
+          if( locator!=null ) {
+            pos_array = locator.get()
+            if( pos_array!=null ) {
+              pos = decode_long(new Buffer(pos_array))
+            }
+          }
+          if( pos == 0L ) {
+            index.get(encode(message_prefix, message_key)) match {
+              case Some(value) =>
+                pos_array = value.toByteArray
+                pos = decode_long(value)
+              case None =>
+                pos = 0L
+            }
+          }
+          if (pos == 0L ) {
+            None
+          } else {
+            log.read(pos).map { case (prefix, data, _)=>
+              val rc:MessageRecord = data
+              rc.locator = new AtomicReference[Array[Byte]](pos_array)
+              rc
+            }
+          }
         }
-        if( location==null ) {
-          debug("Message not indexed.  Journal location could not be determined for message: %s", messageKey)
-          callback(None)
+        if( record.isDefined ) {
+          callback(record)
           None
         } else {
-          Some((location, callback))
+          Some(x)
         }
       }
     }
 
-    locations.foreach { case (location, callback)=>
-      val addMessage = metric_load_from_journal_counter.time {
-        load(location, classOf[AddMessage.Getter])
-      }
-      callback( addMessage.map( x => toMessageRecord(x) ) )
-    }
+    if (missing.isEmpty)
+      return
 
-  }
-
-  def loadMessage(messageKey: Long): Option[MessageRecord] = {
-    metric_load_from_index_counter.start { end =>
-      withTx { tx =>
-        val helper = new TxHelper(tx)
-        import helper._
-
-        val location = messageKeyIndex.get(messageKey)
-        end()
-
-        if (location != null) {
-          metric_load_from_journal_counter.time {
-            load(location, classOf[AddMessage.Getter]) match {
-              case Some(x) =>
-                val messageRecord: MessageRecord = x
-                Some(messageRecord)
-              case None => None
+    // There's a small chance that a message was missing, perhaps we started a read tx, before the
+    // write tx completed.  Lets try again..
+    retry_using_index { index =>
+      missing.foreach { x =>
+        val (message_key, locator, callback) = x
+        val record = metric_load_from_index_counter.time {
+          index.get(encode(message_prefix, message_key)).flatMap{ pos_buffer=>
+            val pos = decode_long(pos_buffer)
+            log.read(pos).map { case (prefix, data, _)=>
+              val rc:MessageRecord = data
+              rc.locator = new AtomicReference[Array[Byte]](pos_buffer.toByteArray)
+              rc
             }
           }
-        } else {
-          debug("Message not indexed.  Journal location could not be determined for message: %s", messageKey)
-          None
         }
+        callback(record)
       }
     }
   }
 
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Batch/Transactional interface to storing/accessing journaled updates.
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  private def load[T <: TypeCreatable](location: Location, expected: Class[T]): Option[T] = {
-    try {
-      load(location) match {
-          case (updateType, batch, data) =>
-            val decoded = expected.cast(decode(location, updateType, data))
-            val rc = Some(decoded)
-            rc
+  def listQueues: Seq[Long] = {
+    val rc = ListBuffer[Long]()
+    retry_using_index { index =>
+      index.cursor_keys_prefixed(queue_prefix_array) { key =>
+        rc += decode_long_key(key)._2
+        true // to continue cursoring.
       }
-    } catch {
-      case e: Throwable =>
-        debug(e, "Could not load journal record at: %s", location)
-        None
-    }
-  }
-
-  private def _store(updates: Seq[TypeCreatable], onComplete: Runnable): Unit = {
-    val batch = next_batch_id
-    begin(batch)
-    updates.foreach {
-      update =>
-        _store(batch, update, null)
-    }
-    commit(batch, onComplete)
-  }
-
-  private def _store(update: TypeCreatable, onComplete: Runnable): Unit = _store(-1, update, onComplete)
-
-  val metric_journal_append_counter = new TimeCounter
-  var metric_journal_append = metric_journal_append_counter(false)
-
-  val metric_index_update_counter = new TimeCounter
-  var metric_index_update = metric_index_update_counter(false)
-
-  /**
-   * All updated are are funneled through this method. The updates are logged to
-   * the journal and then the indexes are update.  onFlush will be called back once
-   * this all completes and the index has the update.
-   *
-   * @throws IOException
-   */
-  private def _store(batch: Int, update: TypeCreatable, onComplete: Runnable): Unit = {
-    val kind = update.asInstanceOf[TypeCreatable]
-    val frozen = update.freeze
-    val baos = new DataByteArrayOutputStream(frozen.serializedSizeFramed + 5)
-    baos.writeByte(kind.toType().getNumber())
-    baos.writeInt(batch)
-    frozen.writeFramed(baos)
-
-    val buffer = baos.toBuffer()
-    append(buffer) { (helper, location) =>
-      metric_index_update_counter.time {
-        executeStore(helper, location, batch, update, onComplete)
-      }
-    }
-  }
-
-  /**
-   */
-  private def begin(batch: Int): Unit = {
-    val baos = new DataByteArrayOutputStream(5)
-    baos.writeByte(BEGIN)
-    baos.writeInt(batch)
-    append(baos.toBuffer) { (helper,location) =>
-      executeBegin(helper, location, batch)
-    }
-  }
-
-  /**
-   */
-  private def commit(batch: Int, onComplete: Runnable): Unit = {
-    val baos = new DataByteArrayOutputStream(5)
-    baos.writeByte(COMMIT)
-    baos.writeInt(batch)
-    append(baos.toBuffer) { (helper,location) =>
-      executeCommit(helper, location, batch, onComplete)
-    }
-  }
-
-  private def rollback(batch: Int, onComplete: Runnable): Unit = {
-    val baos = new DataByteArrayOutputStream(5)
-    baos.writeByte(ROLLBACK)
-    baos.writeInt(batch)
-    append(baos.toBuffer) { (helper,location) =>
-      executeRollback(helper, location, batch, onComplete)
-    }
-  }
-
-  def load(location: Location) = {
-    var data = read(location)
-    val editor = data.bigEndianEditor
-    val updateType = editor.readByte()
-    val batch = editor.readInt
-    (updateType, batch, data)
-  }
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Methods related to recovery
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  /**
-   * Recovers the journal and rollsback any in progress batches that
-   * were in progress and never committed.
-   *
-   * @throws IOException
-   * @throws IOException
-   * @throws IllegalStateException
-   */
-  def recover(onComplete:Runnable): Unit = {
-    recoveryCounter = 0
-    lastRecoveryPosition = null
-    val start = System.currentTimeMillis()
-    incrementalRecover
-
-
-    _store(new AddTrace.Bean().setMessage("RECOVERED"), ^ {
-      // Rollback any batches that did not complete.
-      batches.keysIterator.foreach {
-        batch =>
-          rollback(batch, null)
-      }
-
-      val end = System.currentTimeMillis()
-      info("Processed %d operations from the journal in %,.3f seconds.", recoveryCounter, ((end - start) / 1000.0f))
-      onComplete.run
-    })
-  }
-
-
-  /**
-   * incrementally recovers the journal.  It can be run again and again
-   * if the journal is being appended to.
-   */
-  def incrementalRecover(): Unit = {
-
-    // Is this our first incremental recovery pass?
-    if (lastRecoveryPosition == null) {
-      if (rootBuffer.hasFirstBatchLocation) {
-        // we have to start at the first in progress batch usually...
-        nextRecoveryPosition = rootBuffer.getFirstBatchLocation
-      } else {
-        // but perhaps there were no batches in progress..
-        if (rootBuffer.hasLastUpdateLocation) {
-          // then we can just continue from the last update applied to the index
-          lastRecoveryPosition = rootBuffer.getLastUpdateLocation
-          nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition)
-        } else {
-          // no updates in the index?.. start from the first record in the journal.
-          nextRecoveryPosition = journal.getNextLocation(null)
-        }
-      }
-    } else {
-      nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition)
-    }
-
-    try {
-      recovering = true
-
-      // Continue recovering until journal runs out of records.
-      while (nextRecoveryPosition != null) {
-        lastRecoveryPosition = nextRecoveryPosition
-        recover(lastRecoveryPosition)
-        nextRecoveryPosition = journal.getNextLocation(lastRecoveryPosition)
-      }
-
-    } finally {
-      recovering = false
-    }
-  }
-
-  /**
-   * Recovers the logged record at the specified location.
-   */
-  def recover(location: Location): Unit = {
-    var data = journal.read(location)
-
-    val editor = data.bigEndianEditor
-    val updateType = editor.readByte()
-    val batch = editor.readInt()
-
-    withTx { tx=>
-      val helper = new TxHelper(tx)
-      updateType match {
-        case BEGIN => executeBegin(helper, location, batch)
-        case COMMIT => executeCommit(helper, location, batch, null)
-        case _ =>
-          val update = decode(location, updateType, data)
-          executeStore(helper, location, batch, update, null)
-      }
-      helper.storeRootBean
-    }
-
-    recoveryCounter += 1
-  }
-
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Methods for Journal access
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  private def append(data: Buffer)(cb: (TxHelper, Location) => List[Runnable]): Unit = {
-    metric_journal_append_counter.start { end =>
-      def cbintercept(tx:TxHelper,location:Location) = {
-        end()
-        cb(tx, location)
-      }
-      journal.write(data, cbintercept _ )
-    }
-  }
-
-  def read(location: Location) = journal.read(location)
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Methods that execute updates stored in the journal by indexing them
-  // Used both in normal operation and durring recovery.
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  private def executeBegin(helper:TxHelper, location: Location, batch: Int):List[Runnable] = {
-    assert(batches.get(batch).isEmpty)
-    batches.put(batch, (location, ListBuffer()))
-    Nil
-  }
-
-  private def executeCommit(helper:TxHelper, location: Location, batch: Int, onComplete: Runnable):List[Runnable] = {
-    // apply all the updates in the batch as a single unit of work.
-    batches.remove(batch) match {
-      case Some((_, updates)) =>
-        // When recovering.. we only want to redo updates that committed
-        // after the last update location.
-        if (!recovering || isAfterLastUpdateLocation(location)) {
-            // index the updates
-            updates.foreach {
-              update =>
-                index(helper, update.update, update.location)
-            }
-            helper.updateLocations(location)
-        }
-      case None =>
-        // when recovering..  we are more lax due recovery starting
-        // in the middle of a stream of in progress batches
-        assert(recovering)
-    }
-    if(onComplete!=null) {
-      return List(onComplete)
-    } else {
-      Nil
-    }
-  }
-
-  private def executeRollback(helper:TxHelper, location: Location, batch: Int, onComplete: Runnable): List[Runnable] = {
-    // apply all the updates in the batch as a single unit of work.
-    batches.remove(batch) match {
-      case Some((_, _)) =>
-        if (!recovering || isAfterLastUpdateLocation(location)) {
-          helper.updateLocations(location)
-        }
-      case None =>
-        // when recovering..  we are more lax due recovery starting
-        // in the middle of a stream of in progress batches
-        assert(recovering)
-    }
-    if(onComplete!=null) {
-      return List(onComplete)
-    } else {
-      Nil
-    }
-  }
-
-  private def executeStore(helper:TxHelper, location: Location, batch: Int, update: TypeCreatable, onComplete: Runnable): List[Runnable] = {
-    if (batch == -1) {
-      // update is not part of the batch..
-
-      // When recovering.. we only want to redo updates that happen
-      // after the last update location.
-      if (!recovering || isAfterLastUpdateLocation(location)) {
-          index(helper, update, location)
-          helper.updateLocations(location)
-      }
-
-      if ( onComplete != null) {
-        return List(onComplete)
-      }
-    } else {
-
-      // only the commit/rollback in batch can have an onCompelte handler
-      assert(onComplete == null)
-
-      // if the update was part of a batch don't apply till the batch is committed.
-      batches.get(batch) match {
-        case Some((_, updates)) =>
-          updates += Update(update, location)
-        case None =>
-          // when recovering..  we are more lax due recovery starting
-          // in the middle of a stream of in progress batches
-          assert(recovering)
-      }
-    }
-    return Nil
-  }
-
-
-  private def index(helper:TxHelper, update: TypeCreatable, location: Location): Unit = {
-    import JavaConversions._
-    import helper._
-
-    def removeMessage(key:Long) = {
-      val location = messageKeyIndex.remove(key)
-      if (location != null) {
-        val fileId:jl.Integer = location.getDataFileId()
-        addAndGet(dataFileRefIndex, fileId, -1)
-      } else {
-        if( !recovering ) {
-          error("Cannot remove message, it did not exist: %d", key)
-        }
-      }
-    }
-
-    def removeQueue(queueKey:Long) = {
-      val queueRecord = queueIndex.remove(queueKey)
-      if (queueRecord != null) {
-        val trackingIndex = queueTrackingIndex(queueRecord)
-        val entryIndex = queueEntryIndex(queueRecord)
-
-        trackingIndex.iterator.foreach { entry=>
-          val messageKey = entry.getKey
-          if( addAndGet(messageRefsIndex, messageKey, -1) == 0 ) {
-            // message is no longer referenced.. we can remove it..
-            removeMessage(messageKey.longValue)
-          }
-        }
-
-        entryIndex.destroy
-        trackingIndex.destroy
-      }
-
-    }
-
-    update match {
-      case x: AddMessage.Getter =>
-
-        val messageKey = x.getMessageKey()
-        if (messageKey > rootBean.getLastMessageKey) {
-          rootBean.setLastMessageKey(messageKey)
-        }
-
-        val prevLocation = messageKeyIndex.put(messageKey, location)
-        if (prevLocation != null) {
-          // Message existed.. undo the index update we just did. Chances
-          // are it's a transaction replay.
-          messageKeyIndex.put(messageKey, prevLocation)
-          if (location == prevLocation) {
-            warn("Message replay detected for: %d", messageKey)
-          } else {
-            error("Message replay with different location for: %d", messageKey)
-          }
-        } else {
-          val fileId:jl.Integer = location.getDataFileId()
-          addAndGet(dataFileRefIndex, fileId, 1)
-        }
-
-      case x: AddQueueEntry.Getter =>
-
-        val queueKey = x.getQueueKey
-        val queueRecord = queueIndex.get(queueKey)
-        if (queueRecord != null) {
-          val trackingIndex = queueTrackingIndex(queueRecord)
-          val entryIndex = queueEntryIndex(queueRecord)
-
-          // a message can only appear once in a queue (for now).. perhaps we should
-          // relax this constraint.
-          val messageKey = x.getMessageKey
-          val queueSeq = x.getQueueSeq
-
-          val existing = trackingIndex.put(messageKey, queueSeq)
-          if (existing == null) {
-            val previous = entryIndex.put(queueSeq, x.freeze)
-            if (previous == null) {
-              addAndGet(messageRefsIndex, new jl.Long(messageKey), 1)
-            } else {
-              // TODO perhaps treat this like an update?
-              error("Duplicate queue entry seq %d", x.getQueueSeq)
-            }
-          } else {
-            error("Duplicate queue entry message %d was %d", x.getMessageKey, existing)
-          }
-        } else {
-          error("Queue not found: %d", x.getQueueKey)
-        }
-
-      case x: RemoveQueueEntry.Getter =>
-        val queueKey = x.getQueueKey
-        val queueRecord = queueIndex.get(queueKey)
-        if (queueRecord != null) {
-          val trackingIndex = queueTrackingIndex(queueRecord)
-          val entryIndex = queueEntryIndex(queueRecord)
-
-          val queueSeq = x.getQueueSeq
-          val queueEntry = entryIndex.remove(queueSeq)
-          if (queueEntry != null) {
-            val messageKey = queueEntry.getMessageKey
-            val existing = trackingIndex.remove(messageKey)
-            if (existing != null) {
-              if( addAndGet(messageRefsIndex, new jl.Long(messageKey), -1) == 0 ) {
-                // message is no longer referenced.. we can remove it..
-                removeMessage(messageKey)
-              }
-            } else {
-              if( !recovering ) {
-                error("Tracking entry not found for message %d", queueEntry.getMessageKey)
-              }
-            }
-          } else {
-            if( !recovering ) {
-              error("Queue entry not found for seq %d", x.getQueueSeq)
-            }
-          }
-        } else {
-          if( !recovering ) {
-            error("Queue not found: %d", x.getQueueKey)
-          }
-        }
-
-      case x: AddQueue.Getter =>
-        val queueKey = x.getKey
-        if (queueIndex.get(queueKey) == null) {
-
-          if (queueKey > rootBean.getLastQueueKey) {
-            rootBean.setLastQueueKey(queueKey)
-          }
-
-          val queueRecord = new QueueRootRecord.Bean
-          queueRecord.setEntryIndexPage(alloc(QUEUE_ENTRY_INDEX_FACTORY))
-          queueRecord.setTrackingIndexPage(alloc(QUEUE_TRACKING_INDEX_FACTORY))
-          queueRecord.setInfo(x)
-          queueIndex.put(queueKey, queueRecord.freeze)
-        }
-
-      case x: RemoveQueue.Getter =>
-        removeQueue(x.getKey)
-
-      case x: AddTrace.Getter =>
-        // trace messages are informational messages in the journal used to log
-        // historical info about store state.  They don't update the indexes.
-
-      case x: Purge.Getter =>
-        // Remove all the queues...
-        val queueKeys = ListBuffer[Long]()
-        queueIndex.iterator.foreach { entry =>
-          queueKeys += entry.getKey.longValue
-        }
-
-        queueKeys.foreach { key =>
-          removeQueue(key)
-        }
-
-        // Remove stored messages...
-        messageKeyIndex.clear
-        messageRefsIndex.clear
-        dataFileRefIndex.clear
-        rootBean.setLastMessageKey(0)
-
-        cleanup(_tx);
-        info("Store purged.");
-
-      case x: MapEntry.Getter =>
-        val value = x.getValue
-        if( value==null ) {
-          mapIndex.remove(x.getKey)
-        } else {
-          mapIndex.put(x.getKey, value)
-        }
-
-    }
-  }
-
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Periodic Maintance
-  //
-  /////////////////////////////////////////////////////////////////////
-
-
-  def flush() = {
-    val start = System.currentTimeMillis()
-    index_file.flush
-    val end = System.currentTimeMillis()
-    if (end - start > 1000) {
-      warn("Index flush latency: %,.3f seconds", ((end - start) / 1000.0f))
-    }
-  }
-
-  def cleanup():Unit = withTx {tx =>
-    cleanup(tx)
-  }
-
-  /**
-   * @param tx
-   * @throws IOException
-   */
-  def cleanup(tx:Transaction):Unit = {
-    val helper = new TxHelper(tx)
-    import JavaConversions._
-    import helper._
-
-    debug("Cleanup started.")
-    val gcCandidateSet = new TreeSet[jl.Integer](journal.getFileMap().keySet())
-
-    // Don't cleanup locked data files
-    if (lockedDatatFiles != null) {
-      gcCandidateSet.removeAll(lockedDatatFiles)
-    }
-
-    // Don't GC files that we will need for recovery..
-
-    // Notice we are using the storedRootBuffer and not the rootBuffer field.
-    // rootBuffer has the latest updates, which they may not survive restart.
-    val upto = if (storedRootBuffer.hasFirstBatchLocation) {
-      Some(storedRootBuffer.getFirstBatchLocation.getDataFileId)
-    } else {
-      if (storedRootBuffer.hasLastUpdateLocation) {
-        Some(storedRootBuffer.getLastUpdateLocation.getDataFileId)
-      } else {
-        None
-      }
-    }
-
-    upto match {
-      case Some(dataFile) =>
-        var done = false
-        while (!done && !gcCandidateSet.isEmpty()) {
-          val last = gcCandidateSet.last()
-          if (last.intValue >= dataFile) {
-            gcCandidateSet.remove(last)
-          } else {
-            done = true
-          }
-        }
-
-      case None =>
-    }
-
-    if (!gcCandidateSet.isEmpty() ) {
-      dataFileRefIndex.iterator.foreach { entry =>
-        gcCandidateSet.remove(entry.getKey)
-      }
-      if (!gcCandidateSet.isEmpty()) {
-        debug("Cleanup removing the data files: %s", gcCandidateSet)
-        journal.removeDataFiles(gcCandidateSet)
-      }
-    }
-    debug("Cleanup done.")
-  }
-
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Helper Methods / Classes
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  private case class Update(update: TypeCreatable, location: Location)
-
-  private class TxHelper(val _tx: Transaction) {
-    lazy val mapIndex = MAP_INDEX_FACTORY.open(_tx, rootBuffer.getMapIndexPage)
-    lazy val queueIndex = QUEUE_INDEX_FACTORY.open(_tx, rootBuffer.getQueueIndexPage)
-    lazy val dataFileRefIndex = DATA_FILE_REF_INDEX_FACTORY.open(_tx, rootBuffer.getDataFileRefIndexPage)
-    lazy val messageKeyIndex = MESSAGE_KEY_INDEX_FACTORY.open(_tx, rootBuffer.getMessageKeyIndexPage)
-    lazy val messageRefsIndex = MESSAGE_REFS_INDEX_FACTORY.open(_tx, rootBuffer.getMessageRefsIndexPage)
-    lazy val subscriptionIndex = SUBSCRIPTIONS_INDEX_FACTORY.open(_tx, rootBuffer.getSubscriptionIndexPage)
-
-    def addAndGet[K](index:SortedIndex[K, jl.Integer], key:K, amount:Int):Int = {
-      var counter = index.get(key)
-      if( counter == null ) {
-        if( amount!=0 ) {
-          index.put(key, amount)
-        }
-        amount
-      } else {
-        val update = counter.intValue + amount
-        if( update == 0 ) {
-          index.remove(key)
-        } else {
-          index.put(key, update)
-        }
-        update
-      }
-    }
-
-    def queueEntryIndex(root: QueueRootRecord.Getter) = QUEUE_ENTRY_INDEX_FACTORY.open(_tx, root.getEntryIndexPage)
-
-    def queueTrackingIndex(root: QueueRootRecord.Getter) = QUEUE_TRACKING_INDEX_FACTORY.open(_tx, root.getTrackingIndexPage)
-
-    def alloc(factory: IndexFactory[_, _]) = factory.create(_tx).getIndexLocation
-
-    val rootBean = rootBuffer.copy
-
-    def lastUpdateLocation(location:Location) = {
-      rootBean.setLastUpdateLocation(location)
-    }
-
-    def updateLocations(lastUpdate: Location): Unit = {
-      rootBean.setLastUpdateLocation(lastUpdate)
-      if (batches.isEmpty) {
-        rootBean.clearFirstBatchLocation
-      } else {
-        rootBean.setFirstBatchLocation(batches.head._2._1)
-      }
-    }
-
-    def storeRootBean() = {
-      val frozen = rootBean.freeze
-      rootBuffer = frozen
-      _tx.put(DATABASE_ROOT_RECORD_ACCESSOR, 0, rootBuffer)
-
-      // Since the index flushes updates async, hook a callback to know when
-      // the update has hit disk.  storedRootBuffer is used by the
-      // cleanup task to know when which data logs are safe to cleanup.
-      _tx.onFlush(^{
-        storedRootBuffer = frozen
-      })
-
-    }
-
-  }
-
-  private def withTx[T](func: (Transaction) => T): T = {
-    val tx = index_file.tx
-    var ok = false
-    try {
-      val rc = func(tx)
-      ok = true
-      rc
-    } finally {
-      if (ok) {
-        tx.commit
-      } else {
-        tx.rollback
-      }
-      tx.close
-    }
-  }
-
-  // Gets the next batch id.. after a while we may wrap around
-  // start producing batch ids from zero
-  val next_batch_id = {
-    var rc = next_batch_counter.getAndIncrement
-    while (rc < 0) {
-      // We just wrapped around.. reset the counter to 0
-      // Use a CAS operation so that only 1 thread resets the counter
-      next_batch_counter.compareAndSet(rc + 1, 0)
-      rc = next_batch_counter.getAndIncrement
     }
     rc
   }
 
-  private def isAfterLastUpdateLocation(location: Location) = {
-    val lastUpdate: Location = rootBuffer.getLastUpdateLocation
-    lastUpdate.compareTo(location) < 0
+  def getQueue(queue_key: Long): Option[QueueRecord] = {
+    retry_using_index { index =>
+      index.get(encode(queue_prefix, queue_key)).map( x=> decode_queue_record_buffer(x)  )
+    }
   }
 
+  def listQueueEntryGroups(queue_key: Long, limit: Int) : Seq[QueueEntryRange] = {
+    var rc = ListBuffer[QueueEntryRange]()
+    retry_using_index { index =>
+      var group:QueueEntryRange = null
+      index.cursor_prefixed( encode(queue_entry_prefix, queue_key)) { (key, value) =>
+
+        val (_,_,current_key) = decode_long_long_key(key)
+        if( group == null ) {
+          group = new QueueEntryRange
+          group.first_entry_seq = current_key
+        }
+
+        val entry:QueueEntryRecord = value
+
+        group.last_entry_seq = current_key
+        group.count += 1
+        group.size += entry.size
+
+        if(group.expiration == 0){
+          group.expiration = entry.expiration
+        } else {
+          if( entry.expiration != 0 ) {
+            group.expiration = entry.expiration.min(group.expiration)
+          }
+        }
+
+        if( group.count == limit) {
+          rc += group
+          group = null
+        }
+
+        true // to continue cursoring.
+      }
+      if( group!=null ) {
+        rc += group
+      }
+    }
+    rc
+  }
+
+  def getQueueEntries(queue_key: Long, firstSeq:Long, lastSeq:Long): Seq[QueueEntryRecord] = {
+    var rc = ListBuffer[QueueEntryRecord]()
+    retry_using_index { index =>
+      val start = encode(queue_entry_prefix, queue_key, firstSeq)
+      val end = encode(queue_entry_prefix, queue_key, lastSeq+1)
+      index.cursor_range( start, end ) { (key, value) =>
+        rc += value
+        true
+      }
+    }
+    rc
+  }
+
+  def getLastMessageKey:Long = {
+    retry_using_index { index =>
+      index.last_key(message_prefix_array).map(decode_long_key(_)._2).getOrElse(0)
+    }
+  }
+
+  def get(key: Buffer):Option[Buffer] = {
+    retry_using_index { index =>
+      index.get(encode(map_prefix, key)).map(new Buffer(_))
+    }
+  }
+
+  def getLastQueueKey:Long = {
+    retry_using_index { index =>
+      index.last_key(queue_prefix_array).map(decode_long_key(_)._2).getOrElse(0)
+    }
+  }
+
+  def gc:Unit = {
+    var active_counter = 0
+    var delete_counter = 0
+    val latency_counter = new TimeCounter
+
+    //
+    // This journal_usage will let us get a picture of which queues are using how much of each
+    // log file.  It will help folks figure out why a log file is not getting deleted.
+    //
+    val journal_usage = new ApolloTreeMap[Long,(RecordLog#LogInfo , UsageCounter)]()
+    var append_journal = 0L
+
+    log.log_mutex.synchronized {
+      append_journal = log.log_infos.last._1
+      log.log_infos.foreach(entry=> journal_usage.put(entry._1, (entry._2, UsageCounter())) )
+    }
+
+    def find_journal(pos: Long) = {
+      var entry = journal_usage.floorEntry(pos)
+      if (entry != null) {
+        val (info, usageCounter) = entry.getValue()
+        if (pos < info.limit) {
+          Some(entry.getKey -> usageCounter)
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    }
+
+    in_gc = true
+    val now = System.currentTimeMillis()
+    debug(store.store_kind+" gc starting")
+    latency_counter.time {
+
+      retry_using_index { index =>
+        // Figure out which journal files are still in use by which queues.
+        index.cursor_prefixed(queue_entry_prefix_array) { (_,value) =>
+          val entry_record:QueueEntryRecord = value
+          val pos = if(entry_record.message_locator!=null) {
+            decode_long(entry_record.message_locator)
+          } else {
+            index.get(encode(message_prefix, entry_record.message_key)).map(decode_long(_)).getOrElse(0L)
+          }
+
+          find_journal(pos) match {
+            case Some((key,usageCounter)) =>
+              usageCounter.increment(entry_record.size)
+            case None =>
+          }
+
+          // only continue while the service is still running..
+          store.service_state.is_started
+        }
+
+        if (store.service_state.is_started) {
+
+          gc_detected_log_usage = Map((collection.JavaConversions.asScalaSet(journal_usage.entrySet()).map { x=>
+            x.getKey -> x.getValue._2
+          }).toSeq : _ * )
+
+          // Take empty journals out of the map..
+          val empty_journals = ListBuffer[Long]()
+
+          val i = journal_usage.entrySet().iterator();
+          while( i.hasNext ) {
+            val (info, usageCounter) = i.next().getValue
+            if( usageCounter.count==0 && info.position < append_journal) {
+              empty_journals += info.position
+              i.remove()
+            }
+          }
+
+          index.cursor_prefixed(message_prefix_array) { (key,value) =>
+            val pos = decode_long(value)
+
+            if ( !find_journal(pos).isDefined ) {
+              // Delete it.
+              index.delete(key)
+              delete_counter += 1
+            } else {
+              active_counter += 1
+            }
+            // only continue while the service is still running..
+            store.service_state.is_started
+          }
+
+          if (store.service_state.is_started) {
+            // We don't want to delete any journals that the index has not snapshot'ed or
+            // the the
+            val delete_limit = find_journal(last_index_snapshot_pos).map(_._1).
+                  getOrElse(last_index_snapshot_pos).min(log.appender_start)
+
+            empty_journals.foreach { id =>
+              if ( id < delete_limit ) {
+                log.delete(id)
+              }
+            }
+          }
+        }
+      }
+    }
+    last_gc_ts=now
+    last_gc_duration = latency_counter.total(TimeUnit.MILLISECONDS)
+    in_gc = false
+    debug(store.store_kind+" gc ended")
+  }
+
+
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
+    try {
+      retry_using_index { index =>
+
+        def write_framed(stream:OutputStream, value:Buffer) = {
+          val helper = new AbstractVarIntSupport {
+            def readByte: Byte = throw new UnsupportedOperationException
+            def writeByte(value: Int) = stream.write(value)
+          }
+          helper.writeVarInt(value.length)
+          value.writeTo(stream)
+          true
+        }
+
+        streams.using_map_stream { stream=>
+          index.cursor_prefixed(map_prefix_array) { (key, value) =>
+            val key_buffer = new Buffer(key)
+            key_buffer.moveHead(1)
+            val record = new MapEntryPB.Bean
+            record.setKey(key_buffer)
+            record.setValue(new Buffer(value))
+            record.freeze().writeFramed(stream)
+            true
+          }
+        }
+
+        streams.using_queue_stream { stream =>
+          index.cursor_prefixed(queue_prefix_array) { (_, value) =>
+            write_framed(stream, value)
+          }
+        }
+
+        streams.using_message_stream { stream=>
+          index.cursor_prefixed(message_prefix_array) { (_, value) =>
+            write_framed(stream, value)
+          }
+        }
+
+        streams.using_queue_entry_stream { stream=>
+          index.cursor_prefixed(queue_entry_prefix_array) { (_, value) =>
+            write_framed(stream, value)
+          }
+        }
+      }
+      Success(Zilch)
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
+
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
+    try {
+      purge
+
+      retry_using_index { index =>
+        def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
+          var done = false
+          do {
+            try {
+              func(fact.parseFramed(stream).asInstanceOf[Buffer])
+            } catch {
+              case x:EOFException =>
+                done = true
+            }
+          } while( !done )
+        }
+
+        log.appender { appender =>
+          streams.using_map_stream { stream=>
+            foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
+              index.put(encode(map_prefix, pb.getKey), pb.getValue)
+            }
+          }
+
+          streams.using_queue_stream { stream=>
+            foreach[QueuePB.Buffer](stream, QueuePB.FACTORY) { record=>
+              index.put(encode(queue_prefix, record.key), record.toUnframedBuffer)
+            }
+          }
+
+          streams.using_message_stream { stream=>
+            foreach[MessagePB.Buffer](stream, MessagePB.FACTORY) { record=>
+              val pos = appender.append(LOG_ADD_MESSAGE, record.toUnframedBuffer)
+              index.put(encode(message_prefix, record.key), encode_long(pos))
+            }
+          }
+
+          streams.using_queue_entry_stream { stream=>
+            foreach[QueueEntryPB.Buffer](stream, QueueEntryPB.FACTORY) { record=>
+              index.put(encode(queue_entry_prefix, record.queue_key, record.entry_seq), record.toUnframedBuffer)
+            }
+          }
+        }
+
+      }
+      snapshot_index
+      Success(Zilch)
+
+    } catch {
+      case x:Exception=>
+        Failure(x.getMessage)
+    }
+  }
 }

@@ -86,10 +86,7 @@ abstract class StoreBenchmarkSupport extends FunSuiteSupport with BeforeAndAfter
   val queue_key_counter = new LongCounter
 
   def add_queue(name:String):Long = {
-    var queueA = new QueueRecord
-    queueA.key = queue_key_counter.incrementAndGet
-    queueA.binding_kind = ascii("test")
-    queueA.binding_data = ascii(name)
+    var queueA = QueueRecord(queue_key_counter.incrementAndGet, ascii("test"), ascii(name))
     val rc:Boolean = CB( cb=> store.add_queue(queueA)(cb) )
     expect(true)(rc)
     queueA.key

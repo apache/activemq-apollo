@@ -34,54 +34,55 @@ public class HawtDBStoreDTO extends StoreDTO {
     @XmlAttribute
     public File directory;
 
-    @XmlAttribute(name="archive_directory")
-    public File archive_directory;
-
-	@XmlAttribute(name="index_flush_interval")
-	public Long index_flush_interval;
-
-	@XmlAttribute(name="cleanup_interval")
-	public Long cleanup_interval;
-
-	@XmlAttribute(name="journal_log_size")
-	public Integer journal_log_size;
-
-    @XmlAttribute(name="journal_batch_size")
-    public Integer journal_batch_size;
-
-    @XmlAttribute(name="index_cache_size")
-    public Integer index_cache_size;
-
-    @XmlAttribute(name="index_page_size")
-    public Short index_page_size;
-
     @XmlAttribute(name="fail_if_locked")
     public Boolean fail_if_locked;
+
+    @XmlAttribute(name="gc_interval")
+    public Integer gc_interval;
+
+    @XmlAttribute(name="read_threads")
+    public Integer read_threads;
+
+    @XmlAttribute(name="verify_checksums")
+    public Boolean verify_checksums;
+
+    @XmlAttribute(name="log_size")
+    public Integer log_size;
+
+    @XmlAttribute(name="log_write_buffer_size")
+    public Integer log_write_buffer_size;
+
+    @XmlAttribute(name="index_page_size")
+    public Integer index_page_size;
+
+    @XmlAttribute(name="index_cache_size")
+    public Long index_cache_size;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof HawtDBStoreDTO)) return false;
         if (!super.equals(o)) return false;
 
         HawtDBStoreDTO that = (HawtDBStoreDTO) o;
 
-        if (archive_directory != null ? !archive_directory.equals(that.archive_directory) : that.archive_directory != null)
+        if (directory != null ? !directory.equals(that.directory) : that.directory != null)
             return false;
-        if (cleanup_interval != null ? !cleanup_interval.equals(that.cleanup_interval) : that.cleanup_interval != null)
-            return false;
-        if (directory != null ? !directory.equals(that.directory) : that.directory != null) return false;
         if (fail_if_locked != null ? !fail_if_locked.equals(that.fail_if_locked) : that.fail_if_locked != null)
+            return false;
+        if (gc_interval != null ? !gc_interval.equals(that.gc_interval) : that.gc_interval != null)
             return false;
         if (index_cache_size != null ? !index_cache_size.equals(that.index_cache_size) : that.index_cache_size != null)
             return false;
-        if (index_flush_interval != null ? !index_flush_interval.equals(that.index_flush_interval) : that.index_flush_interval != null)
-            return false;
         if (index_page_size != null ? !index_page_size.equals(that.index_page_size) : that.index_page_size != null)
             return false;
-        if (journal_batch_size != null ? !journal_batch_size.equals(that.journal_batch_size) : that.journal_batch_size != null)
+        if (log_size != null ? !log_size.equals(that.log_size) : that.log_size != null)
             return false;
-        if (journal_log_size != null ? !journal_log_size.equals(that.journal_log_size) : that.journal_log_size != null)
+        if (log_write_buffer_size != null ? !log_write_buffer_size.equals(that.log_write_buffer_size) : that.log_write_buffer_size != null)
+            return false;
+        if (read_threads != null ? !read_threads.equals(that.read_threads) : that.read_threads != null)
+            return false;
+        if (verify_checksums != null ? !verify_checksums.equals(that.verify_checksums) : that.verify_checksums != null)
             return false;
 
         return true;
@@ -91,14 +92,14 @@ public class HawtDBStoreDTO extends StoreDTO {
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + (directory != null ? directory.hashCode() : 0);
-        result = 31 * result + (archive_directory != null ? archive_directory.hashCode() : 0);
-        result = 31 * result + (index_flush_interval != null ? index_flush_interval.hashCode() : 0);
-        result = 31 * result + (cleanup_interval != null ? cleanup_interval.hashCode() : 0);
-        result = 31 * result + (journal_log_size != null ? journal_log_size.hashCode() : 0);
-        result = 31 * result + (journal_batch_size != null ? journal_batch_size.hashCode() : 0);
-        result = 31 * result + (index_cache_size != null ? index_cache_size.hashCode() : 0);
-        result = 31 * result + (index_page_size != null ? index_page_size.hashCode() : 0);
         result = 31 * result + (fail_if_locked != null ? fail_if_locked.hashCode() : 0);
+        result = 31 * result + (gc_interval != null ? gc_interval.hashCode() : 0);
+        result = 31 * result + (read_threads != null ? read_threads.hashCode() : 0);
+        result = 31 * result + (verify_checksums != null ? verify_checksums.hashCode() : 0);
+        result = 31 * result + (log_size != null ? log_size.hashCode() : 0);
+        result = 31 * result + (log_write_buffer_size != null ? log_write_buffer_size.hashCode() : 0);
+        result = 31 * result + (index_page_size != null ? index_page_size.hashCode() : 0);
+        result = 31 * result + (index_cache_size != null ? index_cache_size.hashCode() : 0);
         return result;
     }
 }

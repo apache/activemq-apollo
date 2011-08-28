@@ -16,20 +16,23 @@
  */
 package org.apache.activemq.apollo.broker.store.hawtdb
 
-import dto.{HawtDBStoreStatusDTO, HawtDBStoreDTO}
+import dto.{HawtDBStoreDTO, HawtDBStoreStatusDTO}
 import collection.Seq
 import org.fusesource.hawtdispatch._
 import java.util.concurrent._
-import atomic.{AtomicReference, AtomicInteger, AtomicLong}
-import org.apache.activemq.apollo.dto._
+import atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.ListEventAggregator
+import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
-import java.io.{InputStream, OutputStream}
 import scala.util.continuations._
+import java.io._
+import org.apache.activemq.apollo.web.resources.ViewHelper
 import org.fusesource.hawtbuf.Buffer
-
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 object HawtDBStore extends Log {
   val DATABASE_LOCKED_WAIT_DELAY = 10 * 1000;
 }
@@ -37,26 +40,31 @@ object HawtDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
+class HawtDBStore(val config:HawtDBStoreDTO) extends DelayingStoreSupport {
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
 
-  var executor_pool:ExecutorService = _
-  val schedule_version = new AtomicInteger()
-  val client = new HawtDBClient(this)
+  var write_executor:ExecutorService = _
+  var gc_executor:ExecutorService = _
+  var read_executor:ExecutorService = _
 
-  val load_source = createSource(new ListEventAggregator[(Long, (Option[MessageRecord])=>Unit)](), dispatch_queue)
-  load_source.setEventHandler(^{drain_loads});
+  var client:HawtDBClient = _
+  def create_client = new HawtDBClient(this)
 
-  override def toString = "hawtdb store at "+config.directory
+
+  def store_kind = "hawtdb"
+
+  override def toString = store_kind+" store at "+config.directory
 
   def flush_delay = config.flush_delay.getOrElse(100)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
+  override def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = null
+
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
-    executor_pool {
+    write_executor {
       client.store(uows, ^{
         dispatch_queue {
           callback
@@ -66,64 +74,88 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
   }
 
   protected def _start(on_completed: Runnable) = {
-    executor_pool = Executors.newFixedThreadPool(1, new ThreadFactory(){
-      def newThread(r: Runnable) = {
-        val rc = new Thread(r, "hawtdb store client")
-        rc.setDaemon(true)
-        rc
-      }
-    })
-    client.config = config
-    poll_stats
-    executor_pool {
-      client.start(^{
-        next_msg_key.set( client.rootBuffer.getLastMessageKey.longValue +1 )
-        next_queue_key.set( client.rootBuffer.getLastQueueKey.longValue +1 )
-        val v = schedule_version.incrementAndGet
-        scheduleCleanup(v)
-        scheduleFlush(v)
-        load_source.resume
-        on_completed.run
+    try {
+      client = create_client
+      write_executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
+        def newThread(r: Runnable) = {
+          val rc = new Thread(r, store_kind + " store io write")
+          rc.setDaemon(true)
+          rc
+        }
       })
-    }
-  }
-
-  def scheduleFlush(version:Int): Unit = {
-    def try_flush() = {
-      if (version == schedule_version.get) {
-        executor_pool {
-          client.flush
-          scheduleFlush(version)
+      gc_executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
+        def newThread(r: Runnable) = {
+          val rc = new Thread(r, store_kind + " store gc")
+          rc.setDaemon(true)
+          rc
+        }
+      })
+      read_executor = Executors.newFixedThreadPool(config.read_threads.getOrElse(10), new ThreadFactory() {
+        def newThread(r: Runnable) = {
+          val rc = new Thread(r, store_kind + " store io read")
+          rc.setDaemon(true)
+          rc
+        }
+      })
+      poll_stats
+      write_executor {
+        try {
+          client.start()
+          next_msg_key.set(client.getLastMessageKey + 1)
+          next_queue_key.set(client.getLastQueueKey + 1)
+          poll_gc
+          on_completed.run
+        } catch {
+          case e:Throwable =>
+            e.printStackTrace()
+            HawtDBStore.error(e, "Store client startup failure: "+e)
         }
       }
     }
-    dispatch_queue.executeAfter(client.index_flush_interval, TimeUnit.MILLISECONDS, ^ {try_flush})
-  }
-
-  def scheduleCleanup(version:Int): Unit = {
-    def try_cleanup() = {
-      if (version == schedule_version.get) {
-        executor_pool {
-          client.cleanup()
-          scheduleCleanup(version)
-        }
-      }
+    catch {
+      case e:Throwable =>
+        e.printStackTrace()
+        HawtDBStore.error(e, "Store startup failure: "+e)
     }
-    dispatch_queue.executeAfter(client.cleanup_interval, TimeUnit.MILLISECONDS, ^ {try_cleanup})
   }
 
   protected def _stop(on_completed: Runnable) = {
-    schedule_version.incrementAndGet
     new Thread() {
       override def run = {
-        load_source.suspend
-        executor_pool.shutdown
-        executor_pool.awaitTermination(86400, TimeUnit.SECONDS)
-        executor_pool = null
+        write_executor.shutdown
+        write_executor.awaitTermination(60, TimeUnit.SECONDS)
+        write_executor = null
+        read_executor.shutdown
+        read_executor.awaitTermination(60, TimeUnit.SECONDS)
+        read_executor = null
+        gc_executor.shutdown
         client.stop
         on_completed.run
       }
     }.start
+  }
+
+  private def keep_polling = {
+    val ss = service_state
+    ss.is_starting || ss.is_started
+  }
+
+  def poll_gc:Unit = {
+    val interval = config.gc_interval.getOrElse(60*30)
+    if( interval>0 ) {
+      dispatch_queue.after(interval, TimeUnit.SECONDS) {
+        if( keep_polling ) {
+          gc {
+            poll_gc
+          }
+        }
+      }
+    }
+  }
+
+  def gc(onComplete: =>Unit) = gc_executor {
+    client.gc
+    onComplete
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -136,17 +168,17 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
    * Deletes all stored data from the store.
    */
   def purge(callback: =>Unit) = {
-    executor_pool {
-      client.purge(^{
-        next_queue_key.set(1)
-        next_msg_key.set(1)
-        callback
-      })
+    write_executor {
+      client.purge()
+      next_queue_key.set(1)
+      next_msg_key.set(1)
+      callback
     }
   }
 
+
   def get(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
-    executor_pool {
+    read_executor {
       callback(client.get(key))
     }
   }
@@ -155,38 +187,43 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
    * Ges the last queue key identifier stored.
    */
   def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
-    executor_pool {
-      callback(Some(client.rootBuffer.getLastQueueKey.longValue))
+    write_executor {
+      callback(Some(client.getLastQueueKey))
     }
   }
 
   def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
-    executor_pool {
+    write_executor {
      client.addQueue(record, ^{ callback(true) })
     }
   }
 
   def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
-    executor_pool {
+    write_executor {
       client.removeQueue(queueKey,^{ callback(true) })
     }
   }
 
   def get_queue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
-    executor_pool {
+    write_executor {
       callback( client.getQueue(queueKey) )
     }
   }
 
   def list_queues(callback: (Seq[Long]) => Unit) = {
-    executor_pool {
+    write_executor {
       callback( client.listQueues )
     }
   }
 
+  val load_source = createSource(new ListEventAggregator[(Long, AtomicReference[Array[Byte]], (Option[MessageRecord])=>Unit)](), dispatch_queue)
+  load_source.setEventHandler(^{drain_loads});
+  load_source.resume
+
+
   def load_message(messageKey: Long, locator:AtomicReference[Array[Byte]])(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
-      load_source.merge((messageKey, { (result)=>
+      load_source.merge((messageKey, locator, { (result)=>
         end()
         callback(result)
       }))
@@ -196,19 +233,19 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
   def drain_loads = {
     var data = load_source.getData
     message_load_batch_size_counter += data.size
-    executor_pool ^{
+    read_executor ^{
       client.loadMessages(data)
     }
   }
 
   def list_queue_entry_ranges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
-    executor_pool ^{
+    write_executor ^{
       callback( client.listQueueEntryGroups(queueKey, limit) )
     }
   }
 
   def list_queue_entries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
-    executor_pool ^{
+    write_executor ^{
       callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
     }
   }
@@ -219,8 +256,8 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
 
         flush_latency = flush_latency_counter(true)
         message_load_latency = message_load_latency_counter(true)
-        client.metric_journal_append = client.metric_journal_append_counter(true)
-        client.metric_index_update = client.metric_index_update_counter(true)
+//        client.metric_journal_append = client.metric_journal_append_counter(true)
+//        client.metric_index_update = client.metric_index_update_counter(true)
         commit_latency = commit_latency_counter(true)
         message_load_batch_size =  message_load_batch_size_counter(true)
 
@@ -233,38 +270,54 @@ class HawtDBStore(var config:HawtDBStoreDTO) extends DelayingStoreSupport {
 
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new HawtDBStoreStatusDTO
-
-    rc.state = service_state.toString
-    rc.state_since = service_state.since
-
-    rc.flush_latency = flush_latency
-    rc.message_load_latency = message_load_latency
+    fill_store_status(rc)
     rc.message_load_batch_size = message_load_batch_size
-
-    rc.journal_append_latency = client.metric_journal_append
-    rc.index_update_latency = client.metric_index_update
-
-    rc.canceled_message_counter = metric_canceled_message_counter
-    rc.canceled_enqueue_counter = metric_canceled_enqueue_counter
-    rc.flushed_message_counter = metric_flushed_message_counter
-    rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
-
-    callback(rc)
+    write_executor {
+      client.using_index { index =>
+        rc.log_append_pos = client.log.appender_limit
+        rc.index_snapshot_pos = client.last_index_snapshot_pos
+        rc.last_gc_duration = client.last_gc_duration
+        rc.last_gc_ts = client.last_gc_ts
+        rc.in_gc = client.in_gc
+        rc.log_stats = {
+          var row_layout = "%-20s | %-10s | %10s/%-10s\n"
+          row_layout.format("File", "Messages", "Used Size", "Total Size")+
+          client.log.log_infos.map(x=> x._1 -> client.gc_detected_log_usage.get(x._1)).toSeq.flatMap { x=>
+            try {
+              val file = HawtDBClient.create_sequence_file(client.directory, x._1, HawtDBClient.LOG_SUFFIX)
+              val size = file.length()
+              val usage = x._2 match {
+                case Some(usage)=>
+                  (usage.count.toString, ViewHelper.memory(usage.size))
+                case None=>
+                  ("unknown", "unknown")
+              }
+              Some(row_layout.format(file.getName, usage._1, usage._2, ViewHelper.memory(size)))
+            } catch {
+              case e:Throwable =>
+                None
+            }
+          }.mkString("")
+        }
+      }
+      callback(rc)
+    }
   }
 
   /**
    * Exports the contents of the store to the provided streams.  Each stream should contain
    * a list of framed protobuf objects with the corresponding object types.
    */
-  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = executor_pool ! {
-    Failure("not supported")// client.export_pb(queue_stream, message_stream, queue_entry_stream)
+  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = write_executor ! {
+    client.export_pb(streams)
   }
 
   /**
    * Imports a previously exported set of streams.  This deletes any previous data
    * in the store.
    */
-  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = executor_pool ! {
-    Failure("not supported")//client.import_pb(queue_stream, message_stream, queue_entry_stream)
+  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = write_executor ! {
+    client.import_pb(streams)
   }
+
 }
