@@ -55,7 +55,7 @@ case class BrokerResource() extends Resource {
       if(broker.authenticator!=null) {
         authenticate(broker.authenticator) { security_context =>
           if(security_context!=null) {
-            rc.set(Success(security_context.principles))
+            rc.set(Success(security_context.principals))
           } else {
             rc.set(Success(Set[Principal]()))
           }

@@ -827,21 +827,13 @@ class StompProtocolHandler extends ProtocolHandler {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspendRead("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
-            var msg = if( security_context.user==null ) {
-              "Authentication failed."
-            } else {
-              "Authentication failed. Username="+security_context.user
-            }
-            async_die(msg)
+            async_die("Authentication failed. Credentials="+security_context.credential_dump)
             noop // to make the cps compiler plugin happy.
           } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
-
-            var msg = if( security_context.user==null ) {
-              "Connect not authorized."
-            } else {
-              "Connect not authorized. Username="+security_context.user
-            }
-            async_die(msg)
+            async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
+            noop // to make the cps compiler plugin happy.
+          } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
+            async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
             noop // to make the cps compiler plugin happy.
           } else {
             resumeRead
@@ -960,7 +952,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( !config.add_user_headers.isEmpty ){
         import collection.JavaConversions._
         config.add_user_headers.foreach { h =>
-          val matches = security_context.principles(Option(h.kind).getOrElse("*"))
+          val matches = security_context.principals(Option(h.kind).getOrElse("*"))
           if( !matches.isEmpty ) {
             h.separator match {
               case null=>

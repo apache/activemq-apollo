@@ -205,9 +205,9 @@ object Authorizer {
           ((ctx:SecurityContext) => {
             principal_kinds match {
               case Some(principal_kinds)=>
-                ctx.principles.find(p=> principal_kinds.contains(p.getClass.getName) ).isDefined
+                ctx.principals.find(p=> principal_kinds.contains(p.getClass.getName) ).isDefined
               case None =>
-                !ctx.principles.isEmpty
+                !ctx.principals.isEmpty
             }
           })
         case principal =>
@@ -219,13 +219,13 @@ object Authorizer {
           ((ctx:SecurityContext) => {
             principal_kinds match {
               case Some(principal_kinds)=>
-                ctx.principles.find{ p=>
+                ctx.principals.find{ p=>
                   val km = principal_kinds.contains(p.getClass.getName)
                   val nm = principals.contains(p.getName)
                   km && nm
                 }.isDefined
               case None =>
-                ctx.principles.find(p=> principals.contains(p.getName) ).isDefined
+                ctx.principals.find(p=> principals.contains(p.getName) ).isDefined
             }
           })
       })

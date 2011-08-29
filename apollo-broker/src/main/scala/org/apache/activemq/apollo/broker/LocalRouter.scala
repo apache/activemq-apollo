@@ -271,24 +271,21 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         return None
       }
 
-      if( destination.temp_owner != null ) {
-        for( connection <- security.connection_id) {
-          if( connection != destination.temp_owner.longValue() ) {
-            return Some("Not authorized to destroy the destination.")
-          }
-        }
-      }
+      for(dest <- get_destination_matches(path)) {
 
-      val matches = get_destination_matches(path)
-      matches.foldLeft(None:Option[String]) { case (rc,dest) =>
-        rc.orElse {
-          if( authorizer.can(security, "destroy", dest) ) {
-            None
-          } else {
-            Some("Not authorized to destroy destination: %s".format(dest.id))
+        if( destination.temp_owner != null ) {
+          for( connection <- security.connection_id) {
+            if( connection != destination.temp_owner.longValue() ) {
+              return Some("Not authorized to destroy the temp %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
+            }
           }
         }
+
+        if( !authorizer.can(security, "destroy", dest) ) {
+          return Some("Not authorized to destroy the %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
+        }
       }
+      None
     }
     def destroy_destination(path:Path, destination:DestinationDTO, security: SecurityContext):Unit
 
@@ -303,7 +300,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( destination.temp_owner != null ) {
         for( connection <- security.connection_id) {
           if( connection != destination.temp_owner.longValue() ) {
-            return Some("Not authorized to receive from the temporary destination.")
+            return Some("Not authorized to receive from the temporary destination. Principals=%s".format(security.principal_dump))
           }
         }
       }
@@ -325,8 +322,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         }
 
         matches.foreach { dest =>
-          if( !authorizer.can(security, bind_action(consumer), dest) ) {
-            return Some("Not authorized to receive from the destination.")
+          var action: String = bind_action(consumer)
+          if (!authorizer.can(security, action, dest)) {
+            return Some("Not authorized to %s from the %s '%s'. Principals=%s".format(action, dest.resource_kind.id, dest.id, security.principal_dump))
           }
         }
       }
@@ -390,7 +388,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         assert( matches.size == 1 )
         for( dest <- matches ) {
           if( !authorizer.can(security, "send", dest) ) {
-            return Some("Not authorized to send to the destination.")
+            return Some("Not authorized to send to the %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
           }
         }
 
@@ -533,7 +531,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         def id = destination_parser.encode_path(path)
       }
       if( !authorizer.can(security, "create", resource)) {
-        Some("Not authorized to create the destination")
+        return Some("Not authorized to create the topic '%s'. Principals=%s".format(resource.id, security.principal_dump))
       } else {
         None
       }
@@ -551,7 +549,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         def id = destination_parser.encode_path(path)
       }
       if( !authorizer.can(security, "create", resource)) {
-        return new Failure("Not authorized to create the destination")
+        return Failure("Not authorized to create the topic '%s'. Principals=%s".format(resource.id, security.principal_dump))
       }
 
       val topic = new Topic(LocalRouter.this, destination.asInstanceOf[TopicDestinationDTO], ()=>topic_config(path), path.toString(destination_parser), path)
@@ -715,7 +713,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def can_create_dsub(config:DurableSubscriptionDTO, security:SecurityContext) = {
       val resource = get_dsub_secured_resource(config)
       if( !authorizer.can(security, "create", resource) ) {
-        Some("Not authorized to create the durable subscription.")
+        Some("Not authorized to create the durable subscription '%s'. Principals=%s".format(resource.id, security.principal_dump))
       } else {
         None
       }
@@ -724,7 +722,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def can_connect_dsub(config:DurableSubscriptionDTO, security:SecurityContext):Option[String] = {
       val resource = get_dsub_secured_resource(config)
       if( !authorizer.can(security, "send", resource) ) {
-        Some("Not authorized to send to the durable subscription.")
+        Some("Not authorized to send to durable subscription '%s'. Principals=%s".format(resource.id, security.principal_dump))
       } else {
         None
       }
@@ -734,7 +732,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       val resource = get_dsub_secured_resource(config)
       val action = if ( consumer.browser ) "receive" else "consume"
       if( !authorizer.can(security, action, resource) ) {
-        Some("Not authorized to "+action+" from the durable subscription.")
+        Some("Not authorized to %s from durable subscription '%s'. Principals=%s".format(action, resource.id, security.principal_dump))
       } else {
         None
       }
@@ -788,7 +786,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( authorizer.can(security, "create", resource)) {
         None
       } else {
-        Some("Not authorized to create the queue")
+        Some("Not authorized to create the queue '%s'. Principals=%s".format(resource.id, security.principal_dump))
       }
     }
 
@@ -808,7 +806,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         }
         Success(queue)
       } else {
-        Failure("Not authorized to create the queue")
+        Failure("Not authorized to create the queue '%s'. Principals=%s".format(resource.id, security.principal_dump))
       }
 
     }
@@ -1175,7 +1173,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def _destroy_queue(queue:Queue, security:SecurityContext):Option[String] = {
     if( !authorizer.can(security, "destroy", queue) ) {
-      return Some("Not authorized to destroy")
+      return Some("Not authorized to destroy queue '%s'. Principals=%s".format(queue.id, security.principal_dump))
     }
     _destroy_queue(queue)
     None

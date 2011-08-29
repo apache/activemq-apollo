@@ -1292,7 +1292,7 @@ class StompSecurityTest extends StompTestSupport {
       "login:can_not_connect\n" +
       "passcode:can_not_connect\n")
     frame should startWith("ERROR\n")
-    frame should include("message:Connect not authorized.")
+    frame should include("message:Not authorized to connect")
 
   }
 
@@ -1332,7 +1332,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue\n")
+    frame should include("message:Not authorized to create the queue")
   }
 
   test("Send authorized but not create") {
@@ -1349,7 +1349,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue\n")
+    frame should include("message:Not authorized to create the queue")
 
   }
 
@@ -1367,7 +1367,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue\n")
+    frame should include("message:Not authorized to create the queue")
   }
 
   test("Send and create authorized") {
@@ -1418,7 +1418,7 @@ class StompSecurityTest extends StompTestSupport {
 
     val frame = client.receive()
     frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to receive from the destination.\n")
+    frame should include("message:Not authorized to consume from the queue")
   }
 
 //  test("Consume authorized and JMSXUserID is set on message") {

@@ -435,11 +435,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspendRead("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
-            async_die("Authentication failed.", info)
-            noop
+            async_die("Authentication failed. Credentials="+security_context.credential_dump)
+            noop // to make the cps compiler plugin happy.
           } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
-            async_die("Connect not authorized.", info)
-            noop
+            async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
+            noop // to make the cps compiler plugin happy.
+          } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
+            async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
+            noop // to make the cps compiler plugin happy.
           } else {
             resumeRead
             ack(info);

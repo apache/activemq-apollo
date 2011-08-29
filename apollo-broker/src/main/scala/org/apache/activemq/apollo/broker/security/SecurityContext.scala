@@ -41,30 +41,53 @@ class SecurityContext {
   var login_context:LoginContext = _
   var connection_id:Option[Long] = None
 
+  def credential_dump = {
+    var rc = List[String]()
+    if(certificates!=null) {
+      for(cert<-certificates) {
+        rc ::= "certdn="+cert.getSubjectX500Principal.getName
+      }
+    }
+    if(user!=null) {
+      rc ::= "user="+user
+    }
+    "["+rc.mkString(", ")+"]"
+  }
+
+  def principal_dump = {
+    var rc = List[String]()
+    if(_principals!=null) {
+      for(principal<-_principals) {
+        rc ::= principal.getClass.getName+":"+principal.getName
+      }
+    }
+    "["+rc.mkString(", ")+"]"
+  }
+
   private var _subject:Subject = _
 
   def subject = _subject
 
-  private var _principles = Set[Principal]()
-  def principles = _principles
+  private var _principals = Set[Principal]()
+  def principals = _principals
 
   def subject_= (value:Subject) {
     _subject = value
-    _principles = Set()
+    _principals = Set()
     if( value!=null ) {
       import collection.JavaConversions._
-      _principles = value.getPrincipals.toSet
+      _principals = value.getPrincipals.toSet
     }
   }
 
-  def principles(kind:String):Set[Principal] = {
+  def principals(kind:String):Set[Principal] = {
     kind match {
       case "+"=>
-        principles
+        principals
       case "*"=>
-        principles
+        principals
       case kind=>
-        principles.filter(_.getClass.getName == kind)
+        principals.filter(_.getClass.getName == kind)
     }
   }
 
