@@ -165,9 +165,12 @@ parameter to define the order in which they are returned.  Example:
     'http://localhost:61680/broker/connections.json?o=write_counter%20DESC&o=id'
 
 
-### Reference
+## Route Reference
 
 {filter::jade}
+-# ========================================================================================
+-# Setup the CSS
+-# ========================================================================================
 - attributes("head") = capture
   :css
     table.reference tr th {
@@ -189,8 +192,21 @@ parameter to define the order in which they are returned.  Example:
       font-weight:bold;
     }
 
+-# ========================================================================================
+-# Define a couple of reusable functions..
+-# ========================================================================================
+- def route_section(title:String)(func: =>Unit) =
+  :&markdown
+    ### #{title}
+  table.reference
+    tr
+      th 
+      th Route
+      th On Success
+    - func
+  
 - var even = false
-- def route(method:String, path:String, code:Int, dto:String=null, code_desc:String=null, paging:String=null)(func: =>Unit)
+- def route(method:String, path:String, code:Int, dto:String=null, code_desc:String=null, paging:String=null)(func: =>Unit) =
   - even = !even  
   tr(class={if(even) "even" else "odd"})
     td.methods(rowspan="2")
@@ -209,7 +225,7 @@ parameter to define the order in which they are returned.  Example:
         - if(code_desc!=null)
           !~~ code_desc
         - if( paging!=null )
-          paging
+          | paging
           a(href={website_base_url + "/versions/"+project_version+"/website/documentation/api/apollo-dto/org/apache/activemq/apollo/dto/"+paging+".html"})
             = paging
           
@@ -217,12 +233,12 @@ parameter to define the order in which they are returned.  Example:
     td.description(colspan="2")
       !~~ capture(func)
 
-table.reference
-  tr
-    th 
-    th Route
-    th On Success
-  
+-# ========================================================================================
+- route_section("Broker Management") 
+  - route("POST", "/broker/action/shutdown.json", 303)
+    :markdown
+      Shuts down the JVM.
+
   - route("GET", "/broker.json", 200,"BrokerStatusDTO")
     :markdown
       General information about the broker, JVM, and OS status. Example: 
@@ -324,6 +340,8 @@ table.reference
     :markdown
       Aggregates the messaging metrics for all the destinations
 
+-# ========================================================================================
+- route_section("Virtual Host Management") 
   - route("GET", "/broker/virtual-hosts.json", 200, "DataPageDTO", null, "VirtualHostStatusDTO")
     :markdown
       Provides tabular access to all the virtual hosts.
@@ -598,6 +616,8 @@ table.reference
     :markdown
       Gets metrics and details about the `{dest}` durable subscription on the `{host}` virtual host.
 
+-# ========================================================================================
+- route_section("Connection Management") 
   - route("GET", "/broker/connectors.json", 200, "DataPageDTO", null, "ServiceStatusDTO")
     :markdown
       Provides tabular access to all connectors on the broker.
@@ -668,10 +688,8 @@ table.reference
     :markdown
       Deletes the `{connection}`.
 
-  - route("POST", "/broker/action/shutdown.json", 303)
-    :markdown
-      Shuts down the JVM.
-
+-# ========================================================================================
+- route_section("Broker Configuration Management") 
   - route("GET", "/config/runtime.json", 200,"BrokerDTO")
     :markdown
       The runtime configuration the broker using.  This version
@@ -692,8 +710,11 @@ table.reference
   - route("POST", "/config/files/{file}", 303)
     :markdown
       Updates the contents of the config file.  You can either post the raw bytes,
-      or form encoded with a field `config` set to the contents of the file.
+      or post a url encoded form with a field `config` set to the contents of the file.  In
+      the latter case, the content type is expected to be `application/x-www-form-urlencoded`
 
+-# ========================================================================================
+- route_section("Session Management") 
   - route("GET", "/broker/whoami.json", 200,"PrincipalDTO", "array")
     :markdown
       Lists the principals associated with your username.  Example:
