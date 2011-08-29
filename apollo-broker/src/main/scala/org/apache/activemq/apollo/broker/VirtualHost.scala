@@ -25,7 +25,7 @@ import org.apache.activemq.apollo.util.OptionSupport._
 import org.apache.activemq.apollo.dto._
 import security._
 import security.SecuredResource.VirtualHostKind
-import store.{PersistentLongCounter, Store, StoreFactory}
+import store._
 
 trait VirtualHostFactory {
   def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
@@ -104,6 +104,8 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   var connection_log:Log = _
   var console_log:Log = _
 
+  var direct_buffer_allocator:DirectBufferAllocator = null
+
   def resource_kind = VirtualHostKind
 
   @volatile
@@ -164,6 +166,13 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
 
   override protected def _start(on_completed:Runnable):Unit = {
     apply_update
+
+    if ( config.heap_bypass.getOrElse(0) > 0 ) {
+      import org.apache.activemq.apollo.util.FileSupport._
+      val tmp_dir = broker.tmp / "heapbypass" / id
+      tmp_dir.recursive_delete
+      direct_buffer_allocator = new ConcurrentFileDirectBufferAllocator(tmp_dir)
+    }
 
     store = StoreFactory.create(config.store)
 
@@ -229,7 +238,13 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
         task.run()
       }
     }
-    tracker.callback(on_completed)
+    tracker.callback(dispatch_queue.runnable {
+      if( direct_buffer_allocator !=null ) {
+        direct_buffer_allocator.close
+        direct_buffer_allocator
+      }
+      on_completed.run()
+    })
   }
 
 

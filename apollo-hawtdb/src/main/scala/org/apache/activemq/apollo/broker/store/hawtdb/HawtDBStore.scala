@@ -61,8 +61,6 @@ class HawtDBStore(val config:HawtDBStoreDTO) extends DelayingStoreSupport {
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
-  override def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = null
-
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     write_executor {
       client.store(uows, ^{

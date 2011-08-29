@@ -29,10 +29,10 @@ message MessagePB {
   optional bytes value = 4;
   optional sint64 expiration = 5;
   
-  optional bytes zcp_data = 10;
-  optional int32 zcp_file = 12;
-  optional int64 zcp_offset = 13;
-  optional int32 zcp_size = 14;
+  optional bytes direct_data = 10;
+  optional bytes direct_file = 12;
+  optional int64 direct_offset = 13;
+  optional int32 direct_size = 14;
 }
 
 message QueuePB {

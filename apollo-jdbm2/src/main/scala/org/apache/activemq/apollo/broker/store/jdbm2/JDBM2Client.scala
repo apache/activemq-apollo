@@ -50,15 +50,14 @@ object JDBM2Client extends Log {
     def deserialize(in: SerializerInput) = decode_queue_entry_record(in)
   }
 
-  object ZeroCopyValueSerializer extends Serializer[(Int, Long, Int)] {
-    def serialize(out: SerializerOutput, v: (Int,Long, Int)) = {
-      out.writePackedInt(v._1)
-      out.writePackedLong(v._2)
-      out.writePackedInt(v._3)
+  object ZeroCopyValueSerializer extends Serializer[(Long, Int)] {
+    def serialize(out: SerializerOutput, v: (Long, Int)) = {
+      out.writePackedLong(v._1)
+      out.writePackedInt(v._2)
     }
 
     def deserialize(in: SerializerInput) = {
-      (in.readPackedInt, in.readPackedLong, in.readPackedInt)
+      (in.readPackedLong, in.readPackedInt)
     }
   }
 
@@ -163,18 +162,18 @@ class JDBM2Client(store: JDBM2Store) {
   var queues_db:HTree[Long, QueueRecord] = _
   var entries_db:BTree[(Long,Long), QueueEntryRecord] = _
   var messages_db:HTree[Long, MessagePB.Buffer] = _
-  var zerocp_db:HTree[Long, (Int, Long, Int)] = _
+  var lobs_db:HTree[Long, (Long, Int)] = _
   var message_refs_db:HTree[Long, java.lang.Integer] = _
   var map_db:HTree[Buffer, Buffer] = _
 
   var last_message_key = 0L
   var last_queue_key = 0L
 
-  var zero_copy_buffer_allocator: FileZeroCopyBufferAllocator = _
+  var direct_buffer_allocator: FileDirectBufferAllocator = _
 
-  def zero_copy_dir = {
+  def direct_buffer_file = {
     import FileSupport._
-    config.directory / "zerocp"
+    config.directory / "dbuffer.data"
   }
 
   def start() = {
@@ -184,10 +183,7 @@ class JDBM2Client(store: JDBM2Store) {
 
     config.directory.mkdirs
 
-    if( Option(config.zero_copy).map(_.booleanValue).getOrElse(false) ) {
-      zero_copy_buffer_allocator = new FileZeroCopyBufferAllocator(zero_copy_dir)
-      zero_copy_buffer_allocator.start
-    }
+    direct_buffer_allocator = new FileDirectBufferAllocator(direct_buffer_file)
 
     recman = RecordManagerFactory.createRecordManager((config.directory / "jdbm2").getCanonicalPath)
 
@@ -220,7 +216,7 @@ class JDBM2Client(store: JDBM2Store) {
     transaction {
       messages_db = init_htree("messages", value_serializer = MessageRecordSerializer)
       map_db = init_htree("map", value_serializer = BufferSerializer, key_serializer = BufferSerializer)
-      zerocp_db = init_htree("lobs", value_serializer = ZeroCopyValueSerializer)
+      lobs_db = init_htree("lobs", value_serializer = ZeroCopyValueSerializer)
       message_refs_db = init_htree("message_refs")
       queues_db = init_htree("queues", value_serializer = QueueRecordSerializer)
       entries_db = init_btree("enttries", new QueueEntryKeyComparator, QueueEntryKeySerializer, QueueEntryRecordSerializer)
@@ -228,11 +224,9 @@ class JDBM2Client(store: JDBM2Store) {
       last_message_key = Option(recman.getNamedObject("last_message_key")).map(_.longValue).getOrElse(0L)
       last_queue_key = Option(recman.getNamedObject("last_queue_key")).map(_.longValue).getOrElse(0L)
 
-      if( zero_copy_buffer_allocator!=null ) {
-        zerocp_db.cursor { (_,v)=>
-          zero_copy_buffer_allocator.alloc_at(v._1, v._2, v._3)
-          true
-        }
+      lobs_db.cursor { (_,v)=>
+        direct_buffer_allocator.alloc_at(v._1, v._2)
+        true
       }
     }
 
@@ -241,10 +235,8 @@ class JDBM2Client(store: JDBM2Store) {
   def stop() = {
     recman.close
     recman = null;
-    if( zero_copy_buffer_allocator!=null ) {
-      zero_copy_buffer_allocator.stop
-      zero_copy_buffer_allocator = null
-    }
+    direct_buffer_allocator.close
+    direct_buffer_allocator = null
   }
 
   def transaction[T](func: => T): T = {
@@ -268,8 +260,8 @@ class JDBM2Client(store: JDBM2Store) {
       if( config.directory.isDirectory ) {
         config.directory.listFiles.filter(_.getName.startsWith("jdbm2.")).foreach(_.delete)
       }
-      if( zero_copy_dir.isDirectory ) {
-        zero_copy_dir.listFiles.foreach(_.delete)
+      if( direct_buffer_file.isDirectory ) {
+        direct_buffer_file.listFiles.foreach(_.delete)
       }
     }
     if( recman!=null ) {
@@ -324,12 +316,10 @@ class JDBM2Client(store: JDBM2Store) {
       gc.foreach { key=>
         message_refs_db.remove(key)
         messages_db.remove(key)
-        if( zero_copy_buffer_allocator!=null ){
-          val location = zerocp_db.find(key)
-          if( location!=null ) {
-            zero_copy_buffer_allocator.free(location._1, location._2, location._3)
-            zerocp_db.remove(key)
-          }
+        val location = lobs_db.find(key)
+        if( location!=null ) {
+          direct_buffer_allocator.free(location._1, location._2)
+          lobs_db.remove(key)
         }
       }
     }
@@ -368,7 +358,7 @@ class JDBM2Client(store: JDBM2Store) {
 
   def store(uows: Seq[JDBM2Store#DelayableUOW], callback:Runnable) {
     transaction {
-      var zcp_files_to_sync = Set[Int]()
+      var direct_buffer_sync = false
       uows.foreach { uow =>
 
         for((key,value) <- uow.map_actions) {
@@ -384,14 +374,13 @@ class JDBM2Client(store: JDBM2Store) {
           val message_record = action.message_record
           if (message_record != null) {
 
-            val pb = if( message_record.zero_copy_buffer != null ) {
+            val pb = if( message_record.direct_buffer != null ) {
               val r = to_pb(action.message_record).copy
-              val buffer = zero_copy_buffer_allocator.to_alloc_buffer(message_record.zero_copy_buffer)
-              r.setZcpFile(buffer.file)
-              r.setZcpOffset(buffer.offset)
-              r.setZcpSize(buffer.size)
-              zerocp_db.put(message_record.key, (buffer.file, buffer.offset, buffer.size))
-              zcp_files_to_sync += buffer.file
+              val buffer = direct_buffer_allocator.copy(message_record.direct_buffer)
+              r.setDirectOffset(buffer.offset)
+              r.setDirectSize(buffer.size)
+              lobs_db.put(message_record.key, (buffer.offset, buffer.size))
+              direct_buffer_sync = true
               r.freeze
             } else {
               to_pb(action.message_record)
@@ -416,8 +405,8 @@ class JDBM2Client(store: JDBM2Store) {
 
         }
       }
-      if( zero_copy_buffer_allocator!=null ) {
-        zcp_files_to_sync.foreach(zero_copy_buffer_allocator.sync(_))
+      if( direct_buffer_sync ) {
+        direct_buffer_allocator.sync
       }
     }
     callback.run
@@ -489,8 +478,8 @@ class JDBM2Client(store: JDBM2Store) {
       val record = metric_load_from_index_counter.time {
         Option(messages_db.find(message_key)).map{ pb=>
           val rc = from_pb(pb)
-          if( pb.hasZcpFile ) {
-            rc.zero_copy_buffer = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
+          if( pb.hasDirectSize ) {
+            rc.direct_buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
           }
           rc
         }
@@ -531,16 +520,10 @@ class JDBM2Client(store: JDBM2Store) {
       }
       streams.using_message_stream { message_stream=>
         messages_db.cursor { (_, pb) =>
-          if( pb.hasZcpFile ) {
-            val zcpb = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
-            var data = pb.copy
-            data.clearZcpFile
-            data.clearZcpFile
-            // write the pb frame and then the direct buffer data..
-            data.freeze.writeFramed(message_stream)
-            zcpb.read(message_stream)
-          } else {
-            pb.writeFramed(message_stream)
+          pb.writeFramed(message_stream)
+          if( pb.hasDirectSize ) {
+            val buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
+            buffer.read(message_stream)
           }
           true
         }
@@ -608,27 +591,18 @@ class JDBM2Client(store: JDBM2Store) {
 
         recman.commit
 
-        var zcp_counter = 0
-        val max_ctx = zero_copy_buffer_allocator.contexts.size
-
         streams.using_message_stream { message_stream=>
           foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>
 
-            val record:MessagePB.Buffer = if( pb.hasZcpSize ) {
-              val cp = pb.copy
-              val zcpb = zero_copy_buffer_allocator.contexts(zcp_counter % max_ctx).alloc(cp.getZcpSize)
-              cp.setZcpFile(zcpb.file)
-              cp.setZcpOffset(zcpb.offset)
-
-              zcp_counter += 1
-              zcpb.write(message_stream)
-
-              zerocp_db.put(pb.getMessageKey, (zcpb.file, zcpb.offset, zcpb.size))
-              cp.freeze
-            } else {
-              pb
+            var record:MessagePB.Buffer = pb
+            if( pb.hasDirectSize ) {
+              val cp = record.copy
+              val buffer = direct_buffer_allocator.alloc(cp.getDirectSize)
+              cp.setDirectOffset(buffer.offset)
+              buffer.write(message_stream)
+              lobs_db.put(pb.getMessageKey, (buffer.offset, buffer.size))
+              record = cp.freeze
             }
-
             messages_db.put(record.getMessageKey, record)
             check_flush(record.getSize, 1024*124*10)
           }

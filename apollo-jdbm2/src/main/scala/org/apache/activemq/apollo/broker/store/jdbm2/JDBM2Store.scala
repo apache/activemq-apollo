@@ -54,8 +54,6 @@ class JDBM2Store(var config:JDBM2StoreDTO) extends DelayingStoreSupport {
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
-  override def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = client.zero_copy_buffer_allocator
-
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     executor {
       client.store(uows, ^{

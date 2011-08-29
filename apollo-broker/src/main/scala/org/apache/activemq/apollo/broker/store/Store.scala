@@ -43,12 +43,6 @@ trait Store extends ServiceTrait {
   def get_store_status(callback:(StoreStatusDTO)=>Unit)
 
   /**
-   * @returns a ZeroCopyBufferAllocator if the store supports protocols
-   *          using zero copy buffers when transfering messages.
-   */
-  def zero_copy_buffer_allocator():ZeroCopyBufferAllocator = null
-
-  /**
    * Creates a store uow which is used to perform persistent
    * operations as unit of work.
    */

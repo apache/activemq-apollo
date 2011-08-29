@@ -38,19 +38,17 @@ object HelperTrait {
   implicit def to_buffer(entry: DatabaseEntry): Buffer = new Buffer(entry.getData)
   implicit def to_database_entry(v: Buffer): DatabaseEntry = new DatabaseEntry(v.toByteArray)
 
-  implicit def decode_zcp_value(entry: DatabaseEntry): (Int,Long,Int) = {
+  implicit def decode_lob_value(entry: DatabaseEntry): (Long,Int) = {
     val in = new DataByteArrayInputStream(entry.getData)
-    (in.readVarInt(), in.readVarLong(), in.readVarInt())
+    (in.readVarLong(), in.readVarInt())
   }
-  implicit def encode_zcp_value(v: (Int,Long,Int)): DatabaseEntry = {
+  implicit def encode_zcp_value(v: (Long,Int)): DatabaseEntry = {
     val out = new DataByteArrayOutputStream(
-      AbstractVarIntSupport.computeVarIntSize(v._1) +
-      AbstractVarIntSupport.computeVarLongSize(v._2) +
-      AbstractVarIntSupport.computeVarIntSize(v._3)
+      AbstractVarIntSupport.computeVarLongSize(v._1) +
+      AbstractVarIntSupport.computeVarIntSize(v._2)
     )
-    out.writeVarInt(v._1)
-    out.writeVarLong(v._2)
-    out.writeVarInt(v._3)
+    out.writeVarLong(v._1)
+    out.writeVarInt(v._2)
     new DatabaseEntry(out.toBuffer.data)
   }
 

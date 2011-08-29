@@ -795,11 +795,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       connection_sink.offer(StompFrame(CONNECTED,connected_headers.toList))
-
-      if( this.host.store!=null && this.host.store.zero_copy_buffer_allocator!=null ) {
-        val wf = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
-        wf.zero_copy_buffer_allocator = this.host.store.zero_copy_buffer_allocator
-      }
+      codec.direct_buffer_allocator = this.host.direct_buffer_allocator
     }
 
     reset {

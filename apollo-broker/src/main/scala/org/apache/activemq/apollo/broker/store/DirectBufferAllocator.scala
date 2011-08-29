@@ -26,8 +26,9 @@ import org.fusesource.hawtdispatch.Retained
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait ZeroCopyBufferAllocator {
-  def alloc(size:Int):ZeroCopyBuffer
+trait DirectBufferAllocator {
+  def alloc(size:Int):DirectBuffer
+  def close
 }
 
 /**
@@ -40,7 +41,7 @@ trait ZeroCopyBufferAllocator {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait ZeroCopyBuffer extends Retained {
+trait DirectBuffer extends Retained {
 
   def size:Int
 
@@ -49,6 +50,8 @@ trait ZeroCopyBuffer extends Retained {
   def read(target: OutputStream):Unit
 
   def read(src: Int, target: WritableByteChannel): Int
+
+  def copy(src:DirectBuffer): Unit
 
   def write(src:ReadableByteChannel, target:Int): Int
 

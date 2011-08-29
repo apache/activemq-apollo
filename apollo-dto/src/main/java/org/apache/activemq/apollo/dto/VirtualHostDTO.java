@@ -84,11 +84,17 @@ public class VirtualHostDTO extends ServiceDTO {
     public LogCategoryDTO log_category;
 
     /**
+     * If set the the broker will avoid allocating messages larger than the configured
+     * setting on the JVM heap.  They will be held in temp files until consumed or persisted
+     */
+    @XmlElement(name="heap_bypass")
+    public Integer heap_bypass;
+
+    /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
-
 
     @Override
     public boolean equals(Object o) {
@@ -104,6 +110,7 @@ public class VirtualHostDTO extends ServiceDTO {
         if (auto_create_destinations != null ? !auto_create_destinations.equals(that.auto_create_destinations) : that.auto_create_destinations != null)
             return false;
         if (dsubs != null ? !dsubs.equals(that.dsubs) : that.dsubs != null) return false;
+        if (heap_bypass != null ? !heap_bypass.equals(that.heap_bypass) : that.heap_bypass != null) return false;
         if (host_names != null ? !host_names.equals(that.host_names) : that.host_names != null) return false;
         if (log_category != null ? !log_category.equals(that.log_category) : that.log_category != null) return false;
         if (other != null ? !other.equals(that.other) : that.other != null) return false;
@@ -132,6 +139,7 @@ public class VirtualHostDTO extends ServiceDTO {
         result = 31 * result + (regroup_connections != null ? regroup_connections.hashCode() : 0);
         result = 31 * result + (authentication != null ? authentication.hashCode() : 0);
         result = 31 * result + (log_category != null ? log_category.hashCode() : 0);
+        result = 31 * result + (heap_bypass != null ? heap_bypass.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }

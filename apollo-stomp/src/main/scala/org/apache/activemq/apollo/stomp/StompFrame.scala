@@ -21,7 +21,7 @@ import collection.mutable.ListBuffer
 import java.lang.{String, Class}
 import org.apache.activemq.apollo.broker._
 import java.io.OutputStream
-import org.apache.activemq.apollo.broker.store.ZeroCopyBuffer
+import org.apache.activemq.apollo.broker.store.DirectBuffer
 import org.apache.activemq.apollo.dto.DestinationDTO
 
 /**
@@ -194,7 +194,7 @@ case class BufferContent(content:Buffer) extends StompContent {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class ZeroCopyContent(zero_copy_buffer:ZeroCopyBuffer) extends StompContent {
+case class ZeroCopyContent(zero_copy_buffer:DirectBuffer) extends StompContent {
   def length = zero_copy_buffer.size-1
 
   def writeTo(os:OutputStream) = {

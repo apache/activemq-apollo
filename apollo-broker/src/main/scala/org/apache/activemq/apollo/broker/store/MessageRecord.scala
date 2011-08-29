@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.Buffer
-import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -30,7 +30,7 @@ class MessageRecord {
   var protocol: AsciiBuffer = _
   var size = 0
   var buffer: Buffer = _
-  var zero_copy_buffer: ZeroCopyBuffer = _
+  var direct_buffer: DirectBuffer = _
   var expiration = 0L
   var locator:AtomicReference[Array[Byte]] = _
 

@@ -64,11 +64,11 @@ class BDBClient(store: BDBStore) {
 
   var environment:Environment = _
 
-  var zero_copy_buffer_allocator: FileZeroCopyBufferAllocator = _
+  var direct_buffer_allocator: FileDirectBufferAllocator = _
 
-  def zero_copy_dir = {
+  def direct_buffer_file = {
     import FileSupport._
-    config.directory / "zerocp"
+    config.directory / "dbuffer.dat"
   }
 
   def start() = {
@@ -79,10 +79,7 @@ class BDBClient(store: BDBStore) {
 
     directory.mkdirs
 
-    if( Option(config.zero_copy).map(_.booleanValue).getOrElse(false) ) {
-      zero_copy_buffer_allocator = new FileZeroCopyBufferAllocator(zero_copy_dir)
-      zero_copy_buffer_allocator.start
-    }
+    direct_buffer_allocator = new FileDirectBufferAllocator(direct_buffer_file)
 
     environment = new Environment(directory, env_config);
 
@@ -92,22 +89,18 @@ class BDBClient(store: BDBStore) {
       message_refs_db
       queues_db
 
-      if( zero_copy_buffer_allocator!=null ) {
-        zerocp_db.cursor(tx) { (_,value)=>
-          val v = decode_zcp_value(value)
-          zero_copy_buffer_allocator.alloc_at(v._1, v._2, v._3)
-          true
-        }
+      lobs_db.cursor(tx) { (_,value)=>
+        val v = decode_lob_value(value)
+        direct_buffer_allocator.alloc_at(v._1, v._2)
+        true
       }
     }
   }
 
   def stop() = {
     environment.close
-    if( zero_copy_buffer_allocator!=null ) {
-      zero_copy_buffer_allocator.stop
-      zero_copy_buffer_allocator = null
-    }
+    direct_buffer_allocator.close
+    direct_buffer_allocator = null
   }
 
   case class TxContext(tx:Transaction) {
@@ -137,12 +130,12 @@ class BDBClient(store: BDBStore) {
       _messages_db
     }
 
-    private var _zerocp_db:Database = _
-    def zerocp_db:Database = {
-      if( _zerocp_db==null ) {
-        _zerocp_db = environment.openDatabase(tx, "zerocp", long_key_conf)
+    private var _lobs_db:Database = _
+    def lobs_db:Database = {
+      if( _lobs_db==null ) {
+        _lobs_db = environment.openDatabase(tx, "lobs", long_key_conf)
       }
-      _zerocp_db
+      _lobs_db
     }
 
     private var _message_refs_db:Database = _
@@ -184,6 +177,9 @@ class BDBClient(store: BDBStore) {
       }
       if( _map_db!=null ) {
         _map_db.close
+      }
+      if( _lobs_db!=null ) {
+        _lobs_db.close
       }
 
       if(ok){
@@ -299,13 +295,11 @@ class BDBClient(store: BDBStore) {
     import ctx._
     if( add_and_get(message_refs_db, msg_key, -1, tx)==0 ) {
       messages_db.delete(tx, msg_key)
-      if( zero_copy_buffer_allocator!=null ){
-        zerocp_db.get(tx, to_database_entry(msg_key)).foreach { v=>
-          val location  = decode_zcp_value(v)
-          zero_copy_buffer_allocator.free(location._1, location._2, location._3)
-        }
-        zerocp_db.delete(tx, msg_key)
+      lobs_db.get(tx, to_database_entry(msg_key)).foreach { v=>
+        val location  = decode_lob_value(v)
+        direct_buffer_allocator.free(location._1, location._2)
       }
+      lobs_db.delete(tx, msg_key)
     }
   }
 
@@ -334,7 +328,7 @@ class BDBClient(store: BDBStore) {
     val sync = uows.find( ! _.complete_listeners.isEmpty ).isDefined
     with_ctx(sync) { ctx=>
       import ctx._
-      var zcp_files_to_sync = Set[Int]()
+      var sync_lobs = false
       uows.foreach { uow =>
 
           for((key,value) <- uow.map_actions) {
@@ -352,14 +346,13 @@ class BDBClient(store: BDBStore) {
               if (message_record != null) {
                 import PBSupport._
 
-                val pb = if( message_record.zero_copy_buffer != null ) {
+                val pb = if( message_record.direct_buffer != null ) {
                   val r = to_pb(action.message_record).copy
-                  val buffer = zero_copy_buffer_allocator.to_alloc_buffer(message_record.zero_copy_buffer)
-                  r.setZcpFile(buffer.file)
-                  r.setZcpOffset(buffer.offset)
-                  r.setZcpSize(buffer.size)
-                  zerocp_db.put(tx, message_record.key, (buffer.file, buffer.offset, buffer.size))
-                  zcp_files_to_sync += buffer.file
+                  val buffer = direct_buffer_allocator.copy(message_record.direct_buffer)
+                  r.setDirectOffset(buffer.offset)
+                  r.setDirectSize(buffer.size)
+                  lobs_db.put(tx, message_record.key, (buffer.offset, buffer.size))
+                  sync_lobs = true
                   r.freeze
                 } else {
                   to_pb(action.message_record)
@@ -379,8 +372,8 @@ class BDBClient(store: BDBStore) {
               }
           }
       }
-      if( zero_copy_buffer_allocator!=null ) {
-        zcp_files_to_sync.foreach(zero_copy_buffer_allocator.sync(_))
+      if( sync_lobs ) {
+        direct_buffer_allocator.sync
       }
     }
     callback.run
@@ -490,8 +483,8 @@ class BDBClient(store: BDBStore) {
             import PBSupport._
             val pb:MessagePB.Buffer = data
             val rc = from_pb(pb)
-            if( pb.hasZcpFile ) {
-              rc.zero_copy_buffer = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
+            if( pb.hasDirectSize ) {
+              rc.direct_buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
             }
             rc
           }
@@ -519,8 +512,8 @@ class BDBClient(store: BDBStore) {
             import PBSupport._
             val pb:MessagePB.Buffer = data
             val rc = from_pb(pb)
-            if( pb.hasZcpFile ) {
-              rc.zero_copy_buffer = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
+            if( pb.hasDirectSize ) {
+              rc.direct_buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
             }
             rc
           }
@@ -583,16 +576,10 @@ class BDBClient(store: BDBStore) {
           messages_db.cursor(tx) { (_, data) =>
             import PBSupport._
             val pb = MessagePB.FACTORY.parseUnframed(data.getData)
-            if( pb.hasZcpFile ) {
-              val zcpb = zero_copy_buffer_allocator.view_buffer(pb.getZcpFile, pb.getZcpOffset, pb.getZcpSize)
-              var data = pb.copy
-              data.clearZcpFile
-              data.clearZcpFile
-              // write the pb frame and then the direct buffer data..
-              data.freeze.writeFramed(message_stream)
-              zcpb.read(message_stream)
-            } else {
-              pb.writeFramed(message_stream)
+            pb.writeFramed(message_stream)
+            if( pb.hasDirectSize ) {
+              val buffer_cp_buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
+              buffer_cp_buffer.read(message_stream)
             }
             true
           }
@@ -641,9 +628,6 @@ class BDBClient(store: BDBStore) {
           }
         }
 
-        var zcp_counter = 0
-        val max_ctx = zero_copy_buffer_allocator.contexts.size
-
         streams.using_map_stream { stream=>
           foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
             map_db.put(tx, pb.getKey, pb.getValue)
@@ -653,19 +637,14 @@ class BDBClient(store: BDBStore) {
         streams.using_message_stream { message_stream=>
           foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>
 
-            val record:MessagePB.Buffer = if( pb.hasZcpSize ) {
-              val cp = pb.copy
-              val zcpb = zero_copy_buffer_allocator.contexts(zcp_counter % max_ctx).alloc(cp.getZcpSize)
-              cp.setZcpFile(zcpb.file)
-              cp.setZcpOffset(zcpb.offset)
-
-              zcp_counter += 1
-              zcpb.write(message_stream)
-
-              zerocp_db.put(tx, pb.getMessageKey, (zcpb.file, zcpb.offset, zcpb.size))
-              cp.freeze
-            } else {
-              pb
+            var record:MessagePB.Buffer = pb
+            if( record.hasDirectSize ) {
+              val cp = record.copy
+              val buffer_cp_buffer = direct_buffer_allocator.alloc(cp.getDirectSize)
+              cp.setDirectOffset(buffer_cp_buffer.offset)
+              buffer_cp_buffer.write(message_stream)
+              lobs_db.put(tx, pb.getMessageKey, (buffer_cp_buffer.offset, buffer_cp_buffer.size))
+              record = cp.freeze
             }
 
             messages_db.put(tx, record.getMessageKey, record)

@@ -37,9 +37,6 @@ public class BDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="read_threads")
     public Integer read_threads;
 
-    @XmlAttribute(name="zero_copy")
-    public Boolean zero_copy;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -50,7 +47,6 @@ public class BDBStoreDTO extends StoreDTO {
 
         if (directory != null ? !directory.equals(that.directory) : that.directory != null) return false;
         if (read_threads != null ? !read_threads.equals(that.read_threads) : that.read_threads != null) return false;
-        if (zero_copy != null ? !zero_copy.equals(that.zero_copy) : that.zero_copy != null) return false;
 
         return true;
     }
@@ -60,7 +56,6 @@ public class BDBStoreDTO extends StoreDTO {
         int result = super.hashCode();
         result = 31 * result + (directory != null ? directory.hashCode() : 0);
         result = 31 * result + (read_threads != null ? read_threads.hashCode() : 0);
-        result = 31 * result + (zero_copy != null ? zero_copy.hashCode() : 0);
         return result;
     }
 }

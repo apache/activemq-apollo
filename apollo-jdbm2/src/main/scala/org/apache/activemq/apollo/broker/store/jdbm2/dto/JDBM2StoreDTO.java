@@ -37,9 +37,6 @@ public class JDBM2StoreDTO extends StoreDTO {
     @XmlAttribute(name="compact_interval")
     public Integer compact_interval;
 
-    @XmlAttribute(name="zero_copy")
-    public Boolean zero_copy;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -51,7 +48,6 @@ public class JDBM2StoreDTO extends StoreDTO {
         if (compact_interval != null ? !compact_interval.equals(that.compact_interval) : that.compact_interval != null)
             return false;
         if (directory != null ? !directory.equals(that.directory) : that.directory != null) return false;
-        if (zero_copy != null ? !zero_copy.equals(that.zero_copy) : that.zero_copy != null) return false;
 
         return true;
     }
@@ -61,7 +57,6 @@ public class JDBM2StoreDTO extends StoreDTO {
         int result = super.hashCode();
         result = 31 * result + (directory != null ? directory.hashCode() : 0);
         result = 31 * result + (compact_interval != null ? compact_interval.hashCode() : 0);
-        result = 31 * result + (zero_copy != null ? zero_copy.hashCode() : 0);
         return result;
     }
 }
