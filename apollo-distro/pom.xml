@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0-beta5</version>
   </parent>
 
   <artifactId>apache-apollo</artifactId>
@@ -33,44 +33,44 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-boot</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-cli</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-jdbm2</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-tcp</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
       <type>jar</type>
     </dependency>
     
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta5</version>
       <type>pom</type>
     </dependency>
 
