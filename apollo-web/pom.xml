@@ -155,7 +155,7 @@
     
     <plugins>
 
-      <plugin>
+      <!-- <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-fab-plugin</artifactId>
         <version>1.16-SNAPSHOT</version>
@@ -173,7 +173,7 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
+      </plugin> -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

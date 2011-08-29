@@ -133,7 +133,7 @@
   <build>
     <plugins>
 
-      <plugin>
+      <!-- <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-fab-plugin</artifactId>
         <version>1.16-SNAPSHOT</version>
@@ -151,7 +151,7 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
+      </plugin> -->
 
       <!-- Generate a test jar for the test cases in this package -->
       <plugin>
