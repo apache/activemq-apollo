@@ -22,6 +22,7 @@ import core.Response
 import javax.servlet.http.HttpServletRequest
 import com.sun.jersey.server.impl.ThreadLocalInvoker
 import org.apache.activemq.apollo.web.WebModule
+import javax.ws.rs.core.MediaType._
 
 /**
  *
@@ -32,7 +33,7 @@ case class RootResource() extends Resource() {
   import WebModule._
 
   @GET
-  @Produces(Array("application/json", "application/xml","text/xml","text/html"))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML,TEXT_HTML))
   def post_connection_shutdown_and_redirect() = {
     Response.seeOther(strip_resolve(root_redirect)).build
   }

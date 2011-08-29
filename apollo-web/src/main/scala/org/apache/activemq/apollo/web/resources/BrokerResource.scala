@@ -34,6 +34,7 @@ import java.util.{Collections, ArrayList}
 import org.apache.activemq.apollo.broker._
 import java.security.Principal
 import org.apache.activemq.apollo.dto._
+import javax.ws.rs.core.MediaType._
 
 /**
  * <p>
@@ -43,7 +44,7 @@ import org.apache.activemq.apollo.dto._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@Produces(Array("application/json", "application/xml","text/xml", "text/html;qs=5"))
+@Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML, "text/html;qs=5"))
 case class BrokerResource() extends Resource {
 
   @GET
@@ -324,7 +325,7 @@ case class BrokerResource() extends Resource {
 
 
   @GET @Path("virtual-hosts")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def virtual_host(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
                   @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
@@ -490,7 +491,7 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/topics")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def topics(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
             @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
@@ -527,7 +528,7 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/queues")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def queues(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
             @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
@@ -555,7 +556,7 @@ case class BrokerResource() extends Resource {
   }
 
   @DELETE @Path("virtual-hosts/{id}/queues/{name:.*}")
-  @Produces(Array("application/json", "application/xml","text/xml"))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
   def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
@@ -574,7 +575,7 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("virtual-hosts/{id}/dsubs")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def durable_subscriptions(@PathParam("id") id : String, @QueryParam("f") f:java.util.List[String],
             @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
@@ -602,7 +603,7 @@ case class BrokerResource() extends Resource {
 
 
   @DELETE @Path("virtual-hosts/{id}/dsubs/{name:.*}")
-  @Produces(Array("application/json", "application/xml","text/xml"))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
   def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
@@ -638,7 +639,7 @@ case class BrokerResource() extends Resource {
   }
 
   @GET @Path("connectors")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def connectors(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
                   @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
@@ -662,36 +663,22 @@ case class BrokerResource() extends Resource {
   }
 
   @POST @Path("connectors/{id}/action/stop")
-  @Produces(Array("application/json", "application/xml","text/xml"))
   def post_connector_stop(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.stop
       }
     }
-  }
-
-  @POST @Path("connectors/{id}/action/stop")
-  @Produces(Array("text/html;qs=5"))
-  def post_connector_stop_and_redirect(@PathParam("id") id : String):Unit = unwrap_future_result {
-    post_connector_stop(id)
     result(strip_resolve(".."))
   }
 
   @POST @Path("connectors/{id}/action/start")
-  @Produces(Array("application/json", "application/xml","text/xml"))
   def post_connector_start(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.start
       }
     }
-  }
-
-  @POST @Path("connectors/{id}/action/start")
-  @Produces(Array("text/html;qs=5"))
-  def post_connector_start_and_redirect(@PathParam("id") id : String):Unit = unwrap_future_result {
-    post_connector_start(id)
     result(strip_resolve(".."))
   }
 
@@ -723,7 +710,7 @@ case class BrokerResource() extends Resource {
 
 
   @GET @Path("connections")
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   def connections(@QueryParam("f") f:java.util.List[String], @QueryParam("q") q:String,
                   @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
 
@@ -750,7 +737,7 @@ case class BrokerResource() extends Resource {
   }
 
   @DELETE @Path("connections/{id}")
-  @Produces(Array("application/json", "application/xml","text/xml"))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
   def connection_delete(@PathParam("id") id : Long):Unit = unwrap_future_result {
     with_connection(id){ connection=>
       admining(connection.connector.broker) {

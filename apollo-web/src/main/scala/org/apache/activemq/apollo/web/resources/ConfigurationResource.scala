@@ -22,7 +22,7 @@ import java.io.File
 import org.apache.activemq.apollo.util.FileSupport._
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
-import com.sun.jersey.api.view.ImplicitProduces
+import javax.ws.rs.core.MediaType._
 
 case class EditConfig(file:String, config:String, can_write:Boolean)
 case class ListConfigs(files:Array[String])
@@ -43,7 +43,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
 
   @GET
   @Path("runtime")
-  @Produces(Array("application/json", "application/xml","text/xml"))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
   def runtime = {
 
     // Encode/Decode the runtime config so that we can get a copy that
@@ -62,7 +62,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @GET
-  @Produces(Array("application/json"))
+  @Produces(Array(APPLICATION_JSON))
   @Path("files")
   def list() = {
     etc_directory.listFiles().flatMap { file =>
@@ -75,14 +75,14 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @GET
-  @Produces(Array("text/html"))
+  @Produces(Array(TEXT_HTML))
   @Path("files")
   def list_html() = {
     ListConfigs(list())
   }
 
   @GET
-  @Produces(Array("text/plain"))
+  @Produces(Array(APPLICATION_OCTET_STREAM))
   @Path("files/{name}")
   def get(@PathParam("name") name:String) = {
     val file = etc_directory / name
@@ -93,7 +93,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @GET
-  @Produces(Array("text/html"))
+  @Produces(Array(TEXT_HTML))
   @Path("files/{name}")
   def edit_html(@PathParam("name") name:String) = {
     val file = etc_directory / name
@@ -103,7 +103,8 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
     EditConfig(name, file.read_text(), file.canWrite)
   }
 
-  @PUT
+  @POST
+  @Consumes(Array(WILDCARD))
   @Path("files/{name}")
   def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
     val file = etc_directory / name
@@ -111,11 +112,13 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
       result(NOT_FOUND)
     }
     file.write_bytes(config)
+    result(strip_resolve("."))
   }
 
   @POST
   @Path("files/{name}")
-  @Produces(Array("application/json", "application/xml","text/xml", "text/html"))
+  @Consumes(Array(APPLICATION_FORM_URLENCODED))
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML, TEXT_HTML))
   def edit_post(@PathParam("name") name:String, @FormParam("config") config:String):Unit = {
     put(name, config.getBytes("UTF-8"))
     result(strip_resolve("."))
