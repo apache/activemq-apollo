@@ -1,0 +1,80 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blog_post: true
+title: Apollo 1.0 Beta 5 Released
+author: Hiram Chirino
+author_url: http://fusesource.com
+created_at: 2010-06-29 12:06:40 -0000
+--- 
+
+The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
+availability of Apollo 1.0 Beta 5. ActiveMQ Apollo is a faster, more reliable, easier 
+to maintain messaging broker built from the foundations of the original ActiveMQ. It is
+focused on being the fastest most reliable STOMP 1.1 and 1.0 server available.
+
+Apollo Features:
+
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](${website_base_url}/documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](${website_base_url}/documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](${website_base_url}/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](${website_base_url}/documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](${website_base_url}/documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](${website_base_url}/documentation/user-manual.html#Authentication)
+* [ACL Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS)
+* [REST Based Management](${website_base_url}/documentation/architecture.html#REST_Based_Management)
+  
+Noteworthy changes since the last beta include:
+
+ * APLO-67 - Support an `auto-delete:true` header on the STOMP subscribe frame to auto delete queues when the subscription ends
+ * APLO-70 - Add per-destination queue quota
+ * APLO-34 - Allow a STOMP subscription to control message flow using a credit window
+ * APLO-68 - Add support for TCP-level keepalive
+ * APLO-74 - Support setting the timestamp header on received messages
+ * APLO-75 - Support setting the redelivered header on redelivered messages
+ * APLO-56 - Change to a terser configuration scheme for ACL definitions
+ * APLO-81 - Include message counters on the producer/consumer links on the destination stats in the REST API.
+ * APLO-80 - Separate message statistics for durable subs from queues.
+ * APLO-82 - Add a new /dest-metrics REST route which collects the metrics for queues, topics and dsubs.
+ * APLO-83 - Apollo REST API should support cookie/session based authentication
+ * APLO-71 - Apollo plugins should be easy to configure
+ * APLO-77 - Provide connection aggregation in the REST API
+ * APLO-78 - Provide message statistics (for topics) in the REST API
+
+Migration Notes:
+
+The way access control is configured substantially changed sine the Beta 4 release.  It's 
+recommend you generate a new apollo configuration if upgrade to this release.
+
+Further information:
+
+* [Download](${website_base_url}/download.html)
+* [Issues Fixed](https://issues.apache.org/jira/secure/ReleaseNote.jspa?version=12317041&styleName=Text&projectId=12311310&Create=Create)
+* [Documentation](${website_base_url}/versions/1.0-beta5/website/documentation)
+
+[Feedback](http://activemq.apache.org/community/index.html) is always welcome! 
+
+
+
+
+
+
