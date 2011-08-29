@@ -165,8 +165,11 @@ abstract class Resource(parent:Resource=null) extends Logging {
       security_context.remote_address = new InetSocketAddress(http_request.getRemoteAddr, http_request.getRemotePort)
       security_context.certificates = http_request.getAttribute("javax.servlet.request.X509Certificate").asInstanceOf[Array[X509Certificate]]
 
-      val session = http_request.getSession(false)
-      if( session !=null ) {
+      if(http_request.getAttribute("username")!=null) {
+        security_context.user = http_request.getAttribute("username").asInstanceOf[String];
+        security_context.password = http_request.getAttribute("password").asInstanceOf[String];
+      } else if( http_request.getSession(false) !=null ) {
+        val session = http_request.getSession(false)
         security_context.user = session.getAttribute("username").asInstanceOf[String];
         security_context.password = session.getAttribute("password").asInstanceOf[String];
       } else {

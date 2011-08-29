@@ -77,13 +77,16 @@ case class BrokerResource() extends Resource {
   @POST
   @Path("signin")
   def post_signin(@Context response:HttpServletResponse, @FormParam("username") username:String, @FormParam("password") password:String):Boolean =  {
-    val session = http_request.getSession(true)
-    session.setAttribute("username", username);
-    session.setAttribute("password", password);
     try {
+      http_request.setAttribute("username", username)
+      http_request.setAttribute("password", password)
       unwrap_future_result[Boolean] {
         with_broker { broker =>
           monitoring(broker) {
+            // Only create the session if he is a valid user.
+            val session = http_request.getSession(true)
+            session.setAttribute("username", username)
+            session.setAttribute("password", password)
             true
           }
         }
