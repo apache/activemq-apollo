@@ -75,25 +75,29 @@ object JettyWebServer extends Log {
     var rc:File = null
     val loader = JettyWebServer.getClass.getClassLoader
 
-    // Unpack all the webapp resources found on the classpath.
-    val resources = loader.getResources("META-INF/services/org.apache.activemq.apollo/webapp-resources.jar")
-    while( resources.hasMoreElements ) {
-      val url = resources.nextElement();
-      import FileSupport._
-      rc = tmp / "webapp-resources"
-      rc.mkdirs()
-      using(new JarInputStream(url.openStream()) ) { is =>
-        var entry = is.getNextJarEntry
-        while( entry!=null ) {
-          if( entry.isDirectory ) {
-            (rc / entry.getName).mkdirs()
-          } else {
-            using(new FileOutputStream( rc / entry.getName )) { os =>
-              copy(is, os)
+    if( System.getProperty("apollo.webapp")!=null ) {
+      rc = new File(System.getProperty("apollo.webapp"))
+    } else {
+      // Unpack all the webapp resources found on the classpath.
+      val resources = loader.getResources("META-INF/services/org.apache.activemq.apollo/webapp-resources.jar")
+      while( resources.hasMoreElements ) {
+        val url = resources.nextElement();
+        import FileSupport._
+        rc = tmp / "webapp-resources"
+        rc.mkdirs()
+        using(new JarInputStream(url.openStream()) ) { is =>
+          var entry = is.getNextJarEntry
+          while( entry!=null ) {
+            if( entry.isDirectory ) {
+              (rc / entry.getName).mkdirs()
+            } else {
+              using(new FileOutputStream( rc / entry.getName )) { os =>
+                copy(is, os)
+              }
             }
+            is.closeEntry()
+            entry = is.getNextJarEntry
           }
-          is.closeEntry()
-          entry = is.getNextJarEntry
         }
       }
     }
