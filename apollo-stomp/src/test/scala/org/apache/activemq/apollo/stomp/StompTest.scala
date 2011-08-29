@@ -1386,6 +1386,32 @@ class StompSecurityTest extends StompTestSupport {
 
   }
 
+  test("Send and create authorized via id_regex") {
+    connect("1.1", client,
+      "login:guest\n" +
+      "passcode:guest\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/testblah\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/notmatch\n" +
+      "receipt:1\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue")
+  }
+
   test("Can send and once created") {
 
     // Now try sending with the lower access id.
