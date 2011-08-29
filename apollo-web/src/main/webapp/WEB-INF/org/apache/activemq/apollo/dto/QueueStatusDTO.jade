@@ -23,11 +23,11 @@
   - else
     - "%,.2f %%".format(n.toFloat*100.0/d)
 
-
+- var vhost_path = ".."
 - binding match
   - case x:QueueDestinationDTO =>
     .breadcumbs
-      a(href={strip_resolve("..")+".html"}) Back
+      a(href={strip_resolve(vhost_path)+".html"}) Back
 
     h1 Queue #{id}
     p state: #{state} #{ uptime(state_since) } ago
@@ -36,7 +36,7 @@
         input(type="submit" value="delete")
   - case x:DurableSubscriptionDestinationDTO =>
     .breadcumbs
-      a(href={strip_resolve("..")+".html"}) Back
+      a(href={strip_resolve(vhost_path)+".html"}) Back
 
     h1 Durable Subscription on #{id}
     - if( x.selector != null )
@@ -47,8 +47,9 @@
         input(type="submit" value="delete")
 
   - case _ =>
+    - vhost_path = "../.."
     .breadcumbs
-      a(href={strip_resolve("../..")+".html"}) Back
+      a(href={strip_resolve(vhost_path)+".html"}) Back
     h1 Temporary Queue
     p state: #{state} #{ uptime(state_since) } ago
 
@@ -89,9 +90,9 @@ ul
     li.producer
       - x.kind match
         - case "queue" =>
-          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+          a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
         - case "connection" =>
-          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
+          a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
         - case _ =>
       p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
@@ -103,9 +104,9 @@ ul
     li.consumer
       - x.kind match
         - case "queue" =>
-          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+          a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
         - case "connection" =>
-          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
+          a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
         - case _ =>
       p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
       p next message seq: #{x.position}

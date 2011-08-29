@@ -303,8 +303,13 @@ case class BrokerResource() extends Resource {
   def get_topic_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
     val router:LocalRouter = host
     val topics: Iterable[Topic] = router.topic_domain.destinations
-    val metrics = topics.map(_.status.metrics)
-    FutureResult(Success(aggregate_dest_metrics(metrics)))
+
+    val metrics = Future.all {
+      topics.map { topics =>
+        topic_status(topics).map(_.map_success(_.metrics))
+      }
+    }
+    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
   }
 
   def get_dsub_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
@@ -498,7 +503,7 @@ case class BrokerResource() extends Resource {
       val router: LocalRouter = host
       val records = Future.all {
         router.topic_domain.destination_by_id.values.map { value  =>
-          status(value)
+          topic_status(value)
         }
       }
       val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps, o))
@@ -511,7 +516,7 @@ case class BrokerResource() extends Resource {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
-      status(node)
+      topic_status(node)
     }
   }
 
@@ -522,7 +527,9 @@ case class BrokerResource() extends Resource {
       val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
       monitoring(node) {
-        queue.status(entries)
+        sync(queue) {
+          queue.status(entries)
+        }
       }
     }
   }
@@ -630,8 +637,10 @@ case class BrokerResource() extends Resource {
     }
   }
 
-  def status(node: Topic): FutureResult[TopicStatusDTO] = monitoring(node) {
-    node.status
+  def topic_status(node: Topic): FutureResult[TopicStatusDTO] = monitoring(node) {
+    val rc = FutureResult[TopicStatusDTO]()
+    node.status(x=>rc.set(Success(x)))
+    rc
   }
 
   def status(q:Queue, entries:Boolean=false) = monitoring(q) {

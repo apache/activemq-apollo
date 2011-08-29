@@ -25,6 +25,7 @@ import org.fusesource.hawtdispatch._
 import collection.mutable.{HashSet, HashMap, ListBuffer}
 import java.lang.Long
 import security.SecuredResource
+
 /**
  * <p>
  * A logical messaging topic
@@ -34,33 +35,77 @@ import security.SecuredResource
  */
 class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination with SecuredResource {
 
-  var enqueue_item_counter = 0L
-  var enqueue_size_counter = 0L
-  var enqueue_ts = now
-
-  var dequeue_item_counter = 0L
-  var dequeue_size_counter = 0L
-  var dequeue_ts = now
+  val topic_metrics = new DestMetricsDTO
 
   val resource_kind =SecuredResource.TopicKind
-
-  var proxy_sessions = new HashSet[TopicDeliverySession]()
+  var proxy_sessions = new HashSet[DeliverySession]()
 
   implicit def from_link(from:LinkDTO):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
-  implicit def from_session(from:TopicDeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
+  implicit def from_session(from:DeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
 
-  def add_counters(to:LinkDTO, from:(Long,Long,Long)):Unit = {
+  def add_link_counters(to:LinkDTO, from:(Long,Long,Long)):Unit = {
     to.enqueue_item_counter += from._1
     to.enqueue_size_counter += from._2
     to.enqueue_ts = to.enqueue_ts max from._3
   }
-  def add_counters(to:Topic, from:(Long,Long,Long)):Unit = {
+  def add_enqueue_counters(to:DestMetricsDTO, from:(Long,Long,Long)):Unit = {
     to.enqueue_item_counter += from._1
     to.enqueue_size_counter += from._2
     to.enqueue_ts = to.enqueue_ts max from._3
   }
+  def add_dequeue_counters(to:DestMetricsDTO, from:(Long,Long,Long)):Unit = {
+    to.dequeue_item_counter += from._1
+    to.dequeue_size_counter += from._2
+    to.dequeue_ts = to.enqueue_ts max from._3
+  }
 
-  case class TopicDeliverySession(session:DeliverySession) extends DeliverySession with SessionSinkFilter[Delivery] {
+  val producer_tracker = new DeliveryConsumer {
+    def retained() = 0
+    def retain() {}
+    def release() {}
+
+    def matches(message: Delivery) = true
+    def is_persistent = false
+    def dispatch_queue = null
+    def connect(producer: DeliveryProducer) = ProxyProducerSession(producer)
+
+  }
+
+
+  case class ProxyProducerSession(val producer:DeliveryProducer) extends DeliverySession {
+
+    dispatch_queue {
+      proxy_sessions.add(this)
+    }
+
+    def remaining_capacity = 1
+    var enqueue_ts = 0L
+    var enqueue_size_counter = 0L
+    var enqueue_item_counter = 0L
+    var refiller:Runnable = null
+
+    def offer(value: Delivery) = {
+      enqueue_item_counter += 1
+      enqueue_size_counter += value.size
+      enqueue_ts = now
+      true
+    }
+
+    def close = {
+      dispatch_queue {
+        proxy_sessions.remove(this)
+        producers.get(producer.asInstanceOf[BindableDeliveryProducer]) match {
+          case Some(link) => add_link_counters(link, this)
+          case _          => add_enqueue_counters(topic_metrics, this)
+        }
+      }
+    }
+
+    def full = false
+    def consumer = producer_tracker
+  }
+
+  case class ProxyConsumerSession(proxy:ProxyDeliveryConsumer, session:DeliverySession) extends DeliverySession with SessionSinkFilter[Delivery] {
     def downstream = session
 
     dispatch_queue {
@@ -71,13 +116,14 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       session.close
       dispatch_queue {
         proxy_sessions.remove(this)
-        consumers.get(session.consumer) match {
-          case Some(proxy) => add_counters(proxy.link, this)
-          case _          => add_counters(Topic.this, this)
-        }
-        producers.get(session.producer.asInstanceOf[BindableDeliveryProducer]) match {
-          case Some(link) => add_counters(link, this)
-          case _          => add_counters(Topic.this, this)
+        consumers.get(proxy.registered) match {
+          case Some(proxy) => add_link_counters(proxy.link, this)
+          case _ =>
+            proxy.consumer match {
+              case queue:Queue =>
+              case _ =>
+                add_dequeue_counters(topic_metrics, this)
+            }
         }
       }
     }
@@ -88,7 +134,8 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     def offer(value: Delivery) = downstream.offer(value)
   }
 
-  case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO) extends DeliveryConsumer {
+  case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO, registered:DeliveryConsumer) extends DeliveryConsumer {
+
     def retained() = consumer.retained()
     def retain() = consumer.retain()
     def release() = consumer.release()
@@ -96,7 +143,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     def is_persistent = consumer.is_persistent
     def dispatch_queue = consumer.dispatch_queue
     def connect(producer: DeliveryProducer) = {
-      new TopicDeliverySession(consumer.connect(producer))
+      new ProxyConsumerSession(this, consumer.connect(producer))
     }
   }
 
@@ -107,8 +154,6 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   var idled_at = 0L
   val created_at = now
   var auto_delete_after = 0
-  var producer_counter = 0L
-  var consumer_counter = 0L
 
   var config:TopicDTO = _
 
@@ -124,7 +169,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
-  def status:TopicStatusDTO = {
+  def status(on_complete:(TopicStatusDTO)=>Unit) = {
     dispatch_queue.assertExecuting()
 
     val rc = new TopicStatusDTO
@@ -133,8 +178,6 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     rc.state_since = this.created_at
     rc.config = this.config
 
-    rc.metrics.producer_counter = producer_counter
-    rc.metrics.consumer_counter = consumer_counter
     rc.metrics.producer_count = producers.size
     rc.metrics.consumer_count = consumers.size
 
@@ -148,7 +191,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       rc.kind = o.kind
       rc.label = o.label
       rc.enqueue_ts = o.enqueue_ts
-      add_counters(rc, o);
+      add_link_counters(rc, o);
       rc
     }
 
@@ -162,49 +205,63 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     }
     this.consumers.foreach { case (consumer, proxy) =>
       val o = copy(proxy.link)
-      consumers_links.put(consumer, o)
+      consumers_links.put(proxy.consumer, o)
       rc.consumers.add(o)
     }
 
     // Add in the counters from the live sessions..
     proxy_sessions.foreach{ session =>
       val stats = from_session(session)
-      for( link <- producer_links.get(session.producer.asInstanceOf[BindableDeliveryProducer]) ) {
-        add_counters(link, stats)
-      }
-      for( link <- consumers_links.get(session.consumer) ) {
-        add_counters(link, stats)
+      session match {
+        case session:ProxyProducerSession =>
+          for( link <- producer_links.get(session.producer.asInstanceOf[BindableDeliveryProducer]) ) {
+            add_link_counters(link, stats)
+          }
+        case session:ProxyConsumerSession =>
+          for( link <- consumers_links.get(session.consumer) ) {
+            add_link_counters(link, stats)
+          }
       }
     }
 
     // Now update the topic counters..
-    rc.metrics.enqueue_item_counter = enqueue_item_counter
-    rc.metrics.enqueue_size_counter = enqueue_size_counter
-    rc.metrics.enqueue_ts = enqueue_ts
-
-    rc.metrics.dequeue_item_counter = dequeue_item_counter
-    rc.metrics.dequeue_size_counter = dequeue_size_counter
-    rc.metrics.dequeue_ts = dequeue_ts
-    consumers_links.values.foreach { link =>
-      rc.metrics.enqueue_item_counter += link.enqueue_item_counter
-      rc.metrics.enqueue_size_counter += link.enqueue_size_counter
-      rc.metrics.enqueue_ts = rc.metrics.enqueue_ts max link.enqueue_ts
-    }
+    rc.metrics.current_time = now
+    DestinationMetricsSupport.add_destination_metrics(rc.metrics, topic_metrics)
     producer_links.values.foreach { link =>
-      rc.metrics.dequeue_item_counter += link.enqueue_item_counter
-      rc.metrics.dequeue_size_counter += link.enqueue_size_counter
-      rc.metrics.dequeue_ts = rc.metrics.dequeue_ts max link.enqueue_ts
+      add_enqueue_counters(rc.metrics, link)
     }
 
-    // Add in any queue metrics that the topic may own.
-    for(queue <- consumer_queues.values) {
-      val metrics = queue.get_queue_metrics
-      metrics.enqueue_item_counter = 0
-      metrics.enqueue_size_counter = 0
-      metrics.enqueue_ts = 0
-      DestinationMetricsSupport.add_destination_metrics(rc.metrics, metrics)
+    var futures = List[Future[(TopicStatusDTO)=>Unit]]()
+
+    consumers_links.foreach { case (consumer, link) =>
+      consumer match {
+        case queue:Queue =>
+          // aggregate the queue stats instead of the link stats.
+          val future = Future[(TopicStatusDTO)=>Unit]()
+          futures ::= future
+          queue.dispatch_queue {
+            val metrics = queue.get_queue_metrics
+            metrics.enqueue_item_counter = 0
+            metrics.enqueue_size_counter = 0
+            metrics.enqueue_ts = 0
+            metrics.producer_counter = 0
+            metrics.producer_count = 0
+            metrics.consumer_counter = 0
+            metrics.consumer_count = 0
+            future.set((rc)=>{
+              DestinationMetricsSupport.add_destination_metrics(rc.metrics, metrics)
+            })
+          }
+        case _ =>
+          // plain link, add it's ats.
+          add_dequeue_counters(rc.metrics, link)
+      }
     }
-    rc
+
+    Future.all(futures).onComplete{ data=>
+      data.foreach(_(rc))
+      on_complete(rc)
+    }
   }
 
 
@@ -299,9 +356,9 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         }
     }
 
-    val proxy = ProxyDeliveryConsumer(target, link)
+    val proxy = ProxyDeliveryConsumer(target, link, consumer)
     consumers.put(consumer, proxy)
-    consumer_counter += 1
+    topic_metrics.consumer_counter += 1
     val list = proxy :: Nil
     producers.keys.foreach({ r=>
       r.bind(list)
@@ -312,13 +369,27 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   def unbind (consumer:DeliveryConsumer, persistent:Boolean) = {
 
     for(proxy <- consumers.remove(consumer)) {
-      add_counters(Topic.this, proxy.link)
+      add_dequeue_counters(topic_metrics, proxy.link)
       val list = consumer_queues.remove(consumer) match {
         case Some(queue) =>
           queue.unbind(List(consumer))
           queue.binding match {
             case x:TempQueueBinding =>
-              router._destroy_queue(queue)
+              queue.dispatch_queue {
+                val metrics = queue.get_queue_metrics
+                router._destroy_queue(queue)
+                dispatch_queue {
+                  topic_metrics.dequeue_item_counter += metrics.dequeue_item_counter
+                  topic_metrics.dequeue_size_counter += metrics.dequeue_size_counter
+                  topic_metrics.dequeue_ts = topic_metrics.dequeue_ts max metrics.dequeue_ts
+                  topic_metrics.nack_item_counter += metrics.nack_item_counter
+                  topic_metrics.nack_size_counter += metrics.nack_size_counter
+                  topic_metrics.nack_ts  = topic_metrics.nack_ts max metrics.nack_ts
+                  topic_metrics.expired_item_counter += metrics.expired_item_counter
+                  topic_metrics.expired_size_counter += metrics.expired_size_counter
+                  topic_metrics.expired_ts  = topic_metrics.expired_ts max metrics.expired_ts
+                }
+              }
           }
           List(queue)
         case None =>
@@ -375,21 +446,21 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         link.label = "unknown"
     }
     producers.put(producer, link)
-    producer_counter += 1
-    producer.bind(consumers.values.toList ::: durable_subscriptions.toList)
+    topic_metrics.producer_counter += 1
+    producer.bind(producer_tracker::consumers.values.toList ::: durable_subscriptions.toList)
     check_idle
   }
 
   def disconnect (producer:BindableDeliveryProducer) = {
     for(link <- producers.remove(producer) ) {
-      add_counters(this, link)
+      add_enqueue_counters(topic_metrics, link)
     }
     check_idle
   }
 
   def disconnect_producers:Unit ={
     for( (_, link) <- producers ) {
-      add_counters(this, link)
+      add_enqueue_counters(topic_metrics, link)
     }
     producers.clear
     check_idle

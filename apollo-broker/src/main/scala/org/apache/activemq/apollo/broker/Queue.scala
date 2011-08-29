@@ -211,6 +211,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var idled_at = 0L
 
   def get_queue_metrics:DestMetricsDTO = {
+    dispatch_queue.assertExecuting()
     val rc = new DestMetricsDTO
 
     rc.enqueue_item_counter = this.enqueue_item_counter
@@ -580,7 +581,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   }
 
   def swap_messages = {
-
+    dispatch_queue.assertExecuting()
     now = System.currentTimeMillis()
 
     var cur = entries.getHead
