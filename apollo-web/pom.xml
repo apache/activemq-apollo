@@ -21,14 +21,14 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>1.0-beta5</version>
+    <version>1.0-SNAPSHOT</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-web</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-beta5</version>
+  <version>1.0-SNAPSHOT</version>
 
   <name>${project.artifactId}</name>
   <description>Adds web administration support.</description>
@@ -44,7 +44,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>1.0-beta5</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <!-- Web Framework APIs -->
@@ -119,7 +119,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>1.0-beta5</version>
+      <version>1.0-SNAPSHOT</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
