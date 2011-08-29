@@ -619,11 +619,11 @@ an authorization check:
   the broker or virtual host.
 
 * `action`: A space separated list of actions that will match the rule.
-  Example 'create,destroy'. You can use `*` to match all actions.  Defaults
+  Example 'create destroy'. You can use `*` to match all actions.  Defaults
   to `*`.
 
 * `kind`: A space separated list of broker resource types that will match
-  this rule. You can use `*` to match all key. Example values 'broker,queue'.
+  this rule. You can use `*` to match all key. Example values 'broker queue'.
   Defaults to `*`.
 
 * `id`: The identifier of the resource that will match this rule. You can use
