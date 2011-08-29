@@ -627,7 +627,9 @@ an authorization check:
   Defaults to `*`.
 
 * `id`: The identifier of the resource that will match this rule. You can use
-  `*` to match all resources. Defaults to `*`
+  `*` to match all resources. If the `kind` is set to `queue` or `topic` the
+  your can use a destination wild card to match against the destination id.
+  Defaults to `*`
 
 * `id_regex`: A regular expression to be applied against the id of the
   resource.
