@@ -267,6 +267,10 @@ memory.  Defaults to true.
   use settings values like: `500mb` or `1g` just plain byte count
   like `1024000`.  Once the quota is Exceeded, the producers will
   block until the usage decreases.  Defaults to no limit.
+  
+* `auto_delete_after`: If not set to `0` then the queue will automatically
+  delete once there have been no consumers, producers or messages on it
+  for the configured number of seconds.  Defaults to 300 if not set.
 
 ##### Topics
 
@@ -289,6 +293,10 @@ A `topic` element may be configured with the following attributes:
   consumer so that produces do not slow down to the speed of the slowest
   consumer. If set to `block`, the producers block on slow consumers which
   makes producers only as fast as the slowest consumer on the topic.
+
+* `auto_delete_after`: If not set to `0` then the topic will automatically
+  delete once there have been no consumers or producers on it
+  for the configured number of seconds.  Defaults to 300 if not set.
 
 ##### Durable Subscriptions
 
