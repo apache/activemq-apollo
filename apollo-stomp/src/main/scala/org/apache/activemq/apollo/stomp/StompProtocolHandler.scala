@@ -138,7 +138,8 @@ class StompProtocolHandler extends ProtocolHandler {
     override val browser:Boolean,
     override val exclusive:Boolean,
     val auto_delete:Boolean,
-    val initial_credit_window:(Int,Int, Boolean)
+    val initial_credit_window:(Int,Int, Boolean),
+    val temp:Boolean
   ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
@@ -163,6 +164,10 @@ class StompProtocolHandler extends ProtocolHandler {
 //      printST("release")
 //      r.release
 //    }
+
+    if( temp ) {
+      destination.foreach(_.temp_owner = connection.get.id)
+    }
 
     val ack_source = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
       def mergeEvent(previous:(Int, Int), event:(Int, Int)) = {
@@ -422,7 +427,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def dispose = {
         session_manager.close(downstream)
-        if( auto_delete ) {
+        if( auto_delete || temp) {
           reset {
             val rc = host.router.delete(destination, security_context)
             rc match {
@@ -1031,6 +1036,8 @@ class StompProtocolHandler extends ProtocolHandler {
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
     var auto_delete = get(headers, AUTO_DELETE).map( _ == TRUE ).getOrElse(false)
+    var temp = get(headers, TEMP).map( _ == TRUE ).getOrElse(false)
+
     val ack_mode = get(headers, ACK_MODE).getOrElse(ACK_MODE_AUTO)
     val credit_window = get(headers, CREDIT) match {
       case Some(value) =>
@@ -1088,7 +1095,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window);
+    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window, temp);
     consumers += (id -> consumer)
 
     reset {
