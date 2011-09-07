@@ -602,7 +602,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           val queue = durable_subscriptions_by_id.get( key ) match {
             case Some(queue) =>
               // We may need to update the bindings...
-              if( queue.destination_dto != destination) {
+              if( !destination.path.isEmpty && queue.destination_dto != destination) {
 
                 val binding = BindingFactory.create(destination)
                 if( queue.tune_persistent && queue.store_id == -1 ) {
