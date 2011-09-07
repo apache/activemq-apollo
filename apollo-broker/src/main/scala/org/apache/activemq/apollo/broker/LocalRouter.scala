@@ -661,15 +661,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     override def can_bind_all(path: Path, destination: DestinationDTO, consumer: DeliveryConsumer, security: SecurityContext) = {
       destination match {
         case destination:DurableSubscriptionDestinationDTO =>
-          val config = dsub_config(destination.subscription_id)
           if( !path.parts.isEmpty ) {
             super.can_bind_all(path, destination, consumer, security) orElse {
               if( !durable_subscriptions_by_id.contains(destination.subscription_id) ) {
-                can_create_dsub(config, security)
+                can_create_dsub(destination, security)
               } else {
                 None
               } orElse {
-                can_bind_dsub(config, consumer, security)
+                can_bind_dsub(destination, consumer, security)
               }
             }
           } else {
@@ -677,7 +676,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
             if( !durable_subscriptions_by_id.contains(destination.subscription_id) ) {
               Some("Durable subscription does not exist")
             } else {
-              can_bind_dsub(config, consumer, security)
+              can_bind_dsub(destination, consumer, security)
             }
           }
         case _ =>
@@ -689,13 +688,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     override def can_connect_all(path: Path, destination: DestinationDTO, producer: BindableDeliveryProducer, security: SecurityContext) = {
       destination match {
         case destination:DurableSubscriptionDestinationDTO =>
-          val config = dsub_config(destination.subscription_id)
-
             // User is trying to directly send to a durable subscription.. has to allready exist.
           if( !durable_subscriptions_by_id.contains(destination.subscription_id) ) {
             Some("Durable subscription does not exist")
           } else {
-            can_connect_dsub(config, security)
+            can_connect_dsub(destination, security)
           }
         case _ =>
           super.can_connect_all(path, destination, producer, security)
@@ -703,14 +700,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
 
-    def get_dsub_secured_resource(config: DurableSubscriptionDTO):SecuredResource = {
-      durable_subscriptions_by_id.get(config.id).getOrElse(new SecuredResource() {
+    def get_dsub_secured_resource(config: DurableSubscriptionDestinationDTO):SecuredResource = {
+      durable_subscriptions_by_id.get(config.subscription_id).getOrElse(new SecuredResource() {
         def resource_kind = SecuredResource.DurableSubKind
-        def id = config.id
+        def id = config.subscription_id
       })
     }
 
-    def can_create_dsub(config:DurableSubscriptionDTO, security:SecurityContext) = {
+    def can_create_dsub(config:DurableSubscriptionDestinationDTO, security:SecurityContext) = {
       val resource = get_dsub_secured_resource(config)
       if( !authorizer.can(security, "create", resource) ) {
         Some("Not authorized to create the durable subscription '%s'. Principals=%s".format(resource.id, security.principal_dump))
@@ -719,7 +716,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def can_connect_dsub(config:DurableSubscriptionDTO, security:SecurityContext):Option[String] = {
+    def can_connect_dsub(config:DurableSubscriptionDestinationDTO, security:SecurityContext):Option[String] = {
       val resource = get_dsub_secured_resource(config)
       if( !authorizer.can(security, "send", resource) ) {
         Some("Not authorized to send to durable subscription '%s'. Principals=%s".format(resource.id, security.principal_dump))
@@ -728,7 +725,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
     }
 
-    def can_bind_dsub(config:DurableSubscriptionDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
+    def can_bind_dsub(config:DurableSubscriptionDestinationDTO, consumer:DeliveryConsumer, security:SecurityContext):Option[String] = {
       val resource = get_dsub_secured_resource(config)
       val action = if ( consumer.browser ) "receive" else "consume"
       if( !authorizer.can(security, action, resource) ) {
