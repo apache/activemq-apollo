@@ -230,4 +230,6 @@ div.compare div div {
 .wide div.compare div.compare-left { float:none; width:700px; }
 .wide div.compare div.compare-right { float:none; width:700px; }
 
-
+.hide {
+  display:none;
+}
