@@ -164,6 +164,7 @@
     <module>apollo-broker</module>
     <module>apollo-selector</module>
     <module>apollo-tcp</module>
+    <module>apollo-leveldb</module>
     <module>apollo-bdb</module>
     <module>apollo-jdbm2</module>
     <module>apollo-dto</module>
