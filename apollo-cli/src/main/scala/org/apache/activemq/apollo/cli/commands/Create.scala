@@ -251,7 +251,9 @@ class Create extends Action {
   }
 
   def store_config = {
-    if( can_load("org.fusesource.leveldbjni.JniDBFactory") ) {
+    if( can_load("org.apache.activemq.apollo.broker.store.leveldb.LevelDBStore")
+        && ( can_load("org.fusesource.leveldbjni.JniDBFactory")
+        || can_load("org.iq80.leveldb.impl.Iq80DBFactory"))) {
     """<!-- You can delete this element if you want to disable persistence for this virtual host -->
     <leveldb_store directory="${apollo.base}/data"/>
     """

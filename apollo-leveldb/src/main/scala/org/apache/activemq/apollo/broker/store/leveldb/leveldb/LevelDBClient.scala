@@ -38,6 +38,7 @@ import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.broker.store.MapEntryPB.Bean
 import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
+import org.apache.activemq.apollo.broker.Broker
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -143,7 +144,7 @@ class LevelDBClient(store: LevelDBStore) {
   var last_gc_duration = 0L
   var in_gc = false
   var gc_detected_log_usage = Map[Long, UsageCounter]()
-  var factory:DBFactory = org.fusesource.leveldbjni.JniDBFactory.factory
+  var factory:DBFactory = _
 
 
   def dirty_index_file = directory / ("dirty"+INDEX_SUFFIX)
@@ -161,6 +162,15 @@ class LevelDBClient(store: LevelDBStore) {
 
   def start() = {
     import OptionSupport._
+
+    val factory_names = Option(config.index_factory).getOrElse("org.fusesource.leveldbjni.JniDBFactory, org.iq80.leveldb.impl.Iq80DBFactory")
+    factory = factory_names.split("""(,|\s)+""").map(_.trim()).flatMap { name=>
+      try {
+        Some(Broker.class_loader.loadClass(name).newInstance().asInstanceOf[DBFactory])
+      } catch {
+        case x => None
+      }
+    }.headOption.getOrElse(throw new Exception("Could not load any of the index factory classes: "+factory_names))
 
     sync = config.sync.getOrElse(true);
     verify_checksums = config.verify_checksums.getOrElse(false);

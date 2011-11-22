@@ -32,6 +32,7 @@
         <include>org.codehaus.jackson:jackson-mapper-asl</include>
         <include>org.codehaus.jackson:jackson-core-asl</include>
         <include>org.fusesource.leveldbjni:leveldbjni-all</include>
+        <include>org.iq80.leveldb:leveldb</include>
         
         <!-- security stuff -->
         <include>org.jasypt:jasypt</include>

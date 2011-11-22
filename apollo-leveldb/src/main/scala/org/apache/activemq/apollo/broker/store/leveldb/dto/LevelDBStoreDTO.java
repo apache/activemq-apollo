@@ -73,6 +73,9 @@ public class LevelDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="index_compression")
     public String index_compression;
 
+    @XmlAttribute(name="index_factory")
+    public String index_factory;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -81,10 +84,8 @@ public class LevelDBStoreDTO extends StoreDTO {
 
         LevelDBStoreDTO that = (LevelDBStoreDTO) o;
 
-        if (directory != null ? !directory.equals(that.directory) : that.directory != null)
-            return false;
-        if (gc_interval != null ? !gc_interval.equals(that.gc_interval) : that.gc_interval != null)
-            return false;
+        if (directory != null ? !directory.equals(that.directory) : that.directory != null) return false;
+        if (gc_interval != null ? !gc_interval.equals(that.gc_interval) : that.gc_interval != null) return false;
         if (index_block_restart_interval != null ? !index_block_restart_interval.equals(that.index_block_restart_interval) : that.index_block_restart_interval != null)
             return false;
         if (index_block_size != null ? !index_block_size.equals(that.index_block_size) : that.index_block_size != null)
@@ -97,16 +98,14 @@ public class LevelDBStoreDTO extends StoreDTO {
             return false;
         if (index_write_buffer_size != null ? !index_write_buffer_size.equals(that.index_write_buffer_size) : that.index_write_buffer_size != null)
             return false;
-        if (log_size != null ? !log_size.equals(that.log_size) : that.log_size != null)
-            return false;
+        if (index_factory != null ? !index_factory.equals(that.index_factory) : that.index_factory != null) return false;
+        if (log_size != null ? !log_size.equals(that.log_size) : that.log_size != null) return false;
         if (log_write_buffer_size != null ? !log_write_buffer_size.equals(that.log_write_buffer_size) : that.log_write_buffer_size != null)
             return false;
         if (paranoid_checks != null ? !paranoid_checks.equals(that.paranoid_checks) : that.paranoid_checks != null)
             return false;
-        if (read_threads != null ? !read_threads.equals(that.read_threads) : that.read_threads != null)
-            return false;
-        if (sync != null ? !sync.equals(that.sync) : that.sync != null)
-            return false;
+        if (read_threads != null ? !read_threads.equals(that.read_threads) : that.read_threads != null) return false;
+        if (sync != null ? !sync.equals(that.sync) : that.sync != null) return false;
         if (verify_checksums != null ? !verify_checksums.equals(that.verify_checksums) : that.verify_checksums != null)
             return false;
 
@@ -119,6 +118,7 @@ public class LevelDBStoreDTO extends StoreDTO {
         result = 31 * result + (directory != null ? directory.hashCode() : 0);
         result = 31 * result + (gc_interval != null ? gc_interval.hashCode() : 0);
         result = 31 * result + (read_threads != null ? read_threads.hashCode() : 0);
+        result = 31 * result + (index_factory != null ? index_factory.hashCode() : 0);
         result = 31 * result + (sync != null ? sync.hashCode() : 0);
         result = 31 * result + (paranoid_checks != null ? paranoid_checks.hashCode() : 0);
         result = 31 * result + (verify_checksums != null ? verify_checksums.hashCode() : 0);
