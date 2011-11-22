@@ -251,7 +251,11 @@ class Create extends Action {
   }
 
   def store_config = {
-    if( can_load("com.sleepycat.je.Environment") ) {
+    if( can_load("org.fusesource.leveldbjni.JniDBFactory") ) {
+    """<!-- You can delete this element if you want to disable persistence for this virtual host -->
+    <leveldb_store directory="${apollo.base}/data"/>
+    """
+    } else if( can_load("com.sleepycat.je.Environment") ) {
     """<!-- You can delete this element if you want to disable persistence for this virtual host -->
     <bdb_store directory="${apollo.base}/data"/>
     """

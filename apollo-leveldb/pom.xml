@@ -116,26 +116,6 @@
   <build>
     <plugins>
       
-      <!-- include all the dependencies into the jar so it can run standalone -->
-      <plugin>
-        <groupId>org.fusesource.mvnplugins</groupId>
-        <artifactId>maven-uberize-plugin</artifactId>
-        <version>1.15</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>uberize</goal></goals>
-            <configuration>
-              <artifactSet>
-                <includes>
-                  <include>org.fusesource.leveldbjni:leveldbjni-all</include>
-                </includes>
-              </artifactSet>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      
       <!-- <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-fab-plugin</artifactId>

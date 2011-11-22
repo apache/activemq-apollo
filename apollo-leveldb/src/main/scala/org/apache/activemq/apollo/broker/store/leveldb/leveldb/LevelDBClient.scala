@@ -33,7 +33,6 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
 import collection.immutable.TreeMap
 import org.iq80.leveldb._
-import org.fusesource.leveldbjni.JniDBFactory._
 import org.fusesource.leveldbjni.internal.Util
 import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
@@ -54,7 +53,10 @@ object LevelDBClient extends Log {
   final val queue_prefix_array = Array(queue_prefix)
   final val map_prefix_array = Array(map_prefix)
   final val queue_entry_prefix_array = Array(queue_entry_prefix)
+
   final val dirty_index_key = bytes(":dirty")
+  final val TRUE = bytes("true")
+  final val FALSE = bytes("false")
 
   final val LOG_ADD_QUEUE           = 1.toByte
   final val LOG_REMOVE_QUEUE        = 2.toByte
@@ -66,6 +68,8 @@ object LevelDBClient extends Log {
 
   final val LOG_SUFFIX  = ".log"
   final val INDEX_SUFFIX  = ".index"
+
+  def bytes(value:String) = value.getBytes("UTF-8")
 
   import FileSupport._
   def create_sequence_file(directory:File, id:Long, suffix:String) = directory / ("%016x%s".format(id, suffix))
@@ -139,6 +143,8 @@ class LevelDBClient(store: LevelDBStore) {
   var last_gc_duration = 0L
   var in_gc = false
   var gc_detected_log_usage = Map[Long, UsageCounter]()
+  var factory:DBFactory = org.fusesource.leveldbjni.JniDBFactory.factory
+
 
   def dirty_index_file = directory / ("dirty"+INDEX_SUFFIX)
   def temp_index_file = directory / ("temp"+INDEX_SUFFIX)
@@ -224,7 +230,7 @@ class LevelDBClient(store: LevelDBStore) {
 
       index = new RichDB(factory.open(dirty_index_file, index_options));
       try {
-        index.put(dirty_index_key, bytes("true"))
+        index.put(dirty_index_key, TRUE)
         // Update the index /w what was stored on the logs..
         var pos = last_index_snapshot_pos;
 
@@ -318,7 +324,7 @@ class LevelDBClient(store: LevelDBStore) {
     snapshot_rw_lock.writeLock().lock()
 
     // Close the index so that it's files are not changed async on us.
-    index.put(dirty_index_key, bytes("false"), new WriteOptions().sync(true))
+    index.put(dirty_index_key, FALSE, new WriteOptions().sync(true))
     index.close
   }
 
@@ -330,7 +336,7 @@ class LevelDBClient(store: LevelDBStore) {
     // re=open it..
     retry {
       index = new RichDB(factory.open(dirty_index_file, index_options));
-      index.put(dirty_index_key, bytes("true"))
+      index.put(dirty_index_key, TRUE)
     }
     snapshot_rw_lock.writeLock().unlock()
   }

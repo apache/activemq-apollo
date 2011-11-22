@@ -17,7 +17,6 @@
 
 /**
  * The JAXB POJOs for the
- * The JAXB POJOs for the
  * <a href="http://activemq.apache.org/schema/activemq/apollo/xml-configuration.html">XML Configuration</a>
  * of the ActiveMQ Broker.
  */

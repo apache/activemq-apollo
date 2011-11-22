@@ -342,12 +342,14 @@ cannot get swapped to disk.
 ${project_name} supports multiple message store implementations.  The 
 implementations currently supported are:
 
+* [LevelDB Store](#LevelDB_Store) : is a file based message store implemented using the 
+  [Google's LevelDB](http://en.wikipedia.org/wiki/LevelDB) library to maintain indexes into 
+  log files holding the messages.
 * [BDB Store](#BDB_Store) : is a file based message store implemented using the 
   [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
   This is the most stable implementation.
 * [JDBM2 Store](#JDBM2_Store) : is a file based message store implemented using the 
   [JDBM2](http://code.google.com/p/jdbm2/) library.
-  This is the most stable implementation.
 
 <!-- 
 * [HawtDB Store](#HawtDB_Store) : is a file based message store implemented using the 
@@ -355,6 +357,61 @@ implementations currently supported are:
   has known bugs and not recommend to be used unless your good with a 
   debugger. 
 -->
+
+
+###### LevelDB Store
+
+The LevelDB store is the default store which a newly created Broker instance
+will use.
+
+It is enabled when your `virtual_host` element contains a `leveldb_store` element.
+
+{pygmentize:: xml}
+  ...
+  <virtual_host id="default">
+    ...
+    <leveldb_store directory="${apollo.base}/data"/>
+    ..
+  </virtual_host>
+  ...
+{pygmentize}
+
+A `leveldb_store` element may be configured with the following attributes:
+
+* `directory` : The directory which the store will use to hold it's data
+  files. The store will create the directory if it does not already
+  exist.
+* `flush_delay` : The flush delay is the amount of time in milliseconds
+  that a store will delay persisting a messaging unit of work in hopes
+  that it will be invalidated shortly thereafter by another unit of work
+  which would negate the operation.
+* `gc_interval` : How often to check to find log files which can be discarded 
+   in seconds. The value defaults to 1800 (30 minutes).
+* `read_threads` : The number of concurrent IO reads to allow. The value 
+   defaults to 10.
+* `sync` : If set to `false`, then the store does not sync logging operations to 
+  disk. The value defaults to `true`.
+* `log_size` : The max size (in bytes) of each data log file before log file rotation
+   occurs. The value defaults to 104857600 (100 MB).
+* `log_write_buffer_size`: That maximum amount of log data to build up before writing 
+   to the file system. The value defaults to 4194304 (4 MB).
+* `verify_checksums` :  If set to `true` to force checksum verification of all 
+   data that is read from the file system on behalf of a particular read. By 
+   default, no such verification is done.
+* `paranoid_checks` : Make the store error out as soon as possible if it detects 
+   internal corruption.  The value defaults to false.
+* `index_max_open_files` : Number of open files that can be used by the index. The 
+   value defaults to 1000.
+* `index_block_restart_interval` : Number keys between restart points for delta 
+   encoding of keys. The value defaults to 16.
+* `index_write_buffer_size` : Amount of index data to build up in memory before 
+   converting to a sorted on-disk file. The value defaults to 4194304 (4 MB).
+* `index_block_size` : The size of index data packed per block. The value defaults 
+   to 4096 (4 K).
+* `index_cache_size` : The maximum amount of memory to use to cache index blocks. 
+   The value defaults to 268435456 (256 MB).
+* `index_compression` : The type of compression to apply to the index blocks.  
+   Can be `snappy` or `none`. The value defaults to `snappy`.
 
 ###### BDB Store
 
