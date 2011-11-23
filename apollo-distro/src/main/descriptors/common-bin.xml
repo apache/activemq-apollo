@@ -31,8 +31,12 @@
         <include>org.fusesource.hawtdispatch:*</include>
         <include>org.codehaus.jackson:jackson-mapper-asl</include>
         <include>org.codehaus.jackson:jackson-core-asl</include>
-        <include>org.fusesource.leveldbjni:leveldbjni-all</include>
-        <include>org.iq80.leveldb:leveldb</include>
+        
+        <include>org.iq80.leveldb:*</include>
+        <include>com.google.guava:guava</include>
+        
+        <include>org.fusesource.leveldbjni:*</include>
+        <include>org.fusesource.hawtjni:*</include>
         
         <!-- security stuff -->
         <include>org.jasypt:jasypt</include>
