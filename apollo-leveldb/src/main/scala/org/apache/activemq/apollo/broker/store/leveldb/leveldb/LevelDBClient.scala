@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.broker.store.leveldb
 
-import dto.LevelDBStoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
@@ -27,7 +26,7 @@ import org.apache.activemq.apollo.broker.store._
 import java.io._
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
-import collection.mutable.{HashMap, ListBuffer}
+import collection.mutable.ListBuffer
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
@@ -35,10 +34,9 @@ import collection.immutable.TreeMap
 import org.iq80.leveldb._
 import org.fusesource.leveldbjni.internal.Util
 import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
-import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
-import org.apache.activemq.apollo.broker.store.MapEntryPB.Bean
-import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
+import java.util.concurrent.atomic.AtomicReference
 import org.apache.activemq.apollo.broker.Broker
+import org.apache.activemq.apollo.util.ProcessSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -99,23 +97,58 @@ object LevelDBClient extends Log {
       size += value
     }
   }
-  
+
+  val on_windows = System.getProperty("os.name").toLowerCase().startsWith("windows")
+
   var link_strategy = 0
   def link(source:File, target:File):Unit = {
     link_strategy match {
       case 0 =>
+        // We first try to link via a native system call. Fails if
+        // we cannot load the JNI module.
         try {
           Util.link(source, target)
         } catch {
           case e:IOException => throw e
           case e:Throwable =>
             // Fallback.. to a slower impl..
-            link_strategy = 100
-          link(source, target)
+            debug("Native link system call not available")
+            link_strategy = 5
+            link(source, target)
         }
 
+      // TODO: consider implementing a case which does the native system call using JNA
+
+      case 5 =>
+        // Next we try to do the link by executing an
+        // operating system shell command
+        try {
+          if( on_windows ) {
+            system("fsutil", "hardlink", "create", target.getCanonicalPath, source.getCanonicalPath) match {
+              case(0, _, _) => // Success
+              case (_, out, err) =>
+                // TODO: we might want to look at the out/err to see why it failed
+                // to avoid falling back to the slower strategy.
+                debug("fsutil OS command not available either")
+                link_strategy = 10
+                link(source, target)
+            }
+          } else {
+            system("ln", source.getCanonicalPath, target.getCanonicalPath) match {
+              case(0, _, _) => // Success
+              case (_, out, err) => None
+                // TODO: we might want to look at the out/err to see why it failed
+                // to avoid falling back to the slower strategy.
+                debug("ln OS command not available either")
+                link_strategy = 2
+                link(source, target)
+            }
+          }
+        } catch {
+          case e:Throwable =>
+        }
       case _ =>
-        // this strategy is slow but sure to work.
+        // this final strategy is slow but sure to work.
         source.copy_to(target)
     }
   }
