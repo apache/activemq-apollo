@@ -444,7 +444,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
-  def addQueue(record: QueueRecord, callback:Runnable) = {
+  def add_queue(record: QueueRecord, callback:Runnable) = {
     retry_using_index {
       log.appender { appender =>
         appender.append(LOG_ADD_QUEUE, record)
@@ -454,7 +454,7 @@ class LevelDBClient(store: LevelDBStore) {
     callback.run
   }
 
-  def removeQueue(queue_key: Long, callback:Runnable) = {
+  def remove_queue(queue_key: Long, callback:Runnable) = {
     retry_using_index {
       log.appender { appender =>
         val ro = new ReadOptions
@@ -614,7 +614,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
-  def listQueues: Seq[Long] = {
+  def list_queues: Seq[Long] = {
     val rc = ListBuffer[Long]()
     retry_using_index {
       val ro = new ReadOptions
@@ -628,7 +628,7 @@ class LevelDBClient(store: LevelDBStore) {
     rc
   }
 
-  def getQueue(queue_key: Long): Option[QueueRecord] = {
+  def get_queue(queue_key: Long): Option[QueueRecord] = {
     retry_using_index {
       val ro = new ReadOptions
       ro.fillCache(false)
@@ -715,7 +715,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
-  def getLastQueueKey:Long = {
+  def get_last_queue_key:Long = {
     retry_using_index {
       index.last_key(queue_prefix_array).map(decode_long_key(_)._2).getOrElse(0)
     }

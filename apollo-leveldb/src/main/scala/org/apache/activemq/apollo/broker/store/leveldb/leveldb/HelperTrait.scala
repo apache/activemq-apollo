@@ -17,24 +17,25 @@
 package org.apache.activemq.apollo.broker.store.leveldb
 
 import org.fusesource.hawtbuf._
-import java.util.concurrent.TimeUnit
 import org.iq80.leveldb._
-import org.fusesource.leveldbjni.JniDBFactory._
-import java.io.{DataOutput, DataOutputStream}
+import java.io.DataOutput
 
 object HelperTrait {
 
   def encode(a1:Long):Array[Byte] = {
-    val out = new DataByteArrayOutputStream(
-      AbstractVarIntSupport.computeVarLongSize(a1)
-    )
-    out.writeVarLong(a1)
+//    val out = new DataByteArrayOutputStream(
+//      AbstractVarIntSupport.computeVarLongSize(a1)
+//    )
+//    out.writeVarLong(a1)
+    val out = new DataByteArrayOutputStream(8)
+    out.writeLong(a1)
     out.getData
   }
 
   def decode_long(bytes:Array[Byte]):Long = {
     val in = new DataByteArrayInputStream(bytes)
-    in.readVarLong()
+//    in.readVarLong()
+    in.readLong()
   }
 
   def encode(a1:Byte, a2:Long):Array[Byte] = {
@@ -83,6 +84,8 @@ object HelperTrait {
 
   final class RichDB(val db: DB) {
 
+    val is_pure_java_version = db.getClass.getName == "org.iq80.leveldb.impl.DbImpl"
+    
     def getProperty(name:String) = db.getProperty(name)
 
     def getApproximateSizes(ranges:Range*) = db.getApproximateSizes(ranges:_*)
@@ -173,7 +176,11 @@ object HelperTrait {
       iterator.seek(start_included);
       try {
         def check(key:Array[Byte]) = {
-          (compare(key,end_excluded) < 0) && func(key)
+          if ( compare(key,end_excluded) < 0) {
+            func(key)
+          } else {
+            false
+          }
         }
         while( iterator.hasNext && check(iterator.peekNext.getKey) ) {
           iterator.next()
@@ -199,32 +206,44 @@ object HelperTrait {
     }
 
     def last_key(prefix:Array[Byte], ro:ReadOptions=new ReadOptions): Option[Array[Byte]] = {
-      val copy = new Buffer(prefix).deepCopy().data
-      if ( copy.length > 0 ) {
-        val pos = copy.length-1
-        copy(pos) = (copy(pos)+1).toByte
+      val last = new Buffer(prefix).deepCopy().data
+      if ( last.length > 0 ) {
+        val pos = last.length-1
+        last(pos) = (last(pos)+1).toByte
       }
-      val iterator = db.iterator(ro)
-      try {
-        iterator.seek(copy);
-        if ( iterator.hasPrev ) {
-          iterator.prev()
-        } else {
-          iterator.seekToLast()
+
+      if(is_pure_java_version) {
+        // The pure java version of LevelDB does not support backward iteration.
+        var rc:Option[Array[Byte]] = None
+        cursor_range_keys(prefix, last) { key=>
+          rc = Some(key)
+          true
         }
+        rc
+      } else {
+        val iterator = db.iterator(ro)
+        try {
         
-        if ( iterator.hasNext ) {
-          val key = iterator.peekNext.getKey
-          if(key.startsWith(prefix)) {
-            Some(key)
+          iterator.seek(last);
+          if ( iterator.hasPrev ) {
+            iterator.prev()
+          } else {
+            iterator.seekToLast()
+          }
+
+          if ( iterator.hasNext ) {
+            val key = iterator.peekNext.getKey
+            if(key.startsWith(prefix)) {
+              Some(key)
+            } else {
+              None
+            }
           } else {
             None
-          } 
-        } else {
-          None
+          }
+        } finally {
+          iterator.close();
         }
-      } finally {
-        iterator.close();
       }
     }
   }

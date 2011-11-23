@@ -102,7 +102,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         try {
           client.start()
           next_msg_key.set(client.getLastMessageKey + 1)
-          next_queue_key.set(client.getLastQueueKey + 1)
+          next_queue_key.set(client.get_last_queue_key + 1)
           poll_gc
           on_completed.run
         } catch {
@@ -188,31 +188,31 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
    */
   def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
     write_executor {
-      callback(Some(client.getLastQueueKey))
+      callback(Some(client.get_last_queue_key))
     }
   }
 
   def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     write_executor {
-     client.addQueue(record, ^{ callback(true) })
+     client.add_queue(record, ^{ callback(true) })
     }
   }
 
   def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
     write_executor {
-      client.removeQueue(queueKey,^{ callback(true) })
+      client.remove_queue(queueKey,^{ callback(true) })
     }
   }
 
   def get_queue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
     write_executor {
-      callback( client.getQueue(queueKey) )
+      callback( client.get_queue(queueKey) )
     }
   }
 
   def list_queues(callback: (Seq[Long]) => Unit) = {
     write_executor {
-      callback( client.listQueues )
+      callback( client.list_queues )
     }
   }
 
