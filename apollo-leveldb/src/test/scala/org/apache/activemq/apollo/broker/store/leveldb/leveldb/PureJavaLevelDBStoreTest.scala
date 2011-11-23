@@ -30,7 +30,7 @@ class PureJavaLevelDBStoreTest extends StoreFunSuiteSupport {
     new LevelDBStore({
       val rc = new LevelDBStoreDTO
       rc.index_factory = "org.iq80.leveldb.impl.Iq80DBFactory"
-      rc.directory = basedir / "target" / "apollo-data"
+      rc.directory = data_directory
       rc.flush_delay = flushDelay
       rc
     })

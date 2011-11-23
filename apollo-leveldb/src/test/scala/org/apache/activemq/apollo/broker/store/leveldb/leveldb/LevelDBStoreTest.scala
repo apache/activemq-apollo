@@ -28,7 +28,7 @@ class LevelDBStoreTest extends StoreFunSuiteSupport {
   def create_store(flushDelay:Long):Store = {
     new LevelDBStore({
       val rc = new LevelDBStoreDTO
-      rc.directory = basedir / "target" / "apollo-data"
+      rc.directory = data_directory
       rc.flush_delay = flushDelay
       rc
     })

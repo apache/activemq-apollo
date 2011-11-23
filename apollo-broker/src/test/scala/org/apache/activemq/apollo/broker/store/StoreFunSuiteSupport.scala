@@ -19,10 +19,11 @@ package org.apache.activemq.apollo.broker.store
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtdispatch.TaskTracker
 import java.util.concurrent.{TimeUnit, CountDownLatch}
-import org.scalatest.BeforeAndAfterEach
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
-import java.util.concurrent.atomic.AtomicLong
+import org.scalatest.BeforeAndAfterEach
+import java.io.File
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -54,8 +55,11 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     rc.value
   }
 
+  def data_directory = basedir / "target" / "apollo-data"
 
   override protected def beforeAll() = {
+    super.beforeAll()
+    data_directory.recursive_delete
     store = create_store(5*1000)
     val tracker = new LoggingTracker("store startup")
     tracker.start(store)
@@ -66,6 +70,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val tracker = new LoggingTracker("store stop")
     tracker.stop(store)
     tracker.await
+    super.afterAll()
   }
 
   override protected def beforeEach() = {

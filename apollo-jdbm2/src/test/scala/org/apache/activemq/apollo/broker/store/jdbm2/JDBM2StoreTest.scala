@@ -28,7 +28,7 @@ class JDBM2StoreTest extends StoreFunSuiteSupport {
   def create_store(flushDelay:Long):Store = {
     val rc = new JDBM2Store({
       val rc = new JDBM2StoreDTO
-      rc.directory = basedir / "activemq-data"
+      rc.directory = data_directory
       rc
     })
     rc.config.flush_delay = flushDelay

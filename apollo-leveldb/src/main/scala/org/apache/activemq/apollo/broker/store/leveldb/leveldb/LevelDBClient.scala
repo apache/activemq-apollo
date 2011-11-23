@@ -99,6 +99,26 @@ object LevelDBClient extends Log {
       size += value
     }
   }
+  
+  var link_strategy = 0
+  def link(source:File, target:File):Unit = {
+    link_strategy match {
+      case 0 =>
+        try {
+          Util.link(source, target)
+        } catch {
+          case e:IOException => throw e
+          case e:Throwable =>
+            // Fallback.. to a slower impl..
+            link_strategy = 100
+          link(source, target)
+        }
+
+      case _ =>
+        // this strategy is slow but sure to work.
+        source.copy_to(target)
+    }
+  }
 
 }
 
@@ -229,7 +249,7 @@ class LevelDBClient(store: LevelDBStore) {
         // Resume log replay from a snapshot of the index..
         try {
           file.list_files.foreach { file =>
-            Util.link(file, dirty_index_file / file.getName)
+            link(file, dirty_index_file / file.getName)
           }
         } catch {
           case e:Exception =>
@@ -365,9 +385,8 @@ class LevelDBClient(store: LevelDBStore) {
     try {
 
       // Hard link all the index files.
-      dirty_index_file.list_files.foreach {
-        file =>
-          Util.link(file, tmp_dir / file.getName)
+      dirty_index_file.list_files.foreach { file =>
+        link(file, tmp_dir / file.getName)
       }
 
       // Rename to signal that the snapshot is complete.
