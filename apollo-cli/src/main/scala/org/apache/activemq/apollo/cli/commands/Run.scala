@@ -28,6 +28,8 @@ import java.io.{FileInputStream, File}
 import java.util.logging.LogManager
 import org.apache.activemq.apollo.dto.BrokerDTO
 import collection.mutable.ListBuffer
+import java.lang.Thread.UncaughtExceptionHandler
+import java.lang.Throwable
 
 /**
  * The apollo run command
@@ -51,6 +53,16 @@ class Run extends Action {
 
     try {
 
+      // 
+      // Install an UncaughtExceptionHandler so that all exceptions get properly logged.
+      val exception_handler = new UncaughtExceptionHandler {
+        def uncaughtException(t: Thread, error: Throwable) {
+          Broker.warn(error)
+        }
+      }
+      Thread.setDefaultUncaughtExceptionHandler(exception_handler)
+      getGlobalQueue().sync(Thread.currentThread().setUncaughtExceptionHandler(exception_handler))
+      
       val base = system_dir("apollo.base")
       val etc: File = base / "etc"
 
@@ -96,7 +108,7 @@ class Run extends Action {
           Broker.warn("")
         }
       }
-
+      
       if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
         Broker.error("Strict validation was configured, shutting down")
         return null
@@ -124,7 +136,7 @@ class Run extends Action {
       } else {
         null
       }
-
+      
       if(jul_config_monitor!=null) jul_config_monitor.start
       log4j_config_monitor.start
       broker_config_monitor.start

@@ -113,7 +113,7 @@ trait Log {
   def warn(e: Throwable): Unit = {
     with_throwable(e) {
       if( log.isWarnEnabled ) {
-        log.warn(e.getMessage)
+        log.warn(e.toString)
       }
     }
   }
@@ -135,7 +135,7 @@ trait Log {
   def info(e: Throwable): Unit = {
     with_throwable(e) {
       if( log.isInfoEnabled ) {
-        log.info(e.getMessage)
+        log.info(e.toString)
       }
     }
   }
@@ -155,7 +155,7 @@ trait Log {
 
   def debug(e: Throwable): Unit = {
     if( log.isDebugEnabled ) {
-      log.debug(e.getMessage, e)
+      log.debug(e.toString, e)
     }
   }
 
@@ -173,7 +173,7 @@ trait Log {
 
   def trace(e: Throwable): Unit = {
     if( log.isTraceEnabled ) {
-      log.trace(e.getMessage, e)
+      log.trace(e.toString, e)
     }
   }
 
