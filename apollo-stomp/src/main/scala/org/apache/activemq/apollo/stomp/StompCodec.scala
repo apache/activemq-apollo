@@ -433,9 +433,8 @@ class StompCodec extends ProtocolCodec {
   }
 
   def read_headers(action:AsciiBuffer, headers:HeaderMapBuffer=new HeaderMapBuffer()):FrameReader = (buffer)=> {
-    var rc:StompFrame = null
-    val line = read_line(buffer, max_header_length, "The maximum header length was exceeded")
-    if( line !=null ) {
+    var line = read_line(buffer, max_header_length, "The maximum header length was exceeded")
+    while( line !=null ) {
       if( line.trim().length > 0 ) {
 
         if (max_headers != -1 && headers.size > max_headers) {
@@ -445,6 +444,9 @@ class StompCodec extends ProtocolCodec {
         try {
             val seperatorIndex = line.indexOf(COLON)
             if( seperatorIndex<0 ) {
+                println("===")
+                println(new AsciiBuffer(buffer.array(), 0, read_buffer_size))
+                println("===")
                 throw new IOException("Header line missing seperator [" + ascii(line) + "]")
             }
             var name = line.slice(0, seperatorIndex)
@@ -461,6 +463,7 @@ class StompCodec extends ProtocolCodec {
               throw new IOException("Unable to parser header line [" + line + "]")
         }
 
+        line = read_line(buffer, max_header_length, "The maximum header length was exceeded")
       } else {
         val contentLength = get(headers, CONTENT_LENGTH)
         if (contentLength.isDefined) {
@@ -504,9 +507,10 @@ class StompCodec extends ProtocolCodec {
         } else {
           next_action = read_text_body(action, headers)
         }
+        line = null
       }
     }
-    rc
+    null
   }
 
   def get(headers:HeaderMapBuffer, name:AsciiBuffer):Option[AsciiBuffer] = {
