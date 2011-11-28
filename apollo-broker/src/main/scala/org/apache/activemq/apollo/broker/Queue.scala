@@ -401,6 +401,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
                 tail_entry = new QueueEntry(Queue.this, next_message_seq)
             }
 
+            all_subscriptions.valuesIterator.foreach( _.rewind(head_entry) )
             debug("restored: " + enqueue_item_counter)
           }
           on_completed
@@ -580,9 +581,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     }
   }
 
-  def swap_messages = {
+  def swap_messages:Unit = {
     dispatch_queue.assertExecuting()
     now = System.currentTimeMillis()
+
+    if( !service_state.is_started )
+      return
 
     var cur = entries.getHead
     while( cur!=null ) {
@@ -1041,9 +1045,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   def label = state.label
 
-  def is_tail = this == queue.tail_entry
-  def is_head = this == queue.head_entry
-
+  def is_tail = as_tail!=null
+  def is_head = as_head!=null
   def is_loaded = as_loaded!=null
   def is_swapped = as_swapped!=null
   def is_swapped_range = as_swapped_range!=null
