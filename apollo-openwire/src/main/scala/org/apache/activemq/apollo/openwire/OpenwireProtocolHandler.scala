@@ -536,16 +536,35 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         get_tx_ctx(id).rollback
         ack(info)
 
-      case TransactionInfo.END =>
-        die("XA not yet supported")
-      case TransactionInfo.PREPARE =>
-        die("XA not yet supported")
-      case TransactionInfo.COMMIT_TWO_PHASE =>
-        die("XA not yet supported")
-      case TransactionInfo.RECOVER =>
-        die("XA not yet supported")
       case TransactionInfo.FORGET =>
-        die("XA not yet supported")
+        //die("XA not yet supported")
+        // get_tx_ctx(id).forget
+        ack(info)
+
+      case TransactionInfo.END =>
+        //die("XA not yet supported")
+        // get_tx_ctx(id).end
+        ack(info)
+
+      case TransactionInfo.PREPARE =>
+        // die("XA not yet supported")
+        // get_tx_ctx(id).prepare
+        ack(info)
+
+      case TransactionInfo.COMMIT_TWO_PHASE =>
+        // die("XA not yet supported")
+        get_tx_ctx(id).commit {
+          ack(info)
+        }
+
+      case TransactionInfo.RECOVER =>
+        // die("XA not yet supported")
+        val receipt = new DataArrayResponse
+        var data = Array[XATransactionId]()
+        receipt.setData(data)
+        receipt.setCorrelationId(info.getCommandId)
+        connection_session.offer(receipt);
+
 
       case _ =>
         fail("Transaction info type unknown: " + info.getType)
