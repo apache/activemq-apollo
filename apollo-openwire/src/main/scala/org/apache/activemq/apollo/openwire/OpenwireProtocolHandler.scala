@@ -560,7 +560,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       case TransactionInfo.RECOVER =>
         // die("XA not yet supported")
         val receipt = new DataArrayResponse
-        var data = Array[XATransactionId]()
+        var data = Array[DataStructure]()
         receipt.setData(data)
         receipt.setCorrelationId(info.getCommandId)
         connection_session.offer(receipt);
