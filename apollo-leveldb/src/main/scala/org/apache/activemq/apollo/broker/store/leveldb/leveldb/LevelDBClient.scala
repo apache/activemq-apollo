@@ -221,9 +221,14 @@ class LevelDBClient(store: LevelDBStore) {
       try {
         Some(Broker.class_loader.loadClass(name).newInstance().asInstanceOf[DBFactory])
       } catch {
-        case x => None
+        case x:Throwable =>
+          None
       }
     }.headOption.getOrElse(throw new Exception("Could not load any of the index factory classes: "+factory_names))
+
+    if( factory.getClass.getName == "org.iq80.leveldb.impl.Iq80DBFactory") {
+      warn("Using the pure java LevelDB implementation which is still experimental.  Production users should use the JNI based LevelDB implementation instead.")
+    }
 
     sync = config.sync.getOrElse(true);
     verify_checksums = config.verify_checksums.getOrElse(false);
