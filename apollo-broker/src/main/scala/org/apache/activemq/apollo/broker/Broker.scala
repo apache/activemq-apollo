@@ -42,7 +42,7 @@ import security.SecuredResource.BrokerKind
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait BrokerFactory {
+trait BrokerFactoryTrait {
   def createBroker(brokerURI:String):Broker
 }
 
@@ -55,7 +55,7 @@ trait BrokerFactory {
  */
 object BrokerFactory {
 
-  val finder = new ClassFinder[BrokerFactory]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[BrokerFactory])
+  val finder = new ClassFinder[BrokerFactoryTrait]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[BrokerFactoryTrait])
 
   def createBroker(uri:String):Broker = {
     if( uri == null ) {
