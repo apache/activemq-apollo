@@ -88,6 +88,8 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
 
   private class ShortCircuitFailure(msg:String) extends RuntimeException(msg)
 
+  def exit_within_with_failure[T](msg:String):T = throw new ShortCircuitFailure(msg)
+
   def within[T](timeout:Long, unit:TimeUnit)(func: => Unit ):Unit = {
     val start = System.currentTimeMillis
     var amount = unit.toMillis(timeout)
