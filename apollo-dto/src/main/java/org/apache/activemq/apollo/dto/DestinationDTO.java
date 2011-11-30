@@ -31,21 +31,14 @@ import java.util.List;
  */
 @XmlType(name = "destination")
 @XmlSeeAlso({QueueDestinationDTO.class, DurableSubscriptionDestinationDTO.class})
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 @XmlAccessorType(XmlAccessType.FIELD)
 abstract public class DestinationDTO {
 
     @XmlElement(name = "path")
     public List<String> path = new ArrayList<String>();
 
-    /**
-     * If the destination is a temporary destination, then it
-     * will have temp_owner set to the owner of the connection
-     * id which owns the destination.  Only the owner will be allowed
-     * to consume from the destination.
-     */
-    @XmlAttribute(name="temp_owner")
-    public Long temp_owner;
+    public boolean temp;
 
     public DestinationDTO() {
     }
@@ -59,9 +52,9 @@ abstract public class DestinationDTO {
     }
 
     public String name(String separator) {
-        StringBuilder sb  = new StringBuilder();
-        for( String p : path) {
-            if( sb.length() != 0 ) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : path) {
+            if (sb.length() != 0) {
                 sb.append(separator);
             }
             sb.append(p);
@@ -69,33 +62,40 @@ abstract public class DestinationDTO {
         return sb.toString();
     }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof DestinationDTO)) return false;
+    public boolean temp() {
+        return temp;
+    }
 
-    DestinationDTO that = (DestinationDTO) o;
+    public DestinationDTO temp(boolean temp) {
+        this.temp = temp;
+        return this;
+    }
 
-    if (path != null ? !path.equals(that.path) : that.path != null)
-      return false;
-    if (temp_owner != null ? !temp_owner.equals(that.temp_owner) : that.temp_owner != null)
-      return false;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DestinationDTO)) return false;
 
-    return true;
-  }
+        DestinationDTO that = (DestinationDTO) o;
 
-  @Override
-  public int hashCode() {
-    int result = path != null ? path.hashCode() : 0;
-    result = 31 * result + (temp_owner != null ? temp_owner.hashCode() : 0);
-    return result;
-  }
+        if (temp != that.temp) return false;
+        if (!path.equals(that.path)) return false;
 
-  @Override
-  public String toString() {
-    return "DestinationDTO{" +
-            "path=" + path +
-            ", temp_owner=" + temp_owner +
-            '}';
-  }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = path.hashCode();
+        result = 31 * result + (temp ? 1 : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "DestinationDTO{" +
+                "path=" + path +
+                '}';
+    }
+
 }

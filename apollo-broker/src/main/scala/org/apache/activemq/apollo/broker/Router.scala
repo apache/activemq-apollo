@@ -47,6 +47,8 @@ trait Router extends Service {
   def create(destinations:Array[DestinationDTO], security:SecurityContext): Option[String] @suspendable
 
   def apply_update(on_completed:Runnable):Unit
+
+  def remove_temp_destinations(active_connections:scala.collection.Set[Long]):Unit
 }
 
 /**

@@ -1641,3 +1641,108 @@ class StompAutoDeleteTest extends StompTestSupport {
 
   }
 }
+
+
+class StompTempDestinationTest extends StompTestSupport {
+
+  def path_separator = "."
+
+  test("Temp Queue Send Receive") {
+    connect("1.1")
+
+    def put(msg:String) = {
+      client.write(
+        "SEND\n" +
+        "destination:/temp-queue/test\n" +
+        "reply-to:/temp-queue/test\n" +
+        "\n" +
+        "message:"+msg+"\n")
+    }
+    put("1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/temp-queue/test\n" +
+      "id:1\n" +
+      "\n")
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+
+      // extract headers as a map of values.
+      Map((frame.split("\n").reverse.flatMap { line =>
+        if( line.contains(":") ) {
+          val parts = line.split(":", 2)
+          Some((parts(0), parts(1)))
+        } else {
+          None
+        }
+      }):_*)
+    }
+
+    // The destination and reply-to headers should get updated with actual
+    // Queue names
+    val message = get("1")
+    message.get("destination").get should startWith("/queue/temp.default.")
+    message.get("reply-to") should be === ( message.get("destination") )
+  }
+
+  test("Temp Topic Send Receive") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/temp-topic/test\n" +
+      "id:1\n" +
+      "\n")
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+
+      // extract headers as a map of values.
+      Map((frame.split("\n").reverse.flatMap { line =>
+        if( line.contains(":") ) {
+          val parts = line.split(":", 2)
+          Some((parts(0), parts(1)))
+        } else {
+          None
+        }
+      }):_*)
+    }
+
+    def put(msg:String) = {
+      client.write(
+        "SEND\n" +
+        "destination:/temp-topic/test\n" +
+        "reply-to:/temp-topic/test\n" +
+        "\n" +
+        "message:"+msg+"\n")
+    }
+    put("1")
+
+    // The destination and reply-to headers should get updated with actual
+    // Queue names
+    val message = get("1")
+    message.get("destination").get should startWith("/topic/temp.default.")
+    message.get("reply-to") should be === ( message.get("destination") )
+  }
+
+  test("Receive not allowed on another connection's temp queue") {
+
+    connect("1.1")
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/temp.default.1212112.test\n" +
+      "id:1\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include regex("""message:Not authorized to receive from the temporary destination""")
+
+  }
+}

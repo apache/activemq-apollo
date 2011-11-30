@@ -77,6 +77,12 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="topic_prefix")
     public String topic_prefix;
 
+    @XmlAttribute(name="temp_queue_prefix")
+    public String temp_queue_prefix;
+
+    @XmlAttribute(name="temp_topic_prefix")
+    public String temp_topic_prefix;
+
     @XmlAttribute(name="destination_separator")
     public String destination_separator;
 

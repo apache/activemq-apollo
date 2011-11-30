@@ -289,7 +289,8 @@ class Broker() extends BaseService with SecuredResource {
     check_file_limit
 
     BrokerRegistry.add(this)
-    schedule_periodic_maintenance
+    schedule_now_update
+    schedule_virtualhost_maintenance
 
     val tracker = new LoggingTracker("broker startup", console_log, SERVICE_TIMEOUT)
     apply_update(tracker)
@@ -333,13 +334,28 @@ class Broker() extends BaseService with SecuredResource {
 
   }
 
-  def schedule_periodic_maintenance:Unit = dispatch_queue.after(100, TimeUnit.MILLISECONDS) {
+  def schedule_now_update:Unit = dispatch_queue.after(100, TimeUnit.MILLISECONDS) {
     if( service_state.is_starting_or_started ) {
       now = System.currentTimeMillis
-      schedule_periodic_maintenance
+      schedule_now_update
     }
   }
 
+  def schedule_virtualhost_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
+    if( service_state.is_started ) {
+      val active_connections = connections.keySet
+
+      virtual_hosts.values.foreach { host=>
+        host.dispatch_queue {
+          if(host.service_state.is_started) {
+            host.router.remove_temp_destinations(active_connections)
+          }
+        }
+      }
+
+      schedule_virtualhost_maintenance
+    }
+  }
   protected def init_logs = {
     import OptionSupport._
     // Configure the logging categories...

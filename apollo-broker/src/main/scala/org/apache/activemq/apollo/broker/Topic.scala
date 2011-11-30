@@ -33,7 +33,7 @@ import security.SecuredResource
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, path:Path) extends DomainDestination with SecuredResource {
+class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, val path:Path) extends DomainDestination with SecuredResource {
 
   val topic_metrics = new DestMetricsDTO
 

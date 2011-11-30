@@ -34,11 +34,11 @@ import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
 import scala.util.continuations._
-import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.transport.tcp.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
+import org.apache.activemq.apollo.dto._
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -138,8 +138,7 @@ class StompProtocolHandler extends ProtocolHandler {
     override val browser:Boolean,
     override val exclusive:Boolean,
     val auto_delete:Boolean,
-    val initial_credit_window:(Int,Int, Boolean),
-    val temp:Boolean
+    val initial_credit_window:(Int,Int, Boolean)
   ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
@@ -164,10 +163,6 @@ class StompProtocolHandler extends ProtocolHandler {
 //      printST("release")
 //      r.release
 //    }
-
-    if( temp ) {
-      destination.foreach(_.temp_owner = connection.get.id)
-    }
 
     val ack_source = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
       def mergeEvent(previous:(Int, Int), event:(Int, Int)) = {
@@ -427,7 +422,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def dispose = {
         session_manager.close(downstream)
-        if( auto_delete || temp) {
+        if( auto_delete ) {
           reset {
             val rc = host.router.delete(destination, security_context)
             rc match {
@@ -489,6 +484,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var protocol_filters = List[ProtocolFilter]()
 
   var destination_parser = Stomp.destination_parser
+  var temp_destination_map = HashMap[DestinationDTO, DestinationDTO]()
 
   var codec:StompCodec = _
 
@@ -497,8 +493,24 @@ class StompProtocolHandler extends ProtocolHandler {
     if( rc==null ) {
       throw new ProtocolException("Invalid stomp destiantion name: "+value);
     }
-    rc
+    rc.map { dest =>
+      if( dest.temp() ) {
+        temp_destination_map.getOrElseUpdate(dest, {
+          import scala.collection.JavaConversions._
+          val real_path= ("temp" :: broker.id :: connection.id.toString :: dest.path.toList).toArray
+          dest match {
+            case dest:QueueDestinationDTO => new QueueDestinationDTO( real_path ).temp(true)
+            case dest:TopicDestinationDTO => new TopicDestinationDTO( real_path ).temp(true)
+            case _ => throw new ProtocolException("Invalid stomp destination");
+          }
+        })
+      } else {
+        dest
+      }
+    }
   }
+
+
 
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
@@ -528,6 +540,8 @@ class StompProtocolHandler extends ProtocolHandler {
       destination_parser = new DestinationParser().copy(Stomp.destination_parser)
       if( config.queue_prefix!=null ) { destination_parser.queue_prefix = config.queue_prefix }
       if( config.topic_prefix!=null ) { destination_parser.topic_prefix = config.topic_prefix }
+      if( config.temp_queue_prefix!=null ) { destination_parser.temp_queue_prefix = config.temp_queue_prefix }
+      if( config.temp_topic_prefix!=null ) { destination_parser.temp_topic_prefix = config.temp_topic_prefix }
       if( config.destination_separator!=null ) { destination_parser.destination_separator = config.destination_separator }
       if( config.path_separator!=null ) { destination_parser.path_separator = config.path_separator }
       if( config.any_child_wildcard!=null ) { destination_parser.any_child_wildcard = config.any_child_wildcard }
@@ -888,8 +902,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
 
-    val destiantion: Array[DestinationDTO] = get(frame.headers, DESTINATION).get
-    val key = destiantion.toList
+    val destination: Array[DestinationDTO] = get(frame.headers, DESTINATION).get
+    val key = destination.toList
     producerRoutes.get(key) match {
       case null =>
         // create the producer route...
@@ -907,7 +921,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // don't process frames until producer is connected...
         connection.transport.suspendRead
         reset {
-          val rc = host.router.connect(destiantion, route, security_context)
+          val rc = host.router.connect(destination, route, security_context)
           rc match {
             case Some(failure) =>
               async_die(failure)
@@ -915,22 +929,33 @@ class StompProtocolHandler extends ProtocolHandler {
               if (!connection.stopped) {
                 resumeRead
                 producerRoutes.put(key, route)
-                send_via_route(route, frame, uow)
+                send_via_route(destination, route, frame, uow)
               }
           }
         }
 
       case route =>
         // we can re-use the existing producer route
-        send_via_route(route, frame, uow)
+        send_via_route(destination, route, frame, uow)
 
     }
   }
 
   var message_id_counter = 0;
 
-  def updated_headers(headers:HeaderMap) = {
+  def updated_headers(destination: Array[DestinationDTO], headers:HeaderMap) = {
     var rc:HeaderMap=Nil
+
+    // Do we need to re-write the destination names?
+    if( destination.find(_.temp()).isDefined ) {
+      rc ::= (DESTINATION -> encode_header(destination_parser.encode_destination(destination)))
+    }
+    get(headers, REPLY_TO).foreach { value=>
+      val dests:Array[DestinationDTO] = value
+      if( dests.find(_.temp()).isDefined ) {
+        rc ::= (REPLY_TO -> encode_header(destination_parser.encode_destination(dests)))
+      }
+    }
 
     // Do we need to add the message id?
     if( get( headers, MESSAGE_ID) == None ) {
@@ -969,7 +994,7 @@ class StompProtocolHandler extends ProtocolHandler {
     rc
   }
 
-  def send_via_route(route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
+  def send_via_route(destination: Array[DestinationDTO], route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
     var storeBatch:StoreUOW=null
     // User might be asking for ack that we have processed the message..
     val receipt = frame.header(RECEIPT_REQUESTED)
@@ -977,7 +1002,7 @@ class StompProtocolHandler extends ProtocolHandler {
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
-      var message = updated_headers(frame.headers) match {
+      var message = updated_headers(destination, frame.headers) match {
         case Nil=>
           StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content))
         case updated_headers =>
@@ -1036,7 +1061,6 @@ class StompProtocolHandler extends ProtocolHandler {
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
     var auto_delete = get(headers, AUTO_DELETE).map( _ == TRUE ).getOrElse(false)
-    var temp = get(headers, TEMP).map( _ == TRUE ).getOrElse(false)
 
     val ack_mode = get(headers, ACK_MODE).getOrElse(ACK_MODE_AUTO)
     val credit_window = get(headers, CREDIT) match {
@@ -1095,7 +1119,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window, temp);
+    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window);
     consumers += (id -> consumer)
 
     reset {

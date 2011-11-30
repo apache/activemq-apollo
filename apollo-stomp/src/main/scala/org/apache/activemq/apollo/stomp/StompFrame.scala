@@ -300,6 +300,8 @@ object Stomp {
   destination_parser.queue_prefix = "/queue/"
   destination_parser.topic_prefix = "/topic/"
   destination_parser.dsub_prefix = "/dsub/"
+  destination_parser.temp_queue_prefix = "/temp-queue/"
+  destination_parser.temp_topic_prefix = "/temp-topic/"
   destination_parser.destination_separator = ","
   destination_parser.path_separator = "."
   destination_parser.any_child_wildcard = "*"

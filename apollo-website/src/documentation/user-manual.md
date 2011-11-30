@@ -1418,6 +1418,56 @@ an error message.
 The auto-delete feature does not work with composite or wildcard destinations.
 it also does not work with topics or durable subscriptions.
 
+
+### Temporary Destinations
+
+Temporary destinations are typically used to receive response messages in
+a request/response messaging exchange.  A temporary destination can only
+be consumed by a subscription created on the connection which is associated
+with the temporary destination.  Once the connection is closed, all associated
+temporary destinations are removed. Temporary destinations are prefixed with:
+
+* `/temp-queue/` - For temporary queues.  Has the same delivery semantics as queues.
+* `/temp-topic/` - For temporary topics.  It has the same delivery semantics of topics.
+
+In a request/response scenario, you would first subscribe to the temporary topic:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/temp-queue/example
+    
+    ^@
+
+Then you would send a request with the reply-to header set to the temporary destination. 
+Example:
+
+    SEND
+    destination:/queue/PO.REQUEST
+    reply-to:/temp-queue/example
+
+    PO145
+    ^@
+
+The consumer receiving the request will receive a message similar to:
+
+    MESSAGE
+    subscription:foo
+    reply-to:/queue/temp.default.23.example
+    destination:/queue/PO.REQUEST
+    reply-to:/temp-queue/example
+    
+    PO145
+
+Notice that the reply-to` header value is updated from a temporary destination
+name to normal destination name.  The subscription servicing he requests should respond
+to the updated destination value (`/queue/temp.default.23.example` in the example above).
+
+Temporary destination names actually map to normal queues and topics. They just have
+a `temp.<broker_id>.<connection_id>.` prefix.  Any destination which starts with
+`temp.` has a security policy which only allows the connection which created it
+to subscribe from it.  These destinations are also auto deleted once the connection
+is closed.
+
 ### Destination Wildcards
 
 We support destination wildcards to easily subscribe to multiple destinations
@@ -1494,6 +1544,4 @@ header in the STOMP `SUBSCRIBE` frame to the desired selector. Example:
 Destination names are restricted to using the characters `a-z`, `A-Z`, `0-9`,
 `_`, `-` `%`, `~`, or `.` in addition to composite separator `,` and the wild
 card `*`.
-
-
 

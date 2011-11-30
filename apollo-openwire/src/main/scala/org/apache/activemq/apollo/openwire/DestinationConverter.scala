@@ -36,8 +36,8 @@ object DestinationConverter {
   OPENWIRE_PARSER.any_descendant_wildcard = ">"
 
   def to_destination_dto(domain: String, parts:Array[String]): DestinationDTO = domain match {
-    case LocalRouter.QUEUE_DOMAIN => new QueueDestinationDTO(parts)
-    case LocalRouter.TOPIC_DOMAIN => new TopicDestinationDTO(parts)
+    case "queue" => new QueueDestinationDTO(parts)
+    case "topic" => new TopicDestinationDTO(parts)
     case _ => throw new Exception("Uknown destination domain: " + domain);
   }
 
@@ -53,13 +53,13 @@ object DestinationConverter {
       var path = OPENWIRE_PARSER.decode_path(physicalName)
       dest.getDestinationType match {
         case QUEUE_TYPE =>
-          to_destination_dto(LocalRouter.QUEUE_DOMAIN, path)
+          to_destination_dto("queue", path)
         case TOPIC_TYPE =>
-          to_destination_dto(LocalRouter.TOPIC_DOMAIN, path)
+          to_destination_dto("topic", path)
         case TEMP_QUEUE_TYPE =>
-          to_destination_dto(LocalRouter.QUEUE_DOMAIN, Path("ActiveMQ", "Temp") + path)
+          to_destination_dto("queue", Path("ActiveMQ", "Temp") + path)
         case TEMP_TOPIC_TYPE =>
-          to_destination_dto(LocalRouter.TOPIC_DOMAIN, Path("ActiveMQ", "Temp") + path)
+          to_destination_dto("topic", Path("ActiveMQ", "Temp") + path)
       }
     } else {
       dest.getCompositeDestinations.map { c =>
@@ -72,7 +72,7 @@ object DestinationConverter {
     import collection.JavaConversions._
 
     val rc = dest.map { dest =>
-      var temp = dest.temp_owner != null
+      var temp = false // dest.temp_owner != null
       val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList match {
         case "ActiveMQ" :: "Temp" :: rest =>
           temp = true

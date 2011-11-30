@@ -140,13 +140,6 @@ object LocalRouter extends Log {
 
   val destination_parser = new DestinationParser
 
-  val TOPIC_DOMAIN = "topic"
-  val QUEUE_DOMAIN = "queue"
-  val DSUB_DOMAIN = "dsub"
-
-  val QUEUE_KIND = "queue"
-  val DEFAULT_QUEUE_PATH = "default"
-
   def is_wildcard_config(dto:StringIdDTO) = {
     if( dto.id == null ) {
       true
@@ -209,6 +202,23 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   private val ALL = new Path(List(AnyDescendantPart))
 
   def authorizer = virtual_host.authorizer
+  
+  
+  def is_temp(destination:DestinationDTO) = {
+    destination.getClass!=classOf[DurableSubscriptionDestinationDTO] && destination.path.size() >= 1 && destination.path.get(0) == "temp"
+  }
+  
+  def temp_owner(destination:DestinationDTO) = {
+    if( destination.path.size() < 3 ) {
+      None
+    } else {
+      try {
+        Some((destination.path.get(1), destination.path.get(2).toLong))
+      } catch {
+        case _ => None
+      }
+    }
+  }
 
   trait Domain[D <: DomainDestination] {
 
@@ -272,10 +282,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
 
       for(dest <- get_destination_matches(path)) {
-
-        if( destination.temp_owner != null ) {
+        if( is_temp(destination) ) {
+          val owner = temp_owner(destination).get
           for( connection <- security.connection_id) {
-            if( connection != destination.temp_owner.longValue() ) {
+            if( (virtual_host.broker.id, connection) != owner ) {
               return Some("Not authorized to destroy the temp %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
             }
           }
@@ -297,11 +307,16 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       }
 
       // Only allow the owner to bind.
-      if( destination.temp_owner != null ) {
-        for( connection <- security.connection_id) {
-          if( connection != destination.temp_owner.longValue() ) {
-            return Some("Not authorized to receive from the temporary destination. Principals=%s".format(security.principal_dump))
-          }
+      if( is_temp(destination) ) {
+        temp_owner(destination) match {
+          case Some(owner) =>
+            for( connection <- security.connection_id) {
+              if( (virtual_host.broker.id, connection) != owner ) {
+                return Some("Not authorized to receive from the temporary destination. Principals=%s".format(security.principal_dump))
+              }
+            }
+          case None =>
+            return Some("Invalid temp destination name. Owner id missing")
         }
       }
 
@@ -509,6 +524,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
             case queue:Queue =>
               // Delete any attached queue consumers..
               _destroy_queue(queue)
+            case _ =>
           }
         }
 
@@ -876,7 +892,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
                     virtual_host.store.remove_queue(queue_key){x=> task.run}
                   } else {
                     var binding = BindingFactory.create(record.binding_kind, record.binding_data)
-                    if( binding.binding_dto.temp_owner != null ) {
+                    if( is_temp(binding.binding_dto) ) {
                       // These are the temp queues clients create.
                       virtual_host.store.remove_queue(queue_key){x=> task.run}
                     } else {
@@ -907,6 +923,25 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       create_configure_destinations
       on_completed.run()
+    }
+
+
+  }
+  
+  def remove_temp_destinations(active_connections:scala.collection.Set[Long]) = {
+    virtual_host.dispatch_queue.assertExecuting()
+    // Auto delete temp destinations..
+    queue_domain.destinations.filter(x=> is_temp(x.destination_dto)).foreach { queue=>
+      val owner = temp_owner(queue.destination_dto).get
+      if( owner._1==virtual_host.broker.id && !active_connections.contains(owner._2) ) {
+        _destroy_queue(queue)
+      }
+    }
+    topic_domain.destinations.filter(x=> is_temp(x.destination_dto)).foreach { topic =>
+      val owner = temp_owner(topic.destination_dto).get
+      if( owner._1==virtual_host.broker.id && !active_connections.contains(owner._2) ) {
+        topic_domain.destroy_destination(topic.path, topic.destination_dto, null)
+      }
     }
   }
 

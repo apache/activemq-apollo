@@ -488,9 +488,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def on_destination_info(info:DestinationInfo) = {
     val destinations = to_destination_dto(info.getDestination)
-    if( info.getDestination.isTemporary ) {
-      destinations.foreach(_.temp_owner = connection.id)
-    }
+//    if( info.getDestination.isTemporary ) {
+//      destinations.foreach(_.temp_owner = connection.id)
+//    }
     reset{
       val rc = info.getOperationType match {
         case DestinationInfo.ADD_OPERATION_TYPE=>
@@ -806,9 +806,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       // if they are temp dests.. attach our owner id so that we don't
       // get rejected.
-      if( info.getDestination.isTemporary ) {
-        destination.foreach(_.temp_owner = connection.get.id)
-      }
+//      if( info.getDestination.isTemporary ) {
+//        destination.foreach(_.temp_owner = connection.get.id)
+//      }
 
       parent.consumers.put(info.getConsumerId, this)
       all_consumers.put(info.getConsumerId, this)

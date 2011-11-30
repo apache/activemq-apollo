@@ -27,7 +27,7 @@ import org.fusesource.hawtbuf.AsciiBuffer
 import java.net.URL
 import org.apache.activemq.apollo.util._
 import collection.mutable.{ArrayBuffer, ListBuffer}
-import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, DestinationDTO, BrokerDTO}
+import org.apache.activemq.apollo.dto._
 
 /**
  *
@@ -214,16 +214,11 @@ abstract class BrokerPerfSupport extends FunSuiteSupport with BeforeAndAfterEach
     var dests = new Array[DestinationDTO](destCount)
 
     for (i <- 0 until destCount) {
-      val domain = if (PTP) {LocalRouter.QUEUE_DOMAIN} else {LocalRouter.TOPIC_DOMAIN}
       val name ="dest" + (i + 1)
-      var bean = DestinationParser.create_destination(domain, Array(name))
-      dests(i) = bean
-      //        if (PTP) {
-      //          sendBroker.defaultVirtualHost.createQueue(dests(i))
-      //          if (MULTI_BROKER) {
-      //            rcvBroker.defaultVirtualHost.createQueue(dests(i))
-      //          }
-      //        }
+      dests(i) = if (PTP)
+        new QueueDestinationDTO(Array(name))
+      else
+        new TopicDestinationDTO(Array(name))
     }
     dests
   }
