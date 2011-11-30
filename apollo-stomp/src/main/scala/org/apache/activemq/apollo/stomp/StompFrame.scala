@@ -407,7 +407,6 @@ object Stomp {
   val BROWSER = ascii("browser")
   val EXCLUSIVE = ascii("exclusive")
   val USER_ID = ascii("user-id")
-  val AUTO_DELETE = ascii("auto-delete")
   val TEMP = ascii("temp")
 
   ///////////////////////////////////////////////////////////////////

@@ -137,7 +137,6 @@ class StompProtocolHandler extends ProtocolHandler {
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
     override val exclusive:Boolean,
-    val auto_delete:Boolean,
     val initial_credit_window:(Int,Int, Boolean)
   ) extends BaseRetained with DeliveryConsumer {
 
@@ -422,17 +421,6 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def dispose = {
         session_manager.close(downstream)
-        if( auto_delete ) {
-          reset {
-            val rc = host.router.delete(destination, security_context)
-            rc match {
-              case Some(error) =>
-                async_die(error)
-              case None =>
-                unit
-            }
-          }
-        }
         release
       }
 
@@ -1060,7 +1048,6 @@ class StompProtocolHandler extends ProtocolHandler {
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
     var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
-    var auto_delete = get(headers, AUTO_DELETE).map( _ == TRUE ).getOrElse(false)
 
     val ack_mode = get(headers, ACK_MODE).getOrElse(ACK_MODE_AUTO)
     val credit_window = get(headers, CREDIT) match {
@@ -1076,16 +1063,6 @@ class StompProtocolHandler extends ProtocolHandler {
         }
       case None =>
         (codec.write_buffer_size, 1, true)
-    }
-
-    if(auto_delete) {
-      if( destination.length != 1 ) {
-        die("The auto-delete subscription header cannot be used in conjunction with composite destinations");
-      }
-      val path = destination_parser.decode_path(destination.head.path)
-      if( PathParser.containsWildCards(path) ) {
-        die("The auto-delete subscription header cannot be used in conjunction with wildcard destinations");
-      }
     }
 
     val selector = get(headers, SELECTOR) match {
@@ -1119,7 +1096,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, auto_delete, credit_window);
+    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, credit_window);
     consumers += (id -> consumer)
 
     reset {

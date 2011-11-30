@@ -1600,58 +1600,6 @@ class StompExpirationTest extends StompTestSupport {
   }
 }
 
-class StompAutoDeleteTest extends StompTestSupport {
-
-  def path_separator = "."
-
-  test("Messages Expire") {
-    connect("1.1")
-
-    def put(msg:String) = {
-      client.write(
-        "SEND\n" +
-        "destination:/queue/autodel\n" +
-        "\n" +
-        "message:"+msg+"\n")
-    }
-
-    put("1")
-
-    Thread.sleep(2000)
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/autodel\n" +
-      "auto-delete:true\n" +
-      "id:1\n" +
-      "\n")
-
-    def get(dest:String) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith("\n\nmessage:%s\n".format(dest))
-    }
-    get("1")
-
-    // The queue should still exist..
-    expect(true)(queue_exists("autodel"))
-
-    client.write(
-      "UNSUBSCRIBE\n" +
-      "id:1\n" +
-      "receipt:0\n"+
-      "\n")
-    wait_for_receipt("0")
-
-    Thread.sleep(1000);
-
-    // Now that we unsubscribe, it should not exist any more.
-    expect(false)(queue_exists("autodel"))
-
-  }
-}
-
-
 class StompTempDestinationTest extends StompTestSupport {
 
   def path_separator = "."
@@ -1729,11 +1677,11 @@ class StompTempDestinationTest extends StompTestSupport {
 
     // Check that temp queue is deleted once the client disconnects
     put("2")
-    assert(queue_exists(actual_temp_dest_name))
+    expect(true)(queue_exists(actual_temp_dest_name.stripPrefix("/queue/")))
     client.close();
 
-    within(5, SECONDS) {
-      assert(!queue_exists(actual_temp_dest_name))
+    within(10, SECONDS) {
+      expect(false)(queue_exists(actual_temp_dest_name.stripPrefix("/queue/")))
     }
   }
 
@@ -1809,11 +1757,11 @@ class StompTempDestinationTest extends StompTestSupport {
 
     // Check that temp queue is deleted once the client disconnects
     put("2")
-    assert(topic_exists(actual_temp_dest_name))
+    expect(true)(topic_exists(actual_temp_dest_name.stripPrefix("/topic/")))
     client.close();
 
-    within(5, SECONDS) {
-      assert(!topic_exists(actual_temp_dest_name))
+    within(10, SECONDS) {
+      expect(false)(topic_exists(actual_temp_dest_name.stripPrefix("/topic/")))
     }
 
 
