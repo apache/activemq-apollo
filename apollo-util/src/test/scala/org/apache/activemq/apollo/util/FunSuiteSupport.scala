@@ -24,6 +24,7 @@ import java.lang.String
 import collection.immutable.Map
 import org.scalatest._
 import FileSupport._
+import java.util.concurrent.TimeUnit
 
 /**
  * @version $Revision : 1.1 $
@@ -85,4 +86,36 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
     }
   }
 
+  private class ShortCircuitFailure(msg:String) extends RuntimeException(msg)
+
+  def within[T](timeout:Long, unit:TimeUnit)(func: => Unit ):Unit = {
+    val start = System.currentTimeMillis
+    var amount = unit.toMillis(timeout)
+    var sleep_amount = amount / 100
+    var last:Throwable = null
+
+    if( sleep_amount < 1 ) {
+      sleep_amount = 1
+    }
+    try {
+      func
+      return
+    } catch {
+      case e:ShortCircuitFailure => throw e
+      case e:Throwable => last = e
+    }
+
+    while( (System.currentTimeMillis-start) < amount ) {
+      Thread.sleep(sleep_amount)
+      try {
+        func
+        return
+      } catch {
+        case e:ShortCircuitFailure => throw e
+        case e:Throwable => last = e
+      }
+    }
+
+    throw last
+  }
 }

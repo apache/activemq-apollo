@@ -930,16 +930,24 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   
   def remove_temp_destinations(active_connections:scala.collection.Set[Long]) = {
     virtual_host.dispatch_queue.assertExecuting()
+    val min_create_time = virtual_host.broker.now + 1000;
+
     // Auto delete temp destinations..
     queue_domain.destinations.filter(x=> is_temp(x.destination_dto)).foreach { queue=>
       val owner = temp_owner(queue.destination_dto).get
-      if( owner._1==virtual_host.broker.id && !active_connections.contains(owner._2) ) {
+      if( owner._1==virtual_host.broker.id // are we the broker that owns the temp destination?
+          && !active_connections.contains(owner._2) // Has the connection not around?
+          && queue.service_state.since > min_create_time // It's not a recently created destination?
+      ) {
         _destroy_queue(queue)
       }
     }
     topic_domain.destinations.filter(x=> is_temp(x.destination_dto)).foreach { topic =>
       val owner = temp_owner(topic.destination_dto).get
-      if( owner._1==virtual_host.broker.id && !active_connections.contains(owner._2) ) {
+      if( owner._1==virtual_host.broker.id // are we the broker that owns the temp destination?
+          && !active_connections.contains(owner._2) // Has the connection not around?
+          && topic.created_at > min_create_time // It's not a recently created destination?
+      ) {
         topic_domain.destroy_destination(topic.path, topic.destination_dto, null)
       }
     }

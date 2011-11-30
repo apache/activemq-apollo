@@ -26,6 +26,7 @@ import java.net.InetSocketAddress
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.{LocalRouter, KeyStorage, Broker, BrokerFactory}
 import org.fusesource.hawtbuf.Buffer._
+import java.util.concurrent.TimeUnit._
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -91,6 +92,22 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     val frame = c.receive()
     frame should startWith("RECEIPT\n")
     frame should include("receipt-id:"+id+"\n")
+  }
+
+  def queue_exists(name:String):Boolean = {
+    val host = broker.virtual_hosts.get(ascii("default")).get
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.queue_domain.destination_by_id.get(name).isDefined
+    }.await()
+  }
+
+  def topic_exists(name:String):Boolean = {
+    val host = broker.virtual_hosts.get(ascii("default")).get
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.topic_domain.destination_by_id.get(name).isDefined
+    }.await()
   }
 
 }
@@ -1616,16 +1633,8 @@ class StompAutoDeleteTest extends StompTestSupport {
     }
     get("1")
 
-    def queue_exists:Boolean = {
-      val host = broker.virtual_hosts.get(ascii("default")).get
-      host.dispatch_queue.future {
-        val router = host.router.asInstanceOf[LocalRouter]
-        router.queue_domain.destination_by_id.get("autodel").isDefined
-      }.await()
-    }
-
     // The queue should still exist..
-    expect(true)(queue_exists)
+    expect(true)(queue_exists("autodel"))
 
     client.write(
       "UNSUBSCRIBE\n" +
@@ -1637,7 +1646,7 @@ class StompAutoDeleteTest extends StompTestSupport {
     Thread.sleep(1000);
 
     // Now that we unsubscribe, it should not exist any more.
-    expect(false)(queue_exists)
+    expect(false)(queue_exists("autodel"))
 
   }
 }
@@ -1655,9 +1664,12 @@ class StompTempDestinationTest extends StompTestSupport {
         "SEND\n" +
         "destination:/temp-queue/test\n" +
         "reply-to:/temp-queue/test\n" +
+        "receipt:0\n" +
         "\n" +
         "message:"+msg+"\n")
+      wait_for_receipt("0")
     }
+
     put("1")
 
     client.write(
@@ -1685,8 +1697,44 @@ class StompTempDestinationTest extends StompTestSupport {
     // The destination and reply-to headers should get updated with actual
     // Queue names
     val message = get("1")
-    message.get("destination").get should startWith("/queue/temp.default.")
+    val actual_temp_dest_name = message.get("destination").get
+    actual_temp_dest_name should startWith("/queue/temp.default.")
     message.get("reply-to") should be === ( message.get("destination") )
+
+    // Different connection should be able to send a message to the temp destination..
+    var other = new StompClient
+    connect("1.1", other)
+    other.write(
+      "SEND\n" +
+      "destination:"+actual_temp_dest_name+"\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0", other)
+
+    // First client chould get the message.
+    var frame = client.receive()
+    frame should startWith("MESSAGE\n")
+
+    // But not consume from it.
+    other.write(
+      "SUBSCRIBE\n" +
+      "destination:"+actual_temp_dest_name+"\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+    frame = other.receive()
+    frame should startWith("ERROR\n")
+    frame should include regex("""message:Not authorized to receive from the temporary destination""")
+    other.close()
+
+    // Check that temp queue is deleted once the client disconnects
+    put("2")
+    assert(queue_exists(actual_temp_dest_name))
+    client.close();
+
+    within(5, SECONDS) {
+      assert(!queue_exists(actual_temp_dest_name))
+    }
   }
 
   test("Temp Topic Send Receive") {
@@ -1719,30 +1767,56 @@ class StompTempDestinationTest extends StompTestSupport {
         "SEND\n" +
         "destination:/temp-topic/test\n" +
         "reply-to:/temp-topic/test\n" +
+        "receipt:0\n" +
         "\n" +
         "message:"+msg+"\n")
+      wait_for_receipt("0", client)
     }
     put("1")
 
     // The destination and reply-to headers should get updated with actual
     // Queue names
     val message = get("1")
-    message.get("destination").get should startWith("/topic/temp.default.")
+    val actual_temp_dest_name = message.get("destination").get
+    actual_temp_dest_name should startWith("/topic/temp.default.")
     message.get("reply-to") should be === ( message.get("destination") )
-  }
 
-  test("Receive not allowed on another connection's temp queue") {
-
-    connect("1.1")
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/temp.default.1212112.test\n" +
-      "id:1\n" +
+    // Different connection should be able to send a message to the temp destination..
+    var other = new StompClient
+    connect("1.1", other)
+    other.write(
+      "SEND\n" +
+      "destination:"+actual_temp_dest_name+"\n" +
+      "receipt:0\n" +
       "\n")
+    wait_for_receipt("0", other)
 
-    val frame = client.receive()
+    // First client chould get the message.
+    var frame = client.receive()
+    frame should startWith("MESSAGE\n")
+
+    // But not consume from it.
+    other.write(
+      "SUBSCRIBE\n" +
+      "destination:"+actual_temp_dest_name+"\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+    frame = other.receive()
     frame should startWith("ERROR\n")
     frame should include regex("""message:Not authorized to receive from the temporary destination""")
+    other.close()
+
+    // Check that temp queue is deleted once the client disconnects
+    put("2")
+    assert(topic_exists(actual_temp_dest_name))
+    client.close();
+
+    within(5, SECONDS) {
+      assert(!topic_exists(actual_temp_dest_name))
+    }
+
 
   }
+
 }
