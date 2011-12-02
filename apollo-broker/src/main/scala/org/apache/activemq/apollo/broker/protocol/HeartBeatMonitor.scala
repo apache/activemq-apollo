@@ -38,29 +38,48 @@ class HeartBeatMonitor() {
   var on_dead = ()=>{}
 
   var session = 0
+  
+  def schedule(interval:Long, func:() => Unit) = {
+    if ( this.session==session ) {
+      transport.getDispatchQueue.after(interval, TimeUnit.MILLISECONDS) {
+        if ( this.session==session ) {
+          func()
+        }
+      }
+    }
+  }
 
   def schedual_check_writes(session:Int):Unit = {
-    val last_write_counter = transport.getProtocolCodec.getWriteCounter()
-    transport.getDispatchQueue.after(write_interval/2, TimeUnit.MILLISECONDS) {
-      if( this.session == session ) {
-        if( last_write_counter==transport.getProtocolCodec.getWriteCounter ) {
+    var func = () => {
+      schedual_check_writes(session)
+    }
+    
+    Option(transport.getProtocolCodec).foreach { codec=>
+      val last_write_counter = codec.getWriteCounter()
+      func = () => {
+        if( last_write_counter==codec.getWriteCounter ) {
           on_keep_alive()
         }
         schedual_check_writes(session)
       }
     }
+    schedule(write_interval/2, func)
   }
 
   def schedual_check_reads(session:Int):Unit = {
-    val last_read_counter = transport.getProtocolCodec.getReadCounter()
-    transport.getDispatchQueue.after(read_interval, TimeUnit.MILLISECONDS) {
-      if( this.session == session ) {
-        if( last_read_counter==transport.getProtocolCodec.getReadCounter ) {
+    var func = () => {
+      schedual_check_reads(session)
+    }
+    Option(transport.getProtocolCodec).foreach { codec=>
+      val last_read_counter = codec.getReadCounter
+      func = () => {
+        if( last_read_counter==codec.getReadCounter ) {
           on_dead()
         }
         schedual_check_reads(session)
       }
     }
+    schedule(read_interval, func)
   }
 
   def start = {
