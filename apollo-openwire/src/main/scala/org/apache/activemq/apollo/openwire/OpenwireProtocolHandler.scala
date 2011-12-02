@@ -387,10 +387,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val inactive_time = preferred_wireformat_settings.getMaxInactivityDuration().min(info.getMaxInactivityDuration())
     val initial_delay = preferred_wireformat_settings.getMaxInactivityDurationInitalDelay().min(info.getMaxInactivityDurationInitalDelay())
 
-    if (initial_delay != inactive_time) {
-      die("We only support an initial delay inactivity duration equal to the max inactivity duration")
-    }
-
     if (inactive_time > 0) {
       heart_beat_monitor.read_interval = inactive_time
       // lets be a little forgiving to account to packet transmission latency.
@@ -407,6 +403,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         connection.transport.offer(new KeepAliveInfo)
       }
     }
+
+    heart_beat_monitor.initial_read_check_delay = initial_delay
+    heart_beat_monitor.initial_write_check_delay = initial_delay
 
     heart_beat_monitor.transport = connection.transport
     heart_beat_monitor.start

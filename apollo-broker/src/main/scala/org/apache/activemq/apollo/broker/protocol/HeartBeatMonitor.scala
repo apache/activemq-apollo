@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit
 class HeartBeatMonitor() {
 
   var transport:Transport = _
+  var initial_write_check_delay = 0L
+  var initial_read_check_delay = 0L
   var write_interval = 0L
   var read_interval = 0L
 
@@ -64,10 +66,22 @@ class HeartBeatMonitor() {
   def start = {
     session += 1
     if( write_interval!=0 ) {
-      schedual_check_writes(session)
+      if ( initial_write_check_delay!=0 ) {
+        transport.getDispatchQueue.after(initial_write_check_delay, TimeUnit.MILLISECONDS) {
+          schedual_check_writes(session)
+        }
+      } else {
+        schedual_check_writes(session)
+      }
     }
     if( read_interval!=0 ) {
-      schedual_check_reads(session)
+      if ( initial_read_check_delay!=0 ) {
+        transport.getDispatchQueue.after(initial_read_check_delay, TimeUnit.MILLISECONDS) {
+          schedual_check_reads(session)
+        }
+      } else {
+        schedual_check_reads(session)
+      }
     }
   }
 

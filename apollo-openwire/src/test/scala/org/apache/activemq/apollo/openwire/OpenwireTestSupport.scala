@@ -35,7 +35,7 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
   val broker_config_uri = "xml:classpath:apollo-openwire.xml"
   val transport_scheme = "tcp"
   val transport_host = "localhost"
-  val uri_options = "?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000"
+  val uri_options = ""//"?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000"
 
   override protected def beforeAll() {
     info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
