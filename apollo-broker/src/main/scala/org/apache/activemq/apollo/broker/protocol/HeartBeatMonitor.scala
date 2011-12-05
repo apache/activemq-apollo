@@ -39,7 +39,7 @@ class HeartBeatMonitor() {
 
   var session = 0
   
-  def schedule(interval:Long, func:() => Unit) = {
+  def schedule(session:Int, interval:Long, func:() => Unit) = {
     if ( this.session==session ) {
       transport.getDispatchQueue.after(interval, TimeUnit.MILLISECONDS) {
         if ( this.session==session ) {
@@ -63,7 +63,7 @@ class HeartBeatMonitor() {
         schedual_check_writes(session)
       }
     }
-    schedule(write_interval/2, func)
+    schedule(session, write_interval/2, func)
   }
 
   def schedual_check_reads(session:Int):Unit = {
@@ -79,7 +79,7 @@ class HeartBeatMonitor() {
         schedual_check_reads(session)
       }
     }
-    schedule(read_interval, func)
+    schedule(session, read_interval, func)
   }
 
   def start = {
