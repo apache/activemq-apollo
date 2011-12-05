@@ -224,54 +224,8 @@ abstract class Resource(parent:Resource=null) extends Logging {
     throw new WebApplicationException(response.build())
   }
 
-  type FutureResult[T] = Future[Result[T, Throwable]]
-
-  protected def FutureResult[T]() = Future[Result[T, Throwable]]()
-
-  protected def FutureResult[T](value:Result[T, Throwable]) = {
-    val rc = Future[Result[T, Throwable]]()
-    rc.set(value)
-    rc
-  }
-
-  protected def sync[T](dispached:Dispatched)(func: =>FutureResult[T]):FutureResult[T] = {
-    val rc = Future[Result[T, Throwable]]()
-    dispached.dispatch_queue.apply {
-      try {
-        func.onComplete(x=> rc.apply(x))
-      } catch {
-        case e:Throwable => rc.apply(Failure(e))
-      }
-    }
-    rc
-  }
-
-
-  protected def sync_all[T,D<:Dispatched](values:Iterable[D])(func: (D)=>FutureResult[T]) = {
-    Future.all {
-      values.map { value=>
-        sync(value) {
-          func(value)
-        }
-      }
-    }
-  }
-
   protected implicit def to_local_router(host:VirtualHost):LocalRouter = {
     host.router.asInstanceOf[LocalRouter]
-  }
-
-  protected implicit def wrap_future_result[T](value:T):FutureResult[T] = {
-    val rc = FutureResult[T]()
-    rc.apply(Success(value))
-    rc
-  }
-
-  protected implicit def unwrap_future_result[T](value:FutureResult[T]):T = {
-    value.await() match {
-      case Success(value) => value
-      case Failure(value) => throw value
-    }
   }
 
   def now = BrokerRegistry.list.headOption.map(_.now).getOrElse(System.currentTimeMillis())
