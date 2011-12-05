@@ -405,9 +405,12 @@ object Stomp {
   val REDIRECT_HEADER = ascii("redirect")
 
   val BROWSER = ascii("browser")
+  val BROWSER_END = ascii("browser-end")
   val EXCLUSIVE = ascii("exclusive")
   val USER_ID = ascii("user-id")
   val TEMP = ascii("temp")
+  val INCLUDE_SEQ = ascii("include-seq")
+  val FROM_SEQ = ascii("from-seq")
 
   ///////////////////////////////////////////////////////////////////
   // Common Values

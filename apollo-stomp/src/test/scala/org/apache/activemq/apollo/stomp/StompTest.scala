@@ -251,6 +251,174 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  test("Setting `from-seq` header to -1 results in subscription starting at end of the queue.") {
+    connect("1.1")
+
+    def send(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/from-seq-end\n" +
+        "receipt:0\n"+
+        "\n" +
+        "message:"+id+"\n")
+      wait_for_receipt("0")
+    }
+
+    send(1)
+    send(2)
+    send(3)
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/from-seq-end\n" +
+      "receipt:0\n"+
+      "browser:true\n"+
+      "browser-end:false\n"+
+      "id:0\n" +
+      "from-seq:-1\n"+
+      "\n")
+    wait_for_receipt("0")
+
+    send(4)
+
+    def get(seq:Long) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should include("message:"+seq+"\n")
+    }
+    get(4)
+  }
+
+  test("The `browser-end:false` can be used to continously browse a queue.") {
+    connect("1.1")
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/browsing-continous\n" +
+      "browser:true\n"+
+      "browser-end:false\n"+
+      "receipt:0\n"+
+      "id:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    def send(id:Int) = client.write(
+      "SEND\n" +
+      "destination:/queue/browsing-continous\n" +
+      "\n" +
+      "message:"+id+"\n")
+
+    send(1)
+    send(2)
+
+    def get(seq:Long) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      expect(true)(frame.contains("message:"+seq+"\n"))
+    }
+    get(1)
+    get(2)
+  }
+
+  test("Message sequence headers are added when `include-seq` is used.") {
+    connect("1.1")
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/seq_queue\n" +
+      "receipt:0\n"+
+      "id:0\n" +
+      "include-seq:seq\n"+
+      "\n")
+    wait_for_receipt("0")
+
+    def send(id:Int) = client.write(
+      "SEND\n" +
+      "destination:/queue/seq_queue\n" +
+      "\n" +
+      "message:"+id+"\n")
+
+    send(1)
+    send(2)
+
+    def get(seq:Long) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      expect(true)(frame.contains("seq:"+seq+"\n"))
+    }
+    get(1)
+    get(2)
+  }
+
+  test("The `from-seq` header can be used to resume delivery from a given point in a queue.") {
+    connect("1.1")
+
+    def send(id:Int) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/from_queue\n" +
+        "receipt:0\n"+
+        "\n" +
+        "message:"+id+"\n")
+      wait_for_receipt("0")
+    }
+
+    send(1)
+    send(2)
+    send(3)
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/from_queue\n" +
+      "receipt:0\n"+
+      "browser:true\n"+
+      "id:0\n" +
+      "include-seq:seq\n"+
+      "from-seq:2\n"+
+      "\n")
+    wait_for_receipt("0")
+
+    def get(seq:Long) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should include("seq:"+seq+"\n")
+    }
+    get(2)
+    get(3)
+  }
+
+
+  test("The `from-seq` header is not supported with wildcard or composite destinations.") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/some,/queue/other\n" +
+      "browser:true\n"+
+      "id:0\n" +
+      "include-seq:seq\n"+
+      "from-seq:2\n"+
+      "\n")
+
+    var frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:The from-seq header is only supported when you subscribe to one destination")
+
+    client.close
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/some.*\n" +
+      "browser:true\n"+
+      "id:0\n" +
+      "include-seq:seq\n"+
+      "from-seq:2\n"+
+      "\n")
+
+    frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:The from-seq header is only supported when you subscribe to one destination")
+  }
+
   test("Selector Syntax") {
     connect("1.1")
 

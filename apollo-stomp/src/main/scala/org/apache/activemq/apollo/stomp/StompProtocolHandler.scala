@@ -129,7 +129,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
 
-  class StompConsumer(
+  class StompConsumer (
 
     val subscription_id:Option[AsciiBuffer],
     val destination:Array[DestinationDTO],
@@ -137,7 +137,10 @@ class StompProtocolHandler extends ProtocolHandler {
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
     override val exclusive:Boolean,
-    val initial_credit_window:(Int,Int, Boolean)
+    val initial_credit_window:(Int,Int, Boolean),
+    val include_seq:Option[AsciiBuffer],
+    val from_seq:Long,
+    override val close_on_drain:Boolean
   ) extends BaseRetained with DeliveryConsumer {
 
 ////  The following comes in handy if we need to debug the
@@ -162,6 +165,13 @@ class StompProtocolHandler extends ProtocolHandler {
 //      printST("release")
 //      r.release
 //    }
+
+    override def start_from_tail = from_seq == -1
+
+    var starting_seq:Long = 0L
+    override def set_starting_seq(seq: Long):Unit = {
+      starting_seq=seq
+    }
 
     val ack_source = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
       def mergeEvent(previous:(Int, Int), event:(Int, Int)) = {
@@ -341,6 +351,9 @@ class StompProtocolHandler extends ProtocolHandler {
         val value = ascii(delivery.redeliveries.toString())
         frame = frame.append_headers((header, value)::Nil)
       }
+      if( include_seq.isDefined ) {
+        frame = frame.append_headers((include_seq.get, ascii(delivery.seq.toString))::Nil)
+      }
       frame
     }, Delivery)
 
@@ -362,16 +375,34 @@ class StompProtocolHandler extends ProtocolHandler {
 
     def is_persistent = false
 
-    def matches(delivery:Delivery) = {
-      if( delivery.message.protocol eq StompProtocol ) {
-        if( selector!=null ) {
-          selector._2.matches(delivery.message)
-        } else {
-          true
-        }
-      } else {
-        false
+    def match_protocol(delivery:Delivery)= delivery.message.protocol eq StompProtocol
+    def match_selector(delivery:Delivery)= selector._2.matches(delivery.message)
+    def match_from_seq(delivery:Delivery)= delivery.seq >= from_seq
+    def match_from_tail(delivery:Delivery)= delivery.seq >= starting_seq
+
+    val matchers = {
+      var l = ListBuffer[(Delivery)=>Boolean]()
+      l += match_protocol
+      if( from_seq > 0 ) {
+        l += match_from_seq
       }
+      if( start_from_tail ) {
+        l += match_from_tail
+      }
+      if( selector!=null ) {
+        l += match_selector 
+      }
+      l.toArray
+    }
+
+    def matches(delivery:Delivery):Boolean = {
+      var i=0;
+      while( i < matchers.length ) {
+        if(!matchers(i)(delivery))
+          return false
+        i+=1
+      }
+      true
     }
 
     class StompConsumerSession(val producer:DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery] {
@@ -389,7 +420,7 @@ class StompProtocolHandler extends ProtocolHandler {
         assert(producer.dispatch_queue.isExecuting)
         if( !closed ) {
           closed = true
-          if( browser ) {
+          if( browser && close_on_drain ) {
             // Then send the end of browse message.
             val headers:HeaderMap = List(DESTINATION->EMPTY, MESSAGE_ID->EMPTY, BROWSER->END)
             var frame = StompFrame(MESSAGE, headers, BufferContent(EMPTY_BUFFER))
@@ -1047,7 +1078,21 @@ class StompProtocolHandler extends ProtocolHandler {
 //    val topic = destination.isInstanceOf[TopicDestinationDTO]
     var persistent = get(headers, PERSISTENT).map( _ == TRUE ).getOrElse(false)
     var browser = get(headers, BROWSER).map( _ == TRUE ).getOrElse(false)
-    var exclusive = get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
+    var browser_end = browser && get(headers, BROWSER_END).map( _ == TRUE ).getOrElse(true)
+    var exclusive = !browser && get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
+    var include_seq = get(headers, INCLUDE_SEQ)
+    val from_seq_opt = get(headers, FROM_SEQ)
+    
+    
+    def is_multi_destination = if( destination.length > 1 ) {
+      true
+    } else {
+      val path = destination_parser.decode_path(destination(0).path)
+      PathParser.containsWildCards(path)
+    }
+    if( from_seq_opt.isDefined && is_multi_destination ) {
+      die("The from-seq header is only supported when you subscribe to one destination");
+    }
 
     val ack_mode = get(headers, ACK_MODE).getOrElse(ACK_MODE_AUTO)
     val credit_window = get(headers, CREDIT) match {
@@ -1096,7 +1141,8 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, credit_window);
+    val from_seq = from_seq_opt.map(_.toString.toLong).getOrElse(0L)
+    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, credit_window, include_seq, from_seq, browser_end);
     consumers += (id -> consumer)
 
     reset {

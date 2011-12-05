@@ -1353,9 +1353,113 @@ Example:
 
     MESSAGE
     subscription:mysub
+    destination:
+    message-id:
     browser:end
     
     ^@
+
+If you want the browsing subscription to remain active and continue to 
+listen for message once the last message on the queue is reached, you
+should add the `browser-end:false` header to the `SUBSCRIBE` frame.  When
+the `browser-end:false` header is added the subscription will not be
+sent the "end of browse" message previously described.
+
+### Queue Message Sequences
+
+As messages are added to a queue in a broker, they are assigned an incrementing
+sequence number.  Messages delivered to subscribers can be updated to include
+the sequence number if the `include-seq` header is added to the `SUBSCRIBE`
+frame.  This header should be set to a header name which will be added
+messages delivered to hold value of the sequence number.
+
+Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/foo
+    include-seq:seq
+    
+    ^@
+
+Then you can expect to receive messages like:
+
+    MESSAGE
+    subscription:mysub
+    destination:/queue/foo
+    seq:1
+    
+    Hello
+    ^@
+    MESSAGE
+    subscription:mysub
+    destination:/queue/foo
+    seq:2
+    
+    World
+    ^@
+
+Furthermore, you configure the `SUBSCRIBE` frame so that the subscription
+only receives messages that have a sequence id that is equal to or greater 
+than a requested value by using the `from-seq` header.  Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/foo
+    from-seq:10
+    
+    ^@
+
+If the `from-seq` is set to `-1`, then the subscription will receive messages
+from the tail of the queue.  In other words, it will only receive new messages sent 
+to the queue.
+
+Note: You can only use the `from-seq` header with normal destinations.  If you 
+attempt to use it with a wildcard or composite destination then the connection
+will be closed due to invalid usage.
+
+### Using Queue Browsers and Sequences to Implement Durable Pub/Sub
+
+You can combine the Queue Browser and and Queue Message Sequence features
+to implement durable pub/sub in a way which results in even better performance
+than the Topic Durable Subscriptions feature can provide.  
+
+To use this approach, your subscribing application must be able to keep track 
+of the last sequence number processed from the destination.  The application 
+would typically store this as part of the unit of work it performs to process 
+the message.
+
+In this scenario, you use multiple queue browsers against queue.  The browsing
+subscriptions will use the `include-seq`, `from-seq`, and `browser-end` so that
+they can resume receiving messages from the queue from the last known sequence.
+
+Example:
+
+    SUBSCRIBE
+    id:mysub
+    destination:/queue/foo
+    browser:true
+    browser-end:false
+    include-seq:seq
+    from-seq:503
+    
+    ^@
+
+If you are starting a new consumer, you can either set `from-seq:0` to 
+receive a copy of all the messages that has been sent to the queue or you
+can use `from-seq:-1` to skip over all the message that exist in the queue
+and only receive new messages.
+
+Since the consuming application records the last sequence that was processed,
+you can use the default auto acknowledge mode but still avoid message loss.
+
+Since this approach does not consume the messages from the queue, you should
+either:
+
+* Send messages to the queue with an expiration time so that they are automatically
+  delete once the expiration time is reached.
+* Periodically run a normal consumer application which can cursor the queue
+  and delete messages are are deemed no longer needed.
 
 ### Exclusive Subscriptions
 

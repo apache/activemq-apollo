@@ -60,6 +60,10 @@ trait DeliveryConsumer extends Retained {
 
   def receive_buffer_size = 64*1024
 
+  def close_on_drain = browser
+  def start_from_tail = false
+  def set_starting_seq(seq:Long) = {}
+
   def browser = false
   def exclusive = false
   def dispatch_queue:DispatchQueue;
@@ -181,6 +185,11 @@ class Delivery {
   var message: Message = null
 
   /**
+   * The sequence id the destination assigned the message
+   */
+  var seq:Long = -1
+
+  /**
    * The id the store assigned the message
    */
   var storeKey:Long = -1
@@ -211,6 +220,7 @@ class Delivery {
 
   def set(other:Delivery) = {
     size = other.size
+    seq = other.seq
     message = other.message
     storeKey = other.storeKey
     storeLocator = other.storeLocator

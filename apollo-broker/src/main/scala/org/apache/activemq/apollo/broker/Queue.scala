@@ -479,6 +479,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         val entry = tail_entry
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queueDelivery = delivery.copy
+        queueDelivery.seq = entry.seq
         entry.init(queueDelivery)
         
         if( tune_persistent ) {
@@ -1730,8 +1731,13 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   // This opens up the consumer
   def open() = {
     consumer.retain
-    pos = queue.head_entry;
+    if(consumer.start_from_tail) {
+      pos = queue.tail_entry;
+    } else {
+      pos = queue.head_entry;
+    }
     assert(pos!=null)
+    consumer.set_starting_seq(pos.seq)
 
     session = consumer.connect(this)
     session.refiller = dispatch_queue.runnable {
@@ -1739,7 +1745,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         pos.run
       }
     }
-    queue.head_entry ::= this
+    pos ::= this
 
     queue.all_subscriptions += consumer -> this
     queue.consumer_counter += 1
@@ -1752,7 +1758,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     if( queue.service_state.is_started ) {
       // kick off the initial dispatch.
       refill_prefetch
-      queue.dispatch_queue << queue.head_entry
+      queue.dispatch_queue << pos
     }
     queue.check_idle
   }
@@ -1805,7 +1811,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
     if( tail_parked ) {
       tail_parkings += 0
-      if( browser ) {
+      if( session.consumer.close_on_drain ) {
         close
       }
     }
