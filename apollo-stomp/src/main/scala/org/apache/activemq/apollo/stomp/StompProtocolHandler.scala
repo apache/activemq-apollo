@@ -703,7 +703,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // To avoid double logging to the same log category..
         if( connection_log!=StompProtocolHandler ) {
           // but we also want the error on the apollo.log file.
-          warn("Internal Server Error", e)
+          warn(e, "Internal Server Error")
         }
         async_die("Internal Server Error", e);
     }
