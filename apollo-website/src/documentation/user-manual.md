@@ -1269,17 +1269,16 @@ without needing to acknowledge as message. To do this, don't include the
 
 ### Topic Durable Subscriptions
 
-A durable subscription is a queue which is subscribed to a topic so that
-even if the client which created the durable subscription is not
-online, he can still get a copy of all the messages sent to the topic
-when he comes back online.  Multiple clients can subscribe to the same
-durable subscription and since it's backed by a queue, those subscribers
-will have the topic's messages load balanced across them.
+A durable subscription is a queue which is subscribed to a topic so that even
+if the client which created the durable subscription is not online, he can
+still get a copy of all the messages sent to the topic when he comes back
+online. Multiple clients can subscribe to the same durable subscription and
+since it's backed by a queue, those subscribers will have the topic's messages
+load balanced across them.
 
-To create or reattach to a a durable subscription with STOMP, you uniquely name
-the durable subscription using the `id` header on the `
-SCRIBE` frame and
-also adding a `persistent:true` header. Example:
+To create or reattach to a a durable subscription with STOMP, you uniquely
+name the durable subscription using the `id` header on the `SUBSCRIBE` frame
+and also adding a `persistent:true` header. Example:
 
     SUBSCRIBE
     id:mysub
@@ -1288,10 +1287,10 @@ also adding a `persistent:true` header. Example:
     
     ^@
 
-A standard `UNSUBSCRIBE` frame does not destroy the durable subscription, it 
-only disconnects the client from the durable subscription.  To destroy a 
-durable subscription, you must once again add `persistent:true` header
-to the `UNSUBSCRIBE` frame.  Example:
+A standard `UNSUBSCRIBE` frame does not destroy the durable subscription, it
+only disconnects the client from the durable subscription. To destroy a
+durable subscription, you must once again add `persistent:true` header to the
+`UNSUBSCRIBE` frame. Example:
 
     UNSUBSCRIBE
     id:mysub
@@ -1299,10 +1298,10 @@ to the `UNSUBSCRIBE` frame.  Example:
     
     ^@
 
-If the durable subscription already exists you can address it directly 
-using `/dsub/` prefix on the `destination` header.  For example,
-send a message to the previously created `mysub` durable subscription,
-you send the following STOMP frame:
+If the durable subscription already exists you can address it directly using
+`/dsub/` prefix on the `destination` header. For example, send a message to
+the previously created `mysub` durable subscription, you send the following
+STOMP frame:
 
 
     SEND
@@ -1319,15 +1318,14 @@ Similarly, you can also subscribe to the subscription in the same way:
     
     ^@
 
-Unlike typical STOMP subscriptions id's which are local to the STOMP 
-client's connection, the durable subscription id's are global across
-a virtual host.  If two different connections use the same durable
-subscription id, then messages from the subscription will get load
-balanced across the two connections.  If the second connection uses
-a different `destination` or `selector` header, then updates 
-the original subscription, and the original connection will
-subsequently only receive messages matching the updated
-destination or selector.
+Unlike typical STOMP subscriptions id's which are local to the STOMP client's
+connection, the durable subscription id's are global across a virtual host. If
+two different connections use the same durable subscription id, then messages
+from the subscription will get load balanced across the two connections. If
+the second connection uses a different `destination` or `selector` header,
+then updates the original subscription, and the original connection will
+subsequently only receive messages matching the updated destination or
+selector.
 
 ### Browsing Subscriptions
 
@@ -1335,8 +1333,8 @@ A normal subscription on a queue will consume messages so that no other
 subscription will get a copy of the message. If you want to browse all the
 messages on a queue in a non-destructive fashion, you can create browsing
 subscription. Browsing subscriptions also works with durable subscriptions
-since they are backed by a queue. To make a a browsing subscription, just add the
-`browser:true` header to the `SUBSCRIBE` frame. For example:
+since they are backed by a queue. To make a a browsing subscription, just add
+the `browser:true` header to the `SUBSCRIBE` frame. For example:
 
     SUBSCRIBE
     id:mysub
@@ -1359,19 +1357,19 @@ Example:
     
     ^@
 
-If you want the browsing subscription to remain active and continue to 
-listen for message once the last message on the queue is reached, you
-should add the `browser-end:false` header to the `SUBSCRIBE` frame.  When
-the `browser-end:false` header is added the subscription will not be
-sent the "end of browse" message previously described.
+If you want the browsing subscription to remain active and continue to listen
+for message once the last message on the queue is reached, you should add the
+`browser-end:false` header to the `SUBSCRIBE` frame. When the
+`browser-end:false` header is added the subscription will not be sent the "end
+of browse" message previously described.
 
 ### Queue Message Sequences
 
-As messages are added to a queue in a broker, they are assigned an incrementing
-sequence number.  Messages delivered to subscribers can be updated to include
-the sequence number if the `include-seq` header is added to the `SUBSCRIBE`
-frame.  This header should be set to a header name which will be added
-messages delivered to hold value of the sequence number.
+As messages are added to a queue in a broker, they are assigned an
+incrementing sequence number. Messages delivered to subscribers can be updated
+to include the sequence number if the `include-seq` header is added to the
+`SUBSCRIBE` frame. This header should be set to a header name which will be
+added messages delivered to hold value of the sequence number.
 
 Example:
 
@@ -1399,9 +1397,9 @@ Then you can expect to receive messages like:
     World
     ^@
 
-Furthermore, you configure the `SUBSCRIBE` frame so that the subscription
-only receives messages that have a sequence id that is equal to or greater 
-than a requested value by using the `from-seq` header.  Example:
+Furthermore, you can configure the `SUBSCRIBE` frame so that the subscription
+only receives messages that have a sequence id that is equal to or greater
+than a requested value by using the `from-seq` header. Example:
 
     SUBSCRIBE
     id:mysub
@@ -1411,27 +1409,45 @@ than a requested value by using the `from-seq` header.  Example:
     ^@
 
 If the `from-seq` is set to `-1`, then the subscription will receive messages
-from the tail of the queue.  In other words, it will only receive new messages sent 
-to the queue.
+from the tail of the queue. In other words, it will only receive new messages
+sent to the queue.
 
-Note: You can only use the `from-seq` header with normal destinations.  If you 
+Note: You can only use the `from-seq` header with normal destinations. If you
 attempt to use it with a wildcard or composite destination then the connection
 will be closed due to invalid usage.
 
-### Using Queue Browsers and Sequences to Implement Durable Pub/Sub
+### Using Queue Browsers to Implement Durable Topic Subscriptions
 
-You can combine the Queue Browser and and Queue Message Sequence features
-to implement durable pub/sub in a way which results in even better performance
-than the Topic Durable Subscriptions feature can provide.  
+You can use queue browsers with consumer side message sequence tracking to
+achieve the same semantics as durable topics subscriptions but with a better
+performance profile. Since browsers do not delete messages from a queue, when
+you use multiple browsers against one queue you get the same broadcast effects
+that a topic provides.
 
-To use this approach, your subscribing application must be able to keep track 
-of the last sequence number processed from the destination.  The application 
-would typically store this as part of the unit of work it performs to process 
-the message.
+In this approach the subscribing application keeps track of the last sequence
+number processed from the subscription. The sequence number is typically
+stored as part of the unit of work which is processing the message. The
+subscription can use the default auto acknowledge mode but still get 'once and
+only once' delivery guarantees since:
 
-In this scenario, you use multiple queue browsers against queue.  The browsing
-subscriptions will use the `include-seq`, `from-seq`, and `browser-end` so that
-they can resume receiving messages from the queue from the last known sequence.
+ * consuming application records the last message sequence that 
+   was processed
+ * message are not deleted when delivered to the subscriber
+ * on restart consuming application continues receiving from the queue
+   for the last sequence that it received.
+
+The `SUBSCRIBE` frame used to create the browser should add the `include-seq`,
+`from-seq`, and `browser-end` headers so that they can resume receiving
+messages from the queue from the last known sequence. If you are starting a
+new consumer that does not have a last processed sequence number, you can
+either set `from-seq` to:
+
+ * `0` to start receiving at the head of the queue which sends
+   the subscription a copy of all the messages that are currently 
+   queued. 
+ * `-1` to start receiving at the tail of the queue which to skips 
+   over all the message that exist in the queue so that the subscription
+   only receives new messages.
 
 Example:
 
@@ -1441,23 +1457,15 @@ Example:
     browser:true
     browser-end:false
     include-seq:seq
-    from-seq:503
+    from-seq:0
     
     ^@
-
-If you are starting a new consumer, you can either set `from-seq:0` to 
-receive a copy of all the messages that has been sent to the queue or you
-can use `from-seq:-1` to skip over all the message that exist in the queue
-and only receive new messages.
-
-Since the consuming application records the last sequence that was processed,
-you can use the default auto acknowledge mode but still avoid message loss.
 
 Since this approach does not consume the messages from the queue, you should
 either:
 
-* Send messages to the queue with an expiration time so that they are automatically
-  delete once the expiration time is reached.
+* Send messages to the queue with an expiration time so that they are 
+  automatically delete once the expiration time is reached.
 * Periodically run a normal consumer application which can cursor the queue
   and delete messages are are deemed no longer needed.
 
