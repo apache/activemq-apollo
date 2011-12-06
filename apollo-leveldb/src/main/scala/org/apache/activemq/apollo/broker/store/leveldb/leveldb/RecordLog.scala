@@ -20,7 +20,7 @@ import java.{lang=>jl}
 import java.{util=>ju}
 
 import org.apache.activemq.apollo.util._
-import org.fusesource.hawtbuf.{DataByteArrayOutputStream, AbstractVarIntSupport}
+import org.fusesource.hawtbuf.DataByteArrayOutputStream
 import java.io._
 import java.util.zip.CRC32
 import java.util.Map.Entry
@@ -28,8 +28,6 @@ import java.util.Arrays
 import collection.mutable.{HashMap, HashSet}
 import collection.immutable.TreeMap
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.TimeUnit
-import org.fusesource.hawtdispatch.BaseRetained
 import java.nio.ByteBuffer
 
 object RecordLog {
@@ -162,7 +160,7 @@ case class RecordLog(directory: File, log_suffix:String) {
 
       val start = outbound.position
       outbound.writeByte(id);
-      outbound.writeVarInt(data.length)
+      outbound.writeInt(data.length)
       outbound.write(data);
       val count = outbound.position - start
 
@@ -182,22 +180,24 @@ case class RecordLog(directory: File, log_suffix:String) {
 
     val is = new RandomAccessFile(file, "r")
 
-    val var_support = new AbstractVarIntSupport {
-      def writeByte(p1: Int) = sys.error("Not supported")
-      def readByte(): Byte = is.readByte()
-    };
-
     def read(pos:Long) = this.synchronized {
       is.seek(pos-start)
       val id = is.read()
       if( id == LOG_HEADER_PREFIX(0) ) {
         (id, null, pos+LOG_HEADER_SIZE)
       } else {
-        val length = var_support.readVarInt()
+        val length = is.readInt()
         val data = new Array[Byte](length)
         is.readFully(data)
         (id, data, is.getFilePointer)
       }
+    }
+
+    def read(pos:Long, length:Int) = this.synchronized {
+      is.seek((pos-start)+5)
+      val data = new Array[Byte](length)
+      is.readFully(data)
+      data
     }
 
     def close = this.synchronized {
@@ -357,6 +357,9 @@ case class RecordLog(directory: File, log_suffix:String) {
 
   def read(pos:Long) = {
     get_reader(pos)(_.read(pos))
+  }
+  def read(pos:Long, length:Int) = {
+    get_reader(pos)(_.read(pos, length))
   }
 
 }

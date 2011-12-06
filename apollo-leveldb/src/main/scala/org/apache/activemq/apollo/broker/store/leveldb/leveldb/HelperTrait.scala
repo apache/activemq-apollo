@@ -22,36 +22,46 @@ import java.io.DataOutput
 
 object HelperTrait {
 
-  def encode(a1:Long):Array[Byte] = {
-//    val out = new DataByteArrayOutputStream(
-//      AbstractVarIntSupport.computeVarLongSize(a1)
-//    )
-//    out.writeVarLong(a1)
-    val out = new DataByteArrayOutputStream(8)
-    out.writeLong(a1)
+  def encode_locator(pos:Long, len:Int):Array[Byte] = {
+    val out = new DataByteArrayOutputStream(
+      AbstractVarIntSupport.computeVarLongSize(pos)+
+      AbstractVarIntSupport.computeVarIntSize(len)
+    )
+    out.writeVarLong(pos)
+    out.writeVarInt(len)
     out.getData
   }
 
-  def decode_long(bytes:Buffer):Long = {
+  def decode_locator(bytes:Array[Byte]):(Long,  Int) = {
     val in = new DataByteArrayInputStream(bytes)
-//    in.readVarLong()
-    in.readLong()
+    (in.readVarLong(), in.readVarInt())
+  }
+  def decode_locator(bytes:Buffer):(Long,  Int) = {
+    val in = new DataByteArrayInputStream(bytes)
+    (in.readVarLong(), in.readVarInt())
   }
 
-  def decode_long(bytes:Array[Byte]):Long = {
-    val in = new DataByteArrayInputStream(bytes)
-//    in.readVarLong()
-    in.readLong()
+  def encode_vlong(a1:Long):Array[Byte] = {
+    val out = new DataByteArrayOutputStream(
+      AbstractVarIntSupport.computeVarLongSize(a1)
+    )
+    out.writeVarLong(a1)
+    out.getData
   }
 
-  def encode(a1:Byte, a2:Long):Array[Byte] = {
+  def decode_vlong(bytes:Array[Byte]):Long = {
+    val in = new DataByteArrayInputStream(bytes)
+    in.readVarLong()
+  }
+
+  def encode_key(a1:Byte, a2:Long):Array[Byte] = {
     val out = new DataByteArrayOutputStream(9)
     out.writeByte(a1.toInt)
     out.writeLong(a2)
     out.getData
   }
 
-  def encode(a1:Byte, a2:Buffer):Array[Byte] = {
+  def encode_key(a1:Byte, a2:Buffer):Array[Byte] = {
     val out = new DataByteArrayOutputStream(1+a2.length)
     out.writeByte(a1.toInt)
     a2.writeTo(out.asInstanceOf[DataOutput])
@@ -63,7 +73,7 @@ object HelperTrait {
     (in.readByte(), in.readLong())
   }
 
-  def encode(a1:Byte, a2:Long, a3:Long):Array[Byte] = {
+  def encode_key(a1:Byte, a2:Long, a3:Long):Array[Byte] = {
     val out = new DataByteArrayOutputStream(17)
     out.writeByte(a1)
     out.writeLong(a2)
