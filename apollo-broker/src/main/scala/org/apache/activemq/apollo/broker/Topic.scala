@@ -169,6 +169,12 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
+  def status: FutureResult[TopicStatusDTO] = {
+    val rc = FutureResult[TopicStatusDTO]()
+    status(x => rc.set(Success(x)))
+    rc
+  }
+
   def status(on_complete:(TopicStatusDTO)=>Unit) = {
     dispatch_queue.assertExecuting()
 
@@ -293,6 +299,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
             if( previously_idle_at == idled_at ) {
               router.topic_domain.remove_destination(path, this)
+              DestinationMetricsSupport.add_destination_metrics(router.virtual_host.dead_topic_metrics, topic_metrics)
             }
           }
         }

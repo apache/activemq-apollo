@@ -283,15 +283,7 @@ case class BrokerResource() extends Resource {
     metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_queue_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
-    val router:LocalRouter = host
-    val queues: Iterable[Queue] = router.queue_domain.destinations
-    val metrics = sync_all(queues) { queue =>
-      queue.get_queue_metrics
-    }
-    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
-  }
-
+  def get_queue_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = host.get_queue_metrics
 
   def get_topic_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
     val metrics = sync_all(broker.virtual_hosts.values) { host =>
@@ -300,17 +292,7 @@ case class BrokerResource() extends Resource {
     metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_topic_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
-    val router:LocalRouter = host
-    val topics: Iterable[Topic] = router.topic_domain.destinations
-
-    val metrics = Future.all {
-      topics.map { topics =>
-        topic_status(topics).map(_.map_success(_.metrics))
-      }
-    }
-    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
-  }
+  def get_topic_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = host.get_topic_metrics
 
   def get_dsub_metrics(broker:Broker):FutureResult[AggregateDestMetricsDTO] = {
     val metrics = sync_all(broker.virtual_hosts.values) { host =>
@@ -319,14 +301,7 @@ case class BrokerResource() extends Resource {
     metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option)) ))
   }
 
-  def get_dsub_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = {
-    val router:LocalRouter = host
-    val dsubs: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
-    val metrics = sync_all(dsubs) { dsub =>
-      dsub.get_queue_metrics
-    }
-    metrics.map( x=> Success(aggregate_dest_metrics(x.flatMap(_.success_option))) )
-  }
+  def get_dsub_metrics(host:VirtualHost):FutureResult[AggregateDestMetricsDTO] = host.get_dsub_metrics
 
 
   @GET @Path("virtual-hosts")
@@ -503,7 +478,9 @@ case class BrokerResource() extends Resource {
       val router: LocalRouter = host
       val records = Future.all {
         router.topic_domain.destination_by_id.values.map { value  =>
-          topic_status(value)
+          monitoring(value) {
+            value.status
+          }
         }
       }
       val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[TopicStatusDTO], _, f, q, p, ps, o))
@@ -516,7 +493,9 @@ case class BrokerResource() extends Resource {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
-      topic_status(node)
+      monitoring(node) {
+        node.status
+      }
     }
   }
 
@@ -635,12 +614,6 @@ case class BrokerResource() extends Resource {
     } catch {
       case x:PathParser.PathException => result(NOT_FOUND)
     }
-  }
-
-  def topic_status(node: Topic): FutureResult[TopicStatusDTO] = monitoring(node) {
-    val rc = FutureResult[TopicStatusDTO]()
-    node.status(x=>rc.set(Success(x)))
-    rc
   }
 
   def status(q:Queue, entries:Boolean=false) = monitoring(q) {

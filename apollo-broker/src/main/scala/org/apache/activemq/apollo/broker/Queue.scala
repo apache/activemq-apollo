@@ -447,6 +447,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     swapped_in_size_max -= tune_queue_buffer;
     trigger_swap
 
+    this.destination_dto match {
+      case t:TopicDestinationDTO =>
+      case _ =>
+        DestinationMetricsSupport.add_destination_metrics(virtual_host.dead_queue_metrics, get_queue_metrics)
+    }
     on_completed.run
   }
 

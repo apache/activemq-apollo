@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.broker;
 
-import _root_.java.lang.String
 import _root_.scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch._
 
@@ -26,6 +25,7 @@ import org.apache.activemq.apollo.dto._
 import security._
 import security.SecuredResource.VirtualHostKind
 import store._
+import java.lang.{Throwable, String}
 
 trait VirtualHostFactory {
   def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
@@ -95,6 +95,10 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   val queue_id_counter = new LongCounter()
 
   val session_counter = new PersistentLongCounter("session_counter")
+
+  var dead_topic_metrics = new DestMetricsDTO
+  var dead_queue_metrics = new DestMetricsDTO
+  var dead_dsub_metrics = new DestMetricsDTO
 
   var authenticator:Authenticator = _
   var authorizer = Authorizer()
@@ -247,5 +251,60 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
     })
   }
 
+  def local_router = router.asInstanceOf[LocalRouter]
+
+  def reset_metrics = {
+    dead_queue_metrics = new DestMetricsDTO
+    dead_topic_metrics = new DestMetricsDTO
+  }
+  
+  def aggregate_dest_metrics(metrics:Iterable[DestMetricsDTO]):AggregateDestMetricsDTO = {
+    metrics.foldLeft(new AggregateDestMetricsDTO) { (to, from) =>
+      DestinationMetricsSupport.add_destination_metrics(to, from)
+      from match {
+        case from:AggregateDestMetricsDTO =>
+          to.objects += from.objects
+        case _ =>
+          to.objects += 1
+      }
+      to
+    }
+  }
+
+  def get_topic_metrics:FutureResult[AggregateDestMetricsDTO] = {
+    val topics:Iterable[Topic] = local_router.topic_domain.destinations
+    val metrics: Future[Iterable[Result[DestMetricsDTO, Throwable]]] = Future.all {
+      topics.map(_.status.map(_.map_success(_.metrics)))
+    }
+    metrics.map( x => Success {
+      val rc = aggregate_dest_metrics(x.flatMap(_.success_option))
+      DestinationMetricsSupport.add_destination_metrics(rc, dead_topic_metrics)
+      rc
+    })
+  }
+  
+  def get_queue_metrics:FutureResult[AggregateDestMetricsDTO] = {
+    val queues:Iterable[Queue] = local_router.queue_domain.destinations
+    val metrics = sync_all (queues) { queue =>
+      queue.get_queue_metrics
+    }
+    metrics.map( x => Success {
+      val rc = aggregate_dest_metrics(x.flatMap(_.success_option))
+      DestinationMetricsSupport.add_destination_metrics(rc, dead_queue_metrics)
+      rc
+    })
+  }
+  
+  def get_dsub_metrics:FutureResult[AggregateDestMetricsDTO] = sync(this) {
+    val dsubs:Iterable[Queue] = local_router.topic_domain.durable_subscriptions_by_id.values
+    val metrics = sync_all (dsubs) { dsub =>
+      dsub.get_queue_metrics
+    }
+    metrics.map( x => Success {
+      val rc = aggregate_dest_metrics(x.flatMap(_.success_option))
+      DestinationMetricsSupport.add_destination_metrics(rc, dead_dsub_metrics)
+      rc
+    })
+  }
 
 }
