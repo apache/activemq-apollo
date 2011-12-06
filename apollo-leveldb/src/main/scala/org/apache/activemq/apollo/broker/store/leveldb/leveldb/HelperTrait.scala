@@ -32,6 +32,12 @@ object HelperTrait {
     out.getData
   }
 
+  def decode_long(bytes:Buffer):Long = {
+    val in = new DataByteArrayInputStream(bytes)
+//    in.readVarLong()
+    in.readLong()
+  }
+
   def decode_long(bytes:Array[Byte]):Long = {
     val in = new DataByteArrayInputStream(bytes)
 //    in.readVarLong()

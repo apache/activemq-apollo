@@ -48,15 +48,6 @@ public class LevelDBStoreStatusDTO extends StoreStatusDTO {
     @XmlElement(name="last_checkpoint_pos")
     public long index_snapshot_pos;
 
-    @XmlElement(name="last_gc_ts")
-    public long last_gc_ts;
-
-    @XmlElement(name="in_gc")
-    public boolean in_gc;
-
-    @XmlElement(name="last_gc_duration")
-    public long last_gc_duration;
-
     @XmlElement(name="last_append_pos")
     public long log_append_pos;
 

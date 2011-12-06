@@ -34,9 +34,6 @@ public class LevelDBStoreDTO extends StoreDTO {
     @XmlAttribute
     public File directory;
 
-    @XmlAttribute(name="gc_interval")
-    public Integer gc_interval;
-
     @XmlAttribute(name="read_threads")
     public Integer read_threads;
 
@@ -85,7 +82,6 @@ public class LevelDBStoreDTO extends StoreDTO {
         LevelDBStoreDTO that = (LevelDBStoreDTO) o;
 
         if (directory != null ? !directory.equals(that.directory) : that.directory != null) return false;
-        if (gc_interval != null ? !gc_interval.equals(that.gc_interval) : that.gc_interval != null) return false;
         if (index_block_restart_interval != null ? !index_block_restart_interval.equals(that.index_block_restart_interval) : that.index_block_restart_interval != null)
             return false;
         if (index_block_size != null ? !index_block_size.equals(that.index_block_size) : that.index_block_size != null)
@@ -116,7 +112,6 @@ public class LevelDBStoreDTO extends StoreDTO {
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + (directory != null ? directory.hashCode() : 0);
-        result = 31 * result + (gc_interval != null ? gc_interval.hashCode() : 0);
         result = 31 * result + (read_threads != null ? read_threads.hashCode() : 0);
         result = 31 * result + (index_factory != null ? index_factory.hashCode() : 0);
         result = 31 * result + (sync != null ? sync.hashCode() : 0);

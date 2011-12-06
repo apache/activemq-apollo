@@ -26,17 +26,20 @@ import org.apache.activemq.apollo.broker.store._
 import java.io._
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
-import collection.mutable.ListBuffer
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
 import collection.immutable.TreeMap
-import org.iq80.leveldb._
 import org.fusesource.leveldbjni.internal.Util
 import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
 import java.util.concurrent.atomic.AtomicReference
 import org.apache.activemq.apollo.broker.Broker
 import org.apache.activemq.apollo.util.ProcessSupport._
+import collection.mutable.{HashMap, ListBuffer}
+import org.apache.activemq.apollo.dto.JsonCodec
+import java.util.Map
+import org.iq80.leveldb._
+import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -54,6 +57,7 @@ object LevelDBClient extends Log {
   final val queue_entry_prefix_array = Array(queue_entry_prefix)
 
   final val dirty_index_key = bytes(":dirty")
+  final val log_refs_index_key = bytes(":log-refs")
   final val TRUE = bytes("true")
   final val FALSE = bytes("false")
 
@@ -87,15 +91,6 @@ object LevelDBClient extends Log {
         None
       }
     }): _* )
-  }
-
-  case class UsageCounter() {
-    var count = 0L
-    var size = 0L
-    def increment(value:Int) = {
-      count += 1
-      size += value
-    }
   }
 
   val on_windows = System.getProperty("os.name").toLowerCase().startsWith("windows")
@@ -193,12 +188,8 @@ class LevelDBClient(store: LevelDBStore) {
   var last_index_snapshot_pos:Long = _
   val snapshot_rw_lock = new ReentrantReadWriteLock(true)
 
-  var last_gc_ts = 0L
-  var last_gc_duration = 0L
-  var in_gc = false
-  var gc_detected_log_usage = Map[Long, UsageCounter]()
   var factory:DBFactory = _
-
+  val log_refs = HashMap[Long, LongCounter]()
 
   def dirty_index_file = directory / ("dirty"+INDEX_SUFFIX)
   def temp_index_file = directory / ("temp"+INDEX_SUFFIX)
@@ -259,7 +250,7 @@ class LevelDBClient(store: LevelDBStore) {
       // lets queue a request to checkpoint when
       // the logs rotate.. queue it on the GC thread since GC's lock
       // the index for a long time.
-      store.gc_executor {
+      store.write_executor {
         snapshot_index
       }
     }
@@ -298,11 +289,11 @@ class LevelDBClient(store: LevelDBStore) {
 
       index = new RichDB(factory.open(dirty_index_file, index_options));
       try {
+        load_log_refs
         index.put(dirty_index_key, TRUE)
         // Update the index /w what was stored on the logs..
         var pos = last_index_snapshot_pos;
 
-        // Replay the log from the last update position..
         try {
           while (pos < log.appender_limit) {
             log.read(pos).map {
@@ -314,8 +305,43 @@ class LevelDBClient(store: LevelDBStore) {
                   case LOG_ADD_QUEUE_ENTRY =>
                     val record: QueueEntryRecord = data
                     index.put(encode(queue_entry_prefix, record.queue_key, record.entry_seq), data)
+                    
+                    // Figure out which log file this message reference is pointing at..
+                    val log_key = (if(record.message_locator!=null) {
+                      Some(decode_long(record.message_locator))
+                    } else {
+                      index.get(encode(message_prefix, record.message_key)).map(decode_long(_))
+                    }).flatMap(log.log_info(_)).map(_.position)
+                    
+                    // Increment it.
+                    log_key.foreach { log_key=>
+                      log_refs.getOrElseUpdate(log_key, new LongCounter()).incrementAndGet()
+                    }
+                    
                   case LOG_REMOVE_QUEUE_ENTRY =>
-                    index.delete(data)
+
+                    index.get(data, new ReadOptions).foreach { value=>
+                      val record: QueueEntryRecord = value
+  
+                      // Figure out which log file this message reference is pointing at..
+                      val log_key = (if(record.message_locator!=null) {
+                        Some(decode_long(record.message_locator))
+                      } else {
+                        index.get(encode(message_prefix, record.message_key)).map(decode_long(_))
+                      }).flatMap(log.log_info(_)).map(_.position)
+                      
+                      // Decrement it.
+                      log_key.foreach { log_key=>
+                        log_refs.get(log_key).foreach{ counter=>
+                          if( counter.decrementAndGet() == 0 ) {
+                            log_refs.remove(log_key)
+                          }
+                        }
+                      }
+                      
+                      index.delete(data)
+                    }
+                    
                   case LOG_ADD_QUEUE =>
                     val record: QueueRecord = data
                     index.put(encode(queue_prefix, record.key), data)
@@ -358,6 +384,20 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
+  private def store_log_refs = {
+    index.put(log_refs_index_key, JsonCodec.encode(collection.JavaConversions.mapAsJavaMap(log_refs.mapValues(_.get()))).toByteArray)
+  }
+
+  private def load_log_refs = {
+    log_refs.clear()
+    index.get(log_refs_index_key, new ReadOptions).foreach { value=>
+      val javamap = JsonCodec.decode(new Buffer(value), classOf[java.util.Map[String, Object]])
+      collection.JavaConversions.mapAsScalaMap(javamap).foreach { case (k,v)=>
+        log_refs.put(k.toLong, new LongCounter(v.asInstanceOf[Number].longValue()))
+      }
+    }
+  }
+  
   def stop() = {
     // this blocks until all io completes..
     // Suspend also deletes the index.
@@ -392,6 +432,7 @@ class LevelDBClient(store: LevelDBStore) {
     snapshot_rw_lock.writeLock().lock()
 
     // Close the index so that it's files are not changed async on us.
+    store_log_refs
     index.put(dirty_index_key, FALSE, new WriteOptions().sync(true))
     index.close
   }
@@ -550,7 +591,7 @@ class LevelDBClient(store: LevelDBStore) {
 
             uow.actions.foreach { case (msg, action) =>
               val message_record = action.message_record
-              var pos = 0L
+              var pos = -1L
               var pos_buffer:Buffer = null
 
               if (message_record != null) {
@@ -566,10 +607,19 @@ class LevelDBClient(store: LevelDBStore) {
               action.dequeues.foreach { entry =>
                 if( pos_buffer==null && entry.message_locator!=null ) {
                   pos_buffer = entry.message_locator
+                  pos = decode_long(pos_buffer)
                 }
                 val key = encode(queue_entry_prefix, entry.queue_key, entry.entry_seq)
                 appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
                 batch.delete(key)
+
+                log.log_info(pos).foreach { log_info=>
+                  log_refs.get(log_info.position).foreach{ counter=>
+                    if( counter.decrementAndGet() == 0 ) {
+                      log_refs.remove(log_info.position)
+                    }
+                  }
+                }
               }
 
               action.enqueues.foreach { entry =>
@@ -577,6 +627,12 @@ class LevelDBClient(store: LevelDBStore) {
                 val encoded:Array[Byte] = entry
                 appender.append(LOG_ADD_QUEUE_ENTRY, encoded)
                 batch.put(encode(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
+                
+                // Increment it.
+                log.log_info(pos).foreach { log_info=>
+                  log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
+                }
+                
               }
             }
             if( !uow.complete_listeners.isEmpty ) {
@@ -779,32 +835,48 @@ class LevelDBClient(store: LevelDBStore) {
   }
 
   def gc:Unit = {
-    var active_counter = 0
-    var delete_counter = 0
-    val latency_counter = new TimeCounter
+    last_index_snapshot_pos
+    val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 
-    val ro = new ReadOptions()
-    ro.fillCache(false)
-    ro.verifyChecksums(verify_checksums)
+    // We don't want to delete any journals that the index has not snapshot'ed or
+    // the the
+    val delete_limit = log.log_info(last_index_snapshot_pos).map(_.position).
+          getOrElse(last_index_snapshot_pos).min(log.appender_start)
 
-    //
-    // This journal_usage will let us get a picture of which queues are using how much of each
-    // log file.  It will help folks figure out why a log file is not getting deleted.
-    //
-    val journal_usage = new ApolloTreeMap[Long,(RecordLog#LogInfo , UsageCounter)]()
-    var append_journal = 0L
+    empty_journals.foreach { id =>
+      if ( id < delete_limit ) {
+        log.delete(id)
+      }
+    }
+  }
+  
+  case class UsageCounter(info:RecordLog#LogInfo) {
+    var count = 0L
+    var size = 0L
+    var first_reference_queue:QueueRecord = _
+    
+    def increment(value:Int) = {
+      count += 1
+      size += value
+    }
+  }
 
+  //
+  // Collects detailed usage information about the journal like who's referencing it.
+  //
+  def get_log_usage_details = {
+
+    val usage_map = new ApolloTreeMap[Long,UsageCounter]()
     log.log_mutex.synchronized {
-      append_journal = log.log_infos.last._1
-      log.log_infos.foreach(entry=> journal_usage.put(entry._1, (entry._2, UsageCounter())) )
+      log.log_infos.foreach(entry=> usage_map.put(entry._1, UsageCounter(entry._2)) )
     }
 
-    def find_journal(pos: Long) = {
-      var entry = journal_usage.floorEntry(pos)
+    def lookup_usage(pos: Long) = {
+      var entry = usage_map.floorEntry(pos)
       if (entry != null) {
-        val (info, usageCounter) = entry.getValue()
-        if (pos < info.limit) {
-          Some(entry.getKey -> usageCounter)
+        val usage = entry.getValue()
+        if (pos < usage.info.limit) {
+          Some(usage)
         } else {
           None
         }
@@ -813,88 +885,38 @@ class LevelDBClient(store: LevelDBStore) {
       }
     }
 
-    in_gc = true
-    val now = System.currentTimeMillis()
-    debug(store.store_kind+" gc starting")
-    latency_counter.time {
+    val ro = new ReadOptions()
+    ro.fillCache(false)
+    ro.verifyChecksums(verify_checksums)
 
-      retry_using_index {
-        index.snapshot { snapshot =>
-          ro.snapshot(snapshot)
+    retry_using_index {
+      index.snapshot { snapshot =>
+        ro.snapshot(snapshot)
 
-          // Figure out which journal files are still in use by which queues.
-          index.cursor_prefixed(queue_entry_prefix_array, ro) { (_,value) =>
-            val entry_record:QueueEntryRecord = value
-            val pos = if(entry_record.message_locator!=null) {
-              decode_long(entry_record.message_locator.toByteArray)
-            } else {
-              index.get(encode(message_prefix, entry_record.message_key)).map(decode_long(_)).getOrElse(0L)
-            }
+        // Figure out which journal files are still in use by which queues.
+        index.cursor_prefixed(queue_entry_prefix_array, ro) { (_,value) =>
 
-            find_journal(pos) match {
-              case Some((key,usageCounter)) =>
-                usageCounter.increment(entry_record.size)
-              case None =>
-            }
-
-            // only continue while the service is still running..
-            store.service_state.is_started
+          val entry_record:QueueEntryRecord = value
+          val pos = if(entry_record.message_locator!=null) {
+            Some(decode_long(entry_record.message_locator))
+          } else {
+            index.get(encode(message_prefix, entry_record.message_key)).map(decode_long(_))
           }
 
-          if (store.service_state.is_started) {
-
-            gc_detected_log_usage = Map((collection.JavaConversions.asScalaSet(journal_usage.entrySet()).map { x=>
-              x.getKey -> x.getValue._2
-            }).toSeq : _ * )
-
-            // Take empty journals out of the map..
-            val empty_journals = ListBuffer[Long]()
-
-            val i = journal_usage.entrySet().iterator();
-            while( i.hasNext ) {
-              val (info, usageCounter) = i.next().getValue
-              if( usageCounter.count==0 && info.position < append_journal) {
-                empty_journals += info.position
-                i.remove()
-              }
+          pos.flatMap(lookup_usage(_)).foreach { usage =>
+            if( usage.first_reference_queue == null ) {
+              usage.first_reference_queue = index.get(encode(queue_prefix, entry_record.queue_key), ro).map( x=> decode_queue_record(x) ).getOrElse(null)
             }
-
-            index.cursor_prefixed(message_prefix_array) { (key,value) =>
-              val pos = decode_long(value)
-
-              if ( !find_journal(pos).isDefined ) {
-                // Delete it.
-                index.delete(key)
-                delete_counter += 1
-              } else {
-                active_counter += 1
-              }
-              // only continue while the service is still running..
-              store.service_state.is_started
-            }
-
-            if (store.service_state.is_started) {
-              // We don't want to delete any journals that the index has not snapshot'ed or
-              // the the
-              val delete_limit = find_journal(last_index_snapshot_pos).map(_._1).
-                    getOrElse(last_index_snapshot_pos).min(log.appender_start)
-
-              empty_journals.foreach { id =>
-                if ( id < delete_limit ) {
-                  log.delete(id)
-                }
-              }
-            }
+            usage.increment(entry_record.size)
           }
+
+          true
         }
-
-
       }
     }
-    last_gc_ts=now
-    last_gc_duration = latency_counter.total(TimeUnit.MILLISECONDS)
-    in_gc = false
-    debug(store.store_kind+" gc ended")
+
+    import collection.JavaConversions._
+    usage_map.values.toSeq.toArray
   }
 
 

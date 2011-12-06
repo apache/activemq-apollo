@@ -323,10 +323,10 @@ case class RecordLog(directory: File, log_suffix:String) {
     }
   }
 
+  def log_info(pos:Long) = log_mutex.synchronized(log_infos.range(0L, pos+1).lastOption.map(_._2))
 
   private def get_reader[T](pos:Long)(func: (LogReader)=>T) = {
-    val infos = log_mutex.synchronized(log_infos)
-    val info = infos.range(0L, pos+1).lastOption.map(_._2)
+    val info = log_info(pos)
     info.map { info =>
       // Checkout a reader from the cache...
       val (set, reader_id, reader) = reader_cache_files.synchronized {

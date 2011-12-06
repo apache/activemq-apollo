@@ -385,8 +385,6 @@ A `leveldb_store` element may be configured with the following attributes:
   that a store will delay persisting a messaging unit of work in hopes
   that it will be invalidated shortly thereafter by another unit of work
   which would negate the operation.
-* `gc_interval` : How often to check to find log files which can be discarded 
-   in seconds. The value defaults to 1800 (30 minutes).
 * `read_threads` : The number of concurrent IO reads to allow. The value 
    defaults to 10.
 * `sync` : If set to `false`, then the store does not sync logging operations to 

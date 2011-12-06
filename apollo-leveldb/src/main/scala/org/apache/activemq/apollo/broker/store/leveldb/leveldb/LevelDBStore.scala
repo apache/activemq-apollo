@@ -48,7 +48,6 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
   var next_msg_key = new AtomicLong(1)
 
   var write_executor:ExecutorService = _
-  var gc_executor:ExecutorService = _
   var read_executor:ExecutorService = _
 
   var client:LevelDBClient = _
@@ -79,13 +78,6 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
       write_executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
         def newThread(r: Runnable) = {
           val rc = new Thread(r, store_kind + " store io write")
-          rc.setDaemon(true)
-          rc
-        }
-      })
-      gc_executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
-        def newThread(r: Runnable) = {
-          val rc = new Thread(r, store_kind + " store gc")
           rc.setDaemon(true)
           rc
         }
@@ -128,7 +120,6 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         read_executor.shutdown
         read_executor.awaitTermination(60, TimeUnit.SECONDS)
         read_executor = null
-        gc_executor.shutdown
         client.stop
         on_completed.run
       }
@@ -140,20 +131,15 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
     ss.is_starting || ss.is_started
   }
 
-  def poll_gc:Unit = {
-    val interval = config.gc_interval.getOrElse(60*30)
-    if( interval>0 ) {
-      dispatch_queue.after(interval, TimeUnit.SECONDS) {
-        if( keep_polling ) {
-          gc {
-            poll_gc
-          }
-        }
+  def poll_gc:Unit = dispatch_queue.after(10, TimeUnit.SECONDS) {
+    if( keep_polling ) {
+      gc {
+        poll_gc
       }
     }
   }
 
-  def gc(onComplete: =>Unit) = gc_executor {
+  def gc(onComplete: =>Unit) = write_executor {
     client.gc
     onComplete
   }
@@ -277,23 +263,18 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         rc.index_stats = client.index.getProperty("leveldb.stats")
         rc.log_append_pos = client.log.appender_limit
         rc.index_snapshot_pos = client.last_index_snapshot_pos
-        rc.last_gc_duration = client.last_gc_duration
-        rc.last_gc_ts = client.last_gc_ts
-        rc.in_gc = client.in_gc
         rc.log_stats = {
-          var row_layout = "%-20s | %-10s | %10s/%-10s\n"
-          row_layout.format("File", "Messages", "Used Size", "Total Size")+
-          client.log.log_infos.map(x=> x._1 -> client.gc_detected_log_usage.get(x._1)).toSeq.flatMap { x=>
+          var row_layout = "%-20s | %-10s | %-10s\n"
+          row_layout.format("File", "References", "Total Size")+
+          client.log.log_infos.map{case (id,info)=> id -> client.log_refs.get(id).map(_.get)}.toSeq.flatMap { case (id, refs)=>
             try {
-              val file = LevelDBClient.create_sequence_file(client.directory, x._1, LevelDBClient.LOG_SUFFIX)
+              val file = LevelDBClient.create_sequence_file(client.directory, id, LevelDBClient.LOG_SUFFIX)
               val size = file.length()
-              val usage = x._2 match {
-                case Some(usage)=>
-                  (usage.count.toString, ViewHelper.memory(usage.size))
-                case None=>
-                  ("unknown", "unknown")
-              }
-              Some(row_layout.format(file.getName, usage._1, usage._2, ViewHelper.memory(size)))
+              Some(row_layout.format(
+                file.getName,
+                refs.getOrElse(0L).toString,
+                ViewHelper.memory(size)
+              ))
             } catch {
               case e:Throwable =>
                 None
