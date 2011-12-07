@@ -51,29 +51,6 @@ class DestinationConfigurationTest extends FunSuiteSupport {
 
     val router = broker.default_virtual_host.router.asInstanceOf[LocalRouter]
 
-    def check_tune_queue_buffer(expected:Int)(dto:DestinationDTO) = {
-      var actual=0
-      reset {
-        var q = router.get_or_create_destination(dto, null).success.asInstanceOf[Queue]
-        actual = q.tune_queue_buffer
-      }
-      expect(expected) {actual}
-    }
-
-    check_tune_queue_buffer(333) {
-      var p = new QueueDestinationDTO()
-      p.path.add("unified")
-      p.path.add("a")
-      p
-    }
-
-    check_tune_queue_buffer(111) {
-      var p = new QueueDestinationDTO()
-      p.path.add("notunified")
-      p.path.add("other")
-      p
-    }
-
     ServiceControl.stop(broker, "broker")
   }
 

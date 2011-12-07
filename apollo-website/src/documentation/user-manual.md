@@ -245,9 +245,6 @@ A `queue` element may be configured with the following attributes:
   [Unified Destinations](#Unified_Destinations) documentation for more 
   details.  Defaults to false.
 
-* `queue_buffer` : The amount of memory buffer space allocated for each queue.
-   Defaults to 32k.
-
 * `consumer_buffer` : The amount of memory buffer space allocated to each
 subscription for receiving messages.  Defaults to 256k.
 
@@ -271,6 +268,20 @@ memory.  Defaults to true.
 * `auto_delete_after`: If not set to `0` then the queue will automatically
   delete once there have been no consumers, producers or messages on it
   for the configured number of seconds.  Defaults to 300 if not set.
+  
+* `max_enqueue_rate`: The maximum enqueue rate of the queue.  Producers
+  will be flow controlled once this enqueue rate is reached.  If not set
+  then it is disabled
+
+* `catchup_delivery_rate`: The message delivery rate (in bytes/sec) at which
+  the queue enables a producer rate throttle to allow consumers to catchup 
+  with producers.  The the consumers must also be stalling on message
+  loading longer than they stall to deliver.  If not set then the
+  feature is disabled.
+  
+* `catchup_enqueue_rate`:  The rate at which to throttle enqueues when
+  consumers are catching up.  Defaults to the rate configured in
+  `catchup_delivery_rate` 
 
 ##### Topics
 

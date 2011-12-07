@@ -50,16 +50,10 @@ public class QueueDTO extends StringIdDTO {
     public Boolean unified;
 
     /**
-     *  The amount of memory buffer space for the queue..
-     */
-    @XmlAttribute(name="queue_buffer")
-    public Integer queue_buffer;
-
-    /**
      *  The amount of memory buffer space to use per consumer.
      */
     @XmlAttribute(name="consumer_buffer")
-    public Integer consumer_buffer;
+    public String consumer_buffer;
 
     /**
      * Should this queue persistently store it's entries?
@@ -92,6 +86,27 @@ public class QueueDTO extends StringIdDTO {
     public String quota;
 
     /**
+     *  The message delivery rate (in bytes/sec) at which
+     *  the queue enables a producer rate throttle
+     *  to allow consumers to catchup with producers.
+     */
+    @XmlAttribute(name="catchup_delivery_rate")
+    public String catchup_delivery_rate;
+
+    /**
+     *  The rate at which to throttle enqueues when
+     *  consumers are catching up.
+     */
+    @XmlAttribute(name="catchup_enqueue_rate")
+    public String catchup_enqueue_rate;
+
+    /**
+     *  The maximum enqueue rate of the queue
+     */
+    @XmlAttribute(name="max_enqueue_rate")
+    public String max_enqueue_rate;
+
+    /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)
@@ -107,12 +122,17 @@ public class QueueDTO extends StringIdDTO {
 
         if (auto_delete_after != null ? !auto_delete_after.equals(queueDTO.auto_delete_after) : queueDTO.auto_delete_after != null)
             return false;
+        if (catchup_delivery_rate != null ? !catchup_delivery_rate.equals(queueDTO.catchup_delivery_rate) : queueDTO.catchup_delivery_rate != null)
+            return false;
+        if (catchup_enqueue_rate != null ? !catchup_enqueue_rate.equals(queueDTO.catchup_enqueue_rate) : queueDTO.catchup_enqueue_rate != null)
+            return false;
         if (consumer_buffer != null ? !consumer_buffer.equals(queueDTO.consumer_buffer) : queueDTO.consumer_buffer != null)
+            return false;
+        if (max_enqueue_rate != null ? !max_enqueue_rate.equals(queueDTO.max_enqueue_rate) : queueDTO.max_enqueue_rate != null)
             return false;
         if (other != null ? !other.equals(queueDTO.other) : queueDTO.other != null) return false;
         if (persistent != null ? !persistent.equals(queueDTO.persistent) : queueDTO.persistent != null) return false;
-        if (queue_buffer != null ? !queue_buffer.equals(queueDTO.queue_buffer) : queueDTO.queue_buffer != null)
-            return false;
+        if (quota != null ? !quota.equals(queueDTO.quota) : queueDTO.quota != null) return false;
         if (swap != null ? !swap.equals(queueDTO.swap) : queueDTO.swap != null) return false;
         if (swap_range_size != null ? !swap_range_size.equals(queueDTO.swap_range_size) : queueDTO.swap_range_size != null)
             return false;
@@ -126,11 +146,14 @@ public class QueueDTO extends StringIdDTO {
         int result = super.hashCode();
         result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
         result = 31 * result + (unified != null ? unified.hashCode() : 0);
-        result = 31 * result + (queue_buffer != null ? queue_buffer.hashCode() : 0);
         result = 31 * result + (consumer_buffer != null ? consumer_buffer.hashCode() : 0);
         result = 31 * result + (persistent != null ? persistent.hashCode() : 0);
         result = 31 * result + (swap != null ? swap.hashCode() : 0);
         result = 31 * result + (swap_range_size != null ? swap_range_size.hashCode() : 0);
+        result = 31 * result + (quota != null ? quota.hashCode() : 0);
+        result = 31 * result + (catchup_delivery_rate != null ? catchup_delivery_rate.hashCode() : 0);
+        result = 31 * result + (catchup_enqueue_rate != null ? catchup_enqueue_rate.hashCode() : 0);
+        result = 31 * result + (max_enqueue_rate != null ? max_enqueue_rate.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
