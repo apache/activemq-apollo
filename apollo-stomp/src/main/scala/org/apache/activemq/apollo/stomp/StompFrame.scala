@@ -434,6 +434,8 @@ object Stomp {
 
   val TEXT_PLAIN = ascii("text/plain")
 
+  val TEMP_QUEUE = ascii("/temp-queue/")
+  val TEMP_TOPIC = ascii("/temp-topic/")
 
   //	public enum Transformations {
   //		JMS_BYTE, JMS_OBJECT_XML, JMS_OBJECT_JSON, JMS_MAP_XML, JMS_MAP_JSON

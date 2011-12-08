@@ -1935,4 +1935,27 @@ class StompTempDestinationTest extends StompTestSupport {
 
   }
 
+
+  test("Odd reply-to headers do not cause errors") {
+    connect("1.1")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/oddrepyto\n" +
+      "reply-to:sms:8139993334444\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/oddrepyto\n" +
+      "id:1\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("MESSAGE\n")
+    frame should include("reply-to:sms:8139993334444\n")
+  }
+
 }

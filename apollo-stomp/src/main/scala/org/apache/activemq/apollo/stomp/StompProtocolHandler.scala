@@ -971,9 +971,16 @@ class StompProtocolHandler extends ProtocolHandler {
       rc ::= (DESTINATION -> encode_header(destination_parser.encode_destination(destination)))
     }
     get(headers, REPLY_TO).foreach { value=>
-      val dests:Array[DestinationDTO] = value
-      if( dests.find(_.temp()).isDefined ) {
-        rc ::= (REPLY_TO -> encode_header(destination_parser.encode_destination(dests)))
+      // we may need to translate local temp destination names to broker destination names
+      if( value.indexOf(TEMP_QUEUE)>=0 || value.indexOf(TEMP_TOPIC)>=0 ) {
+        try {
+          val dests: Array[DestinationDTO] = value
+          if (dests.find(_.temp()).isDefined) {
+            rc ::= (REPLY_TO -> encode_header(destination_parser.encode_destination(dests)))
+          }
+        } catch {
+          case _=> // the translation is a best effort thing.
+        }
       }
     }
 
