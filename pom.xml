@@ -544,6 +544,9 @@
                 <exclude>**/*.keystore</exclude>
                 
                 <exclude>**/*.keystore</exclude>
+                
+                <exclude>src/scripts/jquery.js</exclude>
+                <exclude>src/main/resources/org/apache/activemq/apollo/cli/commands/etc/black-list.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/banner.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/commands/version.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/tips.txt</exclude>
