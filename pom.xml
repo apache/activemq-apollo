@@ -172,6 +172,7 @@
     <module>apollo-web</module>
     <module>apollo-cli</module>
     <module>apollo-website</module>
+    <module>apollo-itests</module>
     <module>apollo-distro</module>
     <module>apollo-karaf-feature</module>
   </modules>
