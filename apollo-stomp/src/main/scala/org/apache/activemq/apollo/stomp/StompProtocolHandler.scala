@@ -498,7 +498,7 @@ class StompProtocolHandler extends ProtocolHandler {
   val security_context = new SecurityContext
   var waiting_on:String = "client request"
   var config:StompDTO = _
-  var session_id:AsciiBuffer = _
+  var session_id:String = _
 
   var protocol_filters = List[ProtocolFilter]()
 
@@ -820,9 +820,9 @@ class StompProtocolHandler extends ProtocolHandler {
       var connected_headers = ListBuffer((VERSION, protocol_version))
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
-
-      session_id = encode_header("%s-%x-".format(this.host.config.id, this.host.session_counter.incrementAndGet))
-      connected_headers += SESSION->session_id
+      val v = encode_header("%s-%x-".format(this.host.config.id, this.host.session_counter.incrementAndGet))
+      session_id = v.toString 
+      connected_headers += SESSION->v
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
       connected_headers += HEART_BEAT->outbound_heart_beat_header
@@ -987,8 +987,7 @@ class StompProtocolHandler extends ProtocolHandler {
     // Do we need to add the message id?
     if( get( headers, MESSAGE_ID) == None ) {
       message_id_counter += 1
-      val msgid: Buffer = session_id + encode_header(message_id_counter.toString())
-      rc ::= (MESSAGE_ID -> msgid.ascii)
+      rc ::= (MESSAGE_ID -> ascii(session_id+message_id_counter))
     }
 
     if( config.add_timestamp_header!=null ) {
