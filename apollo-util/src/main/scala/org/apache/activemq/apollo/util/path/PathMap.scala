@@ -91,6 +91,10 @@ class PathMap[Value] {
     if ((set == null) || set.isEmpty) {
       return null.asInstanceOf[Value]
     }
+    var first: Value = set.iterator().next()
+    if( set.size()==1 || !first.isInstanceOf[java.lang.Comparable[_]]) {
+      return first;
+    }
     var sortedSet: SortedSet[Value] = new TreeSet[Value](set)
     return sortedSet.last
   }
