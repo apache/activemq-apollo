@@ -22,13 +22,13 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0-beta6</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-broker</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0-beta6</version>
   <!-- <packaging>bundle</packaging> -->
 
   <name>${project.artifactId}</name>
@@ -42,17 +42,17 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-dto</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta6</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-transport</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta6</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-selector</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta6</version>
     </dependency>
 
     <dependency>
@@ -111,14 +111,14 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta6</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-transport</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-beta6</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
