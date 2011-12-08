@@ -1848,7 +1848,9 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
     session = consumer.connect(this)
     session.refiller = dispatch_queue.runnable {
-      check_consumer_stall
+      if(session!=null) {
+        check_consumer_stall
+      }
       if( pos!=null ) {
         pos.run
       }
