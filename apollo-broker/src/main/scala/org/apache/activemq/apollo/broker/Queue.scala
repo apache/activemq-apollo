@@ -556,6 +556,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
           // Enqueued message prefeteched.
           tail_prefetch -= entry.size
           entry.prefetch_flags = PREFTCH_LOAD_FLAG
+          entry.load(consumer_swapped_in)
         } else {
 //          val prev = entry.getPrevious
 //          if( (prev.as_loaded!=null && prev.as_loaded.swapping_out) || (prev.as_swapped!=null && !prev.as_swapped.swapping_in) ) {
