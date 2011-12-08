@@ -510,7 +510,7 @@ class StompProtocolHandler extends ProtocolHandler {
   implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
     val rc = destination_parser.decode_destination(value.toString)
     if( rc==null ) {
-      throw new ProtocolException("Invalid stomp destiantion name: "+value);
+      throw new ProtocolException("Invalid stomp destination name: "+value);
     }
     rc.map { dest =>
       if( dest.temp() ) {
@@ -585,7 +585,7 @@ class StompProtocolHandler extends ProtocolHandler {
   class Break extends RuntimeException
 
   private def async_die(msg:String, e:Throwable=null) = try {
-    die(msg)
+    die(msg, e)
   } catch {
     case x:Break=>
   }
@@ -598,7 +598,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   private def die[T](msg:String, e:Throwable=null):T = {
     if( e!=null) {
-      connection_log.info(e, "STOMP connection '%s' error: %s", security_context.remote_address, msg)
+      connection_log.info(e, "STOMP connection '%s' error: %s", security_context.remote_address, msg, e)
     } else {
       connection_log.info("STOMP connection '%s' error: %s", security_context.remote_address, msg)
     }
@@ -721,22 +721,23 @@ class StompProtocolHandler extends ProtocolHandler {
                 }
 
               case _ =>
-                die("Invalid frame: "+frame.action);
+                die("Invalid STOMP frame command: "+frame.action);
             }
           }
 
         case _=>
-          die("Internal Server Error: unexpected command type");
+          die("Internal Server Error: unexpected stomp type");
       }
     }  catch {
       case e: Break =>
       case e:Exception =>
         // To avoid double logging to the same log category..
+        var msg: String = "Internal Server Error: " + e
         if( connection_log!=StompProtocolHandler ) {
           // but we also want the error on the apollo.log file.
-          warn(e, "Internal Server Error")
+          warn(e, msg)
         }
-        async_die("Internal Server Error", e);
+        async_die(msg, e);
     }
   }
 

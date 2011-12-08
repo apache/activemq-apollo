@@ -117,7 +117,7 @@ class PathParser {
   var regex_wildcard_start = "{"
   var regex_wildcard_end = "}"
   var path_separator = "."
-  var part_pattern = Pattern.compile("[a-zA-Z0-9\\_\\-\\%\\~]+")
+  var part_pattern = Pattern.compile("[ a-zA-Z0-9\\_\\-\\%\\~]+")
 
   def copy(other:PathParser) = {
     any_descendant_wildcard = other.any_descendant_wildcard

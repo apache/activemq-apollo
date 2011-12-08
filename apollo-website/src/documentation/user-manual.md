@@ -1635,6 +1635,6 @@ header in the STOMP `SUBSCRIBE` frame to the desired selector. Example:
 ### Destination Name Restrictions
 
 Destination names are restricted to using the characters `a-z`, `A-Z`, `0-9`,
-`_`, `-` `%`, `~`, or `.` in addition to composite separator `,` and the wild
+`_`, `-` `%`, `~`, ' ', or `.` in addition to composite separator `,` and the wild
 card `*`.
 

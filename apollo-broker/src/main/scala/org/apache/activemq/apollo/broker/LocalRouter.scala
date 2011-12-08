@@ -1025,14 +1025,21 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def bind(destination: Array[DestinationDTO], consumer: DeliveryConsumer, security: SecurityContext) = {
-    if(!virtual_host.service_state.is_started) {
-      Some("virtual host stopped.")
-    } else {
-      consumer.retain
-      val paths = destination.map(x=> (destination_parser.decode_path(x.path), x) )
-      dispatch_queue ! {
+    consumer.retain
+    dispatch_queue ! {
+      var rc:Option[String] = None
+      val paths = try {
+        destination.map(x => (destination_parser.decode_path(x.path), x))
+      } catch {
+        case x:PathException =>
+          rc = Some(x.getMessage)
+          null
+      }
+      if(rc.isEmpty && !virtual_host.service_state.is_started) {
+        rc = Some("virtual host stopped.")
+      } else if (rc.isEmpty) {
         val failures = paths.flatMap(x=> domain(x._2).can_bind_all(x._1, x._2, consumer, security) )
-        val rc = if( !failures.isEmpty ) {
+        rc = if( !failures.isEmpty ) {
           Some(failures.mkString("; "))
         } else {
           paths.foreach { x=>
@@ -1040,9 +1047,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           }
           None
         }
-        consumer.release
-        rc
       }
+      consumer.release
+      rc
     }
   }
 
@@ -1057,16 +1064,22 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def connect(destinations: Array[DestinationDTO], producer: BindableDeliveryProducer, security: SecurityContext) = {
-    if(!virtual_host.service_state.is_started) {
-      Some("virtual host stopped.")
-    } else {
-      producer.retain
-      val paths = destinations.map(x=> (destination_parser.decode_path(x.path), x) )
-      dispatch_queue ! {
-
+    producer.retain
+    dispatch_queue ! {
+      var rc:Option[String] = None
+      val paths = try {
+        destinations.map(x=> (destination_parser.decode_path(x.path), x) )
+      } catch {
+        case x:PathException =>
+          rc = Some(x.getMessage)
+          null
+      }
+      if(rc.isEmpty && !virtual_host.service_state.is_started) {
+        rc = Some("virtual host stopped.")
+      } else if(rc.isEmpty) {
+        val paths = destinations.map(x=> (destination_parser.decode_path(x.path), x) )
         val failures = paths.flatMap(x=> domain(x._2).can_connect_all(x._1, x._2, producer, security) )
-        if( !failures.isEmpty ) {
-          producer.release
+        rc = if( !failures.isEmpty ) {
           Some(failures.mkString("; "))
         } else {
           paths.foreach { x=>
@@ -1076,6 +1089,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           None
         }
       }
+      if(rc.isDefined) {
+        producer.release
+      }
+      rc
     }
   }
 
