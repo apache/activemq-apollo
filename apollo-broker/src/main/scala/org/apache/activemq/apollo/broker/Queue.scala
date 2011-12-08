@@ -37,7 +37,6 @@ object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
 
   val PREFTCH_LOAD_FLAG = 1.toByte
-  val PREFTCH_HOLD_FLAG = 2.toByte
 
   class MemorySpace {
     var items = 0
@@ -151,7 +150,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
    *  the queue enables a enqueue rate throttle
    *  to allow consumers to catchup with producers.
    */
-  var tune_catchup_delivery_rate = 0
+  var tune_fast_delivery_rate = 0
   
   /**
    *  The rate at which to throttle producers when
@@ -170,8 +169,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     tune_swap = tune_persistent && config.swap.getOrElse(true)
     tune_swap_range_size = config.swap_range_size.getOrElse(10000)
     tune_consumer_buffer = Option(config.consumer_buffer).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(256*1024)
-    tune_catchup_delivery_rate = Option(config.catchup_delivery_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
-    tune_catchup_enqueue_rate = Option(config.catchup_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(tune_catchup_delivery_rate)
+    tune_fast_delivery_rate = Option(config.fast_delivery_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024)
+    tune_catchup_enqueue_rate = Option(config.catchup_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
     tune_max_enqueue_rate = Option(config.max_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
 
     tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
@@ -229,7 +228,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   var producer_counter = 0L
   var consumer_counter = 0L
-  var tail_prefetch = 0L
+  var consumers_keeping_up = true
 
   var individual_swapped_items = 0
 
@@ -550,23 +549,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
           entry.dispatch
         }
 
-        if( entry.as_loaded.acquired) {
-          // Enqueued message aquired.
-        } else if( tail_prefetch > 0 ) {
-          // Enqueued message prefeteched.
-          tail_prefetch -= entry.size
-          entry.prefetch_flags = PREFTCH_LOAD_FLAG
-          entry.load(consumer_swapped_in)
-        } else {
-//          val prev = entry.getPrevious
-//          if( (prev.as_loaded!=null && prev.as_loaded.swapping_out) || (prev.as_swapped!=null && !prev.as_swapped.swapping_in) ) {
-//            // Swap it out ASAP
-//            entry.swap(true)
-//            println("Enqueued message swapped.")
-//          } else {
-//            trigger_swap
-//            // Avoid swapping right away..
-//          }
+        if( !(consumers_keeping_up || entry.as_loaded.acquired) ) {
           entry.swap(true)
         }
 
@@ -576,6 +559,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
           queueDelivery.uow = null
         }
 
+        
+        if( full ) {
+          trigger_swap
+        }
         true
       }
     }
@@ -642,6 +629,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     }
   }
 
+  var keep_up_delivery_rate = 0L
+  
   def swap_messages:Unit = {
     dispatch_queue.assertExecuting()
 
@@ -679,9 +668,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     }
 
     // Set the prefetch flags
+    val was_keepingup = consumers_keeping_up
+    consumers_keeping_up = false
     all_subscriptions.valuesIterator.foreach{ x=>
       x.refill_prefetch
     }
+    consumers_keeping_up = consumers_keeping_up && delivery_rate > tune_fast_delivery_rate
 
     // swap out messages.
     cur = entries.getHead
@@ -690,8 +682,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       val loaded = cur.as_loaded
       if( loaded!=null ) {
         if( cur.prefetch_flags==0 && !loaded.acquired  ) {
-          val asap = !cur.as_loaded.acquired
-          cur.swap(asap)
+          if( consumers_keeping_up && (loaded.space eq producer_swapped_in)) {
+            // don't move out. keeps producer mem maxed to slow down the producer
+          } else {
+            cur.swap(true)
+          }
         } else {
           cur.load(consumer_swapped_in)
         }
@@ -770,7 +765,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
       // Figure out what the max enqueue rate should be.
       max_enqueue_rate = Int.MaxValue
-      if( tune_catchup_delivery_rate>=0 && tune_catchup_enqueue_rate>=0 && delivery_rate>tune_catchup_delivery_rate && swapped_out_size > 0 && stall_ratio < 1.0 ) {
+      if( tune_fast_delivery_rate>=0 && tune_catchup_enqueue_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 1.0 ) {
         max_enqueue_rate = tune_catchup_enqueue_rate
       }
       if(tune_max_enqueue_rate >=0 ) {
@@ -1904,7 +1899,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       consumer.release
 
       queue.check_idle
-      queue.tail_prefetch = 0
       queue.trigger_swap
     } else {}
   }
@@ -1920,9 +1914,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     if( tail_parked ) {
         if(session.consumer.close_on_drain) {
           close
-        } else {
-          var remaining = queue.tune_consumer_buffer - acquired_size;
-          queue.tail_prefetch = queue.tail_prefetch.max(remaining)
         }
     }
   }
@@ -2023,11 +2014,10 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       cursor = next
     }
     
-    // If we hit the tail.. credit it so that we avoid swapping too soon.
-    if( cursor == null ) {
-      queue.tail_prefetch = queue.tail_prefetch.max(((enqueue_size_per_interval/2) - remaining).max(remaining))
+    // If we hit the tail or the producer swap in area.. let the queue know we are keeping up.
+    if( !queue.consumers_keeping_up && (cursor == null || (cursor.as_loaded!=null && (cursor.as_loaded.space eq queue.producer_swapped_in))) ) {
+      queue.consumers_keeping_up = true
     }
-
 
   }
 

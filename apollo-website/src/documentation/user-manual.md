@@ -269,19 +269,22 @@ memory.  Defaults to true.
   delete once there have been no consumers, producers or messages on it
   for the configured number of seconds.  Defaults to 300 if not set.
   
+* `fast_delivery_rate`: The message delivery rate (in bytes/sec) at which             
+  the queue considers the consumers fast enough to start slowing down enqueue
+  rate to match the consumption rate if the consumers are at the 
+  tail of the queue.           
+  
+* `catchup_enqueue_rate`:  If set, and the the current delivery
+   rate is exceeding the configured value of `fast_delivery_rate` and 
+   the consumers are spending more time loading from the store than 
+   delivering, then the enqueue rate will be throttled to the
+   specified value so that the consumers can catch up and reach the 
+   tail of the queue.
+
 * `max_enqueue_rate`: The maximum enqueue rate of the queue.  Producers
   will be flow controlled once this enqueue rate is reached.  If not set
   then it is disabled
 
-* `catchup_delivery_rate`: The message delivery rate (in bytes/sec) at which
-  the queue enables a producer rate throttle to allow consumers to catchup 
-  with producers.  The the consumers must also be stalling on message
-  loading longer than they stall to deliver.  If not set then the
-  feature is disabled.
-  
-* `catchup_enqueue_rate`:  The rate at which to throttle enqueues when
-  consumers are catching up.  Defaults to the rate configured in
-  `catchup_delivery_rate` 
 
 ##### Topics
 

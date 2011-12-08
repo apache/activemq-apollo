@@ -87,15 +87,22 @@ public class QueueDTO extends StringIdDTO {
 
     /**
      *  The message delivery rate (in bytes/sec) at which
-     *  the queue enables a producer rate throttle
-     *  to allow consumers to catchup with producers.
+     *  the queue considers the consumers fast and
+     *  may start slowing down producers to match the consumption
+     *  rate if the consumers are at the tail of the queue.
      */
-    @XmlAttribute(name="catchup_delivery_rate")
-    public String catchup_delivery_rate;
+    @XmlAttribute(name="fast_delivery_rate")
+    public String fast_delivery_rate;
 
     /**
-     *  The rate at which to throttle enqueues when
-     *  consumers are catching up.
+     * If set, and the the current delivery
+     * rate is exceeding the configured value
+     * of fast_delivery_rate and the consumers
+     * are spending more time loading from
+     * the store than delivering, then the
+     * enqueue rate will be throttled to the
+     * specified value so that the consumers
+     * can catch up and reach the tail of the queue.
      */
     @XmlAttribute(name="catchup_enqueue_rate")
     public String catchup_enqueue_rate;
@@ -122,7 +129,7 @@ public class QueueDTO extends StringIdDTO {
 
         if (auto_delete_after != null ? !auto_delete_after.equals(queueDTO.auto_delete_after) : queueDTO.auto_delete_after != null)
             return false;
-        if (catchup_delivery_rate != null ? !catchup_delivery_rate.equals(queueDTO.catchup_delivery_rate) : queueDTO.catchup_delivery_rate != null)
+        if (fast_delivery_rate != null ? !fast_delivery_rate.equals(queueDTO.fast_delivery_rate) : queueDTO.fast_delivery_rate != null)
             return false;
         if (catchup_enqueue_rate != null ? !catchup_enqueue_rate.equals(queueDTO.catchup_enqueue_rate) : queueDTO.catchup_enqueue_rate != null)
             return false;
@@ -151,7 +158,7 @@ public class QueueDTO extends StringIdDTO {
         result = 31 * result + (swap != null ? swap.hashCode() : 0);
         result = 31 * result + (swap_range_size != null ? swap_range_size.hashCode() : 0);
         result = 31 * result + (quota != null ? quota.hashCode() : 0);
-        result = 31 * result + (catchup_delivery_rate != null ? catchup_delivery_rate.hashCode() : 0);
+        result = 31 * result + (fast_delivery_rate != null ? fast_delivery_rate.hashCode() : 0);
         result = 31 * result + (catchup_enqueue_rate != null ? catchup_enqueue_rate.hashCode() : 0);
         result = 31 * result + (max_enqueue_rate != null ? max_enqueue_rate.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
