@@ -174,6 +174,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
     protected DispatchQueue dispatchQueue;
     private DispatchSource readSource;
     private DispatchSource writeSource;
+    private CustomDispatchSource<Integer, Integer> drainOutboundSource;
     private CustomDispatchSource<Integer, Integer> yieldSource;
 
     protected boolean useLocalHost = true;
@@ -468,6 +469,13 @@ public class TcpTransport extends JavaBaseService implements Transport {
             }
         });
         yieldSource.resume();
+        drainOutboundSource = Dispatch.createSource(EventAggregators.INTEGER_ADD, dispatchQueue);
+        drainOutboundSource.setEventHandler(new Runnable() {
+            public void run() {
+                drainOutbound();
+            }
+        });
+        drainOutboundSource.resume();
 
         readSource = Dispatch.createSource(channel, SelectionKey.OP_READ, dispatchQueue);
         writeSource = Dispatch.createSource(channel, SelectionKey.OP_WRITE, dispatchQueue);
@@ -528,6 +536,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
         return codec==null || codec.full();
     }
 
+    boolean rejectingOffers;
+
     public boolean offer(Object command) {
         assert Dispatch.getCurrentQueue() == dispatchQueue;
         try {
@@ -539,14 +549,12 @@ public class TcpTransport extends JavaBaseService implements Transport {
             }
 
             ProtocolCodec.BufferState rc = codec.write(command);
+            rejectingOffers = codec.full();
             switch (rc ) {
                 case FULL:
                     return false;
                 default:
-                    if( drained ) {
-                        drained = false;
-                        resumeWrite();
-                    }
+                    drainOutboundSource.merge(1);
                     return true;
             }
         } catch (IOException e) {
@@ -556,8 +564,8 @@ public class TcpTransport extends JavaBaseService implements Transport {
 
     }
 
+    boolean writeResumedForCodecFlush = false;
 
-    boolean drained = true;
     /**
      *
      */
@@ -568,10 +576,17 @@ public class TcpTransport extends JavaBaseService implements Transport {
         }
         try {
             if( codec.flush() == ProtocolCodec.BufferState.EMPTY && flush() ) {
-                if( !drained ) {
-                    drained = true;
+                if( writeResumedForCodecFlush) {
+                    writeResumedForCodecFlush = false;
                     suspendWrite();
-                    listener.onRefill();
+                }
+                rejectingOffers = false;
+                listener.onRefill();
+
+            } else {
+                if(!writeResumedForCodecFlush) {
+                    writeResumedForCodecFlush = true;
+                    resumeWrite();
                 }
             }
         } catch (IOException e) {
@@ -658,6 +673,7 @@ public class TcpTransport extends JavaBaseService implements Transport {
             }
         }
     }
+
     private void _resumeRead() {
         readSource.resume();
         dispatchQueue.execute(new Runnable(){
@@ -672,14 +688,10 @@ public class TcpTransport extends JavaBaseService implements Transport {
             writeSource.suspend();
         }
     }
+
     protected void resumeWrite() {
         if( isConnected() && writeSource!=null ) {
             writeSource.resume();
-            dispatchQueue.execute(new Runnable(){
-                public void run() {
-                    drainOutbound();
-                }
-            });
         }
     }
 

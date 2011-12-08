@@ -49,4 +49,5 @@ class LongCounter(private var value:Long = 0) extends MetricProducer[Long] {
     rc
   }
 
+  override def toString() = get().toString
 }

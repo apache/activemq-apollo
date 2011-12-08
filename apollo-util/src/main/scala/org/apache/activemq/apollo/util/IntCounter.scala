@@ -48,4 +48,5 @@ class IntCounter(private var value:Int = 0) extends MetricProducer[Int] {
     rc
   }
 
+  override def toString() = get().toString
 }
