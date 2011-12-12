@@ -173,7 +173,7 @@ class StompProtocolHandler extends ProtocolHandler {
       starting_seq=seq
     }
 
-    val ack_source = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
+    val credit_window_source = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
       def mergeEvent(previous:(Int, Int), event:(Int, Int)) = {
         if( previous == null ) {
           event
@@ -184,25 +184,35 @@ class StompProtocolHandler extends ProtocolHandler {
       def mergeEvents(previous:(Int, Int), events:(Int, Int)) = mergeEvent(previous, events)
     }, dispatch_queue)
 
-    ack_source.setEventHandler(^ {
-      val data = ack_source.getData
+    credit_window_source.setEventHandler(^ {
+      val data = credit_window_source.getData
       credit_window_filter.credit(data._1, data._2)
     });
-    ack_source.resume
+    credit_window_source.resume
 
     trait AckHandler {
       def track(delivery:Delivery):Unit
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
+      def close:Unit
     }
 
     class AutoAckHandler extends AckHandler {
+      var closed = false
+
+      def close = { closed  = true}
 
       def track(delivery:Delivery) = {
-        if( delivery.ack!=null ) {
-          delivery.ack(Consumed, null)
+        if( closed ) {
+          if( delivery.ack!=null ) {
+            delivery.ack(Undelivered, null)
+          }
+        } else {
+          if( delivery.ack!=null ) {
+            delivery.ack(Consumed, null)
+          }
+          credit_window_source.merge((delivery.size, 1))
         }
-        ack_source.merge((delivery.size, 1))
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
@@ -219,13 +229,30 @@ class StompProtocolHandler extends ProtocolHandler {
     class SessionAckHandler extends AckHandler{
       var consumer_acks = ListBuffer[(AsciiBuffer, TrackedAck)]()
 
+      def close = {
+        queue.assertExecuting()
+        consumer_acks.foreach { case(_, tack) =>
+          if( tack.ack !=null ) {
+            tack.ack(Delivered, null)
+          }
+        }
+        consumer_acks = null
+      }
+
       def track(delivery:Delivery) = {
         queue.assertExecuting()
-        if( protocol_version eq V1_0 ) {
-          // register on the connection since 1.0 acks may not include the subscription id
-          connection_ack_handlers += ( delivery.message.id-> this )
+        if( consumer_acks == null ) {
+          // It can happen if we get closed.. but destination is still sending data..
+          if( delivery.ack!=null ) {
+            delivery.ack(Undelivered, null)
+          }
+        } else {
+          if( protocol_version eq V1_0 ) {
+            // register on the connection since 1.0 acks may not include the subscription id
+            connection_ack_handlers += ( delivery.message.id-> this )
+          }
+          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
         }
-        consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
@@ -243,19 +270,20 @@ class StompProtocolHandler extends ProtocolHandler {
 
           for( (id, delivery) <- acked ) {
             for( credit <- delivery.credit ) {
-              ack_source.merge((credit, 1))
+              credit_window_source.merge((credit, 1))
               delivery.credit = None
             }
           }
         } else {
           if( credit_value!=null ) {
-            ack_source.merge((credit_value._1, credit_value._2))
+            credit_window_source.merge((credit_value._1, credit_value._2))
           }
         }
       }
 
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
         queue.assertExecuting()
+        assert(consumer_acks !=null)
 
         // session acks ack all previously received messages..
         var found = false
@@ -289,13 +317,30 @@ class StompProtocolHandler extends ProtocolHandler {
     class MessageAckHandler extends AckHandler {
       var consumer_acks = HashMap[AsciiBuffer, TrackedAck]()
 
+      def close = {
+        queue.assertExecuting()
+        consumer_acks.foreach { case(_, tack) =>
+          if( tack.ack !=null ) {
+            tack.ack(Delivered, null)
+          }
+        }
+        consumer_acks = null
+      }
+
       def track(delivery:Delivery) = {
         queue.assertExecuting();
-        if( protocol_version eq V1_0 ) {
-          // register on the connection since 1.0 acks may not include the subscription id
-          connection_ack_handlers += ( delivery.message.id-> this )
+        if( consumer_acks == null ) {
+          // It can happen if we get closed.. but destination is still sending data..
+          if( delivery.ack!=null ) {
+            delivery.ack(Undelivered, null)
+          }
+        } else {
+          if( protocol_version eq V1_0 ) {
+            // register on the connection since 1.0 acks may not include the subscription id
+            connection_ack_handlers += ( delivery.message.id-> this )
+          }
+          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
         }
-        consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
@@ -303,19 +348,20 @@ class StompProtocolHandler extends ProtocolHandler {
         if( initial_credit_window._3 ) {
           for( delivery <- consumer_acks.get(msgid)) {
             for( credit <- delivery.credit ) {
-              ack_source.merge((credit,1))
+              credit_window_source.merge((credit,1))
               delivery.credit = None
             }
           }
         } else {
           if( credit_value!=null ) {
-            ack_source.merge((credit_value._1, credit_value._2))
+            credit_window_source.merge((credit_value._1, credit_value._2))
           }
         }
       }
 
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null) = {
         queue.assertExecuting()
+        assert(consumer_acks !=null)
         consumer_acks.remove(msgid) match {
           case Some(delivery) =>
             if( delivery.ack!=null ) {
@@ -364,6 +410,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     override def dispose() = dispatchQueue {
+      ack_handler.close
       super.dispose()
       sink_manager.close(consumer_sink)
     }

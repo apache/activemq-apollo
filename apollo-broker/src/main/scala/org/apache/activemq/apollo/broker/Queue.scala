@@ -1822,14 +1822,14 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   var total_ack_count = 0L
   var total_nack_count = 0L
-
+  
   override def toString = {
     def seq(entry:QueueEntry) = if(entry==null) null else entry.seq
     "{ id: "+id+", acquired_size: "+acquired_size+", pos: "+seq(pos)+"}"
   }
 
-  def browser = session.consumer.browser
-  def exclusive = session.consumer.exclusive
+  def browser = consumer.browser
+  def exclusive = consumer.exclusive
 
   // This opens up the consumer
   def open() = {
@@ -1869,6 +1869,17 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     queue.check_idle
   }
 
+  var pending_close_action: ()=>Unit = _
+  
+  def check_finish_close = {
+    // We can complete the closing of the sub
+    // once the outstanding acks are settled.
+    if (pending_close_action!=null && acquired.isEmpty) {
+      pending_close_action()
+      pending_close_action = null
+    }
+  }
+
   def close() = {
     if(pos!=null) {
       pos -= this
@@ -1876,30 +1887,27 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       queue.exclusive_subscriptions = queue.exclusive_subscriptions.filterNot( _ == this )
       queue.all_subscriptions -= consumer
-      queue.change_consumer_capacity( - queue.tune_consumer_buffer )
-
-
-      // nack all the acquired entries.
-      var next = acquired.getHead
-      while( next !=null ) {
-        val cur = next;
-        next = next.getNext
-        cur.entry.redelivered
-        cur.nack // this unlinks the entry.
-      }
-
-      if( exclusive ) {
-        // rewind all the subs to the start of the queue.
-        queue.all_subscriptions.values.foreach(_.rewind(queue.head_entry))
-      }
 
       session.refiller = NOOP
       session.close
       session = null
-      consumer.release
 
-      queue.check_idle
-      queue.trigger_swap
+      // The following action gets executed once all aquired messages
+      // ared acked or nacked.
+      pending_close_action = ()=> {
+        queue.change_consumer_capacity( - queue.tune_consumer_buffer )
+
+        if( exclusive ) {
+          // rewind all the subs to the start of the queue.
+          queue.all_subscriptions.values.foreach(_.rewind(queue.head_entry))
+        }
+  
+        queue.check_idle
+        queue.trigger_swap
+      }
+
+      consumer.release
+      check_finish_close
     } else {}
   }
 
@@ -1912,7 +1920,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     pos = value
     check_load_stall
     if( tail_parked ) {
-        if(session.consumer.close_on_drain) {
+        if(consumer.close_on_drain) {
           close
         }
     }
@@ -1933,7 +1941,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   def tail_parked = pos eq queue.tail_entry
 
-  def matches(entry:Delivery) = session.consumer.matches(entry)
+  def matches(entry:Delivery) = consumer.matches(entry)
   def full = session.full
 
   def offer(delivery:Delivery) = try {
@@ -2032,10 +2040,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         debug("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
         return
       }
-      // The session may have already been closed..
-      if( session == null ) {
-        return;
-      }
+
       total_ack_count += 1
       if (entry.messageKey != -1) {
         val storeBatch = if( uow == null ) {
@@ -2063,6 +2068,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       queue.trigger_swap
       next.run
+      check_finish_close
+      
     }
 
     def nack:Unit = {
@@ -2070,10 +2077,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       if(!isLinked) {
         warn("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
         return
-      }
-      // The session may have already been closed..
-      if( session == null ) {
-        return;
       }
 
       total_nack_count += 1
@@ -2098,6 +2101,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       }
       unlink()
+      check_finish_close
     }
   }
 

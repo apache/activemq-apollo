@@ -795,6 +795,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       override def time_stamp = broker.now
     }
 
+    override def dispose() = dispatchQueue {
+      ack_handler.close
+      super.dispose()
+      sink_manager.close(consumer_sink)
+    }
+    
+    
     override def exclusive = info.isExclusive
     override def browser = info.isBrowser
 
@@ -969,9 +976,26 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // TODO: Need to validate all the range ack cases...
       var consumer_acks = ListBuffer[(MessageId,TrackedAck)]()
 
+      def close = {
+        queue.assertExecuting()
+        consumer_acks.foreach { case(_, tack) =>
+          if( tack.ack !=null ) {
+            tack.ack(Delivered, null)
+          }
+        }
+        consumer_acks = null
+      }
+
       def track(msgid:MessageId, ack:(DeliveryResult, StoreUOW)=>Unit) = {
         queue.assertExecuting()
-        consumer_acks += msgid -> new TrackedAck(ack)
+        if( consumer_acks==null ) {
+          // It can happen if we get closed.. but destination is still sending data..
+          if( ack!=null ) {
+            ack(Undelivered, null)
+          }
+        } else {
+          consumer_acks += msgid -> new TrackedAck(ack)
+        }
       }
 
       def credit(messageAck: MessageAck):Unit = {

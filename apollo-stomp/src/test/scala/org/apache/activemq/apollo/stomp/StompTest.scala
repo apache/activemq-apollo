@@ -251,6 +251,59 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  // This is the test case for https://issues.apache.org/jira/browse/APLO-88
+  test("ACK then socket close with/without DISCONNECT, should still ACK") {
+    for(i <- 1 until 3) {
+      connect("1.1")
+
+      def send(id:Int) = {
+        client.write(
+          "SEND\n" +
+          "destination:/queue/from-seq-end\n" +
+          "message-id:id-"+i+"-"+id+"\n"+
+          "receipt:0\n"+
+          "\n")
+        wait_for_receipt("0")
+      }
+
+      def get(seq:Long) = {
+        val frame = client.receive()
+        frame should startWith("MESSAGE\n")
+        frame should include("message-id:id-"+i+"-"+seq+"\n")
+        client.write(
+          "ACK\n" +
+          "subscription:0\n" +
+          "message-id:id-"+i+"-"+seq+"\n" +
+          "\n")
+      }
+
+      send(1)
+      send(2)
+
+      client.write(
+        "SUBSCRIBE\n" +
+        "destination:/queue/from-seq-end\n" +
+        "id:0\n" +
+        "ack:client\n"+
+        "\n")
+      get(1)
+      client.write(
+        "DISCONNECT\n" +
+        "\n")
+      client.close
+
+      connect("1.1")
+      client.write(
+        "SUBSCRIBE\n" +
+        "destination:/queue/from-seq-end\n" +
+        "id:0\n" +
+        "ack:client\n"+
+        "\n")
+      get(2)
+      client.close
+    }
+  }
+
   test("Setting `from-seq` header to -1 results in subscription starting at end of the queue.") {
     connect("1.1")
 
