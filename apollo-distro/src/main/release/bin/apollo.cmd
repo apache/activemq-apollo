@@ -54,6 +54,10 @@ if NOT "x%APOLLO_BASE%" == "x" set BOOTDIRS=%APOLLO_BASE%\lib:%BOOTDIRS%
 
 if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G
 
+if "%APOLLO_ASSERTIONS%"=="false" goto noAPOLLO_ASSERTIONS
+  set JVM_FLAGS=-ea %JVM_FLAGS%
+:noAPOLLO_ASSERTIONS
+
 if "x%APOLLO_OPTS%" == "x" goto noAPOLLO_OPTS
   set JVM_FLAGS=%JVM_FLAGS% %APOLLO_OPTS%
 :noAPOLLO_OPTS

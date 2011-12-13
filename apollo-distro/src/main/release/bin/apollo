@@ -119,7 +119,13 @@ if $cygwin; then
   CYGHOME=`cygpath --windows "$HOME"`
 fi
 
-JVM_FLAGS="${JVM_FLAGS--server -Xmx1G}"
+if [ -z "$JVM_FLAGS" ] ; then
+  JVM_FLAGS="-server -Xmx1G"
+fi
+
+if [ "$APOLLO_ASSERTIONS" != "false" ] ; then
+  JVM_FLAGS="-ea ${JVM_FLAGS}"
+fi
 
 if [ "x$APOLLO_OPTS" != "x" ] ; then
   JVM_FLAGS="${JVM_FLAGS} ${APOLLO_OPTS}"
@@ -135,7 +141,11 @@ if [ "x$APOLLO_PROFILE" != "x" ]; then
     JVM_FLAGS="-agentlib:yjpagent ${JVM_FLAGS}"
 fi
 
-JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS--Dcom.sun.management.jmxremote}"
+if [ -z "$JMX_OPTS" ] ; then
+  JMX_OPTS="-Dcom.sun.management.jmxremote"
+fi
+
+JVM_FLAGS="${JVM_FLAGS} ${JMX_OPTS}"
 
 SYSTEM_PROPS="${SYSTEM_PROPS} -Dapollo.home=${APOLLO_HOME}"
 if [ ! -z "$APOLLO_BASE" ] ; then
