@@ -34,7 +34,8 @@
         
         <include>org.iq80.leveldb:*</include>
         <include>com.google.guava:guava</include>
-        
+        <include>org.xerial.snappy:snappy-java</include>
+
         <include>org.fusesource.leveldbjni:*</include>
         <include>org.fusesource.hawtjni:*</include>
         
