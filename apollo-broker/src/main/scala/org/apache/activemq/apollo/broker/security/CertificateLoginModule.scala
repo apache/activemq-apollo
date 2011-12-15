@@ -131,7 +131,8 @@ class CertificateLoginModule extends LoginModule {
       case Some(file)=>
 
         val users = file_cache.get(file) match {
-          case None => throw new LoginException("Invalid login module configuration")
+          case None =>
+            throw new LoginException("Invalid login module configuration")
           case Some(x) => x
         }
 
@@ -149,12 +150,11 @@ class CertificateLoginModule extends LoginModule {
             debug("Distinguished name: '%s' not found in dn file", dn)
           }
         }
-
-        if (principals.isEmpty) {
-          throw new FailedLoginException("Does not have a listed distinguished name")
-        }
     }
 
+    if (principals.isEmpty) {
+      throw new FailedLoginException("Unknown distinguished names: ["+certificates.map(_.getSubjectX500Principal.getName).mkString(";")+"]")
+    }
     return true
   }
 
