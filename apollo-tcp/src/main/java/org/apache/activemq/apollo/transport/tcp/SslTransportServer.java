@@ -23,6 +23,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -48,7 +49,6 @@ public class SslTransportServer extends TcpTransportServer implements KeyAndTrus
 
     public void start(Runnable onCompleted) throws Exception {
         if( keyManagers!=null ) {
-            sslContext = SSLContext.getInstance(protocol);
             sslContext.init(keyManagers, trustManagers, null);
         } else {
             sslContext = SSLContext.getDefault();
@@ -62,8 +62,9 @@ public class SslTransportServer extends TcpTransportServer implements KeyAndTrus
         return rc;
     }
 
-    protected SslTransportServer protocol(String value) {
+    protected SslTransportServer protocol(String value) throws NoSuchAlgorithmException {
         this.protocol = value;
+        sslContext = SSLContext.getInstance(protocol);
         return this;
     }
 

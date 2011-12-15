@@ -65,16 +65,12 @@ public class SslTransportFactory extends TcpTransportFactory {
     protected String protocol(String scheme) {
         if( scheme.equals("tls") ) {
             return "TLS";
-        } else if( scheme.equals("tlsv1") ) {
-            return "TLSv1";
-        } else if( scheme.equals("tlsv1.1") ) {
-            return "TLSv1.1";
+        } else if( scheme.startsWith("tlsv") ) {
+            return "TLSv"+scheme.substring(4);
         } else if( scheme.equals("ssl") ) {
             return "SSL";
-        } else if( scheme.equals("sslv2") ) {
-            return "SSLv2";
-        } else if( scheme.equals("sslv3") ) {
-            return "SSLv3";
+        } else if( scheme.startsWith("sslv") ) {
+            return "SSLv"+scheme.substring(4);
         }
         return null;
     }
