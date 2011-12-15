@@ -19,7 +19,6 @@ package org.apache.activemq.apollo;
 import javax.jms.*;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -31,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * 
  */
-public class JmsTestSupport extends CombinationTestSupport {
+public class JmsTestSupport extends TestSupport {
 
     static final private AtomicLong TEST_COUNTER = new AtomicLong();
     public String userName;
@@ -40,7 +39,6 @@ public class JmsTestSupport extends CombinationTestSupport {
 
     protected ConnectionFactory factory;
     protected Connection connection;
-    protected BrokerService broker;
 
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<Connection>());
 
@@ -98,12 +96,8 @@ public class JmsTestSupport extends CombinationTestSupport {
         producer.close();
     }
 
-    protected ConnectionFactory createConnectionFactory() throws Exception {
-        return broker.get_connection_factory();
-    }
-
-    protected BrokerService createBroker() throws Exception {
-        return new StompBroker();
+    public ConnectionFactory createConnectionFactory() throws Exception {
+        return broker.getConnectionFactory();
     }
 
     protected void setUp() throws Exception {
@@ -114,7 +108,6 @@ public class JmsTestSupport extends CombinationTestSupport {
             System.setProperty("basedir", file.getAbsolutePath());
         }
 
-        broker = createBroker();
         broker.start();
         factory = createConnectionFactory();
         connection = factory.createConnection(userName, password);

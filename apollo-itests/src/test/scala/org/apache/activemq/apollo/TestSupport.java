@@ -16,14 +16,8 @@
  */
 package org.apache.activemq.apollo;
 
-import org.fusesource.stompjms.StompJmsConnectionFactory;
-
 import java.io.File;
-import java.io.IOException;
-import java.util.Hashtable;
-import java.util.Map;
 import javax.jms.*;
-import javax.naming.InitialContext;
 
 /**
  * Useful base class for unit test cases
@@ -32,9 +26,29 @@ import javax.naming.InitialContext;
  */
 public abstract class TestSupport extends CombinationTestSupport {
 
-    protected BrokerService broker = new StompBroker();
+    protected BrokerService broker;
     protected ConnectionFactory connectionFactory;
     protected boolean topic = true;
+
+    public void initCombos() {
+        Object[] brokers;
+        // TODO - until openwire is built normally do a quick/dirty check
+        boolean openwireEnabled = false;
+        try {
+            Class.forName("org.apache.activemq.apollo.openwire.OpenwireProtocolHandler", false, TestSupport.class.getClassLoader());
+            openwireEnabled = true;
+        } catch (ClassNotFoundException e) {
+
+        }
+
+        if (openwireEnabled) {
+            brokers = new Object[] { new StompBroker(), new OpenwireBroker() };
+        } else {
+            brokers = new Object[] { new StompBroker() };
+        }
+        addCombinationValues("broker", brokers);
+    }
+
     /*
     public PersistenceAdapterChoice defaultPersistenceAdapter = PersistenceAdapterChoice.KahaDB;
     */
@@ -54,6 +68,11 @@ public abstract class TestSupport extends CombinationTestSupport {
         }
     }
     */
+
+    public void setBroker(BrokerService broker) {
+        this.broker = broker;
+    }
+
     protected Destination createDestination(String subject) {
         return null;
     }
@@ -80,6 +99,12 @@ public abstract class TestSupport extends CombinationTestSupport {
         for (int i = 0; i < secondSet.length; i++) {
             TextMessage m1 = (TextMessage)firstSet[i];
             TextMessage m2 = (TextMessage)secondSet[i];
+            if (m1 != null) {
+                m1.getText();
+            }
+            if (m2 != null) {
+                m2.getText();
+            }
             assertFalse("Message " + (i + 1) + " did not match : " + messsage + ": expected {" + m1
                         + "}, but was {" + m2 + "}", m1 == null ^ m2 == null);
             assertEquals("Message " + (i + 1) + " did not match: " + messsage + ": expected {" + m1
@@ -87,14 +112,14 @@ public abstract class TestSupport extends CombinationTestSupport {
         }
     }
 
-    protected ConnectionFactory createConnectionFactory() throws Exception {
-        return broker.get_connection_factory();
+    public ConnectionFactory createConnectionFactory() throws Exception {
+        return broker.getConnectionFactory();
     }
 
     /**
      * Factory method to create a new connection
      */
-    protected Connection createConnection() throws Exception {
+    public Connection createConnection() throws Exception {
         return getConnectionFactory().createConnection();
     }
 
@@ -115,7 +140,7 @@ public abstract class TestSupport extends CombinationTestSupport {
     }
 
     protected String getSubject() {
-        return getName();
+        return getName().replaceAll("[{}= @\\.]+", "_");
     }
 
     public static void recursiveDelete(File f) {

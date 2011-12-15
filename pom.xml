@@ -172,7 +172,6 @@
     <module>apollo-web</module>
     <module>apollo-cli</module>
     <module>apollo-website</module>
-    <module>apollo-itests</module>
     <module>apollo-distro</module>
     <module>apollo-karaf-feature</module>
   </modules>
@@ -504,6 +503,14 @@
         <!-- <module>apollo-cassandra</module> -->
         <module>apollo-hawtdb</module>
         <module>apollo-openwire</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <!-- TODO - for now until tests become stable -->
+      <id>itests</id>
+      <modules>
+        <module>apollo-itests</module>
       </modules>
     </profile>
     

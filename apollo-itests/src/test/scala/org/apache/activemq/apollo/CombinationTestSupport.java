@@ -76,8 +76,11 @@ public abstract class CombinationTestSupport extends AutoFailTestSupport {
         }
     }
 
+
+
     public void runBare() throws Throwable {
         if (combosEvaluated) {
+            LOG.info("Running test : " + getName());
             super.runBare();
         } else {
             CombinationTestSupport[] combinations = getCombinations();
@@ -126,6 +129,7 @@ public abstract class CombinationTestSupport extends AutoFailTestSupport {
     private CombinationTestSupport[] getCombinations() {
         try {
             Method method = getClass().getMethod("initCombos", (Class[])null);
+            LOG.info("initCombos for class " + getClass().getSimpleName() + " : " + method);
             method.invoke(this, (Object[])null);
         } catch (Throwable e) {
         }

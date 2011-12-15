@@ -32,7 +32,7 @@
 
   <name>${project.artifactId}</name>
   <description>General Apollo Integration/System Tests</description>
-  
+
   <properties>
     <maven-compiler-plugin-version>2.3.2</maven-compiler-plugin-version>
     <stompjms-client-version>1.4-SNAPSHOT</stompjms-client-version>
@@ -137,6 +137,30 @@
 
   </dependencies>
 
+  <profiles>
+
+    <profile>
+      <id>unstable</id>
+
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-core</artifactId>
+          <version>5.5.1</version>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-openwire</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <scope>test</scope>
+        </dependency>
+
+      </dependencies>
+    </profile>
+
+  </profiles>
+
   <build>
 
     <pluginManagement>
@@ -178,29 +202,29 @@
           </execution>
         </executions>
         <configuration>
-            <testSourceDir>src/test/scala</testSourceDir>
-            <args>
-              <arg>-deprecation</arg>
-              <arg>-P:continuations:enable</arg>
-            </args>
-            <compilerPlugins>
-              <compilerPlugin>
-                <groupId>org.scala-lang.plugins</groupId>
-                <artifactId>continuations</artifactId>
-                <version>${scala-version}</version>
-              </compilerPlugin>
-              <compilerPlugin>
-                <groupId>org.fusesource.jvmassert</groupId>
-                <artifactId>jvmassert</artifactId>
-                <version>1.2</version>
-              </compilerPlugin>
-            </compilerPlugins>
-            <jvmArgs>
-              <jvmArg>-Xmx1024m</jvmArg>
-              <jvmArg>-Xss8m</jvmArg>
-            </jvmArgs>
-            <scalaVersion>${scala-version}</scalaVersion>
-          </configuration>
+          <testSourceDir>src/test/scala</testSourceDir>
+          <args>
+            <arg>-deprecation</arg>
+            <arg>-P:continuations:enable</arg>
+          </args>
+          <compilerPlugins>
+            <compilerPlugin>
+              <groupId>org.scala-lang.plugins</groupId>
+              <artifactId>continuations</artifactId>
+              <version>${scala-version}</version>
+            </compilerPlugin>
+            <compilerPlugin>
+              <groupId>org.fusesource.jvmassert</groupId>
+              <artifactId>jvmassert</artifactId>
+              <version>1.2</version>
+            </compilerPlugin>
+          </compilerPlugins>
+          <jvmArgs>
+            <jvmArg>-Xmx1024m</jvmArg>
+            <jvmArg>-Xss8m</jvmArg>
+          </jvmArgs>
+          <scalaVersion>${scala-version}</scalaVersion>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -229,23 +253,30 @@
         </executions>
       </plugin>
 
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven-surefire-plugin-version}</version>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin-version}</version>
 
-            <configuration>
-                <!-- we must turn off the use of system class loader so our tests can find stuff - otherwise ScalaSupport compiler can't find stuff -->
-                <useSystemClassLoader>false</useSystemClassLoader>
-                <!--forkMode>pertest</forkMode-->
-                <childDelegation>false</childDelegation>
-                <useFile>true</useFile>
-                <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                <failIfNoTests>false</failIfNoTests>
-            </configuration>
-        </plugin>
+        <configuration>
+          <!-- we must turn off the use of system class loader so our tests can find stuff - otherwise ScalaSupport compiler can't find stuff -->
+          <useSystemClassLoader>false</useSystemClassLoader>
+          <!--forkMode>pertest</forkMode-->
+        <childDelegation>false</childDelegation>
+        <useFile>true</useFile>
+        <redirectTestOutputToFile>true</redirectTestOutputToFile>
+        <failIfNoTests>false</failIfNoTests>
 
-    </plugins>
-  </build>
-  
+        <excludes>
+          <!-- hangs -->
+          <!--
+          <exclude>**/JmsTopicTransactionTest.*</exclude>
+          -->
+        </excludes>
+      </configuration>
+    </plugin>
+
+  </plugins>
+</build>
+
 </project>
