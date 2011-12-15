@@ -558,12 +558,12 @@ Example:
 The `connector` element's `bind` attribute controls which secure transport 
 algorithm gets used by the sever.  Supported values are:
 
-* `ssl://`    - Supports some version of SSL
-* `sslv2://`  - Supports SSL version 2 or higher
-* `sslv3://`  - Supports SSL version 3
-* `tls://`    - Supports some version of TLS
-* `tlsv://`   - Supports RFC 2246: TLS version 1.0 
-* `tls1.1://` - Supports RFC 4346: TLS version 1.1 
+* `ssl://`    - Use the JVM default version of the SSL algorithm.
+* `sslv*://`  - Use a specific SSL version where `*` is a version
+  supported by your JVM.  Example: `sslv3`
+* `tls://`    - Use the JVM default version of the TLS algorithm.
+* `tlsv*://`  - Use a specific TLS version where `*` is a version
+  supported by your JVM.  Example: `tlsv1.1`
 
 The attributes that you can configure on the `key_storage` element are:
 
