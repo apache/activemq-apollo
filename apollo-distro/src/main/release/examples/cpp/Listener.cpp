@@ -74,7 +74,7 @@ int main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED) {
 
     {
         ActiveMQConnectionFactory factory;
-        factory.setBrokerURL(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
+        factory.setBrokerURI(std::string("tcp://") + host + ":" + Integer::toString(port) + "?wireFormat=stomp");
 
         std::auto_ptr<Connection> connection(factory.createConnection(user, password));
 
