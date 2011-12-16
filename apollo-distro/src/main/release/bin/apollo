@@ -155,4 +155,4 @@ fi
 # Attempt to bump up the ulimit 
 ulimit -n 100000 > /dev/null 2> /dev/null
 
-${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.boot.Boot ${BOOTDIRS} org.apache.activemq.apollo.cli.Apollo $@
+${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.boot.Apollo ${BOOTDIRS} org.apache.activemq.apollo.cli.Apollo $@

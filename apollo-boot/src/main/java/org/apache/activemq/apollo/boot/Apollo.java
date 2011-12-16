@@ -32,12 +32,12 @@ import java.util.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class Boot {
+public class Apollo {
 
    public static void main(String[] args) throws Throwable, NoSuchMethodException, IllegalAccessException {
        LinkedList<String> argList = new LinkedList<String>(Arrays.asList(args));
        if( argList.isEmpty() ) {
-           System.err.println("Usage "+Boot.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
+           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
            System.err.println();
            System.err.println("Mising <bootdir>");
            System.exit(2);
@@ -45,7 +45,7 @@ public class Boot {
        String[] bootdirs = argList.removeFirst().split(":");
 
        if( argList.isEmpty() ) {
-           System.err.println("Usage "+Boot.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
+           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
            System.err.println();
            System.err.println("Mising <main-class>");
            System.exit(2);
