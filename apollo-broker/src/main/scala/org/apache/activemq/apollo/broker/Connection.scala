@@ -21,7 +21,7 @@ import _root_.java.lang.{String}
 import org.fusesource.hawtdispatch._
 import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.filter.BooleanExpression
-import org.apache.activemq.apollo.transport.{TransportListener, DefaultTransportListener, Transport}
+import org.fusesource.hawtdispatch.transport.{TransportListener, DefaultTransportListener, Transport}
 import org.apache.activemq.apollo.dto.{DestinationDTO, ConnectionStatusDTO}
 import org.apache.activemq.apollo.util.{Dispatched, Log, BaseService}
 
@@ -84,7 +84,7 @@ abstract class Connection() extends BaseService with Dispatched {
 
   protected def on_failure(error:Exception) = {
     warn(error)
-    transport.stop
+    transport.stop(NOOP)
   }
 }
 

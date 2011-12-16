@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.broker.protocol
 
 import java.io.IOException
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.apache.activemq.apollo.transport._
+import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}

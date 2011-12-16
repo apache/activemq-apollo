@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.transport;
 
+import org.fusesource.hawtdispatch.transport.Transport;
+import org.fusesource.hawtdispatch.transport.TransportServer;
 import org.apache.activemq.apollo.util.ClassFinder;
-
-import java.util.List;
 
 /**
  *

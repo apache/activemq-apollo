@@ -14,18 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.transport;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.TrustManager;
+public class DiscoveryEvent {
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-public interface KeyAndTrustAware {
+    protected String serviceName;
+    protected String brokerName;
 
-    void setKeyManagers(KeyManager[] manager);
+    public DiscoveryEvent() {
+    }
 
-    void setTrustManagers(TrustManager[] trustManagers);
+    public DiscoveryEvent(String serviceName) {
+        this.serviceName = serviceName;
+    }
 
+    /**
+     * @openwire:property version=1
+     */
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
+    }
+
+    /**
+     * @openwire:property version=1
+     */
+    public String getBrokerName() {
+        return brokerName;
+    }
+
+    public void setBrokerName(String name) {
+        this.brokerName = name;
+    }
+
+    public boolean isMarshallAware() {
+        return false;
+    }
 }

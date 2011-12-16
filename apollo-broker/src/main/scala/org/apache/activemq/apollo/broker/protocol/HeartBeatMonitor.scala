@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import org.apache.activemq.apollo.transport.Transport
+import org.fusesource.hawtdispatch.transport.Transport
 import java.util.concurrent.TimeUnit
 
 /**

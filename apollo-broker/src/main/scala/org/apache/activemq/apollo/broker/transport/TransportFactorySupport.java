@@ -14,23 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.transport;
 
-import org.apache.activemq.apollo.util.IOExceptionSupport;
+import org.fusesource.hawtdispatch.transport.Transport;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
-import org.apache.activemq.apollo.util.URISupport;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class  TransportFactorySupport {
-
 
     static public Transport configure(Transport transport, Map<String, String> options) throws IOException {
         IntrospectionSupport.setProperties(transport, options);
@@ -39,18 +34,9 @@ public class  TransportFactorySupport {
 
     public static Transport verify(Transport transport, Map<String, String> options) {
         if (!options.isEmpty()) {
-            // Release the transport resource as we are erroring out...
-            try {
-                transport.stop();
-            } catch (Throwable cleanup) {
-            }
             throw new IllegalArgumentException("Invalid connect parameters: " + options);
         }
         return transport;
     }
 
-    @Override
-    protected Object clone() throws CloneNotSupportedException {
-        return super.clone();    //To change body of overridden methods use File | Settings | File Templates.
-    }
 }

@@ -18,7 +18,7 @@
 package org.apache.activemq.apollo.openwire
 
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.apache.activemq.apollo.transport.ProtocolCodec
+import org.fusesource.hawtdispatch.transport.ProtocolCodec
 import OpenwireConstants._
 import java.nio.ByteBuffer
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
@@ -132,7 +132,7 @@ class OpenwireCodec extends ProtocolCodec {
     }
   }
 
-  def unread(buffer: Buffer) = {
+  def unread(buffer: Array[Byte]) = {
     assert(read_counter == 0)
     read_buffer = buffer.toByteBuffer
     read_buffer.position(read_buffer.limit)

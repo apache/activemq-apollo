@@ -26,7 +26,7 @@ import BufferConversions._
 import _root_.scala.collection.JavaConversions._
 import java.io.{EOFException, DataOutput, DataInput, IOException}
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
-import org.apache.activemq.apollo.transport._
+import org.fusesource.hawtdispatch.transport._
 import _root_.org.fusesource.hawtbuf._
 import Buffer._
 import org.apache.activemq.apollo.util._
@@ -326,9 +326,9 @@ class StompCodec extends ProtocolCodec {
     }
   }
 
-  def unread(buffer: Buffer) = {
+  def unread(buffer: Array[Byte]) = {
     assert(read_counter == 0)
-    read_buffer.put(buffer.data, buffer.offset, buffer.length)
+    read_buffer.put(buffer)
     read_counter += buffer.length
   }
 

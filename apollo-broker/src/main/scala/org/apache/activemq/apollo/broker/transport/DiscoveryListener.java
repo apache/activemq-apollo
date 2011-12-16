@@ -14,46 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.transport;
 
-import java.io.IOException;
 
 /**
- * An asynchronous listener of commands
+ * A listener of services being added or removed from a network
  * 
  */
-public class DefaultTransportListener implements TransportListener {
+public interface DiscoveryListener {
 
-    /**
-     * called to process a command
-     * 
-     * @param command
-     */
-    public void onTransportCommand(Object command) {
-    }
+    void onServiceAdd(DiscoveryEvent event);
 
-    public void onRefill() {
-    }
-
-    /**
-     * An unrecoverable exception has occured on the transport
-     * 
-     * @param error
-     */
-    public void onTransportFailure(IOException error) {
-    }
-
-    /**
-     * The transport has been connected.
-     */
-    public void onTransportConnected() {
-    }
-
-    /**
-     * The transport has suffered a disconnection from
-     * which it hopes to recover
-     */
-    public void onTransportDisconnected() {
-    }
+    void onServiceRemove(DiscoveryEvent event);
 
 }

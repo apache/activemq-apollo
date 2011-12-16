@@ -19,9 +19,9 @@ package org.apache.activemq.apollo.stomp
 import _root_.org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.broker._
 import java.lang.String
-import protocol.{ProtocolFactory, Protocol}
+import protocol.{ProtocolCodecFactory, ProtocolFactory, Protocol}
 import Stomp._
-import org.apache.activemq.apollo.transport._
+import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.broker.store._
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -34,7 +34,7 @@ import org.apache.activemq.apollo.broker.store._
  */
 class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
-  def protocol = PROTOCOL
+  def id = PROTOCOL
 
   def createProtocolCodec() = new StompCodec();
 

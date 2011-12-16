@@ -15,3 +15,5 @@
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.broker.transport.VMTransportFactory
+org.apache.activemq.apollo.broker.transport.TcpTransportFactory
+org.apache.activemq.apollo.broker.transport.SslTransportFactory

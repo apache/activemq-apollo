@@ -14,13 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport.tcp;
+package org.apache.activemq.apollo.broker.transport;
+
+import org.apache.activemq.apollo.util.IntrospectionSupport;
+import org.fusesource.hawtdispatch.transport.SslTransport;
+import org.fusesource.hawtdispatch.transport.SslTransportServer;
+import org.fusesource.hawtdispatch.transport.TcpTransport;
+import org.fusesource.hawtdispatch.transport.TcpTransportServer;
 
 import javax.net.ssl.SSLContext;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -33,10 +37,17 @@ public class SslTransportFactory extends TcpTransportFactory {
      * Allows subclasses of TcpTransportFactory to create custom instances of
      * TcpTransportServer.
      */
-    protected TcpTransportServer createTcpTransportServer(final URI uri) throws Exception {
+    protected TcpTransportServer createTcpTransportServer(final URI uri, final Map<String, String> options) throws Exception {
         String protocol = protocol(uri.getScheme());
         if( protocol!=null ) {
-            return new SslTransportServer(uri).protocol(protocol);
+            return new SslTransportServer(uri){
+                @Override
+                protected TcpTransport createTransport() {
+                    TcpTransport transport = super.createTransport();
+                    IntrospectionSupport.setProperties(transport, options);
+                    return transport;
+                }
+            }.protocol(protocol);
         }
         return null;
 

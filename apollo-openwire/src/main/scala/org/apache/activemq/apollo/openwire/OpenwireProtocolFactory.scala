@@ -17,11 +17,10 @@
 
 package org.apache.activemq.apollo.openwire
 
-import org.apache.activemq.apollo.broker.protocol.{Protocol, ProtocolFactory}
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.apache.activemq.apollo.broker.Message
 import OpenwireConstants._
-import org.apache.activemq.apollo.transport.ProtocolCodecFactory
+import org.apache.activemq.apollo.broker.protocol.{ProtocolCodecFactory, Protocol, ProtocolFactory}
 import org.fusesource.hawtbuf.Buffer
 
 /**
@@ -70,7 +69,7 @@ object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol {
 class OpenwireProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
 
-  def protocol = PROTOCOL
+  def id = PROTOCOL
 
   def createProtocolCodec() = new OpenwireCodec();
 

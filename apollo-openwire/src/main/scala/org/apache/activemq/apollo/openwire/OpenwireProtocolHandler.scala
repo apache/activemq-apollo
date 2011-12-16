@@ -26,23 +26,20 @@ import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
-import org.apache.activemq.apollo.transport._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import scala.util.continuations._
-import tcp.TcpTransport
+import org.fusesource.hawtdispatch.transport._
 import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
 import org.apache.activemq.apollo.openwire.DestinationConverter._
 import org.apache.activemq.apollo.broker._
-import BufferConversions._
 import protocol._
 import security.SecurityContext
-import support.advisory.AdvisorySupport
 
 
 object OpenwireProtocolHandler extends Log {
@@ -134,9 +131,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
 //    protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
 //
-    import OptionSupport._
 
-//    config.max_data_length.foreach( codec.max_data_length = _ )
+    //    config.max_data_length.foreach( codec.max_data_length = _ )
 //    config.max_header_length.foreach( codec.max_header_length = _ )
 //    config.max_headers.foreach( codec.max_headers = _ )
 

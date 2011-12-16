@@ -14,19 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.protocol;
 
 import org.apache.activemq.apollo.util.ClassFinder;
 import org.fusesource.hawtbuf.Buffer;
-
-import java.util.HashMap;
-import java.util.List;
+import org.fusesource.hawtdispatch.transport.ProtocolCodec;
 
 public class ProtocolCodecFactory {
 
     public static interface Provider {
 
-        String protocol();
+        String id();
 
         /**
          * @return an instance of the wire format.
@@ -63,7 +61,7 @@ public class ProtocolCodecFactory {
      */
     public static ProtocolCodecFactory.Provider get(String name) {
         for( Provider provider: providers.jsingletons() ) {
-            if( name.equals(provider.protocol()) ) {
+            if( name.equals(provider.id()) ) {
                 return provider;
             }
         }

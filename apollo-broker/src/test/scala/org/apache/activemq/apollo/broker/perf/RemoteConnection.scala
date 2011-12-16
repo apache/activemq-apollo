@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import java.io.IOException
-import org.apache.activemq.apollo.transport.TransportFactory
+import org.apache.activemq.apollo.broker.transport.TransportFactory
 import org.apache.activemq.apollo.dto.DestinationDTO
 
 abstract class RemoteConnection extends Connection {
@@ -66,7 +66,7 @@ abstract class RemoteConnection extends Connection {
   override def on_transport_failure(error: IOException) = {
     if (!stopped) {
       if (stopping.get()) {
-        transport.stop
+        transport.stop(NOOP)
       } else {
         on_failure(error)
         if (callbackWhenConnected != null) {

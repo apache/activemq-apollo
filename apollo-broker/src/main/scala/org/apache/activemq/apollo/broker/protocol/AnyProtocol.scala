@@ -19,14 +19,14 @@ package org.apache.activemq.apollo.broker.protocol
 import org.apache.activemq.apollo.broker.{Message, ProtocolException}
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.apache.activemq.apollo.transport.{ProtocolCodec}
+import org.fusesource.hawtdispatch.transport.{ProtocolCodec}
 import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io.IOException
 import java.lang.String
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.transport.ProtocolCodec.BufferState
+import org.fusesource.hawtdispatch.transport.ProtocolCodec.BufferState
 
 /**
  * <p>
@@ -68,7 +68,7 @@ class AnyProtocol(val func: ()=>Array[Protocol]) extends Protocol {
 
   lazy val protocols: Array[Protocol] = func()
 
-  def protocol = "any"
+  def id = "any"
 
   def createProtocolCodec = new AnyProtocolCodec(protocols)
 
@@ -85,6 +85,8 @@ class AnyProtocol(val func: ()=>Array[Protocol]) extends Protocol {
   def matchesIdentification(buffer: Buffer) = throw new UnsupportedOperationException()
 
 }
+
+case class ProtocolDetected(id:String, codec:ProtocolCodec)
 
 class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
@@ -106,8 +108,8 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
     protocols.foreach {protocol =>
       if (protocol.matchesIdentification(buff)) {
         val protocolCodec = protocol.createProtocolCodec()
-        protocolCodec.unread(buff)
-        return protocolCodec
+        protocolCodec.unread(buff.toByteArray)
+        return ProtocolDetected(protocol.id, protocolCodec)
       }
     }
     if (buffer.position() == buffer.capacity) {
@@ -119,7 +121,7 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
 
   def getReadCounter = buffer.position()
 
-  def unread(buffer: Buffer) = throw new UnsupportedOperationException()
+  def unread(buffer: Array[Byte]) = throw new UnsupportedOperationException()
 
   def setWritableByteChannel(channel: WritableByteChannel) = {}
 
@@ -154,23 +156,22 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   override def on_transport_command(command: AnyRef) = {
 
-    if (!command.isInstanceOf[ProtocolCodec]) {
-      throw new ProtocolException("Expected a protocol codec");
+    if (!command.isInstanceOf[ProtocolDetected]) {
+      throw new ProtocolException("Expected a ProtocolDetected object");
     }
 
     discriminated = true
 
-    var codec: ProtocolCodec = command.asInstanceOf[ProtocolCodec];
-    val protocol = codec.protocol()
-    val protocol_handler = ProtocolFactory.get(protocol) match {
+    var protocol: ProtocolDetected = command.asInstanceOf[ProtocolDetected];
+    val protocol_handler = ProtocolFactory.get(protocol.id) match {
       case Some(x) => x.createProtocolHandler
       case None =>
-        throw new ProtocolException("No protocol handler available for protocol: " + protocol);
+        throw new ProtocolException("No protocol handler available for protocol: " + protocol.id);
     }
 
      // replace the current handler with the new one.
     connection.protocol_handler = protocol_handler
-    connection.transport.setProtocolCodec(codec)
+    connection.transport.setProtocolCodec(protocol.codec)
     connection.transport.suspendRead
 
     protocol_handler.set_connection(connection);

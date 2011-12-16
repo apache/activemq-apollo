@@ -233,15 +233,28 @@ public final class IntrospectionSupport {
 
     private static Method findSetterMethod(Class<?> clazz, String name) {
         // Build the method name.
-        name = "set" + name.substring(0, 1).toUpperCase() + name.substring(1);
+        String methodName = "set" + name.substring(0, 1).toUpperCase() + name.substring(1);
         Method[] methods = clazz.getMethods();
         for (int i = 0; i < methods.length; i++) {
             Method method = methods[i];
             Class<?> params[] = method.getParameterTypes();
-            if (method.getName().equals(name) && params.length == 1 ) {
+            if (method.getName().equals(methodName) && params.length == 1 ) {
                 return method;
             }
         }
+
+        // Perhaps the name looks like 'buffer_size', translate to bufferSize
+        if( name.contains("_") ) {
+            String[] parts = name.split("_");
+            name = parts[0];
+            for (int i = 1; i < parts.length; i++) {
+                if(parts[i].length()>0) {
+                    name += parts[i].substring(0, 1).toUpperCase() + parts[i].substring(1);
+                }
+            }
+            return findSetterMethod(clazz, name);
+        }
+
         return null;
     }
 

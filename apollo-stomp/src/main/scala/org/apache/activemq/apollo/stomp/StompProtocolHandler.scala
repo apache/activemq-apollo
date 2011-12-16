@@ -34,7 +34,8 @@ import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
 import scala.util.continuations._
-import org.apache.activemq.apollo.transport.tcp.SslTransport
+import org.fusesource.hawtdispatch.transport.SslTransport
+import org.fusesource.hawtdispatch.transport.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException

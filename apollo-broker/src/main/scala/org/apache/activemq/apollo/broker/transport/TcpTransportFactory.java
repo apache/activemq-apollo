@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport.tcp;
+package org.apache.activemq.apollo.broker.transport;
 
 import java.io.IOException;
 import java.net.URI;
@@ -23,17 +23,18 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.activemq.apollo.transport.Transport;
-import org.apache.activemq.apollo.transport.TransportFactory;
+import org.fusesource.hawtdispatch.transport.TcpTransport;
+import org.fusesource.hawtdispatch.transport.TcpTransportServer;
+import org.fusesource.hawtdispatch.transport.Transport;
 //import org.apache.activemq.transport.TransportLoggerFactory;
-import org.apache.activemq.apollo.transport.TransportServer;
+import org.fusesource.hawtdispatch.transport.TransportServer;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
 import org.apache.activemq.apollo.util.URISupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.activemq.apollo.transport.TransportFactorySupport.configure;
-import static org.apache.activemq.apollo.transport.TransportFactorySupport.verify;
+import static org.apache.activemq.apollo.broker.transport.TransportFactorySupport.configure;
+import static org.apache.activemq.apollo.broker.transport.TransportFactorySupport.verify;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -45,13 +46,13 @@ public class TcpTransportFactory implements TransportFactory.Provider {
     public TransportServer bind(String location) throws Exception {
 
         URI uri = new URI(location);
-        TcpTransportServer server = createTcpTransportServer(uri);
+        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
+
+        TcpTransportServer server = createTcpTransportServer(uri, options);
         if (server == null) return null;
 
-        Map<String, String> options = new HashMap<String, String>(URISupport.parseParamters(uri));
         Map<String, String> copy = new HashMap<String, String>(options);
         IntrospectionSupport.setProperties(server, options);
-        server.setTransportOption(copy);
         return server;
     }
 
@@ -75,11 +76,19 @@ public class TcpTransportFactory implements TransportFactory.Provider {
      * Allows subclasses of TcpTransportFactory to create custom instances of
      * TcpTransportServer.
      */
-    protected TcpTransportServer createTcpTransportServer(final URI location) throws IOException, URISyntaxException, Exception {
+    protected TcpTransportServer createTcpTransportServer(final URI location, final Map<String, String> options) throws IOException, URISyntaxException, Exception {
         if( !location.getScheme().equals("tcp") ) {
             return null;
         }
-        return new TcpTransportServer(location);
+
+        return new TcpTransportServer(location) {
+            @Override
+            protected TcpTransport createTransport() {
+                TcpTransport transport = super.createTransport();
+                IntrospectionSupport.setProperties(transport, options);
+                return transport;
+            }
+        };
     }
 
     /**

@@ -24,13 +24,10 @@ import _root_.java.util.concurrent.atomic.AtomicInteger
 import _root_.org.apache.activemq.apollo.broker._
 
 import _root_.scala.collection.JavaConversions._
-import org.apache.activemq.apollo.transport._
-import org.apache.activemq.apollo.transport.pipe.PipeTransportFactory
-import org.apache.activemq.apollo.transport.pipe.PipeTransport
-import org.apache.activemq.apollo.transport.pipe.PipeTransportServer
+import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.util._
 import java.lang.String
-import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, ConnectorTypeDTO}
+import org.apache.activemq.apollo.dto.AcceptingConnectorDTO
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -45,8 +42,8 @@ object VMTransportFactory extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class VMTransportFactory extends PipeTransportFactory with Logging {
-  import PipeTransportFactory._
+class VMTransportFactory extends Logging with TransportFactory.Provider {
+  import PipeTransportRegistry._
   import VMTransportFactory._
   override protected def log = VMTransportFactory
 
@@ -65,9 +62,9 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
       new PipeTransport(this) {
         val stopped = new AtomicBoolean()
 
-        override def stop() = {
+        override def stop(onComplete:Runnable) = {
           if (stopped.compareAndSet(false, true)) {
-            super.stop();
+            super.stop(onComplete);
             if (refs.decrementAndGet() == 0) {
               stopBroker();
             }
@@ -96,7 +93,7 @@ class VMTransportFactory extends PipeTransportFactory with Logging {
     if( !location.startsWith("vm:") ) {
         return null;
     }
-    super.bind(location.replaceFirst("vm:", "pipe:"))
+    PipeTransportRegistry.bind(location)
   }
 
   override def connect(location: String): Transport = {

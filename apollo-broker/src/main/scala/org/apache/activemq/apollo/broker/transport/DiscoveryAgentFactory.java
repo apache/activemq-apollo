@@ -14,43 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.transport;
+package org.apache.activemq.apollo.broker.transport;
 
-public class DiscoveryEvent {
+import org.apache.activemq.apollo.util.ClassFinder;
 
-    protected String serviceName;
-    protected String brokerName;
+public class DiscoveryAgentFactory {
 
-    public DiscoveryEvent() {
+    public interface Provider {
+        public DiscoveryAgent create(String uri) throws Exception;
     }
 
-    public DiscoveryEvent(String serviceName) {
-        this.serviceName = serviceName;
-    }
+    public static final ClassFinder<Provider> providers = new ClassFinder<Provider>("META-INF/services/org.apache.activemq.apollo/discovery-agent-factory.index", Provider.class);
 
     /**
-     * @openwire:property version=1
+     * Creates a DiscoveryAgent
      */
-    public String getServiceName() {
-        return serviceName;
+    public static DiscoveryAgent create(String uri) throws Exception {
+        for( Provider provider : providers.jsingletons()) {
+          DiscoveryAgent rc = provider.create(uri);
+          if( rc!=null ) {
+            return rc;
+          }
+        }
+        throw new IllegalArgumentException("Unknown discovery agent uri: "+uri);
     }
 
-    public void setServiceName(String serviceName) {
-        this.serviceName = serviceName;
-    }
-
-    /**
-     * @openwire:property version=1
-     */
-    public String getBrokerName() {
-        return brokerName;
-    }
-
-    public void setBrokerName(String name) {
-        this.brokerName = name;
-    }
-
-    public boolean isMarshallAware() {
-        return false;
-    }
 }

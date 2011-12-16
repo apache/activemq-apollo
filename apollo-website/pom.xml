@@ -266,13 +266,6 @@
         </dependency>    
         <dependency>
           <groupId>org.apache.activemq</groupId>
-          <artifactId>apollo-transport</artifactId>
-          <version>${project.version}</version>
-          <classifier>scaladoc</classifier>
-          <scope>test</scope>
-        </dependency>    
-        <dependency>
-          <groupId>org.apache.activemq</groupId>
           <artifactId>apollo-util</artifactId>
           <version>${project.version}</version>
           <classifier>scaladoc</classifier>

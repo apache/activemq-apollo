@@ -18,13 +18,14 @@ package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
 import protocol.{ProtocolFactory, Protocol}
-import org.apache.activemq.apollo.transport._
+import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.net.SocketAddress
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.dto._
 import security.SecuredResource
+import transport.TransportFactory
 
 /**
  * <p>
@@ -133,7 +134,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
 
 
-  object BrokerAcceptListener extends TransportAcceptListener {
+  object BrokerAcceptListener extends TransportServerListener {
     def onAcceptError(e: Exception): Unit = {
       warn(e, "Error occured while accepting client connection.")
     }
@@ -198,14 +199,18 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     transport_server.setDispatchQueue(dispatch_queue)
     transport_server.setAcceptListener(BrokerAcceptListener)
 
-    if( transport_server.isInstanceOf[KeyAndTrustAware] ) {
-      if( broker.key_storage!=null ) {
-        transport_server.asInstanceOf[KeyAndTrustAware].setTrustManagers(broker.key_storage.create_trust_managers)
-        transport_server.asInstanceOf[KeyAndTrustAware].setKeyManagers(broker.key_storage.create_key_managers)
-      } else {
-        warn("You are using a transport the expects the broker's key storage to be configured.")
-      }
+    transport_server match {
+      case transport_server:SslTransportServer =>
+        transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
+        if( broker.key_storage!=null ) {
+          transport_server.setTrustManagers(broker.key_storage.create_trust_managers)
+          transport_server.setKeyManagers(broker.key_storage.create_key_managers)
+        } else {
+          warn("You are using a transport that expects the broker's key storage to be configured.")
+        }
+      case _ =>
     }
+
     transport_server.start(^{
       broker.console_log.info("Accepting connections at: "+transport_server.getBoundAddress)
       on_completed.run
