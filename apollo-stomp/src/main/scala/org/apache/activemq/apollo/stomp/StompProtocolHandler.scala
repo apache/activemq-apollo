@@ -843,7 +843,7 @@ class StompProtocolHandler extends ProtocolHandler {
             });
           }
           if( outbound_heartbeat>=0 && please_send > 0 ) {
-            heart_beat_monitor.setWriteInterval(outbound_heartbeat.max(please_send))
+            heart_beat_monitor.setWriteInterval(outbound_heartbeat.max(please_send)/2)
             heart_beat_monitor.setOnKeepAlive(^{
               connection.transport.offer(NEWLINE_BUFFER)
             })

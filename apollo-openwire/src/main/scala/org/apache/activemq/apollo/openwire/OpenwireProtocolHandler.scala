@@ -392,7 +392,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         async_die("Stale connection.  Missed heartbeat.")
       })
 
-      heart_beat_monitor.setWriteInterval(inactive_time)
+      heart_beat_monitor.setWriteInterval(inactive_time / 2)
       heart_beat_monitor.setOnKeepAlive(^{
         // we don't care if the offer gets rejected.. since that just
         // means there is other traffic getting transmitted.
