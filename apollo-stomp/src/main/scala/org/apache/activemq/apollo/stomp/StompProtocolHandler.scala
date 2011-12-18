@@ -23,7 +23,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import Buffer._
 import java.lang.String
-import protocol.{ProtocolFilter, HeartBeatMonitor, ProtocolHandler}
+import protocol.{ProtocolFilter, ProtocolHandler}
 import security.SecurityContext
 import Stomp._
 import org.apache.activemq.apollo.selector.SelectorParser
@@ -34,12 +34,11 @@ import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
 import scala.util.continuations._
-import org.fusesource.hawtdispatch.transport.SslTransport
-import org.fusesource.hawtdispatch.transport.SslTransport
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.dto._
+import org.fusesource.hawtdispatch.transport.{HeartBeatMonitor, SslTransport}
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -542,7 +541,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var protocol_version:AsciiBuffer = _
 
-  var heart_beat_monitor:HeartBeatMonitor = new HeartBeatMonitor
+  var heart_beat_monitor = new HeartBeatMonitor
   val security_context = new SecurityContext
   var waiting_on:String = "client request"
   var config:StompDTO = _
@@ -681,7 +680,7 @@ class StompProtocolHandler extends ProtocolHandler {
       x
     })
     connection_sink = new OverflowSink(sink_manager.open());
-    resumeRead
+    resume_read
   }
 
   override def on_transport_disconnected() = {
@@ -789,14 +788,15 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-
-  def suspendRead(reason:String) = {
+  def suspend_read(reason:String) = {
     waiting_on = reason
     connection.transport.suspendRead
+    heart_beat_monitor.suspendRead
   }
-  def resumeRead() = {
+  def resume_read() = {
     waiting_on = "client request"
     connection.transport.resumeRead
+    heart_beat_monitor.resumeRead
   }
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
@@ -836,23 +836,21 @@ class StompProtocolHandler extends ProtocolHandler {
           val please_send = cy.toString.toLong
 
           if( inbound_heartbeat>=0 && can_send > 0 ) {
-            heart_beat_monitor.read_interval = inbound_heartbeat.max(can_send)
+            heart_beat_monitor.setReadInterval((inbound_heartbeat.max(can_send)*1.5).toLong)
 
-            // lets be a little forgiving to account to packet transmission latency.
-            heart_beat_monitor.read_interval += heart_beat_monitor.read_interval.min(5000)
-
-            heart_beat_monitor.on_dead = () => {
+            heart_beat_monitor.setOnDead(^{
               async_die("Stale connection.  Missed heartbeat.")
-            }
+            });
           }
           if( outbound_heartbeat>=0 && please_send > 0 ) {
-            heart_beat_monitor.write_interval = outbound_heartbeat.max(please_send)
-            heart_beat_monitor.on_keep_alive = () => {
+            heart_beat_monitor.setWriteInterval(outbound_heartbeat.max(please_send))
+            heart_beat_monitor.setOnKeepAlive(^{
               connection.transport.offer(NEWLINE_BUFFER)
-            }
+            })
           }
 
-          heart_beat_monitor.transport = connection.transport
+          heart_beat_monitor.suspendRead()
+          heart_beat_monitor.setTransport(connection.transport)
           heart_beat_monitor.start
 
         } catch {
@@ -886,7 +884,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     reset {
-      suspendRead("virtual host lookup")
+      suspend_read("virtual host lookup")
       val host_header = get(headers, HOST)
       val host = host_header match {
         case None=>
@@ -894,7 +892,7 @@ class StompProtocolHandler extends ProtocolHandler {
         case Some(host)=>
           connection.connector.broker.get_virtual_host(host)
       }
-      resumeRead
+      resume_read
 
       if(host==null) {
         async_die("Invalid virtual host: "+host_header.get)
@@ -908,7 +906,7 @@ class StompProtocolHandler extends ProtocolHandler {
         this.host=host
         connection_log = host.connection_log
         if( host.authenticator!=null &&  host.authorizer!=null ) {
-          suspendRead("authenticating and authorizing connect")
+          suspend_read("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
             async_die("Authentication failed. Credentials="+security_context.credential_dump)
             noop // to make the cps compiler plugin happy.
@@ -919,7 +917,7 @@ class StompProtocolHandler extends ProtocolHandler {
             async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
             noop // to make the cps compiler plugin happy.
           } else {
-            resumeRead
+            resume_read
             send_connected
             noop // to make the cps compiler plugin happy.
           }
@@ -982,7 +980,7 @@ class StompProtocolHandler extends ProtocolHandler {
           override def dispatch_queue = queue
 
           refiller = ^{
-            resumeRead
+            resume_read
           }
         }
 
@@ -995,7 +993,7 @@ class StompProtocolHandler extends ProtocolHandler {
               async_die(failure)
             case None =>
               if (!connection.stopped) {
-                resumeRead
+                resume_read
                 producerRoutes.put(key, route)
                 send_via_route(destination, route, frame, uow)
               }
@@ -1102,7 +1100,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more stomp messages
         // until it's not full anymore.
-        suspendRead("blocked sending to: "+route.overflowSessions.mkString(", "))
+        suspend_read("blocked sending to: "+route.overflowSessions.mkString(", "))
       }
 
     } else {
@@ -1321,7 +1319,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   override def on_transport_failure(error: IOException) = {
     if( !connection.stopped ) {
-      suspendRead("shutdown")
+      suspend_read("shutdown")
       connection_log.info(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       super.on_transport_failure(error);
     }

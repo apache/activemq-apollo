@@ -105,7 +105,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   val security_context = new SecurityContext
   var config:OpenwireDTO = _
 
-  var heart_beat_monitor: HeartBeatMonitor = new HeartBeatMonitor
+  var heart_beat_monitor = new HeartBeatMonitor
 
   var waiting_on: String = "client request"
   var current_command: Object = _
@@ -149,14 +149,16 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def suspendRead(reason: String) = {
+  def suspend_read(reason: String) = {
     waiting_on = reason
     connection.transport.suspendRead
+    heart_beat_monitor.suspendRead
   }
 
-  def resumeRead() = {
+  def resume_read() = {
     waiting_on = "client request"
     connection.transport.resumeRead
+    heart_beat_monitor.resumeRead
   }
 
   def ack(command: Command):Unit = {
@@ -170,7 +172,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   override def on_transport_failure(error: IOException) = {
     if (!connection.stopped) {
       error.printStackTrace
-      suspendRead("shutdown")
+      suspend_read("shutdown")
       debug(error, "Shutting connection down due to: %s", error)
       connection.stop
     }
@@ -191,11 +193,11 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     // Send our preferred wire format settings..
     connection.transport.offer(preferred_wireformat_settings)
 
-    resumeRead
+    resume_read
     reset {
-      suspendRead("virtual host lookup")
+      suspend_read("virtual host lookup")
       this.host = broker.get_default_virtual_host
-      resumeRead
+      resume_read
       if(host==null) {
         async_die("Could not find default virtual host")
       }
@@ -384,26 +386,25 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val initial_delay = preferred_wireformat_settings.getMaxInactivityDurationInitalDelay().min(info.getMaxInactivityDurationInitalDelay())
 
     if (inactive_time > 0) {
-      heart_beat_monitor.read_interval = inactive_time
-      // lets be a little forgiving to account to packet transmission latency.
-      heart_beat_monitor.read_interval += inactive_time.min(5000)
+      heart_beat_monitor.setReadInterval((inactive_time.min(5000)*1.5).toLong)
 
-      heart_beat_monitor.on_dead = () => {
+      heart_beat_monitor.setOnDead(^{
         async_die("Stale connection.  Missed heartbeat.")
-      }
+      })
 
-      heart_beat_monitor.write_interval = inactive_time
-      heart_beat_monitor.on_keep_alive = () => {
+      heart_beat_monitor.setWriteInterval(inactive_time)
+      heart_beat_monitor.setOnKeepAlive(^{
         // we don't care if the offer gets rejected.. since that just
         // means there is other traffic getting transmitted.
         connection.transport.offer(new KeepAliveInfo)
-      }
+      })
     }
 
-    heart_beat_monitor.initial_read_check_delay = initial_delay
-    heart_beat_monitor.initial_write_check_delay = initial_delay
+    heart_beat_monitor.setInitialReadCheckDelay(initial_delay)
+    heart_beat_monitor.setInitialWriteCheckDelay(initial_delay)
 
-    heart_beat_monitor.transport = connection.transport
+    heart_beat_monitor.suspendRead()
+    heart_beat_monitor.setTransport(connection.transport)
     heart_beat_monitor.start
 
     // Give the client some info about this broker.
@@ -428,7 +429,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       reset {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
-          suspendRead("authenticating and authorizing connect")
+          suspend_read("authenticating and authorizing connect")
           if( !host.authenticator.authenticate(security_context) ) {
             async_die("Authentication failed. Credentials="+security_context.credential_dump)
             noop // to make the cps compiler plugin happy.
@@ -439,7 +440,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
             async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
             noop // to make the cps compiler plugin happy.
           } else {
-            resumeRead
+            resume_read
             ack(info);
             noop
           }
@@ -599,7 +600,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           override def connection = Some(OpenwireProtocolHandler.this.connection)
           override def dispatch_queue = queue
           refiller = ^ {
-            resumeRead
+            resume_read
           }
         }
 
@@ -612,7 +613,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
               async_die(failure, msg)
             case None =>
               if (!connection.stopped) {
-                resumeRead
+                resume_read
                 producerRoutes.put(key, route)
                 send_via_route(route, msg, uow)
               }
@@ -649,7 +650,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more messages
         // until it's not full anymore.
-        suspendRead("blocked destination: "+route.overflowSessions.mkString(", "))
+        suspend_read("blocked destination: "+route.overflowSessions.mkString(", "))
       }
 
     } else {
