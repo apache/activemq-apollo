@@ -103,7 +103,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
   var refiller:Runnable = NOOP
 
-  private var overflow = collection.mutable.Queue[T]()
+  var overflow = collection.mutable.Queue[T]()
 
   def overflowed = !overflow.isEmpty
 

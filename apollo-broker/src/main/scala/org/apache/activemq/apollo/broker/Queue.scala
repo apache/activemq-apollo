@@ -218,6 +218,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var swapping_out_size = 0
 
   val producer_swapped_in = new MemorySpace
+  // To allow overflow to drain into the queue even when there are no producers.
+  producer_swapped_in.size_max = 1024
+
   val consumer_swapped_in = new MemorySpace
 
   var swap_out_item_counter = 0L
