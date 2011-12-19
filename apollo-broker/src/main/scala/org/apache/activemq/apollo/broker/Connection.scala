@@ -46,7 +46,7 @@ abstract class Connection() extends BaseService with Dispatched {
     transport.setDispatchQueue(dispatch_queue);
     transport.setTransportListener(new TransportListener(){
       def onTransportFailure(error: IOException) = Connection.this.on_transport_failure(error)
-      def onTransportDisconnected = Connection.this.on_transport_disconnected
+      def onTransportDisconnected(reconnecting:Boolean) = Connection.this.on_transport_disconnected
       def onTransportConnected =  Connection.this.on_transport_connected
       def onTransportCommand(command: AnyRef) =  Connection.this.on_transport_command(command)
       def onRefill =  Connection.this.on_refill

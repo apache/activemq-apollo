@@ -18,7 +18,7 @@ package org.apache.activemq.apollo;
 
 import junit.framework.Test;
 import org.apache.activemq.apollo.test.JmsResourceProvider;
-import org.fusesource.stompjms.StompJmsSession;
+import org.fusesource.stomp.jms.StompJmsSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo;
 
 import junit.framework.Test;
-import org.fusesource.stompjms.StompJmsSession;
+import org.fusesource.stomp.jms.StompJmsSession;
 
 import javax.jms.*;
 import java.net.URISyntaxException;
