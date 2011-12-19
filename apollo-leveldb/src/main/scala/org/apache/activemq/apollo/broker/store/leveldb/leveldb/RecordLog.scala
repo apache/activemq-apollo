@@ -189,7 +189,7 @@ case class RecordLog(directory: File, log_suffix:String) {
         val length = is.readInt()
         val data = new Array[Byte](length)
         is.readFully(data)
-        (id, data, is.getFilePointer)
+        (id, data, start+is.getFilePointer)
       }
     }
 
