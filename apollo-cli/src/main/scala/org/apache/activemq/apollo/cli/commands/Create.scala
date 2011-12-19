@@ -50,6 +50,9 @@ class Create extends Action {
   @option(name = "--home", description = "Directory where apollo is installed")
   val home: String = System.getProperty("apollo.home")
 
+  @option(name = "--with-ssl", description = "Generate an SSL enabled configuraiton")
+  val with_ssl = true
+  
   var broker_security_config =
   """
   <authentication domain="apollo"/>
@@ -93,23 +96,28 @@ class Create extends Action {
       }
 
       // Generate a keystore with a new key
-      println("Generating ssl keystore...")
-      val ssl = system(etc, Array(
-        "keytool", "-genkey",
-        "-storetype", "JKS",
-        "-storepass", "password",
-        "-keystore", "keystore",
-        "-keypass", "password",
-        "-alias", host,
-        "-keyalg", "RSA",
-        "-keysize", "4096",
-        "-dname", "cn=%s".format(host),
-        "-validity", "3650"))==0
+      val ssl = with_ssl && {
+        println("Generating ssl keystore...")
+        val rc = system(etc, Array(
+          "keytool", "-genkey",
+          "-storetype", "JKS",
+          "-storepass", "password",
+          "-keystore", "keystore",
+          "-keypass", "password",
+          "-alias", host,
+          "-keyalg", "RSA",
+          "-keysize", "4096",
+          "-dname", "cn=%s".format(host),
+          "-validity", "3650"))==0
+        if(!rc) {
+          println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
+        }
+        rc
+      }
 
       if( ssl ) {
         write("etc/apollo-ssl.xml", etc/"apollo.xml", true)
       } else {
-        println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
         write("etc/apollo.xml", etc/"apollo.xml", true)
       }
 
