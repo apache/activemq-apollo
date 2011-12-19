@@ -16,9 +16,7 @@
  */
 package example;
 
-import org.fusesource.stompjms.StompJmsConnectionFactory;
-import org.fusesource.stompjms.StompJmsDestination;
-
+import org.fusesource.stomp.jms.*;
 import javax.jms.*;
 
 class Publisher {
@@ -46,12 +44,14 @@ class Publisher {
         Connection connection = factory.createConnection(user, password);
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Destination dest = StompJmsDestination.createDestination(destination);
+        Destination dest = new StompJmsDestination(destination);
         MessageProducer producer = session.createProducer(dest);
         producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
         for( int i=1; i <= messages; i ++) {
-            producer.send(session.createTextMessage(body));
+            TextMessage msg = session.createTextMessage(body);
+            msg.setIntProperty("id", i);
+            producer.send(msg);
             if( (i % 1000) == 0) {
                 System.out.println(String.format("Sent %d messages", i));
             }

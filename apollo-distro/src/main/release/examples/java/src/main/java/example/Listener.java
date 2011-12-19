@@ -16,9 +16,7 @@
  */
 package example;
 
-import org.fusesource.stompjms.StompJmsConnectionFactory;
-import org.fusesource.stompjms.StompJmsDestination;
-
+import org.fusesource.stomp.jms.*;
 import javax.jms.*;
 
 class Listener {
@@ -37,11 +35,11 @@ class Listener {
         Connection connection = factory.createConnection(user, password);
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Destination dest = StompJmsDestination.createDestination(destination);
+        Destination dest = new StompJmsDestination(destination);
 
         MessageConsumer consumer = session.createConsumer(dest);
         long start = System.currentTimeMillis();
-        long count = 0;
+        long count = 1;
         System.out.println("Waiting for messages...");
         while(true) {
             Message msg = consumer.receive();
@@ -52,13 +50,18 @@ class Listener {
                     System.out.println(String.format("Received %d in %.2f seconds", count, (1.0*diff/1000.0)));
                     break;
                 } else {
+                    if( count != msg.getIntProperty("id") ) {
+                        System.out.println("mismatch: "+count+"!="+msg.getIntProperty("id"));
+                    }
+                    count = msg.getIntProperty("id");
+
                     if( count == 0 ) {
                         start = System.currentTimeMillis();
                     }
-                    count ++;
                     if( count % 1000 == 0 ) {
                         System.out.println(String.format("Received %d messages.", count));
                     }
+                    count ++;
                 }
 
             } else {
