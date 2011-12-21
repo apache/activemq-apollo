@@ -46,9 +46,21 @@ succeeded or failed.  Expect the following:
 
 * *`200`*: If a GET, PUT, or DELETE request succeeds.
 * *`303`*: If a POST request succeeds.
-* *`404`*: If the resource cannot be found
-* *`401`*: If the user does not have access to the resource
+* *`400`*: The request could not be understood by the server due to malformed syntax. The client SHOULD NOT repeat the request without modifications.
+* *`404`*: If the resource cannot be found.
+* *`401`*: If the user does not have access to the resource.
 * *`50x`*: If an internal server error occurs while processing the request.
+
+If your get a *`40x`* or *`50x`* response code, the response message
+will contain a document describing the failure.  For example, if we try
+to use invalid query syntax you would get:
+
+    $ curl -i -u "admin:password" `echo 'http://localhost:61680/broker/virtual-hosts/apollo-01/queues.json?f=id&q=foo(id=="foo")'`
+    HTTP/1.1 400 Bad Request
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+
+    {"message":"Unable to find function (method): \"foo(java.lang.Boolean)\" in any user-defined function handlers or the default function handler"}
 
 ### Working with Tabular Results
 

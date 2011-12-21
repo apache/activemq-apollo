@@ -22,7 +22,8 @@ import scala.collection.Iterable
 import org.apache.activemq.apollo.util.path.PathParser
 import org.apache.activemq.apollo.util._
 import javax.ws.rs._
-import javax.ws.rs.core.Context
+import core.Response.Status
+import core.{Response, Context}
 import javax.ws.rs.core.Response.Status._
 import management.ManagementFactory
 import javax.management.ObjectName
@@ -46,6 +47,7 @@ import javax.ws.rs.core.MediaType._
  */
 @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML, "text/html;qs=5"))
 case class BrokerResource() extends Resource {
+  import Resource._
 
   @GET
   @Path("whoami")
@@ -429,6 +431,17 @@ case class BrokerResource() extends Resource {
         memo.flatMap(invoke(_, field))
       }.getOrElse(null)
     }
+
+    def NOT(o:AnyRef):AnyRef = not(o)
+    def Not(o:AnyRef):AnyRef = not(o)
+    def not(o:AnyRef):AnyRef = {
+      o match {
+        case java.lang.Boolean.TRUE => java.lang.Boolean.FALSE
+        case java.lang.Boolean.FALSE => java.lang.Boolean.TRUE
+        case null => java.lang.Boolean.TRUE
+        case _ => java.lang.Boolean.FALSE
+      }
+    }
   }
 
   def narrow[T](kind:Class[T], x:Iterable[Result[T, Throwable]], f:java.util.List[String], q:String, p:java.lang.Integer, ps:java.lang.Integer, o:java.util.List[String]) = {
@@ -466,7 +479,8 @@ case class BrokerResource() extends Resource {
 
       Success(rc)
     } catch {
-      case e:Throwable => Failure(e)
+      case e:Throwable =>
+        Failure(create_result(BAD_REQUEST, new ErrorDTO(e.getMessage)))
     }
   }
 

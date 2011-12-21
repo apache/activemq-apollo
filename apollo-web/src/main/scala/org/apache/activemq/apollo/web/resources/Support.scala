@@ -23,7 +23,6 @@ import com.sun.jersey.api.view.ImplicitProduces
 import Response._
 import Response.Status._
 import java.util.concurrent.TimeUnit
-import org.fusesource.hawtdispatch._
 import org.fusesource.scalate.{NoValueSetException, RenderContext}
 import com.sun.jersey.core.util.Base64
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
@@ -35,7 +34,7 @@ import org.apache.activemq.apollo.util._
 import java.net.{InetSocketAddress, URI}
 import java.security.cert.X509Certificate
 
-object Resource {
+object Resource extends Log {
 
   val SECURITY_CONTEXT_ATTRIBUTE: String = classOf[SecurityContext].getName
   val HEADER_WWW_AUTHENTICATE: String = "WWW-Authenticate"
@@ -60,7 +59,7 @@ object Resource {
  */
 @ImplicitProduces(Array("text/html;qs=5"))
 @Produces(Array("application/json", "application/xml","text/xml"))
-abstract class Resource(parent:Resource=null) extends Logging {
+abstract class Resource(parent:Resource=null) {
   import Resource._
 
   @Context
@@ -77,12 +76,16 @@ abstract class Resource(parent:Resource=null) extends Logging {
     this.http_request = other.http_request
   }
 
-  def result(value:Status, message:Any=null):Nothing = {
+  def create_result(value: Response.Status, message: Any): WebApplicationException = {
     val response = Response.status(value)
-    if( message!=null ) {
+    if (message != null) {
       response.entity(message)
     }
-    throw new WebApplicationException(response.build)
+    new WebApplicationException(response.build).fillInStackTrace().asInstanceOf[WebApplicationException]
+  }
+
+  def result(value:Status, message:Any=null):Nothing = {
+    throw create_result(value, message)
   }
 
   def result[T](uri:URI):T = {

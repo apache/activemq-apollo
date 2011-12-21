@@ -32,6 +32,7 @@ DestinationDTO
 DurableSubscriptionDTO
 DurableSubscriptionDestinationDTO
 EntryStatusDTO
+ErrorDTO
 IntMetricDTO
 JvmMetricsDTO
 KeyStorageDTO

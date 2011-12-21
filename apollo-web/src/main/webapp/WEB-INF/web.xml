@@ -53,6 +53,7 @@
       <param-value>
         org.apache.activemq.apollo.web.resources.RootResource,
         org.apache.activemq.apollo.web.resources.JacksonJsonProvider
+        org.apache.activemq.apollo.web.resources.JaxrsExceptionMapper
         org.fusesource.scalate.jersey.ScalateTemplateProvider
         org.fusesource.scalate.jersey.ScalateTemplateProcessor
       </param-value>
