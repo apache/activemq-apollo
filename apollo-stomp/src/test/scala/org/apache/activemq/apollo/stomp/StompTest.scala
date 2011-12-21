@@ -883,9 +883,9 @@ class StompDestinationTest extends StompTestSupport {
 
 }
 
-class DurableSubscriptionTest extends StompTestSupport {
+class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
   test("Duplicate SUBSCRIBE updates durable subscription bindings") {
     connect("1.1")
@@ -1119,6 +1119,10 @@ class DurableSubscriptionTest extends StompTestSupport {
     frame should include("message:Durable subscription does not exist")
 
   }
+}
+
+class DurableSubscriptionOnBDBTest extends StompTestSupport {
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 }
 
 class StompUnifiedQueueTest extends StompTestSupport {
