@@ -368,12 +368,6 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>2.1.1</version>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <executions>
           <execution>
@@ -390,6 +384,54 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.0</version>
+        <executions>
+         <execution>
+           <id>attach-descriptor</id>
+           <goals>
+             <goal>attach-descriptor</goal>
+           </goals>
+         </execution>
+       </executions>
+       
+       <configuration>
+          <reportPlugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-project-info-reports-plugin</artifactId>
+              <version>2.4</version>
+              <configuration>
+                <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
+                <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+              </configuration>
+              <!-- simpler configuration without reportSets available for usual cases -->
+              <reports>
+                <report>index</report>
+                <report>dependencies</report>
+                <report>issue-tracking</report>
+                <report>license</report>
+                <report>mailing-list</report>
+                <report>modules</report>
+                <report>project-team</report>
+                <report>plugin-management</report>
+                <report>plugins</report>
+                <report>scm</report>
+              </reports>
+            </plugin>
+            <plugin>
+              <groupId>org.scala-tools</groupId>
+              <artifactId>maven-scala-plugin</artifactId>
+              <configuration>
+                <scalaVersion>${scala-version}</scalaVersion>
+              </configuration>
+            </plugin>
+          </reportPlugins>
+        </configuration>
       </plugin>
       
       <!-- <plugin>
@@ -418,79 +460,6 @@
       
     </plugins>
   </build>
-  <reporting>
-    <plugins>
-      <!-- <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.5</version>
-      </plugin> -->
-      <!--
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jxr-plugin</artifactId>
-            </plugin>
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.4.3</version>
-      </plugin>
-      <!--
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-checkstyle-plugin</artifactId>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-pmd-plugin</artifactId>
-            </plugin>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>cobertura-maven-plugin</artifactId>
-            </plugin>
-      -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>taglist-maven-plugin</artifactId>
-        <version>2.3</version>
-      </plugin>
-      <!--
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <links>
-            <link>http://java.sun.com/j2se/1.5.0/docs/api/</link>
-            <link>http://java.sun.com/javaee/5/docs/api/</link>
-            <link>http://jakarta.apache.org/commons/collections/apidocs-COLLECTIONS_3_0/</link>
-            <link>http://jakarta.apache.org/commons/dbcp/apidocs/</link>
-            <link>http://jakarta.apache.org/commons/fileupload/apidocs/</link>
-            <link>http://jakarta.apache.org/commons/httpclient/apidocs/</link>
-            <link>http://jakarta.apache.org/commons/logging/apidocs/</link>
-            <link>http://jakarta.apache.org/commons/pool/apidocs/</link>
-            <link>http://junit.sourceforge.net/javadoc/</link>
-            <link>http://logging.apache.org/log4j/docs/api/</link>
-          </links>
-          <linksource>true</linksource>
-          <maxmemory>900m</maxmemory>
-          <source>1.5</source>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.2</version>
-        <configuration>
-          <formats>
-            <format>html</format>
-            <format>xml</format>
-          </formats>
-        </configuration>
-      </plugin>
-      -->
-
-    </plugins>
-  </reporting>
 
   <profiles>
     
@@ -728,7 +697,41 @@
         </plugins> 
       </build>
     </profile>
+
+    <profile>
+      <id>undercover</id>
+        <repositories>
+          <repository>
+            <id>zact</id>
+            <url>http://zact.googlecode.com/svn/maven/repository</url>
+          </repository>
+        </repositories>
+        <pluginRepositories>
+          <pluginRepository>
+            <id>zact</id>
+            <url>http://zact.googlecode.com/svn/maven/repository</url>
+          </pluginRepository>
+        </pluginRepositories>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>undercover</groupId>
+              <artifactId>undercover-maven-plugin</artifactId>
+              <version>0.8.4</version>
+              <executions>
+                <execution>
+                  <phase>test</phase>
+                  <goals>
+                    <goal>undercover</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </build>      
+    </profile>
   </profiles>
+    
   <repositories>
 
     <repository>
