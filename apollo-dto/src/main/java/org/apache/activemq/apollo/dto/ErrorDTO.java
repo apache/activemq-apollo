@@ -42,6 +42,12 @@ public class ErrorDTO {
         this.message = message;
     }
 
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
