@@ -699,6 +699,11 @@ class StompProtocolHandler extends ProtocolHandler {
           host.router.unbind(consumer.destination, consumer, false , security_context)
       }
       consumers = Map()
+      security_context.logout( e => {
+        if(e!=null) {
+          connection_log.info(e, "STOMP connection '%s' log out error: %s", security_context.remote_address, e.toString)
+        }
+      })
       trace("stomp protocol resources released")
     }
   }

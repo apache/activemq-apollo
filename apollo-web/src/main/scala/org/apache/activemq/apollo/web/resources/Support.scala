@@ -161,21 +161,37 @@ abstract class Resource(parent:Resource=null) {
   protected def authenticate[T](authenticator:Authenticator)(func: (SecurityContext)=>Unit): Unit = {
 
     var security_context = http_request.getAttribute(SECURITY_CONTEXT_ATTRIBUTE).asInstanceOf[SecurityContext]
+    if(security_context == null) {
+      // perhaps we can find it in the session
+      var session = http_request.getSession(false)
+      if( session!=null ) {
+        var user_info = session.getAttribute("user_info").asInstanceOf[UserInfo];
+        if( user_info!=null ) {
+          security_context = user_info.security_context;
+        }
+      }
+    }
+
     if( security_context!=null ) {
+      // yay.. user is already logged in.
       func(security_context)
     } else {
+
       security_context = new SecurityContext
       security_context.local_address = new InetSocketAddress(http_request.getLocalAddr, http_request.getLocalPort)
       security_context.remote_address = new InetSocketAddress(http_request.getRemoteAddr, http_request.getRemotePort)
       security_context.certificates = http_request.getAttribute("javax.servlet.request.X509Certificate").asInstanceOf[Array[X509Certificate]]
 
-      if(http_request.getAttribute("username")!=null) {
-        security_context.user = http_request.getAttribute("username").asInstanceOf[String];
-        security_context.password = http_request.getAttribute("password").asInstanceOf[String];
-      } else if( http_request.getSession(false) !=null ) {
+      var user_info = http_request.getAttribute("user_info").asInstanceOf[UserInfo];
+      if( user_info==null  ) {
         val session = http_request.getSession(false)
-        security_context.user = session.getAttribute("username").asInstanceOf[String];
-        security_context.password = session.getAttribute("password").asInstanceOf[String];
+        if( session!=null ) {
+          user_info = session.asInstanceOf[UserInfo];
+        }
+      }
+      if(user_info!=null) {
+        security_context.user = user_info.username
+        security_context.password = user_info.password
       } else {
         var auth_header = http_request.getHeader(HEADER_AUTHORIZATION)
         if (auth_header != null && auth_header.length > 0) {
@@ -207,10 +223,23 @@ abstract class Resource(parent:Resource=null) {
           }
         }
       }
+
+      def call_func_with_security = {
+        http_request.setAttribute(SECURITY_CONTEXT_ATTRIBUTE, security_context)
+        try {
+          func(security_context)
+        } finally {
+          // If there is no session, then we have to logout at the end of the request.
+          if( http_request.getSession(false)==null ) {
+            security_context.logout((error)=>{
+            })
+          }
+        }
+      }
+
       reset {
         if( authenticator.authenticate(security_context) ) {
-          http_request.setAttribute(SECURITY_CONTEXT_ATTRIBUTE, security_context)
-          func(security_context)
+          call_func_with_security
         } else {
           func(null)
         }

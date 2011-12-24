@@ -36,6 +36,7 @@ import org.apache.activemq.apollo.broker._
 import java.security.Principal
 import org.apache.activemq.apollo.dto._
 import javax.ws.rs.core.MediaType._
+import security.SecurityContext
 
 /**
  * <p>
@@ -71,37 +72,59 @@ case class BrokerResource() extends Resource {
     new ArrayList[PrincipalDTO](rc.map(x=>new PrincipalDTO(x.getClass.getName, x.getName)))
   }
 
+  @Produces(Array("text/html;qs=5"))
   @GET
   @Path("signin")
-  def get_signin(@Context response:HttpServletResponse, @QueryParam("username") username:String, @QueryParam("password") password:String):Boolean = {
-    post_signin(response, username, password)
+  def get_signin_html(@Context response:HttpServletResponse, @QueryParam("username") username:String, @QueryParam("password") password:String): ErrorDTO = {
+    if(post_signin(response, username, password)) {
+      result(strip_resolve("../.."))
+    } else {
+      var dto = new ErrorDTO()
+      dto.code = "%d: %s".format(BAD_REQUEST.getStatusCode, BAD_REQUEST.getReasonPhrase)
+      dto.message = "Invalid user id or password";
+      result(BAD_REQUEST, dto)
+    }
   }
+
+//  @GET
+//  @Path("signin")
+//  def get_signin(@Context response:HttpServletResponse, @QueryParam("username") username:String, @QueryParam("password") password:String):Boolean = {
+//    post_signin(response, username, password)
+//  }
 
   @POST
   @Path("signin")
   def post_signin(@Context response:HttpServletResponse, @FormParam("username") username:String, @FormParam("password") password:String):Boolean =  {
     try {
-      http_request.setAttribute("username", username)
-      http_request.setAttribute("password", password)
+      val user_info = UserInfo(username, password)
+      http_request.setAttribute("user_info", user_info)
       unwrap_future_result[Boolean] {
         with_broker { broker =>
           monitoring(broker) {
             // Only create the session if he is a valid user.
             val session = http_request.getSession(true)
-            session.setAttribute("username", username)
-            session.setAttribute("password", password)
+            user_info.security_context = http_request.getAttribute(SECURITY_CONTEXT_ATTRIBUTE).asInstanceOf[SecurityContext]
+            session.setAttribute("user_info", user_info)
             true
           }
         }
       }
     } catch {
       case e:WebApplicationException => // this happens if user is not authorized
+        e.printStackTrace()
         false
     }
   }
 
-  @GET
-  @Path("signout")
+  @Produces(Array("text/html"))
+  @GET @Path("signout")
+  def signout_html():Unit = {
+    signout()
+    result(strip_resolve("../.."))
+  }
+
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
+  @GET @Path("signout")
   def signout():Unit =  {
     val session = http_request.getSession(false)
     if( session !=null ) {
@@ -480,7 +503,7 @@ case class BrokerResource() extends Resource {
       Success(rc)
     } catch {
       case e:Throwable =>
-        Failure(create_result(BAD_REQUEST, new ErrorDTO(e.getMessage)))
+        Failure(create_result(BAD_REQUEST, e.getMessage))
     }
   }
 

@@ -17,13 +17,12 @@
 package org.apache.activemq.apollo.broker.security
 
 import java.security.Principal
-import collection.mutable.HashSet
 import javax.security.auth.Subject
 import java.security.cert.X509Certificate
-import org.apache.activemq.apollo.util.OptionSupport._
-import org.apache.activemq.jaas.{GroupPrincipal, UserPrincipal}
-import javax.security.auth.login.LoginContext
 import java.net.SocketAddress
+import org.apache.activemq.apollo.broker.Broker.BLOCKABLE_THREAD_POOL
+import org.fusesource.hawtdispatch._
+import javax.security.auth.login.LoginContext
 
 /**
  * <p>
@@ -35,6 +34,7 @@ class SecurityContext {
 
   var user:String = _
   var password:String = _
+  var sso_token:String = _
   var certificates:Array[X509Certificate] = _
   var local_address:SocketAddress = _
   var remote_address:SocketAddress = _
@@ -91,4 +91,26 @@ class SecurityContext {
     }
   }
 
+  /**
+   * Logs the user off, called func when completed. Pass
+   * any errors that occurred during the log off process
+   * to the function or null.
+   */
+  def logout(func: (Throwable)=>Unit) = {
+    if(login_context==null) {
+      func(null)
+    } else {
+      val lc = login_context
+      login_context = null
+      BLOCKABLE_THREAD_POOL {
+        try {
+          lc.logout()
+          func(null)
+        } catch {
+          case e:Throwable => func(e)
+        }
+      }
+    }
+  }
+  
 }
