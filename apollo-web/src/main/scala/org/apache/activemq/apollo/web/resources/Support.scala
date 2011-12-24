@@ -33,6 +33,7 @@ import util.continuations._
 import org.apache.activemq.apollo.util._
 import java.net.{InetSocketAddress, URI}
 import java.security.cert.X509Certificate
+import org.apache.activemq.apollo.dto.ErrorDTO
 
 object Resource extends Log {
 
@@ -108,10 +109,10 @@ abstract class Resource(parent:Resource=null) {
             if (authorizer.can(security_context, action, resource)) {
               block.onComplete(rc)
             } else {
-              unauthroized
+              unauthorized
             }
           } else {
-            unauthroized
+            unauthorized
           }
         } catch {
           case e:Throwable =>
@@ -217,13 +218,18 @@ abstract class Resource(parent:Resource=null) {
     }
   }
 
-  protected def unauthroized = {
+  protected def unauthorized = {
     val response = Response.status(HttpServletResponse.SC_UNAUTHORIZED)
     if( http_request.getHeader("AuthPrompt")!="false" && http_request.getSession(false)==null ) {
       // TODO: perhaps get the realm from the authenticator
       var http_realm = "Apollo"
       response.header(HEADER_WWW_AUTHENTICATE, AUTHENTICATION_SCHEME_BASIC + " realm=\"" + http_realm + "\"")
     }
+
+    var dto = new ErrorDTO()
+    dto.code = "%d: %s".format(UNAUTHORIZED.getStatusCode, UNAUTHORIZED.getReasonPhrase)
+    dto.message = "You do not have access to access the resource.";
+    response.entity(dto)
     throw new WebApplicationException(response.build())
   }
 

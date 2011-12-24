@@ -31,44 +31,28 @@ import java.util.List;
 public class ErrorDTO {
 
     /**
+     * The error code.
+     */
+    @XmlAttribute(name="code")
+    public String code;
+
+    /**
      * The message associated with the error.
      */
     @XmlAttribute(name="message")
     public String message;
 
-    public ErrorDTO(){}
+    /**
+     * The resource being access which caused the error
+     */
+    @XmlAttribute(name="resource")
+    public String resource;
 
-    public ErrorDTO(String message) {
-        this.message = message;
-    }
+    public ErrorDTO(){}
 
     /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ErrorDTO)) return false;
-
-        ErrorDTO errorDTO = (ErrorDTO) o;
-
-        if (message != null ? !message.equals(errorDTO.message) : errorDTO.message != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return message != null ? message.hashCode() : 0;
-    }
-
-    @Override
-    public String toString() {
-        return "ErrorDTO{" +
-                "message='" + message + '\'' +
-                '}';
-    }
 }
