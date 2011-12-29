@@ -45,6 +45,13 @@
       <version>${scala-version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-compiler</artifactId>
+      <version>${scala-version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
