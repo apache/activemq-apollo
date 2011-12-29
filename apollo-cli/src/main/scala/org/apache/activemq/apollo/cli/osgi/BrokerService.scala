@@ -30,7 +30,6 @@ import org.apache.activemq.apollo.cli.commands.Create
 import org.apache.felix.service.command.CommandSession
 import java.io._
 import java.lang.{UnsupportedOperationException, String}
-import tools.nsc.io.NullPrintStream
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
