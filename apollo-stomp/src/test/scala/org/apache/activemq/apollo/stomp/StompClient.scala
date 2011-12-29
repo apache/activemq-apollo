@@ -48,7 +48,7 @@ class StompClient extends ShouldMatchers {
       new Socket
     }
     socket.connect(new InetSocketAddress(host, port))
-    socket.setSoLinger(true, 0)
+    socket.setSoLinger(true, 1)
     out = new BufferedOutputStream(socket.getOutputStream, bufferSize)
     in = new BufferedInputStream(socket.getInputStream, bufferSize)
   }
