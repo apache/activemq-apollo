@@ -291,7 +291,6 @@
             </includes>
             <excludes>
               <exclude>**/legacy/**</exclude>
-              <exclude>**/perf/**</exclude>
               <exclude>**/jaxb/**</exclude>
             </excludes>
             <!--
@@ -547,32 +546,6 @@
       </build>
     </profile>
     
-    <profile>
-      <id>benchmark</id>
-      <build>
-        <plugins>
-          
-          <!-- skip all tests by default.. modules with benchmarking tests will 
-               enable those tests when this profile is active  -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven-surefire-plugin-version}</version>
-            <configuration>
-              <argLine>-server</argLine>
-              <systemPropertyVariables>
-                <notes>${notes}</notes>
-              </systemPropertyVariables>
-              <excludes>
-                <exclude>**/**</exclude>
-              </excludes>
-            </configuration>
-          </plugin>
-          
-        </plugins>
-      </build>
-    </profile>
-
     <!--
       To generate a graph of the project dependencies, run: mvn -P graph graph:project
     -->
