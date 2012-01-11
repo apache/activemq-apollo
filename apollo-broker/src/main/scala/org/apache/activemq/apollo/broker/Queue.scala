@@ -527,6 +527,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         val entry = tail_entry
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queueDelivery = delivery.copy
+        queueDelivery.sender = destination_dto
         queueDelivery.seq = entry.seq
         entry.init(queueDelivery)
         

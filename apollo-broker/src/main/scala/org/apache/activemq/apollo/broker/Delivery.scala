@@ -23,6 +23,7 @@ import org.apache.activemq.apollo.filter.Filterable
 import org.apache.activemq.apollo.broker.store.StoreUOW
 import org.apache.activemq.apollo.util.Log
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
+import org.apache.activemq.apollo.dto.DestinationDTO
 
 object DeliveryProducer extends Log
 
@@ -95,16 +96,6 @@ trait DeliverySession extends SessionSink[Delivery] {
 trait Message extends Filterable with Retained {
 
   /**
-   * the globally unique id of the message
-   */
-  def id: AsciiBuffer
-
-  /**
-   * the globally unique id of the producer
-   */
-  def producer: AsciiBuffer
-
-  /**
    *  the message priority.
    */
   def priority:Byte
@@ -175,6 +166,11 @@ object Poisoned extends DeliveryResult
 class Delivery {
 
   /**
+   * Where the delivery is originating from.
+   */
+  var sender:DestinationDTO = _
+
+  /**
    * Total size of the delivery.  Used for resource allocation tracking
    */
   var size:Int = 0
@@ -219,6 +215,7 @@ class Delivery {
   def copy() = (new Delivery).set(this)
 
   def set(other:Delivery) = {
+    sender = other.sender
     size = other.size
     seq = other.seq
     message = other.message
@@ -230,7 +227,7 @@ class Delivery {
 
   def createMessageRecord() = {
     val record = message.protocol.encode(message)
-    assert( record.size == size )
+    record.size = size
     record.locator = storeLocator
     record
   }

@@ -45,11 +45,6 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
   var id: AsciiBuffer = null
 
   /**
-   * the globally unique id of the producer
-   */
-  var producer: AsciiBuffer = null
-
-  /**
    *  the message priority.
    */
   var priority:Byte = 4;

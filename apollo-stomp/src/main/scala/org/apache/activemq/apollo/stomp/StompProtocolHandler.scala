@@ -128,6 +128,10 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
+  
+  def id(message:Message) = {
+    message.asInstanceOf[StompFrameMessage].id
+  }
 
   class StompConsumer (
 
@@ -249,9 +253,9 @@ class StompProtocolHandler extends ProtocolHandler {
         } else {
           if( protocol_version eq V1_0 ) {
             // register on the connection since 1.0 acks may not include the subscription id
-            connection_ack_handlers += ( delivery.message.id-> this )
+            connection_ack_handlers += ( id(delivery.message) -> this )
           }
-          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack )
+          consumer_acks += id(delivery.message) -> new TrackedAck(Some(delivery.size), delivery.ack )
         }
       }
 
@@ -337,9 +341,9 @@ class StompProtocolHandler extends ProtocolHandler {
         } else {
           if( protocol_version eq V1_0 ) {
             // register on the connection since 1.0 acks may not include the subscription id
-            connection_ack_handlers += ( delivery.message.id-> this )
+            connection_ack_handlers += ( id(delivery.message) -> this )
           }
-          consumer_acks += delivery.message.id -> new TrackedAck(Some(delivery.size), delivery.ack)
+          consumer_acks += id(delivery.message) -> new TrackedAck(Some(delivery.size), delivery.ack)
         }
       }
 
@@ -555,7 +559,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var codec:StompCodec = _
 
   implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
-    val rc = destination_parser.decode_destination(value.toString)
+    val rc = destination_parser.decode_multi_destination(value.toString)
     if( rc==null ) {
       throw new ProtocolException("Invalid stomp destination name: "+value);
     }

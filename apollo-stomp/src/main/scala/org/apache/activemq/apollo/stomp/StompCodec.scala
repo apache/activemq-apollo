@@ -42,7 +42,6 @@ object StompCodec extends Log {
 
     val rc = new MessageRecord
     rc.protocol = PROTOCOL
-    rc.size = frame.size
     rc.expiration = message.expiration
 
     if( frame.content.isInstanceOf[ZeroCopyContent] ) {

@@ -131,7 +131,11 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     def producer = session.producer
     def consumer = session.consumer
 
-    def offer(value: Delivery) = downstream.offer(value)
+    def offer(value: Delivery) = {
+      val copy = value.copy();
+      copy.sender = destination_dto
+      downstream.offer(copy)
+    }
   }
 
   case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO, registered:DeliveryConsumer) extends DeliveryConsumer {

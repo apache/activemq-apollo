@@ -41,13 +41,9 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   def protocol = OpenwireProtocol
 
-  def producer = ascii(message.getProducerId.toString)
-
   def priority = message.getPriority
 
   def persistent = message.isPersistent
-
-  def id = _id
 
   def expiration = message.getExpiration
 
@@ -89,10 +85,8 @@ object EndOfBrowseMessage extends Message {
   def retain() {}
   def release() {}
   def protocol: Protocol = null
-  def producer: AsciiBuffer = null
   def priority: Byte = 0
   def persistent: Boolean = false
-  def id: AsciiBuffer = null
   def expiration: Long = 0L
   def getProperty(name: String): AnyRef = null
   def getLocalConnectionId: AnyRef = null
