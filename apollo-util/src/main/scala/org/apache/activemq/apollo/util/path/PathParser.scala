@@ -134,7 +134,11 @@ class PathParser {
   }
 
   def parts(subject: String): Array[String] = {
-    subject.split(Pattern.quote(path_separator))
+    if(path_separator!=null) {
+      subject.split(Pattern.quote(path_separator))
+    } else {
+      Array(subject)
+    }
   }
 
   def decode_path(subject: String): Path = {
@@ -155,9 +159,9 @@ class PathParser {
   }
 
   private def decode_part(value: String): Part = {
-    if (value == any_child_wildcard) {
+    if (any_child_wildcard!=null && value == any_child_wildcard) {
       return AnyChildPart
-    } else if (value == any_descendant_wildcard) {
+    } else if (any_descendant_wildcard!=null && value == any_descendant_wildcard) {
       return AnyDescendantPart
     } else {
       if (part_pattern == null || part_pattern.matcher(value.toString).matches) {

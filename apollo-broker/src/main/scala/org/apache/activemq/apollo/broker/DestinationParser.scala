@@ -59,13 +59,19 @@ class DestinationParser extends PathParser {
         }
         dest match {
           case d:QueueDestinationDTO =>
-            rc.append(queue_prefix)
+            if( queue_prefix!=null ) {
+              rc.append(queue_prefix)
+            }
             rc.append(encode_path(dest.path.toIterable))
           case d:DurableSubscriptionDestinationDTO =>
-            rc.append(dsub_prefix)
+            if( dsub_prefix!=null ) {
+              rc.append(dsub_prefix)
+            }
             rc.append(d.subscription_id)
           case d:TopicDestinationDTO =>
-            rc.append(topic_prefix)
+            if( topic_prefix!=null ) {
+              rc.append(topic_prefix)
+            }
             rc.append(encode_path(dest.path.toIterable))
           case _ =>
             throw new Exception("Uknown destination type: "+dest.getClass);
@@ -83,7 +89,7 @@ class DestinationParser extends PathParser {
    * @param compositeSeparator
    * @return
    */
-  def decode_destination(value: String): Array[DestinationDTO] = {
+  def decode_multi_destination(value: String, unqualified:(String)=>DestinationDTO=null): Array[DestinationDTO] = {
     if (value == null) {
       return null;
     }
@@ -92,33 +98,50 @@ class DestinationParser extends PathParser {
       var rc = value.split(Pattern.quote(destination_separator));
       var dl = ListBuffer[DestinationDTO]()
       for (buffer <- rc) {
-        val d = decode_destination(buffer)
+        val d = decode_single_destination(buffer, unqualified)
         if (d == null) {
           return null;
         }
-        dl += d(0)
+        dl += d
       }
       return dl.toArray
     } else {
-
-      if (queue_prefix != null && value.startsWith(queue_prefix)) {
-        var name = value.substring(queue_prefix.length)
-        return Array( new QueueDestinationDTO(parts(name)) )
-      } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
-        var name = value.substring(topic_prefix.length)
-        return Array( new TopicDestinationDTO(parts(name)) )
-      } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
-        var name = value.substring(dsub_prefix.length)
-        return Array( new DurableSubscriptionDestinationDTO(name) )
-      } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
-        var name = value.substring(temp_topic_prefix.length)
-        return Array( new TopicDestinationDTO(parts(name)).temp(true) )
-      } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
-        var name = value.substring(temp_queue_prefix.length)
-        return Array( new QueueDestinationDTO(parts(name)).temp(true) )
+      val rc = decode_single_destination(value, unqualified)
+      if( rc == null ) {
+        null
       } else {
-        return null;
+        Array(rc)
       }
+    }
+  }
+
+  /**
+   * Parses a non-composite destination name.
+   *
+   * @param value
+   * @param compositeSeparator
+   * @return
+   */
+  def decode_single_destination(value: String, unqualified: (String) => DestinationDTO): DestinationDTO = {
+    if (queue_prefix != null && value.startsWith(queue_prefix)) {
+      var name = value.substring(queue_prefix.length)
+      return new QueueDestinationDTO(parts(name))
+    } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
+      var name = value.substring(topic_prefix.length)
+      return new TopicDestinationDTO(parts(name))
+    } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
+      var name = value.substring(dsub_prefix.length)
+      return new DurableSubscriptionDestinationDTO(name)
+    } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
+      var name = value.substring(temp_topic_prefix.length)
+      return new TopicDestinationDTO(parts(name)).temp(true)
+    } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
+      var name = value.substring(temp_queue_prefix.length)
+      return new QueueDestinationDTO(parts(name)).temp(true)
+    } else if (unqualified != null) {
+      return unqualified(value)
+    } else {
+      return null
     }
   }
 
