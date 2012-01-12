@@ -42,6 +42,7 @@ class JaxrsExceptionMapper extends ExceptionMapper[Throwable] {
     http_request.getRequestURI + Option(query).map("?"+_).getOrElse("")
   }
 
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
   def toResponse(error: Throwable): Response = {
     def response(status: Response.Status, msg: String=null) = {
       val response = Response.status(status)

@@ -77,10 +77,23 @@ abstract class Resource(parent:Resource=null) {
     this.http_request = other.http_request
   }
 
-  def create_result(value: Response.Status, message: Any): WebApplicationException = {
-    val response = Response.status(value)
-    if (message != null) {
-      response.entity(message)
+  def requested_uri = {
+    val query = http_request.getQueryString
+    http_request.getRequestURI + Option(query).map("?"+_).getOrElse("")
+  }
+
+  def create_result(status: Response.Status, message: Any): WebApplicationException = {
+    val response = Response.status(status)
+    message match {
+      case null =>
+      case message:String =>
+        val e = new ErrorDTO
+        e.code = "%d: %s".format(status.getStatusCode, status.getReasonPhrase)
+        e.message = message
+        e.resource = requested_uri
+        response.entity(e)
+      case x:AnyRef =>
+        response.entity(message)
     }
     new WebApplicationException(response.build).fillInStackTrace().asInstanceOf[WebApplicationException]
   }
