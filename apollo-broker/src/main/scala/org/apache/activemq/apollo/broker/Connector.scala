@@ -197,7 +197,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     protocol = ProtocolFactory.get(config.protocol.getOrElse("any")).get
     transport_server = TransportFactory.bind( config.bind )
     transport_server.setDispatchQueue(dispatch_queue)
-    transport_server.setAcceptListener(BrokerAcceptListener)
+    transport_server.setTransportServerListener(BrokerAcceptListener)
 
     transport_server match {
       case transport_server:SslTransportServer =>
