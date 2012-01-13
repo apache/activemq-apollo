@@ -29,9 +29,10 @@ trait Authenticator {
    * If the authentication succeeds, then the subject and
    * principles fields of the SecurityContext should be populated.
    *
-   * @returns true if the SecurityContext was authenticated.
+   * @returns null if the SecurityContext was authenticated. Otherwise
+   * returns an error message that can be given to a client.
    */
-  def authenticate(ctx:SecurityContext):Boolean @suspendable
+  def authenticate(ctx:SecurityContext):String @suspendable
 
   /**
    * Extracts the user name of the logged in user.

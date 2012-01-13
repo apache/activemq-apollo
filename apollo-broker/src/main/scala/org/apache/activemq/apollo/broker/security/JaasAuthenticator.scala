@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.broker.security
 
-import javax.security.auth.login.LoginContext
 
 import javax.security.auth.callback.Callback
 import javax.security.auth.callback.CallbackHandler
@@ -30,6 +29,8 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.AuthenticationDTO
 import org.apache.activemq.apollo.util.Log
 import collection.JavaConversions._
+import javax.security.auth.login._
+import javax.security.auth.message.AuthException
 
 /**
  * <p>
@@ -78,7 +79,7 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
     }
   }
 
-  def _authenticate(security_ctx: SecurityContext): Boolean = {
+  def _authenticate(security_ctx: SecurityContext): String = {
     val original = Thread.currentThread().getContextClassLoader()
     Thread.currentThread().setContextClassLoader(getClass.getClassLoader())
     JaasAuthenticator._log.set(log)
@@ -103,12 +104,27 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
 
       security_ctx.login_context.login()
       security_ctx.subject = security_ctx.login_context.getSubject()
-      true
+      null
+
     } catch {
       case x: Exception =>
+        val (reported, actual) = x match {
+          case x:AccountLockedException =>
+            ("Account locked", "Account locked: "+x.getMessage)
+          case x:AccountExpiredException  =>
+            ("Account expired", "Account expired: "+x.getMessage)
+          case x:CredentialExpiredException  =>
+            ("Creditial expired", "Creditial expired: "+x.getMessage)
+          case x:FailedLoginException  =>
+            ("Authentication failed", "Failed login: "+x.getMessage)
+          case x:AccountNotFoundException  =>
+            ("Authentication failed", "Account not found: "+x.getMessage)
+          case _ =>
+            ("Authentication failed", x.getMessage)
+        }
         security_ctx.login_context = null
-        log.info("authentication failed: local:%s, remote:%s, reason:%s ", security_ctx.local_address, security_ctx.remote_address, x.getMessage)
-        false
+        log.info("authentication failed: local:%s, remote:%s, reason:%s ", security_ctx.local_address, security_ctx.remote_address, actual)
+        reported
     } finally {
       JaasAuthenticator._log.remove
       Thread.currentThread().setContextClassLoader(original)

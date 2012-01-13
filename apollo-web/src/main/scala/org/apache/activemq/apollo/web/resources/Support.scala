@@ -251,7 +251,7 @@ abstract class Resource(parent:Resource=null) {
       }
 
       reset {
-        if( authenticator.authenticate(security_context) ) {
+        if( authenticator.authenticate(security_context)==null ) {
           call_func_with_security
         } else {
           func(null)

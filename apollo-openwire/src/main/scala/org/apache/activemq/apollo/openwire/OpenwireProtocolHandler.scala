@@ -430,8 +430,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       reset {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspend_read("authenticating and authorizing connect")
-          if( !host.authenticator.authenticate(security_context) ) {
-            async_die("Authentication failed. Credentials="+security_context.credential_dump)
+          val auth_failure = host.authenticator.authenticate(security_context)
+          if( auth_failure!=null ) {
+            async_die(auth_failure+". Credentials="+security_context.credential_dump)
             noop // to make the cps compiler plugin happy.
           } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
             async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
