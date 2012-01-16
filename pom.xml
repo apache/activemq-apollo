@@ -752,24 +752,19 @@
       <releases><enabled>false</enabled></releases>
     </repository>
 
-    <!-- <repository>
-      <id>shorrockin</id>
-      <url>http://maven.shorrockin.com</url>
-    </repository> -->
-
     <repository>
       <id>oracleReleases</id>
       <url>http://download.oracle.com/maven</url>
       <layout>default</layout>
     </repository>
   
-    <repository>
-      <id>ops4j.sonatype.snapshots.deploy</id>
-      <name>OPS4J snapshot repository</name>
-      <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
-      <snapshots><enabled>true</enabled></snapshots>
+	  <repository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
       <releases><enabled>false</enabled></releases>
-    </repository>
+      <snapshots><enabled>true</enabled></snapshots>
+	  </repository>
 
     <!-- for net.sf.josql dependency not yet in central -->
     <repository>
