@@ -121,7 +121,7 @@ class DiskBenchmark extends Action {
   @option(name = "--verbose", description = "Enable verbose output")
   var verbose: Boolean = false
   @option(name = "--sample-interval", description = "The number of milliseconds to spend mesuring perfomance.")
-  var sampleInterval: Long = 10 * 1000
+  var sampleInterval: Long = 30 * 1000
 
   @option(name = "--block-size", description = "The size of each IO operation.")
   var block_size_txt = "4k"
@@ -213,6 +213,7 @@ class DiskBenchmark extends Action {
           report.read_duration = TimeUnit.NANOSECONDS.toMillis(end-start)
 
         } finally {
+          out.println("Closing.")
           raf.close
         }
         file.delete
@@ -236,7 +237,7 @@ class DiskBenchmark extends Action {
   private def write(raf: RandomAccessFile, data: Array[Byte], until: (Long)=>Boolean) = {
     var file_position = raf.getFilePointer
     var counter = 0
-    while (!until(counter * data.length)) {
+    while (!until(counter.toLong * data.length)) {
       if(  file_position + data.length >= file_size ) {
         filled = true
         file_position = 0;
@@ -252,7 +253,7 @@ class DiskBenchmark extends Action {
   private def read(raf: RandomAccessFile, data: Array[Byte], until: (Long)=>Boolean) = {
     var file_position = raf.getFilePointer
     var counter = 0
-    while (!until(counter * data.length)) {
+    while (!until(counter.toLong * data.length)) {
       if( file_position + data.length >= file_size ) {
         file_position = 0;
         raf.seek(file_position)
