@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
 import management.ManagementFactory
 import org.apache.activemq.apollo.util.{MemoryPropertyEditor, IOHelper}
+import MemoryPropertyEditor._
 
 
 class Report {
@@ -96,7 +97,7 @@ class Report {
 
 object DiskBenchmark {
   
-  final val PHYSICAL_MEM_SIZE = MemoryPropertyEditor.format((try {
+  final val PHYSICAL_MEM_SIZE = format((try {
     val mbean_server = ManagementFactory.getPlatformMBeanServer()
     mbean_server.getAttribute(new ObjectName("java.lang:type=OperatingSystem"), "TotalPhysicalMemorySize") match {
       case x:java.lang.Long=> Some(x.longValue)
@@ -115,25 +116,27 @@ object DiskBenchmark {
 @command(scope="apollo", name = "disk-benchmark", description = "Benchmarks your disk's speed")
 class DiskBenchmark extends Action {
   import DiskBenchmark._
-
+  
+  
   @option(name = "--verbose", description = "Enable verbose output")
   var verbose: Boolean = false
   @option(name = "--sample-interval", description = "The number of milliseconds to spend mesuring perfomance.")
   var sampleInterval: Long = 10 * 1000
-  @argument(name="file", description="The file that will be used to benchmark your disk (must NOT exist)")
-  var file = new File("disk-benchmark.dat")
-  
+
   @option(name = "--block-size", description = "The size of each IO operation.")
   var block_size_txt = "4k"
-  def block_size = MemoryPropertyEditor.parse(block_size_txt).toInt
+  def block_size = parse(block_size_txt).toInt
 
   @option(name = "--file-size", description = "The size of the data file to use, this should be big enough to flush the OS write cache.")
   var file_size_txt = PHYSICAL_MEM_SIZE
-  def file_size = MemoryPropertyEditor.parse(file_size_txt)
+  def file_size = parse(file_size_txt)
 
   @option(name = "--warm-up-size", description = "The amount of data we should initial write before measuring performance samples (used to flush the OS write cache).")
-  var warm_up_size_txt = PHYSICAL_MEM_SIZE
-  def warm_up_size = MemoryPropertyEditor.parse(warm_up_size_txt)
+  var warm_up_size_txt = format(parse("500M").min(parse(PHYSICAL_MEM_SIZE)/2))
+  def warm_up_size = parse(warm_up_size_txt)
+
+  @argument(name="file", description="The file that will be used to benchmark your disk (must NOT exist)")
+  var file = new File("disk-benchmark.dat")
 
   def execute(session: CommandSession):AnyRef = {
     def out = session.getConsole
@@ -195,6 +198,11 @@ class DiskBenchmark extends Action {
           })
           report.sync_write_duration = TimeUnit.NANOSECONDS.toMillis(end-start)
 
+          if(!filled) {
+            file_size_txt = ""+raf.getFilePointer
+            out.println("File was not fully written, read benchmark will be operating against: "+(file_size/(1024 * 1024.0f))+" megs of data" )
+            raf.seek(0);
+          }
           out.println("Benchmarking reads")
           start = System.nanoTime()
           end = start
@@ -222,12 +230,15 @@ class DiskBenchmark extends Action {
     }
     null
   }
+  
+  var filled = false
 
   private def write(raf: RandomAccessFile, data: Array[Byte], until: (Long)=>Boolean) = {
     var file_position = raf.getFilePointer
     var counter = 0
     while (!until(counter * data.length)) {
       if(  file_position + data.length >= file_size ) {
+        filled = true
         file_position = 0;
         raf.seek(file_position)
       }
