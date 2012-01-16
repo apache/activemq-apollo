@@ -19,3 +19,4 @@ org.apache.activemq.apollo.cli.commands.Create
 org.apache.activemq.apollo.cli.commands.Help
 org.apache.activemq.apollo.cli.commands.DashHelp
 org.apache.activemq.apollo.cli.commands.Version
+org.apache.activemq.apollo.cli.commands.DiskBenchmark

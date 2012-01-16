@@ -23,3 +23,4 @@ org.apache.activemq.apollo.cli.commands.StoreExport
 org.apache.activemq.apollo.cli.commands.StoreImport
 org.apache.activemq.apollo.cli.commands.DashHelp
 org.apache.activemq.apollo.cli.commands.Version
+org.apache.activemq.apollo.cli.commands.DiskBenchmark
