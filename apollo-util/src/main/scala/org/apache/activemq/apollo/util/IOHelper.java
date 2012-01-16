@@ -20,6 +20,7 @@ import java.io.*;
 import java.lang.reflect.Field;
 
 import org.apache.activemq.apollo.util.os.CLibrary;
+import org.apache.activemq.apollo.util.os.Kernel32Library;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 import org.fusesource.hawtbuf.HexSupport;
 
@@ -254,13 +255,15 @@ public final class IOHelper {
         }
     }
     
-	public interface IOStrategy {
+	public interface SyncStrategy {
 		void sync(FileDescriptor fdo) throws IOException;
-	}	
-	
-	static final IOStrategy IO_STRATEGY = createIOStrategy();
-	
-	private static IOStrategy createIOStrategy() {
+	}
+    static final SyncStrategy SYNC_STRATEGY = createSyncStrategy();
+    static public void sync(FileDescriptor fd) throws IOException {
+        SYNC_STRATEGY.sync(fd);
+    }
+
+	private static SyncStrategy createSyncStrategy() {
 		
 		// On OS X, the fsync system call does not fully flush the hardware buffers.. 
 		// to do that you have to do an fcntl call, and the only way to do that is to
@@ -276,7 +279,7 @@ public final class IOHelper {
 				field.setAccessible(true);
 				// Try to dynamically load the JNA impl of the CLibrary interface..
 				final CLibrary lib = getCLibrary();
-				return new IOStrategy() {
+				return new SyncStrategy() {
 					static final int F_FULLFSYNC = 51;	
 					public void sync(FileDescriptor fd) throws IOException {
 						try {
@@ -286,29 +289,130 @@ public final class IOHelper {
 							throw IOExceptionSupport.create(e);
 						}
 					}
-				};
+
+                    public void hardlink(File source, File target) throws IOException {
+                        int rc = lib.link(source.getCanonicalPath(), target.getCanonicalPath());
+                        if( rc != 0 ){
+                            throw new IOException("Hard link failed with result code="+rc);
+                        }
+                    }
+                };
 			} catch (Throwable ignore) {
 				// Perhaps we should issue a warning here so folks know that 
 				// the disk syncs are not going to be of very good quality.
 			}
-		}
-		
-		return new IOStrategy() {
+		} else if( os.toLowerCase().startsWith("windows") ) {
+            // We will gracefully fall back to default JDK file sync behavior
+            // if the JNA library is not in the path, and we can't set the
+            // FileDescriptor.fd field accessible.
+            try {
+                final Kernel32Library lib = getKernel32Library();
+                return new SyncStrategy() {
+                    public void sync(FileDescriptor fd) throws IOException {
+                        fd.sync();
+                    }
+                    public void hardlink(File source, File target) throws IOException {
+                        int rc = lib.CreateHardLink(target.getCanonicalPath(), source.getCanonicalPath(), 0);
+                        if( rc == 0 ){
+                            throw new IOException("Hard link failed with result code="+lib.GetLastError());
+                        }
+                    }
+                };
+            } catch (Throwable ignore) {
+                // Perhaps we should issue a warning here so folks know that
+                // the disk syncs are not going to be of very good quality.
+            }
+        }
+
+
+        // We will gracefully fall back to default JDK file sync behavior
+        // if the JNA library is not in the path, and we can't set the
+        // FileDescriptor.fd field accessible.
+        try {
+            final CLibrary lib = getCLibrary();
+            return new SyncStrategy() {
+                public void sync(FileDescriptor fd) throws IOException {
+                    fd.sync();
+                }
+
+                public void hardlink(File source, File target) throws IOException {
+                    int rc = lib.link(source.getCanonicalPath(), target.getCanonicalPath());
+                    if( rc != 0 ){
+                        throw new IOException("Hard link failed with result code="+rc);
+                    }
+                }
+            };
+        } catch (Throwable ignore) {
+            // Perhaps we should issue a warning here so folks know that
+            // the disk syncs are not going to be of very good quality.
+        }
+
+		return new SyncStrategy() {
 			public void sync(FileDescriptor fd) throws IOException {
 				fd.sync();
 			}
-		};
+
+            public void hardlink(File source, File target) throws IOException {
+
+            }
+        };
 	}
+
+    public interface HardLinkStrategy {
+        void hardlink(File source, File target) throws IOException;
+    }
+    static final HardLinkStrategy HARD_LINK_STRATEGY = createHardLinkStrategy();
+    static public void hardlink(File source, File target) throws IOException {
+        if(HARD_LINK_STRATEGY==null)
+            throw new UnsupportedOperationException();
+        HARD_LINK_STRATEGY.hardlink(source, target);
+    }
+
+    private static HardLinkStrategy createHardLinkStrategy() {
+
+        String os = System.getProperty("os.name");
+        if( os.toLowerCase().startsWith("windows") ) {
+            try {
+                final Kernel32Library lib = getKernel32Library();
+                return new HardLinkStrategy() {
+                    public void hardlink(File source, File target) throws IOException {
+                        int rc = lib.CreateHardLink(target.getCanonicalPath(), source.getCanonicalPath(), 0);
+                        if( rc == 0 ){
+                            throw new IOException("Hard link failed with result code="+lib.GetLastError());
+                        }
+                    }
+                };
+            } catch (Throwable ignore) {
+            }
+        }
+
+        try {
+            final CLibrary lib = getCLibrary();
+            return new HardLinkStrategy() {
+                public void hardlink(File source, File target) throws IOException {
+                    int rc = lib.link(source.getCanonicalPath(), target.getCanonicalPath());
+                    if( rc != 0 ){
+                        throw new IOException("Hard link failed with result code="+rc);
+                    }
+                }
+            };
+        } catch (Throwable ignore) {
+        }
+        return null;
+    }
 
 	@SuppressWarnings("unchecked")
 	public static CLibrary getCLibrary() throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
-		Class clazz = IOHelper.class.getClassLoader().loadClass("org.apache.activemq.util.os.JnaCLibrary");
+		Class clazz = IOHelper.class.getClassLoader().loadClass("org.apache.activemq.apollo..util.os.JnaCLibrary");
 		final CLibrary lib = (CLibrary) clazz.getField("INSTANCE").get(null);
 		return lib;
 	}
-	
-	static public void sync(FileDescriptor fd) throws IOException {
-		IO_STRATEGY.sync(fd);
-	}
+
+    @SuppressWarnings("unchecked")
+    public static Kernel32Library getKernel32Library() throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
+        Class clazz = IOHelper.class.getClassLoader().loadClass("org.apache.activemq.apollo.util.os.Kernel32JnaLibrary");
+        final Kernel32Library lib = (Kernel32Library) clazz.getField("INSTANCE").get(null);
+        return lib;
+    }
 
 }

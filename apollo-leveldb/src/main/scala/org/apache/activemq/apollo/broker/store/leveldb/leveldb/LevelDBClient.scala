@@ -94,7 +94,6 @@ object LevelDBClient extends Log {
   }
 
   val on_windows = System.getProperty("os.name").toLowerCase().startsWith("windows")
-
   var link_strategy = 0
   def link(source:File, target:File):Unit = {
     link_strategy match {
@@ -108,11 +107,23 @@ object LevelDBClient extends Log {
           case e:Throwable =>
             // Fallback.. to a slower impl..
             debug("Native link system call not available")
-            link_strategy = 5
+            link_strategy = 2
             link(source, target)
         }
 
       // TODO: consider implementing a case which does the native system call using JNA
+      case 2 =>
+        // Next try JNA (might not be in classpath)
+        try {
+          IOHelper.hardlink(source, target)
+        } catch {
+          case e:IOException => throw e
+          case e:Throwable =>
+            // Fallback.. to a slower impl..
+            debug("JNA based hard link system call not available")
+            link_strategy = 5
+            link(source, target)
+        }
 
       case 5 =>
         // Next we try to do the link by executing an
@@ -135,7 +146,7 @@ object LevelDBClient extends Log {
                 // TODO: we might want to look at the out/err to see why it failed
                 // to avoid falling back to the slower strategy.
                 debug("ln OS command not available either")
-                link_strategy = 2
+                link_strategy = 10
                 link(source, target)
             }
           }

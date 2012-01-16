@@ -16,7 +16,13 @@
  */
 package org.apache.activemq.apollo.util.os;
 
-public interface CLibrary {
-    void fcntl(int fd, int cmd, Object... args);
-    int link(String source, String target);
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+public interface Kernel32Library {
+    public int GetLastError();
+    public int CreateHardLink(String target, String source, long reserved);
 }
