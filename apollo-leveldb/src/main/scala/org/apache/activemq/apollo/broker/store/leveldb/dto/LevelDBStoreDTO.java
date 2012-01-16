@@ -47,10 +47,10 @@ public class LevelDBStoreDTO extends StoreDTO {
     public Boolean verify_checksums;
 
     @XmlAttribute(name="log_size")
-    public Integer log_size;
+    public String log_size;
 
     @XmlAttribute(name="log__write_buffer_size")
-    public Integer log_write_buffer_size;
+    public String log_write_buffer_size;
 
     @XmlAttribute(name="index_max_open_files")
     public Integer index_max_open_files;
@@ -59,13 +59,13 @@ public class LevelDBStoreDTO extends StoreDTO {
     public Integer index_block_restart_interval;
 
     @XmlAttribute(name="index_write_buffer_size")
-    public Integer index_write_buffer_size;
+    public String index_write_buffer_size;
 
     @XmlAttribute(name="index_block_size")
-    public Integer index_block_size;
+    public String index_block_size;
 
     @XmlAttribute(name="index_cache_size")
-    public Long index_cache_size;
+    public String index_cache_size;
 
     @XmlAttribute(name="index_compression")
     public String index_compression;

@@ -201,7 +201,7 @@ class LevelDBClient(store: LevelDBStore) {
 
   def log_size = {
     import OptionSupport._
-    config.log_size.getOrElse(1024 * 1024 * 100)
+    Option(config.log_size).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024 * 1024 * 100)
   }
 
   def start() = {
@@ -230,21 +230,21 @@ class LevelDBClient(store: LevelDBStore) {
     config.index_max_open_files.foreach( index_options.maxOpenFiles(_) )
     config.index_block_restart_interval.foreach( index_options.blockRestartInterval(_) )
     config.paranoid_checks.foreach( index_options.paranoidChecks(_) )
-    config.index_write_buffer_size.foreach( index_options.writeBufferSize(_) )
-    config.index_block_size.foreach( index_options.blockSize(_) )
+    Option(config.index_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.writeBufferSize(_) )
+    Option(config.index_block_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.blockSize(_) )
     Option(config.index_compression).foreach(x => index_options.compressionType( x match {
       case "snappy" => CompressionType.SNAPPY
       case "none" => CompressionType.NONE
       case _ => CompressionType.SNAPPY
     }) )
 
-    index_options.cacheSize(config.index_cache_size.getOrElse(1024*1024*256L))
+    index_options.cacheSize(Option(config.index_cache_size).map(MemoryPropertyEditor.parse(_).toLong).getOrElse(1024*1024*256L))
     index_options.logger(new Logger() {
       def log(msg: String) = debug(store.store_kind+": "+msg)
     })
 
     log = create_log
-    log.write_buffer_size = config.log_write_buffer_size.getOrElse(1024*1024*4)
+    log.write_buffer_size = Option(config.log_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024*4)
     log.log_size = log_size
     log.on_log_rotate = ()=> {
       // lets queue a request to checkpoint when
