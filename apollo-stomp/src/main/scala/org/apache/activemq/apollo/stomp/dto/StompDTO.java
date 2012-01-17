@@ -57,13 +57,13 @@ public class StompDTO extends ProtocolDTO {
     public String add_redeliveries_header;
 
     @XmlAttribute(name="max_header_length")
-    public Integer max_header_length;
+    public String max_header_length;
 
     @XmlAttribute(name="max_headers")
     public Integer max_headers;
 
     @XmlAttribute(name="max_data_length")
-    public Integer max_data_length;
+    public String max_data_length;
 
     /**
      * A broker accepts connections via it's configured connectors.

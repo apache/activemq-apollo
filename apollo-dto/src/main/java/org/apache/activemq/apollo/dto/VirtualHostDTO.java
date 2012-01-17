@@ -88,7 +88,7 @@ public class VirtualHostDTO extends ServiceDTO {
      * setting on the JVM heap.  They will be held in temp files until consumed or persisted
      */
     @XmlElement(name="heap_bypass")
-    public Integer heap_bypass;
+    public String heap_bypass;
 
     /**
      * To hold any other non-matching XML elements

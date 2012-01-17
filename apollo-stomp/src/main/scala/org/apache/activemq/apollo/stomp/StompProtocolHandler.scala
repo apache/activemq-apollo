@@ -593,8 +593,8 @@ class StompProtocolHandler extends ProtocolHandler {
     protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
 
     import OptionSupport._
-    config.max_data_length.foreach( codec.max_data_length = _ )
-    config.max_header_length.foreach( codec.max_header_length = _ )
+    Option(config.max_data_length).map(MemoryPropertyEditor.parse(_)).foreach( codec.max_data_length = _ )
+    Option(config.max_header_length).map(MemoryPropertyEditor.parse(_)).foreach( codec.max_header_length = _ )
     config.max_headers.foreach( codec.max_headers = _ )
 
     if( config.queue_prefix!=null ||

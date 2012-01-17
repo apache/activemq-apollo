@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.*;
 public class OpenwireDTO extends ProtocolDTO {
 
     @XmlAttribute(name="max_data_length")
-    public Integer max_data_length;
+    public String max_data_length;
 
     @XmlAttribute(name="destination_separator")
     public String destination_separator;

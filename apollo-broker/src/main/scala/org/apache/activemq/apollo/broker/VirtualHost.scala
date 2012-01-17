@@ -171,7 +171,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   override protected def _start(on_completed:Runnable):Unit = {
     apply_update
 
-    if ( config.heap_bypass.getOrElse(0) > 0 ) {
+    if ( Option(config.heap_bypass).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(0) > 0 ) {
       import org.apache.activemq.apollo.util.FileSupport._
       val tmp_dir = broker.tmp / "heapbypass" / id
       tmp_dir.recursive_delete
