@@ -12,7 +12,12 @@ The Apache Software Foundation (http://www.apache.org/).
 
 -------------------------------------------------------------------------
 
-This product includes software (hawtdispatch,hawtbuf) developed at
+This product includes software (Scala) developed at
+EPFL, Lausanne (http://www.scala-lang.org/).
+
+-------------------------------------------------------------------------
+
+This product includes software (hawtdispatch,hawtbuf,levedbjni) developed at
 The FuseSource Corp (http://fusesource.com/).
 
 -------------------------------------------------------------------------
@@ -54,11 +59,6 @@ used (note that this software is not included in the distribution):
 
   * The PBE Encryption facilities require the Java Cryptography 
     extensions: http://java.sun.com/javase/technologies/security/.
-
--------------------------------------------------------------------------
-
-This product includes software (jdbm2) developed by
-Cees De Groot, Alex Boisvert, Jan Kotek
 
 -------------------------------------------------------------------------
 

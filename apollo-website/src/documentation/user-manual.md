@@ -362,10 +362,10 @@ implementations currently supported are:
 * [BDB Store](#BDB_Store) : is a file based message store implemented using the 
   [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
   This is the most stable implementation.
+
+<!-- These modules are deprecated.. don't expose in end user doco.
 * [JDBM2 Store](#JDBM2_Store) : is a file based message store implemented using the 
   [JDBM2](http://code.google.com/p/jdbm2/) library.
-
-<!-- 
 * [HawtDB Store](#HawtDB_Store) : is a file based message store implemented using the 
   [HawtDB](http://hawtdb.fusesource.org/) library.  This implementation
   has known bugs and not recommend to be used unless your good with a 
@@ -462,6 +462,8 @@ A `bdb_store` element may be configured with the following attributes:
 * `read_threads` : The number of concurrent read threads to use when
   accessing the store. The value defaults to 10.
 
+<!-- These modules are deprecated.. don't expose in end user doco.
+
 ###### JDBM2 Store
 
 The JDBM2 store implementation is redistributable by apache so it can 
@@ -498,7 +500,6 @@ A `jdbm2_store` element may be configured with the following attributes:
   this attribute is not set, it will default to 60 seconds. Set to -1 
   to disable compaction altogether.
 
-<!--  
 ###### HawtDB Store
 
 The HawtDB store implementation is redistributable by apache so it can 

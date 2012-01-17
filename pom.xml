@@ -169,14 +169,12 @@
     <module>apollo-selector</module>
     <module>apollo-leveldb</module>
     <module>apollo-bdb</module>
-    <module>apollo-jdbm2</module>
     <module>apollo-dto</module>
     <module>apollo-stomp</module>
     <module>apollo-web</module>
     <module>apollo-cli</module>
     <module>apollo-website</module>
     <module>apollo-distro</module>
-    <module>apollo-karaf-feature</module>
   </modules>
 
   <scm>
@@ -474,6 +472,7 @@
         <!-- <module>apollo-cassandra</module> -->
         <module>apollo-hawtdb</module>
         <module>apollo-openwire</module>
+        <module>apollo-jdbm2</module>
       </modules>
     </profile>
 

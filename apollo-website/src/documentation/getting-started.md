@@ -85,21 +85,3 @@ the admin interface will be accessible at:
 * [http://127.0.0.1:61680/](http://127.0.0.1:61680/) or [https://127.0.0.1:61681/](https://127.0.0.1:61681/)
 
 The default login id and password is `admin` and `password`.
-
-## Installing Recommended Optional Features
-
-### Switching to the BDB Store
-
-If your on Windows, it is highly recommended that you switch the the BDB based message
-store due to the LevelDB store implementation on Windows still being buggy.
-Unfortunately, BDB cannot be redistributed by Apache so you must first download the 
-bdb jar directly from Oracle at 
-[je-4.1.10.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar) 
-and then copy it into the `${APOLLO_HOME}/lib` directory.
-
-For those of you with curl installed, you can just run:
-
-    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar > %APOLLO_HOME%\lib\je-4.1.10.jar
-    
-Once installed, you then need to update the configuration by editing the `etc/apollo.xml` file and
-replace `leveldb_store` with `bdb_store`.
