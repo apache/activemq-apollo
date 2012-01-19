@@ -49,9 +49,6 @@ public class LevelDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="log_size")
     public String log_size;
 
-    @XmlAttribute(name="log__write_buffer_size")
-    public String log_write_buffer_size;
-
     @XmlAttribute(name="index_max_open_files")
     public Integer index_max_open_files;
 
@@ -96,8 +93,6 @@ public class LevelDBStoreDTO extends StoreDTO {
             return false;
         if (index_factory != null ? !index_factory.equals(that.index_factory) : that.index_factory != null) return false;
         if (log_size != null ? !log_size.equals(that.log_size) : that.log_size != null) return false;
-        if (log_write_buffer_size != null ? !log_write_buffer_size.equals(that.log_write_buffer_size) : that.log_write_buffer_size != null)
-            return false;
         if (paranoid_checks != null ? !paranoid_checks.equals(that.paranoid_checks) : that.paranoid_checks != null)
             return false;
         if (read_threads != null ? !read_threads.equals(that.read_threads) : that.read_threads != null) return false;
@@ -118,7 +113,6 @@ public class LevelDBStoreDTO extends StoreDTO {
         result = 31 * result + (paranoid_checks != null ? paranoid_checks.hashCode() : 0);
         result = 31 * result + (verify_checksums != null ? verify_checksums.hashCode() : 0);
         result = 31 * result + (log_size != null ? log_size.hashCode() : 0);
-        result = 31 * result + (log_write_buffer_size != null ? log_write_buffer_size.hashCode() : 0);
         result = 31 * result + (index_max_open_files != null ? index_max_open_files.hashCode() : 0);
         result = 31 * result + (index_block_restart_interval != null ? index_block_restart_interval.hashCode() : 0);
         result = 31 * result + (index_write_buffer_size != null ? index_write_buffer_size.hashCode() : 0);

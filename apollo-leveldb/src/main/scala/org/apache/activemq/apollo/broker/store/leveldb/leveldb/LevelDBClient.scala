@@ -172,6 +172,9 @@ class LevelDBClient(store: LevelDBStore) {
   import FileSupport._
 
   def dispatchQueue = store.dispatch_queue
+  
+  implicit def toByteArray(buf:Buffer):Array[Byte] = buf.toByteArray
+  implicit def toBuffer(buf:Array[Byte]):Buffer = new Buffer(buf)
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -240,7 +243,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     config.index_max_open_files.foreach( index_options.maxOpenFiles(_) )
     config.index_block_restart_interval.foreach( index_options.blockRestartInterval(_) )
-    config.paranoid_checks.foreach( index_options.paranoidChecks(_) )
+    index_options.paranoidChecks(config.paranoid_checks.getOrElse(true))
     Option(config.index_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.writeBufferSize(_) )
     Option(config.index_block_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.blockSize(_) )
     Option(config.index_compression).foreach(x => index_options.compressionType( x match {
@@ -255,8 +258,9 @@ class LevelDBClient(store: LevelDBStore) {
     })
 
     log = create_log
-    log.write_buffer_size = Option(config.log_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024*4)
-    log.log_size = log_size
+    log.sync = sync
+    log.logSize = log_size
+    log.paranoidChecks = index_options.paranoidChecks()
     log.on_log_rotate = ()=> {
       // lets queue a request to checkpoint when
       // the logs rotate.. queue it on the GC thread since GC's lock
@@ -660,7 +664,7 @@ class LevelDBClient(store: LevelDBStore) {
         }
         if( sync_needed && sync ) {
           appender.flush
-          appender.sync
+          appender.force
         }
       }
     }
@@ -711,6 +715,7 @@ class LevelDBClient(store: LevelDBStore) {
               log.read(pos, len).map { data =>
                 val rc:MessageRecord = data
                 rc.locator = new AtomicReference[Array[Byte]](locator_data)
+                assert( rc.protocol!=null )
                 rc
               }
             }
@@ -741,6 +746,7 @@ class LevelDBClient(store: LevelDBStore) {
               log.read(pos, len).map { data =>
                 val rc:MessageRecord = data
                 rc.locator = new AtomicReference[Array[Byte]](locator_data)
+                assert( rc.protocol!=null )
                 rc
               }
             }
