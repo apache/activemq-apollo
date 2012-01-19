@@ -29,9 +29,9 @@ import OptionSupport._
 import java.util.concurrent.atomic.{AtomicReference, AtomicInteger}
 import org.fusesource.hawtbuf.Buffer
 import java.lang.UnsupportedOperationException
-import org.apache.activemq.apollo.dto._
 import security.SecuredResource._
 import security.{SecuredResource, SecurityContext}
+import org.apache.activemq.apollo.dto._
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -952,7 +952,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     import OptionSupport._
     if( config.unified.getOrElse(false) ) {
       // this is a unified queue.. actually have the produce bind to the topic, instead of the
-      val topic = router.topic_domain.get_or_create_destination(binding.destination, binding.binding_dto, null).success
+      val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
+      val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
       topic.connect(destination, producer)
     } else {
       dispatch_queue {
@@ -967,7 +968,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   def disconnect (producer:BindableDeliveryProducer) = {
     import OptionSupport._
     if( config.unified.getOrElse(false) ) {
-      val topic = router.topic_domain.get_or_create_destination(binding.destination, binding.binding_dto, null).success
+      val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
+      val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
       topic.disconnect(producer)
     } else {
       dispatch_queue {

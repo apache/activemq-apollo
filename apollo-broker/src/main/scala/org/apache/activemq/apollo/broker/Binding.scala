@@ -144,11 +144,11 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
   def binding_kind = POINT_TO_POINT_KIND
 
   def unbind(node: LocalRouter, queue: Queue) = {
-    node.queue_domain.unbind(queue)
+    node.local_queue_domain.unbind(queue)
   }
 
   def bind(node: LocalRouter, queue: Queue) = {
-    node.queue_domain.bind(queue)
+    node.local_queue_domain.bind(queue)
   }
 
   val id = binding_dto.name(LocalRouter.destination_parser.path_separator)
@@ -215,17 +215,17 @@ object DurableSubscriptionQueueBinding extends BindingFactory {
 class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:DurableSubscriptionDestinationDTO) extends Binding {
   import DurableSubscriptionQueueBinding._
 
-  val destination = LocalRouter.destination_parser.decode_path(binding_dto.path)
+  val destination = Path(binding_dto.subscription_id)
 
   def binding_kind = DURABLE_SUB_KIND
 
 
   def unbind(router: LocalRouter, queue: Queue) = {
-    router.topic_domain.unbind_dsub(queue)
+    router.local_dsub_domain.unbind(queue)
   }
 
   def bind(router: LocalRouter, queue: Queue) = {
-    router.topic_domain.bind_dsub(queue)
+    router.local_dsub_domain.bind(queue)
   }
 
   def id = binding_dto.subscription_id

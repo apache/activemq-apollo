@@ -302,7 +302,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         if( auto_delete_after!=0 ) {
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
             if( previously_idle_at == idled_at ) {
-              router.topic_domain.remove_destination(path, this)
+              router.local_topic_domain.remove_destination(path, this)
               DestinationMetricsSupport.add_destination_metrics(router.virtual_host.dead_topic_metrics, topic_metrics)
             }
           }

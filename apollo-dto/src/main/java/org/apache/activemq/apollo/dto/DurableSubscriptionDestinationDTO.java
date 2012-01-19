@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import org.codehaus.jackson.annotate.JsonIgnore;
+
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
  * <p>
@@ -29,33 +29,54 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name = "dsub_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
+public class DurableSubscriptionDestinationDTO extends DestinationDTO {
 
     @XmlAttribute
     public String selector;
 
-    @XmlAttribute(name="subscription_id")
-    public String subscription_id;
+    /**
+     * Topics that the durable subscription is attached to
+     */
+    @XmlElement(name="topic")
+    public ArrayList<TopicDestinationDTO> topics = new ArrayList<TopicDestinationDTO>();
 
     public DurableSubscriptionDestinationDTO() {
     }
 
     public DurableSubscriptionDestinationDTO(String subscription_id) {
-        super();
-        this.subscription_id = subscription_id;
+        super(new String[]{subscription_id});
+    }
+
+    @JsonIgnore
+    public String subscription_id() {
+        return path.get(0);
+    }
+
+    /**
+     * Marks the destination as addressing a durable subscription directly.
+     * This will not create or modify an existing subscription.
+     */
+    @JsonIgnore
+    public DurableSubscriptionDestinationDTO direct() {
+        topics = null;
+        return this;
+    }
+
+    @JsonIgnore
+    public boolean is_direct() {
+        return topics == null;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof DurableSubscriptionDestinationDTO)) return false;
         if (!super.equals(o)) return false;
 
         DurableSubscriptionDestinationDTO that = (DurableSubscriptionDestinationDTO) o;
 
         if (selector != null ? !selector.equals(that.selector) : that.selector != null) return false;
-        if (subscription_id != null ? !subscription_id.equals(that.subscription_id) : that.subscription_id != null)
-            return false;
+        if (topics != null ? !topics.equals(that.topics) : that.topics != null) return false;
 
         return true;
     }
@@ -64,16 +85,16 @@ public class DurableSubscriptionDestinationDTO extends TopicDestinationDTO {
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + (selector != null ? selector.hashCode() : 0);
-        result = 31 * result + (subscription_id != null ? subscription_id.hashCode() : 0);
+        result = 31 * result + (topics != null ? topics.hashCode() : 0);
         return result;
     }
 
     @Override
     public String toString() {
         return "DurableSubscriptionDestinationDTO{" +
-                "path=" + path +
+                "id='" + subscription_id() + '\'' +
                 ", selector='" + selector + '\'' +
-                ", subscription_id='" + subscription_id + '\'' +
+                ", topics=" + topics +
                 '}';
     }
 }

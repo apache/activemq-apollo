@@ -830,22 +830,23 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
 
       if( is_durable_sub ) {
-        destination = destination.map { _ match {
+
+        var subscription_id = ""
+        if( parent.parent.info.getClientId != null ) {
+          subscription_id += parent.parent.info.getClientId + ":"
+        }
+        subscription_id += info.getSubscriptionName
+
+        val rc = new DurableSubscriptionDestinationDTO(subscription_id)
+        rc.selector = info.getSelector
+
+        destination.foreach { _ match {
           case x:TopicDestinationDTO=>
-            val rc = new DurableSubscriptionDestinationDTO()
-            rc.path = x.path
-            if( is_durable_sub ) {
-              rc.subscription_id = ""
-              if( parent.parent.info.getClientId != null ) {
-                rc.subscription_id += parent.parent.info.getClientId + ":"
-              }
-              rc.subscription_id += info.getSubscriptionName
-            }
-            rc.selector = info.getSelector
-            rc
+            rc.topics.add(new TopicDestinationDTO(x.path))
           case _ => die("A durable subscription can only be used on a topic destination")
           }
         }
+        destination = Array(rc)
       }
 
       reset {

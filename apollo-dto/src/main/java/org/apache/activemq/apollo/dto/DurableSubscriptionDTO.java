@@ -43,6 +43,12 @@ public class DurableSubscriptionDTO extends QueueDTO {
     public String topic;
 
     /**
+     * Additional topic names.
+     */
+    @XmlElement(name="topic")
+    public ArrayList<String> topics = new ArrayList<String>();
+
+    /**
      * An optional selector that the durable subscription will be created
      * with when it's first eagerly created.
      */
@@ -60,6 +66,7 @@ public class DurableSubscriptionDTO extends QueueDTO {
         if (id_regex != null ? !id_regex.equals(that.id_regex) : that.id_regex != null) return false;
         if (selector != null ? !selector.equals(that.selector) : that.selector != null) return false;
         if (topic != null ? !topic.equals(that.topic) : that.topic != null) return false;
+        if (topics != null ? !topics.equals(that.topics) : that.topics != null) return false;
 
         return true;
     }
@@ -69,6 +76,7 @@ public class DurableSubscriptionDTO extends QueueDTO {
         int result = super.hashCode();
         result = 31 * result + (id_regex != null ? id_regex.hashCode() : 0);
         result = 31 * result + (topic != null ? topic.hashCode() : 0);
+        result = 31 * result + (topics != null ? topics.hashCode() : 0);
         result = 31 * result + (selector != null ? selector.hashCode() : 0);
         return result;
     }

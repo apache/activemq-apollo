@@ -363,13 +363,13 @@ case class BrokerResource() extends Resource {
 
     val router: LocalRouter = host
 
-    router.queue_domain.destinations.foreach { node =>
+    router.local_queue_domain.destinations.foreach { node =>
       result.queues.add(node.id)
     }
-    router.topic_domain.destinations.foreach { node =>
+    router.local_topic_domain.destinations.foreach { node =>
       result.topics.add(node.id)
     }
-    router.topic_domain.durable_subscriptions_by_id.keys.foreach { id =>
+    router.local_dsub_domain.destination_by_id.keys.foreach { id =>
       result.dsubs.add(id)
     }
 
@@ -514,7 +514,7 @@ case class BrokerResource() extends Resource {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val records = Future.all {
-        router.topic_domain.destination_by_id.values.map { value  =>
+        router.local_topic_domain.destination_by_id.values.map { value  =>
           monitoring(value) {
             value.status
           }
@@ -529,7 +529,7 @@ case class BrokerResource() extends Resource {
   def topic(@PathParam("id") id : String, @PathParam("name") name : String):TopicStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
-      val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       monitoring(node) {
         node.status
       }
@@ -540,7 +540,7 @@ case class BrokerResource() extends Resource {
   def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
-      val node = router.topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
       monitoring(node) {
         sync(queue) {
@@ -556,7 +556,7 @@ case class BrokerResource() extends Resource {
             @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
-      val values: Iterable[Queue] = router.queue_domain.destination_by_id.values
+      val values: Iterable[Queue] = router.local_queue_domain.destination_by_id.values
 
       val records = sync_all(values) { value =>
         status(value, false)
@@ -571,7 +571,7 @@ case class BrokerResource() extends Resource {
   def queue(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
-      val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       sync(node) {
         status(node, entries)
       }
@@ -583,7 +583,7 @@ case class BrokerResource() extends Resource {
   def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
-      val node = router.queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       admining(node) {
         router._destroy_queue(node)
       }
@@ -603,7 +603,7 @@ case class BrokerResource() extends Resource {
             @QueryParam("q") q:String, @QueryParam("p") p:java.lang.Integer, @QueryParam("ps") ps:java.lang.Integer, @QueryParam("o") o:java.util.List[String] ):DataPageDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
-      val values: Iterable[Queue] = router.topic_domain.durable_subscriptions_by_id.values
+      val values: Iterable[Queue] = router.local_dsub_domain.destination_by_id.values
 
       val records = sync_all(values) { value =>
         status(value, false)
@@ -617,7 +617,7 @@ case class BrokerResource() extends Resource {
   def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
-      val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       sync(node) {
         status(node, entries)
       }
@@ -630,7 +630,7 @@ case class BrokerResource() extends Resource {
   def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
-      val node = router.topic_domain.durable_subscriptions_by_id.get(name).getOrElse(result(NOT_FOUND))
+      val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       admining(node) {
         router._destroy_queue(node)
       }

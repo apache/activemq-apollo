@@ -1190,18 +1190,22 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     if( persistent ) {
-      destination = destination.map { _ match {
-        case x:DurableSubscriptionDestinationDTO=>
-          x
-        case x:TopicDestinationDTO=>
-          val rc = new DurableSubscriptionDestinationDTO()
-          rc.path = x.path
-          rc.subscription_id = decode_header(id)
-          rc.selector = if (selector == null) null else selector._1
-          rc
+      
+      val dsubs = ListBuffer[DurableSubscriptionDestinationDTO]()
+      val topics = ListBuffer[TopicDestinationDTO]()
+      destination.foreach { _ match {
+        case x:DurableSubscriptionDestinationDTO=> dsubs += x
+        case x:TopicDestinationDTO=> topics += x
         case _ => die("A persistent subscription can only be used on a topic destination")
-        }
+      } }
+
+      if( !topics.isEmpty ) {
+        val dsub = new DurableSubscriptionDestinationDTO(decode_header(id))
+        dsub.selector = if (selector == null) null else selector._1
+        topics.foreach( dsub.topics.add(_) )
+        dsubs += dsub
       }
+      destination = dsubs.toArray
     }
 
     val from_seq = from_seq_opt.map(_.toString.toLong).getOrElse(0L)
