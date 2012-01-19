@@ -217,7 +217,9 @@ class LevelDBClient(store: LevelDBStore) {
   def log_size = {
     import OptionSupport._
     Option(config.log_size).map(MemoryPropertyEditor.parse(_)).map{size=>
-      if(size > Int.MaxValue) {
+      if(size == MemoryPropertyEditor.parse("2G")) {
+        Int.MaxValue // which is 2G - 1 (close enough!)
+      } else if(size > Int.MaxValue) {
         warn("leveldb log_size was configured to be '"+config.log_size+"' but the maximum supported log size is 2G")
         Int.MaxValue
       } else {
