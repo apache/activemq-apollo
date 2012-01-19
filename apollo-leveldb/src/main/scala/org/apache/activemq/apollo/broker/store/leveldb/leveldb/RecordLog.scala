@@ -87,19 +87,6 @@ case class RecordLog(directory: File, logSuffix:String) {
     (checksum.getValue & 0xFFFFFFFF).toInt
   }
 
-  var write_thread:Thread = _
-  def is_write_thread_executing = if(write_thread==null) {
-    write_thread = Thread.currentThread()
-    true
-  } else {
-    write_thread eq Thread.currentThread() 
-  }
-
-  def assert_on_write_thread = if ( !is_write_thread_executing) {
-    val current: Thread = Thread.currentThread()
-    throw new Exception("current: "+current.getName+", expected: "+write_thread.getName)
-  }
-  
   class LogAppender(file:File, position:Long) extends LogReader(file, position) {
 
     override def open = new RandomAccessFile(file, "rw")
@@ -113,7 +100,6 @@ case class RecordLog(directory: File, logSuffix:String) {
     val flushed_offset = new AtomicLong(0)
 
     def append_position = {
-      assert_on_write_thread
       position+append_offset
     }
 
@@ -127,10 +113,9 @@ case class RecordLog(directory: File, logSuffix:String) {
     val write_buffer = new DataByteArrayOutputStream((BUFFER_SIZE)+BUFFER_SIZE)
 
     def force = {
-      // only need to update the file metadata if the file size changes..
-      assert_on_write_thread
       flush
       if(sync) {
+        // only need to update the file metadata if the file size changes..
         channel.force(append_offset > logSize)
       }
     }
@@ -139,7 +124,6 @@ case class RecordLog(directory: File, logSuffix:String) {
      * returns the offset position of the data record.
      */
     def append(id:Byte, data: Buffer): Long = this.synchronized {
-      assert_on_write_thread
       val record_position = append_position
       val data_length = data.length
       val total_length = LOG_HEADER_SIZE + data_length
@@ -184,7 +168,6 @@ case class RecordLog(directory: File, logSuffix:String) {
     }
 
     def flush = this.synchronized {
-      assert_on_write_thread
       if( write_buffer.position() > 0 ) {
         val buffer = write_buffer.toBuffer.toByteBuffer
         val pos = append_offset-buffer.remaining
@@ -196,18 +179,6 @@ case class RecordLog(directory: File, logSuffix:String) {
         write_buffer.reset()
       }
     }
-
-//    override def read(record_position: Long, length: Int) = this.synchronized {
-//      super.read(record_position, length)
-//    }
-//
-//    override def read(record_position: Long) = this.synchronized {
-//      super.read(record_position)
-//    }
-//
-//    override def check(record_position: Long) = this.synchronized {
-//      super.check(record_position)
-//    }
 
     override def check_read_flush(end_offset:Int) = {
       if( flushed_offset.get() < end_offset )  {
@@ -360,7 +331,6 @@ case class RecordLog(directory: File, logSuffix:String) {
   }
 
   def create_appender(position: Long): Any = {
-    assert_on_write_thread
     log_mutex.synchronized {
       if(current_appender!=null) {
         log_infos += position -> new LogInfo(current_appender.file, current_appender.position, current_appender.append_offset)
@@ -416,7 +386,6 @@ case class RecordLog(directory: File, logSuffix:String) {
     } finally {
       current_appender.flush
       log_mutex.synchronized {
-        assert_on_write_thread
         if ( current_appender.append_offset >= logSize ) {
           current_appender.release()
           on_log_rotate()
