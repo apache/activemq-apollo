@@ -40,6 +40,7 @@ import org.apache.activemq.apollo.dto.JsonCodec
 import java.util.Map
 import org.iq80.leveldb._
 import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
+import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -215,7 +216,14 @@ class LevelDBClient(store: LevelDBStore) {
 
   def log_size = {
     import OptionSupport._
-    Option(config.log_size).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024 * 1024 * 100)
+    Option(config.log_size).map(MemoryPropertyEditor.parse(_)).map{size=>
+      if(size > Int.MaxValue) {
+        warn("leveldb log_size was configured to be '"+config.log_size+"' but the maximum supported log size is 2G")
+        Int.MaxValue
+      } else {
+        size.toInt
+      }
+    }.getOrElse(1024 * 1024 * 100)
   }
 
   def start() = {
@@ -243,7 +251,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     config.index_max_open_files.foreach( index_options.maxOpenFiles(_) )
     config.index_block_restart_interval.foreach( index_options.blockRestartInterval(_) )
-    index_options.paranoidChecks(config.paranoid_checks.getOrElse(true))
+    index_options.paranoidChecks(config.paranoid_checks.getOrElse(false))
     Option(config.index_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.writeBufferSize(_) )
     Option(config.index_block_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.blockSize(_) )
     Option(config.index_compression).foreach(x => index_options.compressionType( x match {
@@ -254,7 +262,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     index_options.cacheSize(Option(config.index_cache_size).map(MemoryPropertyEditor.parse(_).toLong).getOrElse(1024*1024*256L))
     index_options.logger(new Logger() {
-      def log(msg: String) = debug(store.store_kind+": "+msg)
+      def log(msg: String) = debug(store.store_kind+": "+msg.stripSuffix("\n"))
     })
 
     log = create_log
@@ -513,7 +521,7 @@ class LevelDBClient(store: LevelDBStore) {
       } catch {
         case e:Throwable =>
           if( error==null ) {
-            warn(e, "DB operation failed. (entering recovery mode)")
+            warn(e, "DB operation failed. (entering recovery mode): "+e)
           }
           error = e
       }
@@ -880,7 +888,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
   
-  case class UsageCounter(info:RecordLog#LogInfo) {
+  case class UsageCounter(info:LogInfo) {
     var count = 0L
     var size = 0L
     var first_reference_queue:QueueRecord = _

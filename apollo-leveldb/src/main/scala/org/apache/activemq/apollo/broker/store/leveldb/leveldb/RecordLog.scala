@@ -22,12 +22,12 @@ import java.{util=>ju}
 import java.util.zip.CRC32
 import java.util.Map.Entry
 import collection.immutable.TreeMap
-import org.fusesource.hawtdispatch.BaseRetained
 import java.util.concurrent.atomic.AtomicLong
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.util.{Log, LRUCache}
 import org.fusesource.hawtbuf.{DataByteArrayInputStream, DataByteArrayOutputStream, Buffer}
+import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
 
 object RecordLog extends Log {
 
@@ -42,7 +42,13 @@ object RecordLog extends Log {
 
   val LOG_HEADER_PREFIX = '*'.toByte
   val LOG_HEADER_SIZE = 10
-  val BUFFER_SIZE = 1024
+
+  val BUFFER_SIZE = 1024*512
+  val BYPASS_BUFFER_SIZE = 1024*16
+
+  case class LogInfo(file:File, position:Long, length:Long) {
+    def limit = position+length
+  }
 }
 
 case class RecordLog(directory: File, logSuffix:String) {
@@ -55,9 +61,6 @@ case class RecordLog(directory: File, logSuffix:String) {
   var paranoidChecks = false
   var sync = false
 
-  case class LogInfo(file:File, position:Long, length:AtomicLong) {
-    def limit = position+length.get
-  }
 
   var log_infos = TreeMap[Long, LogInfo]()
   object log_mutex
@@ -65,7 +68,7 @@ case class RecordLog(directory: File, logSuffix:String) {
   def delete(id:Long) = {
     log_mutex.synchronized {
       // We can't delete the current appender.
-      if( current_appender.start != id ) {
+      if( current_appender.position != id ) {
         log_infos.get(id).foreach { info =>
           onDelete(info.file)
           log_infos = log_infos.filterNot(_._1 == id)
@@ -84,7 +87,20 @@ case class RecordLog(directory: File, logSuffix:String) {
     (checksum.getValue & 0xFFFFFFFF).toInt
   }
 
-  class LogAppender(file:File, start:Long) extends LogReader(file, start) {
+  var write_thread:Thread = _
+  def is_write_thread_executing = if(write_thread==null) {
+    write_thread = Thread.currentThread()
+    true
+  } else {
+    write_thread eq Thread.currentThread() 
+  }
+
+  def assert_on_write_thread = if ( !is_write_thread_executing) {
+    val current: Thread = Thread.currentThread()
+    throw new Exception("current: "+current.getName+", expected: "+write_thread.getName)
+  }
+  
+  class LogAppender(file:File, position:Long) extends LogReader(file, position) {
 
     override def open = new RandomAccessFile(file, "rw")
 
@@ -93,9 +109,13 @@ case class RecordLog(directory: File, logSuffix:String) {
       super.dispose()
     }
 
-    val length = new AtomicLong(0)
-    
-    def limit = start+length.get()
+    var append_offset = 0L
+    val flushed_offset = new AtomicLong(0)
+
+    def append_position = {
+      assert_on_write_thread
+      position+append_offset
+    }
 
     // set the file size ahead of time so that we don't have to sync the file
     // meta-data on every log sync.
@@ -104,101 +124,131 @@ case class RecordLog(directory: File, logSuffix:String) {
     channel.force(true)
     channel.position(0)
 
-    val os = new DataByteArrayOutputStream((BUFFER_SIZE)+LOG_HEADER_PREFIX)
+    val write_buffer = new DataByteArrayOutputStream((BUFFER_SIZE)+BUFFER_SIZE)
 
     def force = {
       // only need to update the file metadata if the file size changes..
+      assert_on_write_thread
       flush
       if(sync) {
-        channel.force(length.get() > logSize)
-      }
-    }
-
-    def flush = {
-      if( os.position() > 0 ) {
-        val buffer = os.toBuffer.toByteBuffer
-        val pos = length.get()-buffer.remaining
-        trace("wrote at "+pos+" "+os.toBuffer)
-        channel.write(buffer, pos)
-        if( buffer.hasRemaining ) {
-          throw new IOException("Short write")
-        }
-        os.reset()
+        channel.force(append_offset > logSize)
       }
     }
 
     /**
      * returns the offset position of the data record.
      */
-    def append(id:Byte, data: Buffer): Long = {
-      val rc = limit
+    def append(id:Byte, data: Buffer): Long = this.synchronized {
+      assert_on_write_thread
+      val record_position = append_position
       val data_length = data.length
       val total_length = LOG_HEADER_SIZE + data_length
       
-      if( os.position() + total_length > BUFFER_SIZE ) {
+      if( write_buffer.position() + total_length > BUFFER_SIZE ) {
         flush
       }
 
-      if( total_length > (BUFFER_SIZE<<2) ) {
+      val cs: Int = checksum(data)
+//      trace("Writing at: "+record_position+" len: "+data_length+" with checksum: "+cs)
+
+      if( total_length > BYPASS_BUFFER_SIZE ) {
 
         // Write the header and flush..
-        os.writeByte(LOG_HEADER_PREFIX)
-        os.writeByte(id)
-        os.writeInt(checksum(data))
-        os.writeInt(data_length)
+        write_buffer.writeByte(LOG_HEADER_PREFIX)
+        write_buffer.writeByte(id)
+        write_buffer.writeInt(cs)
+        write_buffer.writeInt(data_length)
 
-        length.addAndGet(LOG_HEADER_PREFIX)
+        append_offset += LOG_HEADER_SIZE
         flush
 
         // Directly write the data to the channel since it's large.
         val buffer = data.toByteBuffer
-        val pos = length.get()+LOG_HEADER_PREFIX
-        trace("wrote at "+pos+" "+data)
+        val pos = append_offset+LOG_HEADER_SIZE
+        flushed_offset.addAndGet(buffer.remaining)
         channel.write(buffer, pos)
         if( buffer.hasRemaining ) {
           throw new IOException("Short write")
         }
-        length.addAndGet(data_length)
+        append_offset += data_length
 
       } else {
-        os.writeByte(LOG_HEADER_PREFIX)
-        os.writeByte(id)
-        os.writeInt(checksum(data))
-        os.writeInt(data_length)
-        os.write(data.data, data.offset, data_length)
-        length.addAndGet(total_length)
+        write_buffer.writeByte(LOG_HEADER_PREFIX)
+        write_buffer.writeByte(id)
+        write_buffer.writeInt(cs)
+        write_buffer.writeInt(data_length)
+        write_buffer.write(data.data, data.offset, data_length)
+        append_offset += total_length
       }
-      rc
+      record_position
+    }
+
+    def flush = this.synchronized {
+      assert_on_write_thread
+      if( write_buffer.position() > 0 ) {
+        val buffer = write_buffer.toBuffer.toByteBuffer
+        val pos = append_offset-buffer.remaining
+        flushed_offset.addAndGet(buffer.remaining)
+        channel.write(buffer, pos)
+        if( buffer.hasRemaining ) {
+          throw new IOException("Short write")
+        }
+        write_buffer.reset()
+      }
+    }
+
+//    override def read(record_position: Long, length: Int) = this.synchronized {
+//      super.read(record_position, length)
+//    }
+//
+//    override def read(record_position: Long) = this.synchronized {
+//      super.read(record_position)
+//    }
+//
+//    override def check(record_position: Long) = this.synchronized {
+//      super.check(record_position)
+//    }
+
+    override def check_read_flush(end_offset:Int) = {
+      if( flushed_offset.get() < end_offset )  {
+        this.synchronized {
+          println("read flush")
+          flush
+        }
+      }
     }
 
   }
 
-  case class LogReader(file:File, start:Long) extends BaseRetained {
-    
-    val fd = open
+  case class LogReader(file:File, position:Long) extends BaseRetained {
 
     def open = new RandomAccessFile(file, "r")
-    
-    def channel = fd.getChannel
+
+    val fd = open
+    val channel = fd.getChannel
 
     override def dispose() {
       fd.close()
     }
 
-    def read(pos:Long, length:Int) = this.synchronized {
-      val offset = (pos-start).toInt
+    def check_read_flush(end_offset:Int) = {}
+    
+    def read(record_position:Long, length:Int) = {
+      val offset = (record_position-position).toInt
+      check_read_flush(offset+LOG_HEADER_SIZE+length)
+      
       if(paranoidChecks) {
+
         val record = new Buffer(LOG_HEADER_SIZE+length)
+
         if( channel.read(record.toByteBuffer, offset) != record.length ) {
-          val data2 = new Buffer(LOG_HEADER_SIZE+length)
-          channel.read(data2.toByteBuffer, offset)
-          throw new IOException("short record at position: "+pos+" in file: "+file+", offset: "+offset)
+          throw new IOException("short record at position: "+record_position+" in file: "+file+", offset: "+offset)
         }
 
         val is = new DataByteArrayInputStream(record)
         val prefix = is.readByte()
         if( prefix != LOG_HEADER_PREFIX ) {
-          throw new IOException("invalid record at position: "+pos+" in file: "+file+", offset: "+offset)
+          throw new IOException("invalid record at position: "+record_position+" in file: "+file+", offset: "+offset)
         }
 
         val id = is.readByte()
@@ -209,7 +259,7 @@ case class RecordLog(directory: File, logSuffix:String) {
         // If your reading the whole record we can verify the data checksum
         if( expectedLength == length ) {
           if( expectedChecksum != checksum(data) ) {
-            throw new IOException("checksum does not match at position: "+pos+" in file: "+file+", offset: "+offset)
+            throw new IOException("checksum does not match at position: "+record_position+" in file: "+file+", offset: "+offset)
           }
         }
 
@@ -217,14 +267,14 @@ case class RecordLog(directory: File, logSuffix:String) {
       } else {
         val data = new Buffer(length)
         if( channel.read(data.toByteBuffer, offset+LOG_HEADER_SIZE) != data.length ) {
-          throw new IOException("short record at position: "+pos+" in file: "+file+", offset: "+offset)
+          throw new IOException("short record at position: "+record_position+" in file: "+file+", offset: "+offset)
         }
         data
       }
     }
 
-    def read(pos:Long) = this.synchronized {
-      val offset = (pos-start).toInt
+    def read(record_position:Long) = {
+      val offset = (record_position-position).toInt
       val header = new Buffer(LOG_HEADER_SIZE)
       channel.read(header.toByteBuffer, offset)
       val is = header.bigEndianEditor();
@@ -247,11 +297,11 @@ case class RecordLog(directory: File, logSuffix:String) {
           throw new IOException("checksum does not match")
         }
       }
-      (id, data, pos+LOG_HEADER_SIZE+length)
+      (id, data, record_position+LOG_HEADER_SIZE+length)
     }
 
-    def check(pos:Long):Option[Long] = this.synchronized {
-      var offset = (pos-start).toInt
+    def check(record_position:Long):Option[Long] = {
+      var offset = (record_position-position).toInt
       val header = new Buffer(LOG_HEADER_SIZE)
       channel.read(header.toByteBuffer, offset)
       val is = header.bigEndianEditor();
@@ -289,12 +339,12 @@ case class RecordLog(directory: File, logSuffix:String) {
       if( expectedChecksum !=  checksum ) {
         return None
       }
-      return Some(pos+LOG_HEADER_SIZE+length)
+      return Some(record_position+LOG_HEADER_SIZE+length)
     }
 
-    def verifyAndGetEndPosition:Long = this.synchronized {
-      var pos = start;
-      val limit = start+channel.size()
+    def verifyAndGetEndPosition:Long = {
+      var pos = position;
+      val limit = position+channel.size()
       while(pos < limit) {
         check(pos) match {
           case Some(next) => pos = next
@@ -310,16 +360,20 @@ case class RecordLog(directory: File, logSuffix:String) {
   }
 
   def create_appender(position: Long): Any = {
-    current_appender = create_log_appender(position)
+    assert_on_write_thread
     log_mutex.synchronized {
-      log_infos += position -> new LogInfo(current_appender.file, position, current_appender.length)
+      if(current_appender!=null) {
+        log_infos += position -> new LogInfo(current_appender.file, current_appender.position, current_appender.append_offset)
+      }
+      current_appender = create_log_appender(position)
+      log_infos += position -> new LogInfo(current_appender.file, position, 0)
     }
   }
 
   def open = {
     log_mutex.synchronized {
       log_infos = LevelDBClient.find_sequence_files(directory, logSuffix).map { case (position,file) =>
-        position -> LogInfo(file, position, new AtomicLong(file.length()))
+        position -> LogInfo(file, position, file.length())
       }
 
       val appendPos = if( log_infos.isEmpty ) {
@@ -328,13 +382,14 @@ case class RecordLog(directory: File, logSuffix:String) {
         val (_, file) = log_infos.last
         val r = LogReader(file.file, file.position)
         try {
-          val rc = r.verifyAndGetEndPosition
-          file.length.set(rc - file.position)
-          if( file.file.length != file.length.get() ) {
+          val actualLength = r.verifyAndGetEndPosition
+          val updated = file.copy(length = actualLength - file.position)
+          log_infos = log_infos + (updated.position->updated)
+          if( updated.file.length != file.length ) {
             // we need to truncate.
-            using(new RandomAccessFile(file.file, "rw")) ( _.setLength(file.length.get()) )
+            using(new RandomAccessFile(file.file, "rw")) ( _.setLength(updated.length))
           }
-          rc
+          actualLength
         } finally {
           r.release()
         }
@@ -350,8 +405,8 @@ case class RecordLog(directory: File, logSuffix:String) {
     }
   }
 
-  def appender_limit = current_appender.limit
-  def appender_start = current_appender.start
+  def appender_limit = current_appender.append_position
+  def appender_start = current_appender.position
 
   def next_log(position:Long) = LevelDBClient.create_sequence_file(directory, position, logSuffix)
 
@@ -361,10 +416,11 @@ case class RecordLog(directory: File, logSuffix:String) {
     } finally {
       current_appender.flush
       log_mutex.synchronized {
-        if ( current_appender.length.get >= logSize ) {
+        assert_on_write_thread
+        if ( current_appender.append_offset >= logSize ) {
           current_appender.release()
           on_log_rotate()
-          create_appender(current_appender.limit)
+          create_appender(current_appender.append_position)
         }
       }
     }
@@ -380,12 +436,12 @@ case class RecordLog(directory: File, logSuffix:String) {
 
   def log_info(pos:Long) = log_mutex.synchronized(log_infos.range(0L, pos+1).lastOption.map(_._2))
 
-  private def get_reader[T](pos:Long)(func: (LogReader)=>T) = {
+  private def get_reader[T](record_position:Long)(func: (LogReader)=>T) = {
 
     val lookup = log_mutex.synchronized {
-      val info = log_info(pos)
+      val info = log_info(record_position)
       info.map { info=>
-        if(info.position == current_appender.start) {
+        if(info.position == current_appender.position) {
           current_appender.retain()
           (info, current_appender)
         } else {
