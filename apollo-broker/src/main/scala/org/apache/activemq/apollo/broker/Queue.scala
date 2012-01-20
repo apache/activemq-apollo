@@ -1001,14 +1001,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     rc
   }
 
-  val swap_out_completes_source = createSource(new ListEventAggregator[QueueEntry#Loaded](), dispatch_queue)
+  val swap_out_completes_source = createSource(new ListEventAggregator[Runnable](), dispatch_queue)
   swap_out_completes_source.setEventHandler(^ {drain_swap_out_completes});
   swap_out_completes_source.resume
 
   def drain_swap_out_completes() = might_unfill {
     val data = swap_out_completes_source.getData
     data.foreach { loaded =>
-      loaded.swapped_out
+      loaded.run()
     }
   }
 
@@ -1389,8 +1389,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       if(!storing) {
         storing = true
         delivery.uow.enqueue(toQueueEntryRecord)
-        delivery.uow.on_flush {
-          queue.swap_out_completes_source.merge(this)
+        delivery.uow.on_flush { canceled =>
+          queue.swap_out_completes_source.merge(^{
+            this.swapped_out(!canceled)
+          })
         }
       }
     }
@@ -1401,7 +1403,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
         queue.swapping_out_size+=size
         if( stored ) {
-          swapped_out
+          swapped_out(false)
         } else {
 
           // The storeBatch is only set when called from the messages.offer method
@@ -1437,7 +1439,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
-    def swapped_out() = {
+    def swapped_out(store_wrote_to_disk:Boolean) = {
       assert( state == this )
       storing = false
       stored = true
@@ -1448,8 +1450,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         space -= delivery
         queue.swapping_out_size-=size
 
-        queue.swap_out_size_counter += size
-        queue.swap_out_item_counter += 1
+        if( store_wrote_to_disk ) {
+          queue.swap_out_size_counter += size
+          queue.swap_out_item_counter += 1
+        }
 
         state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer)
         if( can_combine_with_prev ) {

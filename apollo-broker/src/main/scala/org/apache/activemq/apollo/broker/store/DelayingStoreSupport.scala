@@ -63,6 +63,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     var dispose_start:Long = 0
     var flushing = false;
+    var canceled = false;
 
     class MessageAction {
 
@@ -85,7 +86,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     var completed = false
     var complete_listeners = ListBuffer[() => Unit]()
     var flushed = false
-    var flush_listeners = ListBuffer[() => Unit]()
+    var flush_listeners = ListBuffer[(Boolean)=>Unit]()
     var disable_delay = false
 
     var map_actions = Map[Buffer, Buffer]()
@@ -94,17 +95,15 @@ trait DelayingStoreSupport extends Store with BaseService {
       map_actions += (key -> value)
     }
 
-    def on_flush(callback: =>Unit) = {
-      if( this.synchronized {
+    def on_flush(callback: (Boolean)=>Unit) = {
+      (this.synchronized {
         if( flushed ) {
-          true
+          Some(canceled)
         } else {
-          flush_listeners += ( ()=> callback  )
-          false
+          flush_listeners += callback
+          None
         }
-      }) {
-        callback
-      }
+      }).foreach(callback(_))
     }
 
     def on_complete(callback: =>Unit) = {
@@ -135,7 +134,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     def cancel = {
       dispatch_queue.assertExecuting()
-      flushing = true
+      canceled = true
       delayed_uows.remove(uow_id)
       on_completed
     }
@@ -193,7 +192,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     def on_flushed() = this.synchronized {
       if( !flushed ) {
         flushed = true
-        flush_listeners.foreach(_())
+        flush_listeners.foreach(_(canceled))
       }
     }
 
@@ -319,7 +318,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
           def prev_uow = prev_action.uow
 
-          if( prev_action!=null && !prev_uow.flushing ) {
+          if( prev_action!=null && !(prev_uow.flushing || prev_uow.canceled) ) {
 
 
             prev_uow.delayable_actions -= 1
@@ -366,7 +365,7 @@ trait DelayingStoreSupport extends Store with BaseService {
   }
 
   private def flush(uow:DelayableUOW) = {
-    if( uow!=null && !uow.flushing ) {
+    if( uow!=null && !(uow.flushing || uow.canceled) ) {
       uow.flushing = true
       delayed_uows.remove(uow.uow_id)
       flush_source.merge(uow)
