@@ -284,7 +284,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     import OptionSupport._
 
     config = config_updater()
-    auto_delete_after = config.auto_delete_after.getOrElse(60*5)
+    auto_delete_after = config.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured destinations.
       if( !LocalRouter.is_wildcard_config(config) ) {

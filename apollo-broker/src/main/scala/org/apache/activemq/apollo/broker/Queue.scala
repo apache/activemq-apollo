@@ -157,39 +157,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var tune_catchup_enqueue_rate = 0
 
   /**
-   *  Tthe rate at which producers are throttled at.
+   *  The rate at which producers are throttled at.
    */
   var tune_max_enqueue_rate = 0
-
-  def configure(c:QueueDTO) = {
-    config = c
-    tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
-    tune_swap = tune_persistent && config.swap.getOrElse(true)
-    tune_swap_range_size = config.swap_range_size.getOrElse(10000)
-    tune_consumer_buffer = Option(config.consumer_buffer).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(256*1024)
-    tune_fast_delivery_rate = Option(config.fast_delivery_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024)
-    tune_catchup_enqueue_rate = Option(config.catchup_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
-    tune_max_enqueue_rate = Option(config.max_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
-
-    tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
-
-    if( tune_persistent ) {
-      val record = QueueRecord(store_id, binding.binding_kind, binding.binding_data)
-      virtual_host.store.add_queue(record) { rc => Unit }
-    }
-
-    auto_delete_after = config.auto_delete_after.getOrElse(60*5)
-    if( auto_delete_after!= 0 ) {
-      // we don't auto delete explicitly configured queues,
-      // non destination queues, or unified queues.
-      if( config.unified.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
-        auto_delete_after = 0
-      }
-    }
-  }
-  dispatch_queue {
-    configure(config)
-  }
 
   var now = System.currentTimeMillis
 
@@ -245,6 +215,30 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var loaded_items = 0
   var loaded_size = 0
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
+
+  def configure(c:QueueDTO) = {
+    config = c
+    tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
+    tune_swap = tune_persistent && config.swap.getOrElse(true)
+    tune_swap_range_size = config.swap_range_size.getOrElse(10000)
+    tune_consumer_buffer = Option(config.consumer_buffer).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(256*1024)
+    tune_fast_delivery_rate = Option(config.fast_delivery_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024)
+    tune_catchup_enqueue_rate = Option(config.catchup_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
+    tune_max_enqueue_rate = Option(config.max_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
+
+    tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
+
+    auto_delete_after = config.auto_delete_after.getOrElse(30)
+    if( auto_delete_after!= 0 ) {
+      // we don't auto delete explicitly configured queues,
+      // non destination queues, or unified queues.
+      if( config.unified.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
+        auto_delete_after = 0
+      }
+    }
+  }
+  configure(config)
+
 
   def get_queue_metrics:DestMetricsDTO = {
     dispatch_queue.assertExecuting()
@@ -399,13 +393,13 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def check_idle {
     if (producers.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
-      if (idled_at==0) {
+      if (idled_at==0 && auto_delete_after!=0) {
         idled_at = now
-        if( auto_delete_after!=0 ) {
-          dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
-            if( now == idled_at ) {
-              router._destroy_queue(this)
-            }
+        val idled_at_start = idled_at
+        dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
+          // Have we been idle that whole time?
+          if( idled_at == idled_at_start ) {
+            router._destroy_queue(this)
           }
         }
       }
@@ -793,6 +787,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       }
 
       swap_messages
+      check_idle
       schedule_periodic_maintenance
     }
   }

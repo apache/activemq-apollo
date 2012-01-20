@@ -267,7 +267,7 @@ memory.  Defaults to true.
   
 * `auto_delete_after`: If not set to `0` then the queue will automatically
   delete once there have been no consumers, producers or messages on it
-  for the configured number of seconds.  Defaults to 300 if not set.
+  for the configured number of seconds.  Defaults to 30 if not set.
   
 * `fast_delivery_rate`: The message delivery rate (in bytes/sec) at which             
   the queue considers the consumers fast enough to start slowing down enqueue
@@ -310,7 +310,7 @@ A `topic` element may be configured with the following attributes:
 
 * `auto_delete_after`: If not set to `0` then the topic will automatically
   delete once there have been no consumers or producers on it
-  for the configured number of seconds.  Defaults to 300 if not set.
+  for the configured number of seconds.  Defaults to 30 if not set.
 
 ##### Durable Subscriptions
 
