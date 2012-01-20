@@ -20,7 +20,6 @@ import java.{lang=>jl}
 import java.{util=>ju}
 
 import org.fusesource.hawtbuf.proto.PBMessageFactory
-import org.apache.activemq.apollo.broker.store.PBSupport._
 
 import org.apache.activemq.apollo.broker.store._
 import java.io._
@@ -39,8 +38,9 @@ import collection.mutable.{HashMap, ListBuffer}
 import org.apache.activemq.apollo.dto.JsonCodec
 import java.util.Map
 import org.iq80.leveldb._
-import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
 import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
+import org.apache.activemq.apollo.broker.store.PBSupport._
+import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -251,10 +251,11 @@ class LevelDBClient(store: LevelDBStore) {
 
     index_options = new Options();
     index_options.createIfMissing(true);
+    val paranoid_checks = config.paranoid_checks.getOrElse(false)
 
     config.index_max_open_files.foreach( index_options.maxOpenFiles(_) )
     config.index_block_restart_interval.foreach( index_options.blockRestartInterval(_) )
-    index_options.paranoidChecks(config.paranoid_checks.getOrElse(false))
+    index_options.paranoidChecks(paranoid_checks)
     Option(config.index_write_buffer_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.writeBufferSize(_) )
     Option(config.index_block_size).map(MemoryPropertyEditor.parse(_).toInt).foreach( index_options.blockSize(_) )
     Option(config.index_compression).foreach(x => index_options.compressionType( x match {
@@ -271,7 +272,7 @@ class LevelDBClient(store: LevelDBStore) {
     log = create_log
     log.sync = sync
     log.logSize = log_size
-    log.paranoidChecks = index_options.paranoidChecks()
+    log.verify_checksums = verify_checksums
     log.on_log_rotate = ()=> {
       // lets queue a request to checkpoint when
       // the logs rotate.. queue it on the GC thread since GC's lock
@@ -327,6 +328,11 @@ class LevelDBClient(store: LevelDBStore) {
       try {
         load_log_refs
         index.put(dirty_index_key, TRUE)
+
+        if( paranoid_checks ) {
+          check_index_integrity(index)
+        }
+
         // Update the index /w what was stored on the logs..
         var pos = last_index_snapshot_pos;
 
@@ -420,6 +426,85 @@ class LevelDBClient(store: LevelDBStore) {
       }
     }
   }
+
+  def check_index_integrity(index:RichDB) = {
+    val actual_log_refs = HashMap[Long, LongCounter]()
+    var referenced_queues = Set[Long]()
+
+    // Lets find out what the queue entries are..
+    var fixed_records = 0 
+    index.cursor_prefixed(queue_entry_prefix_array) { (key, value)=>
+      try {
+        val (_, queue_key, seq_key) = decode_long_long_key(key)
+        val record: QueueEntryRecord = value
+        if (record.getQueueKey != queue_key) {
+          throw new IOException("key missmatch")
+        }
+        if (record.getQueueSeq != seq_key) {
+          throw new IOException("key missmatch")
+        }
+        val pos = decode_locator(record.getMessageLocator)._1
+        log.log_info(pos).foreach {
+          log_info =>
+            actual_log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
+        }
+        referenced_queues += queue_key
+      } catch {
+        case _ =>
+          fixed_records += 1
+          // Invalid record.
+          index.delete(key)
+      }
+      true
+    }
+    
+    // Lets cross check the queues.
+    index.cursor_prefixed(queue_prefix_array) { (key, value)=>
+      try {
+        val (_, queue_key) = decode_long_key(key)
+        val record: QueueRecord = value
+        if (record.getKey != queue_key) {
+          throw new IOException("key missmatch")
+        }
+        referenced_queues -= queue_key
+      } catch {
+        case _ =>
+          fixed_records += 1
+          // Invalid record.
+          index.delete(key)
+      }
+      true
+    }
+
+    referenced_queues.foreach { queue_key=>
+      // We have queue entries for a queue that does not exist..
+      index.cursor_prefixed(encode_key(queue_entry_prefix, queue_key)) { (key, value)=>
+
+        fixed_records += 1
+        index.delete(key)
+        val entry_record:QueueEntryRecord = value
+        val pos = decode_locator(entry_record.getMessageLocator)._1
+        log.log_info(pos).foreach { log_info =>
+          actual_log_refs.get(log_info.position).foreach { counter =>
+            if (counter.decrementAndGet() == 0) {
+              actual_log_refs.remove(log_info.position)
+            }
+          }
+        }
+        true
+      }
+    }
+
+    if( actual_log_refs != log_refs ) {
+      log_refs.clear()
+      log_refs ++= actual_log_refs
+    }
+    
+    if( fixed_records > 0 ) {
+      warn("Fixed %d invalid index enties in the leveldb store", fixed_records)
+    }
+  }
+
 
   private def store_log_refs = {
     index.put(log_refs_index_key, JsonCodec.encode(collection.JavaConversions.mapAsJavaMap(log_refs.mapValues(_.get()))).toByteArray)

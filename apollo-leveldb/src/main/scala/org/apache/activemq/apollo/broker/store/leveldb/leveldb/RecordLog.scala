@@ -72,7 +72,7 @@ case class RecordLog(directory: File, logSuffix:String) {
 
   var logSize = 1024 * 1024 * 100
   var current_appender:LogAppender = _
-  var paranoidChecks = false
+  var verify_checksums = false
   var sync = false
 
 
@@ -222,7 +222,7 @@ case class RecordLog(directory: File, logSuffix:String) {
       val offset = (record_position-position).toInt
       check_read_flush(offset+LOG_HEADER_SIZE+length)
       
-      if(paranoidChecks) {
+      if(verify_checksums) {
 
         val record = new Buffer(LOG_HEADER_SIZE+length)
 
@@ -277,7 +277,7 @@ case class RecordLog(directory: File, logSuffix:String) {
         throw new IOException("short record")
       }
 
-      if(paranoidChecks) {
+      if(verify_checksums) {
         if( expectedChecksum != checksum(data) ) {
           throw new IOException("checksum does not match")
         }
