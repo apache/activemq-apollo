@@ -569,7 +569,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         matches.foreach( _.unbind_durable_subscription(destination, queue) )
       }
 
-      val path = destination_parser.decode_path(destination.path)
+      val path = Path(destination.subscription_id)
       remove_destination(path, queue)
     }
 
@@ -1264,6 +1264,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     val config = binding.config(virtual_host)
 
     val queue = new Queue(this, qid, binding, config)
+    if( queue.tune_persistent && id == -1) {
+      val record = QueueRecord(queue.store_id, binding.binding_kind, binding.binding_data)
+      virtual_host.store.add_queue(record) { rc => Unit }
+    }
 
     queue.start
     queues_by_binding.put(binding, queue)
