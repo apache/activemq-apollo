@@ -53,7 +53,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
 
   override def toString = "bdb store at "+config.directory
 
-  def flush_delay = config.flush_delay.getOrElse(100)
+  def flush_delay = config.flush_delay.getOrElse(500)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 

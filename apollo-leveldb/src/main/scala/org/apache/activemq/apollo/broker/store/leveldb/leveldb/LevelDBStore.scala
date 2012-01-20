@@ -58,7 +58,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
 
   override def toString = store_kind+" store at "+config.directory
 
-  def flush_delay = config.flush_delay.getOrElse(100)
+  def flush_delay = config.flush_delay.getOrElse(500)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 

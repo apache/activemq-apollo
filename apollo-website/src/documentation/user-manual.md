@@ -398,7 +398,7 @@ A `leveldb_store` element may be configured with the following attributes:
 * `flush_delay` : The flush delay is the amount of time in milliseconds
   that a store will delay persisting a messaging unit of work in hopes
   that it will be invalidated shortly thereafter by another unit of work
-  which would negate the operation.
+  which would negate the operation.  Defaults to 500.
 * `read_threads` : The number of concurrent IO reads to allow. The value 
    defaults to 10.
 * `sync` : If set to `false`, then the store does not sync logging operations to 
@@ -458,7 +458,7 @@ A `bdb_store` element may be configured with the following attributes:
 * `flush_delay` : The flush delay is the amount of time in milliseconds
   that a store will delay persisting a messaging unit of work in hopes
   that it will be invalidated shortly thereafter by another unit of work
-  which would negate the operation.
+  which would negate the operation. Defaults to 500.
 * `read_threads` : The number of concurrent read threads to use when
   accessing the store. The value defaults to 10.
 
