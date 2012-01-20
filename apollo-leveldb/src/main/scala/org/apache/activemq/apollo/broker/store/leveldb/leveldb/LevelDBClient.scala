@@ -200,6 +200,7 @@ class LevelDBClient(store: LevelDBStore) {
   var index:RichDB = _
   var index_options:Options = _
 
+  var last_index_snapshot_ts = System.currentTimeMillis()
   var last_index_snapshot_pos:Long = _
   val snapshot_rw_lock = new ReentrantReadWriteLock(true)
 
@@ -300,7 +301,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     // Only keep the last snapshot..
     snapshots.filterNot(_._1 == last_index_snapshot_pos).foreach( _._2.recursive_delete )
-    temp_index_file.recursive_delete
+    temp_index_file.recursive_delete // usually does not exist.
 
     retry {
 
@@ -380,11 +381,17 @@ class LevelDBClient(store: LevelDBStore) {
                     ro.verifyChecksums(verify_checksums)
                     val queue_key = decode_vlong(data)
                     index.delete(encode_key(queue_prefix, queue_key))
-                    index.cursor_keys_prefixed(encode_key(queue_entry_prefix, queue_key), ro) {
-                      key =>
-                        index.delete(key)
-                        true
+                    index.cursor_prefixed(encode_key(queue_entry_prefix, queue_key), ro) { (key, value)=>
+                      index.delete(key)
+
+                      // Figure out what log file that message entry was in so we can,
+                      // decrement the log file reference.
+                      val entry_record:QueueEntryRecord = value
+                      val pos = decode_locator(entry_record.getMessageLocator)._1
+                      log_ref_decrement(pos)
+                      true
                     }
+
                   case LOG_MAP_ENTRY =>
                     replay_operations+=1
                     val entry = MapEntryPB.FACTORY.parseUnframed(data)
@@ -398,6 +405,9 @@ class LevelDBClient(store: LevelDBStore) {
                 }
                 pos = next_pos
             }
+          }
+          if(replay_operations > 0) {
+            snapshot_index
           }
         }
         info("Took %.2f second(s) to recover %d operations in the log file.", (log_replay_duration/TimeUnit.SECONDS.toNanos(1).toFloat), replay_operations)
@@ -500,6 +510,7 @@ class LevelDBClient(store: LevelDBStore) {
       tmp_dir.renameTo(snapshot_index_file(new_snapshot_index_pos))
       snapshot_index_file(last_index_snapshot_pos).recursive_delete
       last_index_snapshot_pos = new_snapshot_index_pos
+      last_index_snapshot_ts = System.currentTimeMillis()
 
     } catch {
       case e: Exception =>
@@ -888,6 +899,11 @@ class LevelDBClient(store: LevelDBStore) {
   }
 
   def gc:Unit = {
+
+    // TODO:
+    // Perhaps we should snapshot_index if the current snapshot is old.
+    //
+
     last_index_snapshot_pos
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 
