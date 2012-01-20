@@ -244,8 +244,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var auto_delete_after = 0
   var idled_at = 0L
 
-  def swapped_in_items = this.producer_swapped_in.items + this.consumer_swapped_in.items
-  def swapped_in_size = this.producer_swapped_in.size + this.consumer_swapped_in.size
+  var loaded_items = 0
+  var loaded_size = 0
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
   def get_queue_metrics:DestMetricsDTO = {
@@ -279,8 +279,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     rc.swapping_in_size = this.swapping_in_size
     rc.swapping_out_size = this.swapping_out_size
 
-    rc.swapped_in_items = swapped_in_items
-    rc.swapped_in_size = swapped_in_size
+    rc.swapped_in_items = this.loaded_items
+    rc.swapped_in_size = this.loaded_size
     rc.swapped_in_size_max = swapped_in_size_max
 
     rc.producer_counter = this.producer_counter
@@ -593,7 +593,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   }
 
   def display_stats: Unit = {
-    info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, swapped_in_size, swapped_in_size_max)
+    info("contains: %d messages worth %,.2f MB of data, producers are %s, %d/%d buffer space used.", queue_items, (queue_size.toFloat / (1024 * 1024)), {if (messages.full) "being throttled" else "not being throttled"}, loaded_size, swapped_in_size_max)
     info("total messages enqueued %d, dequeues %d ", enqueue_item_counter, dequeue_item_counter)
   }
 
@@ -1338,6 +1338,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     var swapping_out = false
     var storing = false
 
+    queue.loaded_items += 1
+    queue.loaded_size += size
+
     def label = {
       var rc = "loaded"
       if( acquired ) {
@@ -1439,6 +1442,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         }
         if( remove_pending ) {
           state.remove
+        } else {
+          queue.loaded_items -= 1
+          queue.loaded_size -= size
         }
       } else {
         if( remove_pending ) {
@@ -1462,6 +1468,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
 
     override def remove = {
+      queue.loaded_items -= 1
+      queue.loaded_size -= size
       if( storing | remove_pending ) {
         remove_pending = true
       } else {

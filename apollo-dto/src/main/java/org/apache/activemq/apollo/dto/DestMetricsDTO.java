@@ -170,35 +170,35 @@ public class DestMetricsDTO {
      * or swap messages to persistent storage once this limit is reached.
      */
     @XmlAttribute(name="swapped_in_size_max")
-    public int swapped_in_size_max;
+    public long swapped_in_size_max;
 
     /**
      * The total size in bytes of messages that are resident in
      * the broker's RAM.
      */
     @XmlAttribute(name="swapped_in_size")
-    public int swapped_in_size;
+    public long swapped_in_size;
 
     /**
      * The total number of messages that are resident in
      * the broker's RAM.
      */
     @XmlAttribute(name="swapped_in_items")
-    public int swapped_in_items;
+    public long swapped_in_items;
 
     /**
      * The total size in bytes of messages that are being
      * loaded from persistent storage into RAM
      */
     @XmlAttribute(name="swapping_in_size")
-    public int swapping_in_size;
+    public long swapping_in_size;
 
     /**
      * The total size in bytes of messages that are being
      * evicted from RAM into persistent storage.
      */
     @XmlAttribute(name="swapping_out_size")
-    public int swapping_out_size;
+    public long swapping_out_size;
 
     /**
      * The total number of messages that have ever been
