@@ -280,9 +280,18 @@ class LevelDBClient(store: LevelDBStore) {
       }
     }
 
-    retry {
-      log.open
+    def time[T](func: =>T):Long = {
+      val start = System.nanoTime()
+      func  
+      System.nanoTime() - start 
     }
+    
+    val log_open_duration = time {
+      retry {
+        log.open
+      }
+    }
+    info("Opening the log file took: %.2f ms", (log_open_duration/TimeUnit.MILLISECONDS.toNanos(1).toFloat))
 
     // Find out what was the last snapshot.
     val snapshots = find_sequence_files(directory, INDEX_SUFFIX)
@@ -313,21 +322,25 @@ class LevelDBClient(store: LevelDBStore) {
       }
 
       index = new RichDB(factory.open(dirty_index_file, index_options));
+
       try {
         load_log_refs
         index.put(dirty_index_key, TRUE)
         // Update the index /w what was stored on the logs..
         var pos = last_index_snapshot_pos;
 
-        try {
+        var replay_operations = 0
+        val log_replay_duration = time {
           while (pos < log.appender_limit) {
             log.read(pos).map {
               case (kind, data, next_pos) =>
                 kind match {
                   case LOG_ADD_MESSAGE =>
+                    replay_operations+=1
                     val record: MessageRecord = data
                     index.put(encode_key(message_prefix, record.key), encode_locator(pos, data.length))
                   case LOG_ADD_QUEUE_ENTRY =>
+                    replay_operations+=1
                     val record: QueueEntryRecord = data
                     index.put(encode_key(queue_entry_prefix, record.queue_key, record.entry_seq), data)
                     
@@ -341,7 +354,7 @@ class LevelDBClient(store: LevelDBStore) {
                     // Increment it.
                     pos.foreach(log_ref_increment(_))
                   case LOG_REMOVE_QUEUE_ENTRY =>
-
+                    replay_operations+=1
                     index.get(data, new ReadOptions).foreach { value=>
                       val record: QueueEntryRecord = value
   
@@ -357,9 +370,11 @@ class LevelDBClient(store: LevelDBStore) {
                     }
                     
                   case LOG_ADD_QUEUE =>
+                    replay_operations+=1
                     val record: QueueRecord = data
                     index.put(encode_key(queue_prefix, record.key), data)
                   case LOG_REMOVE_QUEUE =>
+                    replay_operations+=1
                     val ro = new ReadOptions
                     ro.fillCache(false)
                     ro.verifyChecksums(verify_checksums)
@@ -371,6 +386,7 @@ class LevelDBClient(store: LevelDBStore) {
                         true
                     }
                   case LOG_MAP_ENTRY =>
+                    replay_operations+=1
                     val entry = MapEntryPB.FACTORY.parseUnframed(data)
                     if (entry.getValue == null) {
                       index.delete(encode_key(map_prefix, entry.getKey))
@@ -378,16 +394,13 @@ class LevelDBClient(store: LevelDBStore) {
                       index.put(encode_key(map_prefix, entry.getKey), entry.getValue.toByteArray)
                     }
                   case _ =>
-                  // Skip unknown records like the RecordLog headers.
+                  // Skip unknown records
                 }
                 pos = next_pos
             }
           }
         }
-        catch {
-          case e:Throwable => e.printStackTrace()
-        }
-
+        info("Took %.2f second(s) to recover %d operations in the log file.", (log_replay_duration/TimeUnit.SECONDS.toNanos(1).toFloat), replay_operations)
 
       } catch {
         case e:Throwable =>

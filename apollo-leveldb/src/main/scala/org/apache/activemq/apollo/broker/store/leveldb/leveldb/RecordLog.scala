@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.util.{Log, LRUCache}
-import org.fusesource.hawtbuf.{DataByteArrayInputStream, DataByteArrayOutputStream, Buffer}
 import org.fusesource.hawtdispatch.{DispatchQueue, BaseRetained}
+import org.fusesource.hawtbuf.{AbstractVarIntSupport, DataByteArrayInputStream, DataByteArrayOutputStream, Buffer}
 
 object RecordLog extends Log {
 
@@ -41,6 +41,8 @@ object RecordLog extends Log {
   //   length   : uint32     // the length the the data
 
   val LOG_HEADER_PREFIX = '*'.toByte
+  val UOW_END_RECORD = -1.toByte
+  
   val LOG_HEADER_SIZE = 10
 
   val BUFFER_SIZE = 1024*512
@@ -49,6 +51,18 @@ object RecordLog extends Log {
   case class LogInfo(file:File, position:Long, length:Long) {
     def limit = position+length
   }
+  
+  def encode_long(a1:Long) = {
+    val out = new DataByteArrayOutputStream(8)
+    out.writeLong(a1)
+    out.toBuffer
+  }
+
+  def decode_long(value:Buffer):Long = {
+    val in = new DataByteArrayInputStream(value)
+    in.readLong()
+  }
+  
 }
 
 case class RecordLog(directory: File, logSuffix:String) {
@@ -271,7 +285,7 @@ case class RecordLog(directory: File, logSuffix:String) {
       (id, data, record_position+LOG_HEADER_SIZE+length)
     }
 
-    def check(record_position:Long):Option[Long] = {
+    def check(record_position:Long):Option[(Long, Option[Long])] = {
       var offset = (record_position-position).toInt
       val header = new Buffer(LOG_HEADER_SIZE)
       channel.read(header.toByteBuffer, offset)
@@ -280,7 +294,7 @@ case class RecordLog(directory: File, logSuffix:String) {
       if( prefix != LOG_HEADER_PREFIX ) {
         return None // Does not look like a record.
       }
-      val id = is.readByte()
+      val kind = is.readByte()
       val expectedChecksum = is.readInt()
       val length = is.readInt()
 
@@ -310,19 +324,30 @@ case class RecordLog(directory: File, logSuffix:String) {
       if( expectedChecksum !=  checksum ) {
         return None
       }
-      return Some(record_position+LOG_HEADER_SIZE+length)
+      val uow_start_pos = if(kind == UOW_END_RECORD && length==8) Some(decode_long(chunk)) else None
+      return Some(record_position+LOG_HEADER_SIZE+length, uow_start_pos)
     }
 
     def verifyAndGetEndPosition:Long = {
       var pos = position;
+      var current_uow_start = pos
       val limit = position+channel.size()
       while(pos < limit) {
         check(pos) match {
-          case Some(next) => pos = next
-          case None => return pos
+          case Some((next, uow_start_pos)) =>
+            uow_start_pos.foreach { uow_start_pos => 
+              if( uow_start_pos == current_uow_start ) {
+                current_uow_start = next
+              } else {
+                return current_uow_start
+              }
+            }
+            pos = next
+          case None =>
+            return current_uow_start
         }
       }
-      pos
+      return current_uow_start
     }
   }
 
@@ -381,8 +406,14 @@ case class RecordLog(directory: File, logSuffix:String) {
   def next_log(position:Long) = LevelDBClient.create_sequence_file(directory, position, logSuffix)
 
   def appender[T](func: (LogAppender)=>T):T= {
+    val intial_position = current_appender.append_position
     try {
-      func(current_appender)
+      val rc = func(current_appender)
+      if( current_appender.append_position != intial_position ) {
+        // Record a UOW_END_RECORD so that on recovery we only replay full units of work.
+        current_appender.append(UOW_END_RECORD,encode_long(intial_position))
+      }
+      rc
     } finally {
       current_appender.flush
       log_mutex.synchronized {
