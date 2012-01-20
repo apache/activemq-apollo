@@ -42,6 +42,9 @@ public class LevelDBStoreDTO extends StoreDTO {
 
     @XmlAttribute(name="paranoid_checks")
     public Boolean paranoid_checks;
+    
+    @XmlAttribute(name="fail_if_locked")
+    public Boolean fail_if_locked;
 
     @XmlAttribute(name="verify_checksums")
     public Boolean verify_checksums;

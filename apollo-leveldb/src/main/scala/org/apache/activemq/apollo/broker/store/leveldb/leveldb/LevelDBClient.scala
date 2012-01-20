@@ -282,12 +282,17 @@ class LevelDBClient(store: LevelDBStore) {
       }
     }
 
+    lock_file = new LockFile(directory / "lock", true)
+
     def time[T](func: =>T):Long = {
       val start = System.nanoTime()
       func  
       System.nanoTime() - start 
     }
-    
+
+    // Lock before we open anything..
+    lock_store
+
     val log_open_duration = time {
       retry {
         log.open
@@ -505,7 +510,23 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
-
+  var lock_file:LockFile = _
+  
+  def lock_store = {
+    import OptionSupport._
+    if (config.fail_if_locked.getOrElse(false)) {
+      lock_file.lock()
+    } else {
+      retry {
+        lock_file.lock()
+      }
+    }
+  }
+  
+  def unlock_store = {
+    lock_file.unlock()
+  }
+  
   private def store_log_refs = {
     index.put(log_refs_index_key, JsonCodec.encode(collection.JavaConversions.mapAsJavaMap(log_refs.mapValues(_.get()))).toByteArray)
   }
@@ -530,6 +551,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
     copy_dirty_index_to_snapshot
     log = null
+    unlock_store
   }
 
   def using_index[T](func: =>T):T = {
@@ -639,7 +661,7 @@ class LevelDBClient(store: LevelDBStore) {
 
       if (!rc.isDefined) {
         // We may need to give up if the store is being stopped.
-        if ( !store.service_state.is_started ) {
+        if ( !store.service_state.is_starting_or_started ) {
           throw error
         }
         Thread.sleep(1000)
