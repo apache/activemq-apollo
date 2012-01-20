@@ -1647,6 +1647,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swapping_in_size -= size
 
         val delivery = new Delivery()
+        delivery.seq = seq
         delivery.message = ProtocolFactory.get(messageRecord.protocol.toString).get.decode(messageRecord)
         delivery.size = messageRecord.size
         delivery.storeKey = messageRecord.key

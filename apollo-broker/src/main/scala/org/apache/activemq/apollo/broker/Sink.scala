@@ -191,18 +191,36 @@ class SinkMux[T](val downstream:Sink[T]) {
     }
   }
 
-  def open():Sink[T] = {
-    val sink = new Sink[T] {
-      var refiller:Runnable = NOOP
-      def offer(value: T) = downstream.offer(value)
-      def full = downstream.full
+  class ManagedSink extends Sink[T] {
+
+    var closed = false
+    var refiller:Runnable = NOOP
+
+    def offer(value: T) = {
+      if ( closed ) {
+        true
+      } else {
+        downstream.offer(value)
+      }
     }
+    def full = !closed && downstream.full
+  }
+  
+  def open():Sink[T] = {
+    val sink = new ManagedSink()
     sinks += sink
     sink
   }
 
   def close(sink:Sink[T]):Unit = {
-    sinks -= sink
+    sink match {
+      case sink:ManagedSink =>
+        sink.closed = true
+        sink.refiller.run()
+        sinks -= sink
+      case _ =>
+        error("We did not open that sink")
+    }
   }
 }
 
@@ -210,8 +228,14 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
 
   var byte_credits = 0
   var delivery_credits = 0
+  var disabled = true
 
-  override def full: Boolean = downstream.full || ( byte_credits <= 0 && delivery_credits <= 0 )
+  override def full: Boolean = downstream.full || ( disabled && byte_credits <= 0 && delivery_credits <= 0 )
+
+  def disable = {
+    disabled = false
+    refiller.run()
+  }
 
   def passing(value: T) = {
     byte_credits -= sizer.size(value)

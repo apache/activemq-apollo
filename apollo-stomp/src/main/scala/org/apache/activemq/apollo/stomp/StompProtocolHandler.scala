@@ -415,8 +415,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
     override def dispose() = dispatchQueue {
       ack_handler.close
-      super.dispose()
+      credit_window_filter.disable
       sink_manager.close(consumer_sink)
+      super.dispose()
     }
 
     def dispatch_queue = StompProtocolHandler.this.dispatchQueue
