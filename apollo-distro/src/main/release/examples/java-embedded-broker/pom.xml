@@ -20,30 +20,38 @@
   <modelVersion>4.0.0</modelVersion>
   
   <groupId>example</groupId>
-  <artifactId>example</artifactId>
+  <artifactId>example-embedded-broker</artifactId>
   <version>0.1-SNAPSHOT</version>
   
-  <name>example</name>
-  <description>Apollo Java Examples</description>
+  <name>example-embedded-broker</name>
+  <description>Apollo Java Embedded Broker Example</description>
 
-  <repositories>
-    <repository>
-      <id>Fusesource Snapshots</id>
-      <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
-    </repository>
-  </repositories>
-  
   <dependencies>
     
     <dependency>
-      <groupId>org.apache.geronimo.specs</groupId>
-      <artifactId>geronimo-jms_1.1_spec</artifactId>
-      <version>1.1</version>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-broker</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.stompjms</groupId>
-      <artifactId>stompjms-client</artifactId>
-      <version>${stompjms-version}</version>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-stomp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-leveldb</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-web</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j-version}</version>
     </dependency>
 
   </dependencies>
@@ -59,20 +67,6 @@
           <target>1.6</target>
         </configuration>
       </plugin>
-
-      <!-- include all the dependencies into the jar so it's easier to execute the example -->
-      <plugin>
-        <groupId>org.fusesource.mvnplugins</groupId>
-        <artifactId>maven-uberize-plugin</artifactId>
-        <version>1.14</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>uberize</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
-      
     </plugins>
   </build>
   

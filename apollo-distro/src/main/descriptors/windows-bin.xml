@@ -27,10 +27,13 @@
       <directory>src/main/release</directory>
       <outputDirectory>/</outputDirectory>
       <excludes>
-        <exclude>bin/**</exclude>
+        <exclude>bin/**</exclude> <!-- Exclude unix bits. -->
+        <exclude>**/pom.xml</exclude> <!-- Needs filtering -->
       </excludes>
       <lineEnding>dos</lineEnding>
     </fileSet>
+    
+    <!-- Copy the windows scripts .. exclude the unix bits-->
     <fileSet>
       <directory>src/main/release/bin</directory>
       <outputDirectory>/bin</outputDirectory>
@@ -41,32 +44,15 @@
       </includes>
     </fileSet>
 
+    <!-- filtered files --> 
     <fileSet>
-      <directory>..</directory>
+      <directory>src/main/release</directory>
       <outputDirectory>/</outputDirectory>
       <includes>
-        <include>*.txt</include>
-      </includes>
-      <lineEnding>dos</lineEnding>
-    </fileSet>
-
-    <!-- copy the examples -->
-
-    <fileSet>
-      <directory>../samples</directory>
-      <outputDirectory>/samples</outputDirectory>
-      <includes>
-        <include>pom.xml</include>
         <include>**/pom.xml</include>
-        <include>**/run</include>
-        <include>*/src/**</include>
       </includes>
-      <excludes>
-        <exclude>target</exclude>
-        <exclude>**/target</exclude>
-        <exclude>**/target/**</exclude>
-      </excludes>
-      <lineEnding>dos</lineEnding>
+      <lineEnding>unix</lineEnding>
+      <filtered>true</filtered>
     </fileSet>
 
   </fileSets>

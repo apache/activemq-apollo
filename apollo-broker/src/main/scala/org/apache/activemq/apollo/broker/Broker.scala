@@ -35,6 +35,8 @@ import javax.management.ObjectName
 import org.fusesource.hawtdispatch.TaskTracker._
 import java.util.concurrent.TimeUnit
 import security.SecuredResource.BrokerKind
+import reflect.BeanProperty
+
 /**
  * <p>
  * The BrokerFactory creates Broker objects from a URI.
@@ -217,9 +219,12 @@ class Broker() extends BaseService with SecuredResource {
 
   import Broker._
 
+  @BeanProperty
   var tmp: File = _
 
+  @BeanProperty
   var config: BrokerDTO = new BrokerDTO
+
   config.virtual_hosts.add({
     val rc = new VirtualHostDTO
     rc.id = "default"

@@ -1,18 +1,19 @@
-Prereqs
-=======
+## Overview
+
+This is an example of how use the Java JMS api with Apollo.
+
+## Prereqs
 
 - Install Java SDK
 - Install [Maven](http://maven.apache.org/download.html) 
 
-Building
-========
+## Building
 
 Run:
 
     mvn install
 
-Running the Examples
-====================
+## Running the Examples
 
 In one terminal window run:
 
