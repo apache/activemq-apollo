@@ -50,4 +50,15 @@ class LongCounter(private var value:Long = 0) extends MetricProducer[Long] {
   }
 
   override def toString() = get().toString
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case obj:LongCounter =>
+        obj.value == value
+      case _ =>
+        false
+    }
+  }
+
+  override def hashCode(): Int = value.hashCode()
 }

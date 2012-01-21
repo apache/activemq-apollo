@@ -20,12 +20,13 @@ import org.apache.felix.gogo.commands.{Action, Option => option, Argument => arg
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.broker.store.{StreamManager, StoreFactory}
 import scala.util.continuations._
 import java.util.zip.ZipFile
 import java.io.{InputStream, File}
 import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
+import org.apache.activemq.apollo.broker.store.ZipInputStreamManager._
+import org.apache.activemq.apollo.broker.store.{ZipInputStreamManager, StreamManager, StoreFactory}
 
 
 /**
@@ -39,11 +40,11 @@ class StoreImport extends Action {
   @option(name = "--conf", description = "The Apollo configuration file.")
   var conf: File = _
 
-  @option(name = "--virtual-host", description = "The id of the virtual host to export, if not specified, the default virtual host is selected.")
+  @option(name = "--virtual-host", description = "The id of the virtual host to import into, if not specified, the default virtual host is selected.")
   var host: String = _
 
-  @argument(name = "dest", description = "The destination file to hold the exported data", index=0, required=true)
-  var dest:File = _
+  @argument(name = "file", description = "The zip file the contains that data for the import", index=0, required=true)
+  var file:File = _
 
   def execute(session: CommandSession):AnyRef = {
     import Helper._
@@ -81,32 +82,19 @@ class StoreImport extends Action {
 
       ServiceControl.start(store, "store startup")
 
-      val zip = new ZipFile(dest)
+      session.getConsole.println("Importing: "+file)
+      val zip = new ZipFile(file)
       try {
-        val manager = new StreamManager[InputStream]() {
-          def entry(name:String, func: (InputStream) => Unit) = {
-            val entry = zip.getEntry(name)
-            if(entry == null) {
-              error("Invalid data file, zip entry not found: "+name);
-            }
-            using(zip.getInputStream(entry)) { is=>
-              func(is)
-            }
-          }
-          def using_queue_stream(func: (InputStream) => Unit) = entry("queues.dat", func)
-          def using_queue_entry_stream(func: (InputStream) => Unit) = entry("queue_entries.dat", func)
-          def using_message_stream(func: (InputStream) => Unit) = entry("messages.dat", func)
-          def using_map_stream(func: (InputStream) => Unit) = entry("map.dat", func)
-        }
-        reset {
-          val rc = store.import_pb(manager)
-          rc.failure_option.foreach(error _)
-        }
+        val manager = ZipInputStreamManager(zip)
+        sync_cb[Option[String]] { cb =>
+          store.import_pb(manager, cb)
+        }.foreach(error _)
       } finally {
         zip.close
       }
 
       ServiceControl.stop(store, "store stop");
+      session.getConsole.println("Done.")
 
     } catch {
       case x:Failure=>

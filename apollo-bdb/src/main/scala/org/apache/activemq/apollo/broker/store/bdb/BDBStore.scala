@@ -228,16 +228,16 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
    * Exports the contents of the store to the provided streams.  Each stream should contain
    * a list of framed protobuf objects with the corresponding object types.
    */
-  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable = write_executor ! {
-    client.export_pb(streams)
+  def export_pb(streams:StreamManager[OutputStream], cb:(Option[String])=>Unit) = write_executor {
+    cb(client.export_pb(streams))
   }
 
   /**
    * Imports a previously exported set of streams.  This deletes any previous data
    * in the store.
    */
-  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable = write_executor ! {
-    client.import_pb(streams)
+  def import_pb(streams:StreamManager[InputStream], cb:(Option[String])=>Unit) = write_executor {
+    cb(client.import_pb(streams))
   }
 
 }

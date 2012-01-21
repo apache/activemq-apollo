@@ -21,11 +21,12 @@ import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
 import java.util.zip.{ZipEntry, ZipOutputStream}
-import org.apache.activemq.apollo.broker.store.{StreamManager, StoreFactory}
-import java.io.{OutputStream, FileOutputStream, File}
-import scala.util.continuations._
 import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
+import java.io._
+import java.util.concurrent.CountDownLatch
+import org.apache.activemq.apollo.broker.store.ZipOputputStreamManager._
+import org.apache.activemq.apollo.broker.store.{ZipOputputStreamManager, StreamManager, StoreFactory}
 
 /**
  * The apollo stop command
@@ -41,8 +42,8 @@ class StoreExport extends Action {
   @option(name = "--virtual-host", description = "The id of the virtual host to export, if not specified, the default virtual host is selected.")
   var host: String = _
 
-  @argument(name = "dest", description = "The destination file to hold the exported data", index=0, required=true)
-  var dest:File = _
+  @argument(name = "file", description = "The zip file to hold the exported data", index=0, required=true)
+  var file:File = _
 
   def execute(session: CommandSession):AnyRef = {
     import Helper._
@@ -79,27 +80,18 @@ class StoreExport extends Action {
       }
 
       ServiceControl.start(store, "store startup")
-      using( new ZipOutputStream(new FileOutputStream(dest))) { out=>
+      session.getConsole.println("Exporting... (this might take a while)")
+      using( new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) { out=>
         out.setMethod(ZipEntry.DEFLATED)
         out.setLevel(9)
-        val manager = new StreamManager[OutputStream]() {
-          def entry(name:String, func: (OutputStream) => Unit) = {
-            out.putNextEntry(new ZipEntry(name));
-            func(out)
-            out.closeEntry();
-          }
-          def using_queue_stream(func: (OutputStream) => Unit) = entry("queues.dat", func)
-          def using_queue_entry_stream(func: (OutputStream) => Unit) = entry("queue_entries.dat", func)
-          def using_message_stream(func: (OutputStream) => Unit) = entry("messages.dat", func)
-          def using_map_stream(func: (OutputStream) => Unit) = entry("map.dat", func)
-        }
-        reset {
-          val rc = store.export_pb(manager)
-          rc.failure_option.foreach(error _)
-        }
-      }
+        val manager = ZipOputputStreamManager(out)
 
+        sync_cb[Option[String]] { cb =>
+          store.export_pb(manager, cb)
+        }.foreach(error _)
+      }
       ServiceControl.stop(store, "store stop");
+      session.getConsole.println("Done. Export located at: "+file)
 
     } catch {
       case x:Failure=>

@@ -19,16 +19,49 @@ package org.apache.activemq.apollo.broker.store
 import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util._
 import java.io.{InputStream, OutputStream}
-import scala.util.continuations._
-import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
+import java.util.concurrent.atomic.AtomicReference
 import org.fusesource.hawtbuf.Buffer
+import java.util.zip.{ZipFile, ZipEntry, ZipOutputStream}
+import FileSupport._
 
 trait StreamManager[A] {
+  def using_version_stream(func: (A)=>Unit)
   def using_map_stream(func: (A)=>Unit)
   def using_queue_stream(func: (A)=>Unit)
   def using_message_stream(func: (A)=>Unit)
   def using_queue_entry_stream(func: (A)=>Unit)
 }
+
+case class ZipOputputStreamManager(out:ZipOutputStream) extends StreamManager[OutputStream]() {
+  def entry(name:String, func: (OutputStream) => Unit) = {
+    out.putNextEntry(new ZipEntry(name));
+    func(out)
+    out.closeEntry();
+  }
+  def using_version_stream(func: (OutputStream) => Unit) = entry("version.txt", func)
+  def using_queue_stream(func: (OutputStream) => Unit) = entry("queues.dat", func)
+  def using_queue_entry_stream(func: (OutputStream) => Unit) = entry("queue_entries.dat", func)
+  def using_message_stream(func: (OutputStream) => Unit) = entry("messages.dat", func)
+  def using_map_stream(func: (OutputStream) => Unit) = entry("map.dat", func)
+}
+
+case class ZipInputStreamManager(zip:ZipFile) extends StreamManager[InputStream]() {
+  def entry(name:String, func: (InputStream) => Unit) = {
+    val entry = zip.getEntry(name)
+    if(entry == null) {
+      sys.error("Invalid data file, zip entry not found: "+name);
+    }
+    using(zip.getInputStream(entry)) { is=>
+      func(is)
+    }
+  }
+  def using_version_stream(func: (InputStream) => Unit) = entry("version.txt", func)
+  def using_queue_stream(func: (InputStream) => Unit) = entry("queues.dat", func)
+  def using_queue_entry_stream(func: (InputStream) => Unit) = entry("queue_entries.dat", func)
+  def using_message_stream(func: (InputStream) => Unit) = entry("messages.dat", func)
+  def using_map_stream(func: (InputStream) => Unit) = entry("map.dat", func)
+}
+
 
 /**
  * <p>
@@ -116,11 +149,11 @@ trait Store extends ServiceTrait {
    * Exports the contents of the store to the provided streams.  Each stream should contain
    * a list of framed protobuf objects with the corresponding object types.
    */
-  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] @suspendable
+  def export_pb(streams:StreamManager[OutputStream], cb:(Option[String])=>Unit):Unit
 
   /**
    * Imports a previously exported set of streams.  This deletes any previous data
    * in the store.
    */
-  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] @suspendable
+  def import_pb(streams:StreamManager[InputStream], cb:(Option[String])=>Unit):Unit
 }

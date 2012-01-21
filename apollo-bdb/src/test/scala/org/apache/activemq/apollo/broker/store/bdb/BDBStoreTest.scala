@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker.store.bdb
 
 import dto.BDBStoreDTO
 import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
-import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

@@ -31,7 +31,8 @@ import scala.Some
 import java.sql.ClientInfoStatus
 import com.sleepycat.je._
 import javax.management.remote.rmi._RMIConnection_Stub
-import org.fusesource.hawtbuf.Buffer
+import org.apache.activemq.apollo.util.FileSupport._
+import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 
 object BDBClient extends Log
 /**
@@ -548,8 +549,12 @@ class BDBClient(store: BDBStore) {
     }
   }
 
-  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
+  def export_pb(streams:StreamManager[OutputStream]):Option[String] = {
     try {
+      streams.using_version_stream{ stream=>
+        new AsciiBuffer("1").writeTo(stream)
+      }
+
       with_ctx() { ctx=>
         import ctx._
         import PBSupport._
@@ -594,14 +599,25 @@ class BDBClient(store: BDBStore) {
         }
 
       }
-      Success(Zilch)
+      None
     } catch {
       case x:Exception=>
-        Failure(x.getMessage)
+        Some(x.getMessage)
     }
   }
 
-  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
+  def import_pb(streams:StreamManager[InputStream]):Option[String] = {
+    try {
+      streams.using_version_stream {
+        stream =>
+          var ver = read_text(stream).toInt
+          if (ver != 1) {
+            return Some("Cannot import from an export file at version: "+ver)
+          }
+      }
+    } catch {
+      case e => return Some("Could not determine export format version: "+e)
+    }
     try {
       purge
 
@@ -660,11 +676,11 @@ class BDBClient(store: BDBStore) {
           }
         }
       }
-      Success(Zilch)
+      None
 
     } catch {
       case x:Exception=>
-        Failure(x.getMessage)
+        Some(x.getMessage)
     }
   }
 }

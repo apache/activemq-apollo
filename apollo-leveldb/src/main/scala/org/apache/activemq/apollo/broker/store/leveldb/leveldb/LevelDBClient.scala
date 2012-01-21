@@ -30,7 +30,6 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
 import collection.immutable.TreeMap
 import org.fusesource.leveldbjni.internal.Util
-import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
 import org.apache.activemq.apollo.broker.Broker
 import org.apache.activemq.apollo.util.ProcessSupport._
 import collection.mutable.{HashMap, ListBuffer}
@@ -39,6 +38,7 @@ import org.iq80.leveldb._
 import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
 import org.apache.activemq.apollo.broker.store.PBSupport
 import java.util.concurrent.atomic.AtomicReference
+import org.fusesource.hawtbuf.{AsciiBuffer, Buffer, AbstractVarIntSupport}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -1063,8 +1063,12 @@ class LevelDBClient(store: LevelDBStore) {
 //  }
 
 
-  def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
+  def export_pb(streams:StreamManager[OutputStream]):Option[String] = {
     try {
+      streams.using_version_stream{ stream=>
+        new AsciiBuffer("1").writeTo(stream)
+      }
+
       retry_using_index {
         
         // Delete all the tmp keys..
@@ -1110,23 +1114,29 @@ class LevelDBClient(store: LevelDBStore) {
           // Figure out the active log locations..
           streams.using_queue_entry_stream { stream=>
             index.cursor_prefixed(queue_entry_prefix_array, ro) { (_, value) =>
-              write_framed(stream, value)
-              val record = QueueEntryPB.FACTORY.parseUnframed(value)
+              val record = QueueEntryPB.FACTORY.parseUnframed(value).copy()
               val (pos, len) = decode_locator(record.getMessageLocator)
+              record.setMessageKey(pos)
+              write_framed(stream, record.freeze().toUnframedByteArray)
               index.put(encode_key(tmp_prefix, pos), encode_vlong(len))
               true
             }
           }
 
           streams.using_message_stream { stream=>
-            index.cursor_prefixed(Array(tmp_prefix), ro) { (key, value) =>
+            index.cursor_prefixed(Array(tmp_prefix)) { (key, value) =>
               val (_, pos) = decode_long_key(key)
               val len = decode_vlong(value).toInt
               log.read(pos, len).foreach { value =>
                 // Set the message key to be the position in the log.
-                val pb = MessagePB.FACTORY.parseUnframed(value).copy
-                pb.setMessageKey(pos)
-                write_framed(stream, pb.freeze.toUnframedBuffer)
+                val copy = MessagePB.FACTORY.parseUnframed(value).copy
+                copy.setMessageKey(pos)
+                val data = copy.freeze.toUnframedBuffer
+                
+                val check = MessagePB.FACTORY.parseUnframed(data).copy
+                assert(check.getMessageKey == pos)
+                
+                write_framed(stream, data)
               }
               true
             }
@@ -1141,14 +1151,26 @@ class LevelDBClient(store: LevelDBStore) {
         }
 
       }
-      Success(Zilch)
+      None
     } catch {
       case x:Exception=>
-        Failure(x.getMessage)
+        Some(x.getMessage)
     }
   }
 
-  def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
+  def import_pb(streams:StreamManager[InputStream]):Option[String] = {
+    try {
+      streams.using_version_stream {
+        stream =>
+          var ver = read_text(stream).toInt
+          if (ver != 1) {
+            return Some("Cannot import from an export file at version: "+ver)
+          }
+      }
+    } catch {
+      case e => return Some("Could not determine export format version: "+e)
+    }
+
     try {
       purge
       log_refs.clear()
@@ -1169,6 +1191,7 @@ class LevelDBClient(store: LevelDBStore) {
         }
 
         log.appender { appender =>
+                
           streams.using_map_stream { stream=>
             foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
               index.put(encode_key(map_prefix, pb.getKey), pb.getValue.toByteArray)
@@ -1192,14 +1215,17 @@ class LevelDBClient(store: LevelDBStore) {
           streams.using_queue_entry_stream { stream=>
             foreach[QueueEntryPB.Buffer](stream, QueueEntryPB.FACTORY) { record=>
               val copy = record.copy();
-              index.get(encode_key(tmp_prefix, record.getMessageKey)).foreach { locator=>
+              var original_msg_key: Long = record.getMessageKey
+              index.get(encode_key(tmp_prefix, original_msg_key)) match {
+                case Some(locator)=>
                 val (pos, len) = decode_locator(locator)
                 copy.setMessageLocator(locator)
                 index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), copy.freeze().toUnframedBuffer)
-                
                 log.log_info(pos).foreach { log_info =>
                   log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
                 }
+                case None =>
+                  println("Invalid queue entry, references message that was not in the export: "+original_msg_key)
               }
             }
           }
@@ -1214,11 +1240,11 @@ class LevelDBClient(store: LevelDBStore) {
       }
       
       snapshot_index
-      Success(Zilch)
+      None
 
     } catch {
       case x:Exception=>
-        Failure(x.getMessage)
+        Some(x.getMessage)
     }
   }
 }

@@ -18,6 +18,7 @@ package org.apache.activemq.apollo
 
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.Future
+import java.util.concurrent.CountDownLatch
 
 /**
  *
@@ -69,5 +70,16 @@ package object util {
     }
   }
 
+  def sync_cb[T](func: (T=>Unit)=>Unit ) = {
+    var rc:Option[T] = null
+    val cd = new CountDownLatch(1)
+    def cb(x:T) = {
+      rc = Some(x)
+      cd.countDown
+    }
+    func(cb)
+    cd.await
+    rc.get
+  }
 
 }

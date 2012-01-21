@@ -22,9 +22,11 @@ import java.util.concurrent.{TimeUnit, CountDownLatch}
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
 import org.scalatest.BeforeAndAfterEach
-import java.io.File
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.concurrent.atomic.AtomicReference
+import java.util.zip.{ZipFile, ZipOutputStream, ZipEntry}
+import java.io._
+import org.apache.activemq.apollo.util.sync_cb
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -41,20 +43,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
    * Handy helper to call an async method on the store and wait for
    * the result of the callback.
    */
-  def CB[T](func: (T=>Unit)=>Unit ) = {
-    class X {
-      var value:T = _
-    }
-    val rc = new X
-    val cd = new CountDownLatch(1)
-    def cb(x:T) = {
-      rc.value = x
-      cd.countDown
-    }
-    func(cb)
-    cd.await
-    rc.value
-  }
+
 
   def data_directory = basedir / "target" / "apollo-data"
 
@@ -75,15 +64,20 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   }
 
   override protected def beforeEach() = {
+    purge
+  }
+
+  def purge {
     val tracker = new LoggingTracker("store startup")
     val task = tracker.task("purge")
     store.purge(task.run)
     tracker.await
   }
 
+
   def expectCB[T](expected:T)(func: (T=>Unit)=>Unit ) = {
     expect(expected) {
-      CB(func)
+      sync_cb(func)
     }
   }
 
@@ -91,7 +85,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
   def add_queue(name:String):Long = {
     var queue_a = QueueRecord(queue_key_counter.incrementAndGet, ascii("test"), ascii(name))
-    val rc:Boolean = CB( cb=> store.add_queue(queue_a)(cb) )
+    val rc:Boolean = sync_cb( cb=> store.add_queue(queue_a)(cb) )
     expect(true)(rc)
     queue_a.key
   }
@@ -141,11 +135,62 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     msg_keys
   }
 
+  test("export and import") {
+    val A = add_queue("A")
+    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
+
+    val rc:Option[MessageRecord] = sync_cb( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
+    expect(ascii("message 1").buffer) {
+      rc.get.buffer
+    }
+
+    val file = test_data_dir / "export.zip"
+    file.getParentFile.mkdirs()
+    using( new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) { out=>
+      val manager = ZipOputputStreamManager(out)
+
+      // Export the data...
+      expect(None) {
+        sync_cb[Option[String]] { cb =>
+          store.export_pb(manager, cb)
+        }
+      }
+    }
+
+    // purge the data..
+    purge
+
+    // There should ne no queues..
+    expectCB(Seq[Long]()) { cb=>
+      store.list_queues(cb)
+    }
+
+    // Import the data..
+    val zip = new ZipFile(file)
+    try {
+      val manager = ZipInputStreamManager(zip)
+      expect(None) {
+        sync_cb[Option[String]] { cb =>
+          store.import_pb(manager, cb)
+        }
+      }
+    } finally {
+      zip.close
+    }
+
+    // The data should be there now again..
+    val queues:Seq[Long] = sync_cb(store.list_queues(_))
+    expect(1)(queues.size)
+    val entries:Seq[QueueEntryRecord] = sync_cb(cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb))
+    expect(3) ( entries.size  )
+
+  }
+
   test("load stored message") {
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
+    val rc:Option[MessageRecord] = sync_cb( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
     }
@@ -166,7 +211,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("my queue name")
     populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[QueueRecord] = CB( cb=> store.get_queue(A)(cb) )
+    val rc:Option[QueueRecord] = sync_cb( cb=> store.get_queue(A)(cb) )
     expect(ascii("my queue name")) {
       rc.get.binding_data.ascii
     }
@@ -176,7 +221,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Seq[QueueEntryRecord] = CB( cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb) )
+    val rc:Seq[QueueEntryRecord] = sync_cb( cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb) )
     expect(msg_keys.toSeq.map(_._1)) {
       rc.map( _.message_key )
     }
