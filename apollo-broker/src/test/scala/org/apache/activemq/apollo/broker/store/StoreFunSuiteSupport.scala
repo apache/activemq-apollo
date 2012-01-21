@@ -18,13 +18,12 @@ package org.apache.activemq.apollo.broker.store
  */
 import org.fusesource.hawtbuf.AsciiBuffer._
 import org.fusesource.hawtdispatch.TaskTracker
-import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.TimeUnit
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCounter}
 import org.scalatest.BeforeAndAfterEach
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.concurrent.atomic.AtomicReference
-import java.util.zip.{ZipFile, ZipOutputStream, ZipEntry}
 import java.io._
 import org.apache.activemq.apollo.util.sync_cb
 
@@ -144,15 +143,13 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
       rc.get.buffer
     }
 
-    val file = test_data_dir / "export.zip"
+    val file = test_data_dir / "export.tgz"
     file.getParentFile.mkdirs()
-    using( new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) { out=>
-      val manager = ZipOputputStreamManager(out)
-
+    using( new BufferedOutputStream(new FileOutputStream(file))) { os =>
       // Export the data...
       expect(None) {
         sync_cb[Option[String]] { cb =>
-          store.export_pb(manager, cb)
+          store.export_data(os, cb)
         }
       }
     }
@@ -166,16 +163,12 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     }
 
     // Import the data..
-    val zip = new ZipFile(file)
-    try {
-      val manager = ZipInputStreamManager(zip)
+    using(new BufferedInputStream(new FileInputStream(file))) { is =>
       expect(None) {
         sync_cb[Option[String]] { cb =>
-          store.import_pb(manager, cb)
+          store.import_data(is, cb)
         }
       }
-    } finally {
-      zip.close
     }
 
     // The data should be there now again..

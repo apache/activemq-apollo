@@ -20,19 +20,12 @@ import dto.BDBStoreDTO
 import java.{lang=>jl}
 import java.{util=>ju}
 
-import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
-import java.io.{EOFException, InputStream, OutputStream}
-import org.fusesource.hawtbuf.proto.{MessageBuffer, PBMessageFactory}
-import org.apache.activemq.apollo.util.Log._
-import scala.Some
-import java.sql.ClientInfoStatus
+import java.io.{InputStream, OutputStream}
 import com.sleepycat.je._
-import javax.management.remote.rmi._RMIConnection_Stub
-import org.apache.activemq.apollo.util.FileSupport._
-import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
+import org.fusesource.hawtbuf.Buffer
 
 object BDBClient extends Log
 /**
@@ -549,56 +542,41 @@ class BDBClient(store: BDBStore) {
     }
   }
 
-  def export_pb(streams:StreamManager[OutputStream]):Option[String] = {
+  def export_data(os:OutputStream):Option[String] = {
     try {
-      streams.using_version_stream{ stream=>
-        new AsciiBuffer("1").writeTo(stream)
-      }
+      val manager = ExportStreamManager(os, 1)
 
       with_ctx() { ctx=>
         import ctx._
-        import PBSupport._
 
-        streams.using_map_stream { stream =>
-          map_db.cursor(tx) { (key,value) =>
-            val record = new MapEntryPB.Bean
-            record.setKey(key)
-            record.setValue(value)
-            record.freeze().writeFramed(stream)
-            true
-          }
+        messages_db.cursor(tx) { (_, value) =>
+          val record = MessagePB.FACTORY.parseUnframed(value.getData)
+          manager.store_message(record)
+          true
         }
 
-        streams.using_queue_stream { queue_stream =>
-          queues_db.cursor(tx) { (_, value) =>
-            val record:QueueRecord = value
-            record.freeze.writeFramed(queue_stream)
-            true
-          }
+        entries_db.cursor(tx) { (key, value) =>
+          val record = QueueEntryPB.FACTORY.parseUnframed(value.getData)
+          manager.store_queue_entry(record)
+          true
         }
 
-        streams.using_message_stream { message_stream=>
-          messages_db.cursor(tx) { (_, data) =>
-            import PBSupport._
-            val pb = MessagePB.FACTORY.parseUnframed(data.getData)
-            pb.writeFramed(message_stream)
-            if( pb.hasDirectSize ) {
-              val buffer_cp_buffer = direct_buffer_allocator.slice(pb.getDirectOffset, pb.getDirectSize)
-              buffer_cp_buffer.read(message_stream)
-            }
-            true
-          }
+        queues_db.cursor(tx) { (_, value) =>
+          val record = QueuePB.FACTORY.parseUnframed(value)
+          manager.store_queue(record)
+          true
         }
 
-        streams.using_queue_entry_stream { queue_entry_stream=>
-          entries_db.cursor(tx) { (key, value) =>
-            val record:QueueEntryRecord = value
-            record.freeze.writeFramed(queue_entry_stream)
-            true
-          }
+        map_db.cursor(tx) { (key,value) =>
+          val record = new MapEntryPB.Bean
+          record.setKey(key)
+          record.setValue(value)
+          manager.store_map_entry(record)
+          true
         }
-
       }
+
+      manager.finish
       None
     } catch {
       case x:Exception=>
@@ -606,75 +584,42 @@ class BDBClient(store: BDBStore) {
     }
   }
 
-  def import_pb(streams:StreamManager[InputStream]):Option[String] = {
+  def import_data(is:InputStream):Option[String] = {
     try {
-      streams.using_version_stream {
-        stream =>
-          var ver = read_text(stream).toInt
-          if (ver != 1) {
-            return Some("Cannot import from an export file at version: "+ver)
-          }
+      val manager = ImportStreamManager(is)
+      if(manager.version!=1) {
+        return Some("Cannot import from an export file of version: "+manager.version)
       }
-    } catch {
-      case e => return Some("Could not determine export format version: "+e)
-    }
-    try {
-      purge
 
-      def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
-        var done = false
-        do {
-          try {
-            func(fact.parseFramed(stream).asInstanceOf[Buffer])
-          } catch {
-            case x:EOFException =>
-              done = true
-          }
-        } while( !done )
-      }
+      purge
 
       with_ctx() { ctx=>
         import ctx._
-        import PBSupport._
 
-        streams.using_queue_stream { queue_stream=>
-          foreach[QueuePB.Buffer](queue_stream, QueuePB.FACTORY) { pb=>
-            val record:QueueRecord = pb
-            queues_db.put(tx, record.key, record)
-          }
+        while(manager.getNext match {
+
+          case record:MessagePB.Buffer =>
+            messages_db.put(tx, record.getMessageKey, record.toUnframedBuffer)
+            true
+
+          case record:QueueEntryPB.Buffer =>
+            entries_db.put(tx, (record.getQueueKey, record.getQueueSeq), record.toUnframedBuffer)
+            add_and_get(message_refs_db, record.getMessageKey, 1, tx)
+            true
+
+          case record:QueuePB.Buffer =>
+            queues_db.put(tx, record.getKey, record.toUnframedBuffer)
+            true
+
+          case record:MapEntryPB.Buffer =>
+            map_db.put(tx, record.getKey, record.getValue)
+            true
+
+          case null =>
+            false
+        }) { // keep looping
         }
 
-        streams.using_map_stream { stream=>
-          foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
-            map_db.put(tx, pb.getKey, pb.getValue)
-          }
-        }
-
-        streams.using_message_stream { message_stream=>
-          foreach[MessagePB.Buffer](message_stream, MessagePB.FACTORY) { pb=>
-
-            var record:MessagePB.Buffer = pb
-            if( record.hasDirectSize ) {
-              val cp = record.copy
-              val buffer_cp_buffer = direct_buffer_allocator.alloc(cp.getDirectSize)
-              cp.setDirectOffset(buffer_cp_buffer.offset)
-              buffer_cp_buffer.write(message_stream)
-              lobs_db.put(tx, pb.getMessageKey, (buffer_cp_buffer.offset, buffer_cp_buffer.size))
-              record = cp.freeze
-            }
-
-            messages_db.put(tx, record.getMessageKey, record)
-          }
-        }
-
-        streams.using_queue_entry_stream { queue_entry_stream=>
-          foreach[QueueEntryPB.Buffer](queue_entry_stream, QueueEntryPB.FACTORY) { pb=>
-            val record:QueueEntryRecord = pb
-
-            entries_db.put(tx, (record.queue_key, record.entry_seq), record)
-            add_and_get(message_refs_db, record.message_key, 1, tx)
-          }
-        }
       }
       None
 

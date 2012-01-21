@@ -22,11 +22,11 @@ import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
 import scala.util.continuations._
 import java.util.zip.ZipFile
-import java.io.{InputStream, File}
 import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
-import org.apache.activemq.apollo.broker.store.ZipInputStreamManager._
-import org.apache.activemq.apollo.broker.store.{ZipInputStreamManager, StreamManager, StoreFactory}
+import org.apache.activemq.apollo.broker.store.ImportStreamManager._
+import org.apache.activemq.apollo.broker.store.{ImportStreamManager, StreamManager, StoreFactory}
+import java.io.{FileInputStream, BufferedInputStream, InputStream, File}
 
 
 /**
@@ -43,7 +43,7 @@ class StoreImport extends Action {
   @option(name = "--virtual-host", description = "The id of the virtual host to import into, if not specified, the default virtual host is selected.")
   var host: String = _
 
-  @argument(name = "file", description = "The zip file the contains that data for the import", index=0, required=true)
+  @argument(name = "file", description = "The compressed tar file the contains that data for the import", index=0, required=true)
   var file:File = _
 
   def execute(session: CommandSession):AnyRef = {
@@ -80,17 +80,14 @@ class StoreImport extends Action {
         error("Could not create the store.")
       }
 
+      session.getConsole.println("Starting store: "+store)
       ServiceControl.start(store, "store startup")
 
       session.getConsole.println("Importing: "+file)
-      val zip = new ZipFile(file)
-      try {
-        val manager = ZipInputStreamManager(zip)
+      using( ImportStreamManager(new BufferedInputStream(new FileInputStream(file)))) { manager =>
         sync_cb[Option[String]] { cb =>
-          store.import_pb(manager, cb)
+          store.import_data(manager, cb)
         }.foreach(error _)
-      } finally {
-        zip.close
       }
 
       ServiceControl.stop(store, "store stop");

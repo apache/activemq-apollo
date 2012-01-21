@@ -899,16 +899,16 @@ store of any data!
 
 Use the `apollo-broker store-export` command to export the data. For example:
 
-    /var/lib/mybroker/bin/apollo-broker store-export myarchive.zip
+    /var/lib/mybroker/bin/apollo-broker store-export myarchive.tgz
 
 The above command will load the `mybroker`'s configuration and export the
-first virtual host's messages store to the `myarchive.zip`. You can use the
+first virtual host's messages store to the `myarchive.tgz`. You can use the
 `--virtual-host` command line option to be more specific of which virtual
 host you wish to export.
 
 Use the `apollo-broker store-import` command to import the data.  For example:
 
-    /var/lib/mybroker/bin/apollo-broker store-import myarchive.zip
+    /var/lib/mybroker/bin/apollo-broker store-import myarchive.tgz
 
 Just like in the case of the `store-export` command, it will load the
 `mybroker`'s configuration and import the archive into the first virtual

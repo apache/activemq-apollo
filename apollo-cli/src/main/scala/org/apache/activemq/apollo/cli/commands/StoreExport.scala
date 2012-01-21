@@ -25,8 +25,8 @@ import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
 import java.io._
 import java.util.concurrent.CountDownLatch
-import org.apache.activemq.apollo.broker.store.ZipOputputStreamManager._
-import org.apache.activemq.apollo.broker.store.{ZipOputputStreamManager, StreamManager, StoreFactory}
+import org.apache.activemq.apollo.broker.store.ExportStreamManager._
+import org.apache.activemq.apollo.broker.store.{ExportStreamManager, StreamManager, StoreFactory}
 
 /**
  * The apollo stop command
@@ -42,7 +42,7 @@ class StoreExport extends Action {
   @option(name = "--virtual-host", description = "The id of the virtual host to export, if not specified, the default virtual host is selected.")
   var host: String = _
 
-  @argument(name = "file", description = "The zip file to hold the exported data", index=0, required=true)
+  @argument(name = "file", description = "The compressed tar file to hold the exported data", index=0, required=true)
   var file:File = _
 
   def execute(session: CommandSession):AnyRef = {
@@ -79,15 +79,13 @@ class StoreExport extends Action {
         error("Could not create the store.")
       }
 
+      session.getConsole.println("Starting store: "+store)
       ServiceControl.start(store, "store startup")
-      session.getConsole.println("Exporting... (this might take a while)")
-      using( new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) { out=>
-        out.setMethod(ZipEntry.DEFLATED)
-        out.setLevel(9)
-        val manager = ZipOputputStreamManager(out)
 
+      session.getConsole.println("Exporting... (this might take a while)")
+      using( ExportStreamManager(new BufferedOutputStream(new FileOutputStream(file)))) { manager=>
         sync_cb[Option[String]] { cb =>
-          store.export_pb(manager, cb)
+          store.export_data(manager, cb)
         }.foreach(error _)
       }
       ServiceControl.stop(store, "store stop");

@@ -346,7 +346,7 @@ class LevelDBClient(store: LevelDBStore) {
                   case LOG_ADD_MESSAGE =>
                   case LOG_ADD_QUEUE_ENTRY =>
                     replay_operations+=1
-                    val record = QueueEntryPB.FACTORY.parseUnframed(data)
+                    val record = QueueEntryPB.FACTORY.parseFramed(data)
                     val pos = decode_vlong(record.getMessageLocator)
                     index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), data)
                     pos.foreach(log_ref_increment(_))
@@ -354,7 +354,7 @@ class LevelDBClient(store: LevelDBStore) {
                   case LOG_REMOVE_QUEUE_ENTRY =>
                     replay_operations+=1
                     index.get(data, new ReadOptions).foreach { value=>
-                      val record = QueueEntryPB.FACTORY.parseUnframed(value)
+                      val record = QueueEntryPB.FACTORY.parseFramed(value)
                       val pos = decode_vlong(record.getMessageLocator)
                       pos.foreach(log_ref_decrement(_))
                       index.delete(data)
@@ -362,7 +362,7 @@ class LevelDBClient(store: LevelDBStore) {
                     
                   case LOG_ADD_QUEUE =>
                     replay_operations+=1
-                    val record = QueuePB.FACTORY.parseUnframed(data)
+                    val record = QueuePB.FACTORY.parseFramed(data)
                     index.put(encode_key(queue_prefix, record.getKey), data)
 
                   case LOG_REMOVE_QUEUE =>
@@ -377,7 +377,7 @@ class LevelDBClient(store: LevelDBStore) {
 
                       // Figure out what log file that message entry was in so we can,
                       // decrement the log file reference.
-                      val record = QueueEntryPB.FACTORY.parseUnframed(value)
+                      val record = QueueEntryPB.FACTORY.parseFramed(value)
                       val pos = decode_vlong(record.getMessageLocator)
                       log_ref_decrement(pos)
                       true
@@ -385,7 +385,7 @@ class LevelDBClient(store: LevelDBStore) {
 
                   case LOG_MAP_ENTRY =>
                     replay_operations+=1
-                    val entry = MapEntryPB.FACTORY.parseUnframed(data)
+                    val entry = MapEntryPB.FACTORY.parseFramed(data)
                     if (entry.getValue == null) {
                       index.delete(encode_key(map_prefix, entry.getKey))
                     } else {
@@ -421,7 +421,7 @@ class LevelDBClient(store: LevelDBStore) {
     index.cursor_prefixed(queue_entry_prefix_array) { (key, value)=>
       try {
         val (_, queue_key, seq_key) = decode_long_long_key(key)
-        val record = QueueEntryPB.FACTORY.parseUnframed(value)
+        val record = QueueEntryPB.FACTORY.parseFramed(value)
         val (pos, len) = decode_locator(record.getMessageLocator)
         if (record.getQueueKey != queue_key) {
           throw new IOException("key missmatch")
@@ -448,7 +448,7 @@ class LevelDBClient(store: LevelDBStore) {
     index.cursor_prefixed(queue_prefix_array) { (key, value)=>
       try {
         val (_, queue_key) = decode_long_key(key)
-        val record = QueuePB.FACTORY.parseUnframed(value)
+        val record = QueuePB.FACTORY.parseFramed(value)
         if (record.getKey != queue_key) {
           throw new IOException("key missmatch")
         }
@@ -469,7 +469,7 @@ class LevelDBClient(store: LevelDBStore) {
         trace("invalid queue entry record: %s, error: queue key does not exits %s", new Buffer(key), queue_key)
         fixed_records += 1
         index.delete(key)
-        val record = QueueEntryPB.FACTORY.parseUnframed(value)
+        val record = QueueEntryPB.FACTORY.parseFramed(value)
         val pos = decode_vlong(record.getMessageLocator)
         log.log_info(pos).foreach { log_info =>
           actual_log_refs.get(log_info.position).foreach { counter =>
@@ -718,7 +718,7 @@ class LevelDBClient(store: LevelDBStore) {
 
           // Figure out what log file that message entry was in so we can,
           // decrement the log file reference.
-          val record = QueueEntryPB.FACTORY.parseUnframed(value)
+          val record = QueueEntryPB.FACTORY.parseFramed(value)
           val pos = decode_vlong(record.getMessageLocator)
           log_ref_decrement(pos)
           true
@@ -745,7 +745,7 @@ class LevelDBClient(store: LevelDBStore) {
                 entry.setValue(value)
                 batch.put(encode_key(map_prefix, key), value.toByteArray)
               }
-              appender.append(LOG_MAP_ENTRY, entry.freeze().toUnframedByteArray)
+              appender.append(LOG_MAP_ENTRY, entry.freeze().toFramedByteArray)
             }
 
             uow.actions.foreach { case (msg, action) =>
@@ -783,7 +783,7 @@ class LevelDBClient(store: LevelDBStore) {
                 val record = PBSupport.to_pb(entry)
                 record.setMessageLocator(locator_buffer)
 
-                val encoded = record.freeze().toUnframedBuffer
+                val encoded = record.freeze().toFramedBuffer
                 appender.append(LOG_ADD_QUEUE_ENTRY, encoded)
                 batch.put(encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
                 
@@ -906,7 +906,7 @@ class LevelDBClient(store: LevelDBStore) {
             group.first_entry_seq = current_key
           }
 
-          val entry = QueueEntryPB.FACTORY.parseUnframed(value)
+          val entry = QueueEntryPB.FACTORY.parseFramed(value)
           val pos = decode_vlong(entry.getMessageLocator)
 
           group.last_entry_seq = current_key
@@ -947,7 +947,7 @@ class LevelDBClient(store: LevelDBStore) {
         val start = encode_key(queue_entry_prefix, queue_key, firstSeq)
         val end = encode_key(queue_entry_prefix, queue_key, lastSeq+1)
         index.cursor_range( start, end, ro ) { (key, value) =>
-          val record = QueueEntryPB.FACTORY.parseUnframed(value)
+          val record = QueueEntryPB.FACTORY.parseFramed(value)
           val entry = PBSupport.from_pb(record)
           entry.message_locator = new AtomicReference[Object](decode_locator(record.getMessageLocator))
           rc += entry
@@ -1063,11 +1063,9 @@ class LevelDBClient(store: LevelDBStore) {
 //  }
 
 
-  def export_pb(streams:StreamManager[OutputStream]):Option[String] = {
+  def export_data(os:OutputStream):Option[String] = {
     try {
-      streams.using_version_stream{ stream=>
-        new AsciiBuffer("1").writeTo(stream)
-      }
+      val manager = ExportStreamManager(os, 1)
 
       retry_using_index {
         
@@ -1078,68 +1076,62 @@ class LevelDBClient(store: LevelDBStore) {
         }
         
         index.snapshot { snapshot=>
-          val ro = new ReadOptions
-          ro.snapshot(snapshot)
-          ro.verifyChecksums(verify_checksums)
-          ro.fillCache(false)
+          val nocache = new ReadOptions
+          nocache.snapshot(snapshot)
+          nocache.verifyChecksums(verify_checksums)
+          nocache.fillCache(false)
           
-          def write_framed(stream:OutputStream, value:Array[Byte]) = {
-            val helper = new AbstractVarIntSupport {
-              def readByte: Byte = throw new UnsupportedOperationException
-              def writeByte(value: Int) = stream.write(value)
-            }
-            helper.writeVarInt(value.length)
-            stream.write(value);
+          val cache = new ReadOptions
+          nocache.snapshot(snapshot)
+          nocache.verifyChecksums(false)
+          nocache.fillCache(false)
+
+          // Build a temp table of all references messages by the queues
+          // Remember 2 queues could reference the same message.
+          index.cursor_prefixed(queue_entry_prefix_array, cache) { (_, value) =>
+            val record = QueueEntryPB.FACTORY.parseFramed(value)
+            val (pos, len) = decode_locator(record.getMessageLocator)
+            index.put(encode_key(tmp_prefix, pos), encode_vlong(len))
             true
           }
 
-          streams.using_map_stream { stream=>
-            index.cursor_prefixed(map_prefix_array, ro) { (key, value) =>
-              val key_buffer = new Buffer(key)
-              key_buffer.moveHead(1)
-              val record = new MapEntryPB.Bean
-              record.setKey(key_buffer)
-              record.setValue(new Buffer(value))
-              record.freeze().writeFramed(stream)
-              true
-            }
-          }
-
-          streams.using_queue_stream { stream =>
-            index.cursor_prefixed(queue_prefix_array) { (_, value) =>
-              write_framed(stream, value)
-            }
-          }
-
-          // Figure out the active log locations..
-          streams.using_queue_entry_stream { stream=>
-            index.cursor_prefixed(queue_entry_prefix_array, ro) { (_, value) =>
-              val record = QueueEntryPB.FACTORY.parseUnframed(value).copy()
-              val (pos, len) = decode_locator(record.getMessageLocator)
+          // Use the temp table to export all the referenced messages. Use
+          // the log position as the message key.
+          index.cursor_prefixed(Array(tmp_prefix)) { (key, value) =>
+            val (_, pos) = decode_long_key(key)
+            val len = decode_vlong(value).toInt
+            log.read(pos, len).foreach { value =>
+              // Set the message key to be the position in the log.
+              val record = MessagePB.FACTORY.parseFramed(value).copy
               record.setMessageKey(pos)
-              write_framed(stream, record.freeze().toUnframedByteArray)
-              index.put(encode_key(tmp_prefix, pos), encode_vlong(len))
-              true
+              manager.store_message(record)
             }
+            true
           }
 
-          streams.using_message_stream { stream=>
-            index.cursor_prefixed(Array(tmp_prefix)) { (key, value) =>
-              val (_, pos) = decode_long_key(key)
-              val len = decode_vlong(value).toInt
-              log.read(pos, len).foreach { value =>
-                // Set the message key to be the position in the log.
-                val copy = MessagePB.FACTORY.parseUnframed(value).copy
-                copy.setMessageKey(pos)
-                val data = copy.freeze.toUnframedBuffer
-                
-                val check = MessagePB.FACTORY.parseUnframed(data).copy
-                assert(check.getMessageKey == pos)
-                
-                write_framed(stream, data)
-              }
-              true
-            }
+          // Now export the queue entries
+          index.cursor_prefixed(queue_entry_prefix_array, nocache) { (_, value) =>
+            val record = QueueEntryPB.FACTORY.parseFramed(value).copy()
+            val (pos, len) = decode_locator(record.getMessageLocator)
+            record.setMessageKey(pos)
+            manager.store_queue_entry(record)
+            true
+          }
+
+          index.cursor_prefixed(queue_prefix_array) { (_, value) =>
+            val record = QueuePB.FACTORY.parseFramed(value)
+            manager.store_queue(record)
+            true
+          }
+
+          index.cursor_prefixed(map_prefix_array, nocache) { (key, value) =>
+            val key_buffer = new Buffer(key)
+            key_buffer.moveHead(1)
+            val record = new MapEntryPB.Bean
+            record.setKey(key_buffer)
+            record.setValue(new Buffer(value))
+            manager.store_map_entry(record)
+            true
           }
 
         }
@@ -1151,84 +1143,65 @@ class LevelDBClient(store: LevelDBStore) {
         }
 
       }
+      manager.finish
+
       None
     } catch {
       case x:Exception=>
+        debug(x, "Export failed")
+        x.printStackTrace()
         Some(x.getMessage)
     }
   }
 
-  def import_pb(streams:StreamManager[InputStream]):Option[String] = {
+  def import_data(is:InputStream):Option[String] = {
     try {
-      streams.using_version_stream {
-        stream =>
-          var ver = read_text(stream).toInt
-          if (ver != 1) {
-            return Some("Cannot import from an export file at version: "+ver)
-          }
+      val manager = ImportStreamManager(is)
+      if(manager.version!=1) {
+        return Some("Cannot import from an export file of version: "+manager.version)
       }
-    } catch {
-      case e => return Some("Could not determine export format version: "+e)
-    }
 
-    try {
       purge
-      log_refs.clear()
-          
-      val actual_log_refs = HashMap[Long, LongCounter]()
-      
+
       retry_using_index {
-        def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
-          var done = false
-          do {
-            try {
-              func(fact.parseFramed(stream).asInstanceOf[Buffer])
-            } catch {
-              case x:EOFException =>
-                done = true
-            }
-          } while( !done )
-        }
-
         log.appender { appender =>
-                
-          streams.using_map_stream { stream=>
-            foreach[MapEntryPB.Buffer](stream, MapEntryPB.FACTORY) { pb =>
-              index.put(encode_key(map_prefix, pb.getKey), pb.getValue.toByteArray)
-            }
-          }
+          while(manager.getNext match {
 
-          streams.using_queue_stream { stream=>
-            foreach[QueuePB.Buffer](stream, QueuePB.FACTORY) { record=>
-              index.put(encode_key(queue_prefix, record.getKey), record.toUnframedByteArray)
-            }
-          }
-
-          streams.using_message_stream { stream=>
-            foreach[MessagePB.Buffer](stream, MessagePB.FACTORY) { record=>
-              val message_data = record.toUnframedBuffer
+            case record:MessagePB.Buffer =>
+              val message_data = record.toFramedBuffer
               val pos = appender.append(LOG_ADD_MESSAGE, message_data)
               index.put(encode_key(tmp_prefix, record.getMessageKey), encode_locator(pos, message_data.length))
-            }
-          }
+              true
 
-          streams.using_queue_entry_stream { stream=>
-            foreach[QueueEntryPB.Buffer](stream, QueueEntryPB.FACTORY) { record=>
+            case record:QueueEntryPB.Buffer =>
               val copy = record.copy();
               var original_msg_key: Long = record.getMessageKey
               index.get(encode_key(tmp_prefix, original_msg_key)) match {
                 case Some(locator)=>
                 val (pos, len) = decode_locator(locator)
                 copy.setMessageLocator(locator)
-                index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), copy.freeze().toUnframedBuffer)
+                index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), copy.freeze().toFramedBuffer)
                 log.log_info(pos).foreach { log_info =>
                   log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
                 }
                 case None =>
                   println("Invalid queue entry, references message that was not in the export: "+original_msg_key)
               }
-            }
+              true
+
+            case record:QueuePB.Buffer =>
+              index.put(encode_key(queue_prefix, record.getKey), record.toFramedBuffer)
+              true
+
+            case record:MapEntryPB.Buffer =>
+              index.put(encode_key(map_prefix, record.getKey), record.getValue)
+              true
+
+            case null =>
+              false
+          }) { // keep looping
           }
+
         }
       }
 
@@ -1244,6 +1217,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     } catch {
       case x:Exception=>
+        debug(x, "Import failed")
         Some(x.getMessage)
     }
   }

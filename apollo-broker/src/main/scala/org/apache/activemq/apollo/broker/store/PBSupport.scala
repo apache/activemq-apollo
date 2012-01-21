@@ -48,14 +48,14 @@ object PBSupport {
     rc
   }
 
-  def encode_message_record(out: OutputStream, v: MessageRecord) = to_pb(v).freeze.writeUnframed(out)
-  def decode_message_record(in: InputStream):MessageRecord = MessagePB.FACTORY.parseUnframed(in)
+  def encode_message_record(out: OutputStream, v: MessageRecord) = to_pb(v).freeze.writeFramed(out)
+  def decode_message_record(in: InputStream):MessageRecord = MessagePB.FACTORY.parseFramed(in)
 
-  implicit def encode_message_record(v: MessageRecord):Array[Byte] = to_pb(v).freeze.toUnframedByteArray
-  implicit def decode_message_record(data: Array[Byte]):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
+  implicit def encode_message_record(v: MessageRecord):Array[Byte] = to_pb(v).freeze.toFramedByteArray
+  implicit def decode_message_record(data: Array[Byte]):MessageRecord = MessagePB.FACTORY.parseFramed(data)
 
-  implicit def encode_message_record_buffer(v: MessageRecord) = to_pb(v).freeze.toUnframedBuffer
-  implicit def decode_message_record_buffer(data: Buffer):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
+  implicit def encode_message_record_buffer(v: MessageRecord) = to_pb(v).freeze.toFramedBuffer
+  implicit def decode_message_record_buffer(data: Buffer):MessageRecord = MessagePB.FACTORY.parseFramed(data)
 
 
   implicit def to_pb(v: QueueRecord):QueuePB.Bean = {
@@ -70,14 +70,14 @@ object PBSupport {
     QueueRecord(pb.getKey, pb.getBindingKind, pb.getBindingData)
   }
 
-  def encode_queue_record(out: OutputStream, v: QueueRecord) = to_pb(v).freeze.writeUnframed(out)
-  def decode_queue_record(in: InputStream):QueueRecord = QueuePB.FACTORY.parseUnframed(in)
+  def encode_queue_record(out: OutputStream, v: QueueRecord) = to_pb(v).freeze.writeFramed(out)
+  def decode_queue_record(in: InputStream):QueueRecord = QueuePB.FACTORY.parseFramed(in)
 
-  implicit def encode_queue_record(v: QueueRecord) = to_pb(v).freeze.toUnframedByteArray
-  implicit def decode_queue_record(data: Array[Byte]):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
+  implicit def encode_queue_record(v: QueueRecord) = to_pb(v).freeze.toFramedByteArray
+  implicit def decode_queue_record(data: Array[Byte]):QueueRecord = QueuePB.FACTORY.parseFramed(data)
 
-  implicit def encode_queue_record_buffer(v: QueueRecord) = to_pb(v).freeze.toUnframedBuffer
-  implicit def decode_queue_record_buffer(data: Buffer):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
+  implicit def encode_queue_record_buffer(v: QueueRecord) = to_pb(v).freeze.toFramedBuffer
+  implicit def decode_queue_record_buffer(data: Buffer):QueueRecord = QueuePB.FACTORY.parseFramed(data)
 
   implicit def to_pb(v: QueueEntryRecord):QueueEntryPB.Bean = {
     val pb = new QueueEntryPB.Bean
@@ -105,13 +105,13 @@ object PBSupport {
     rc
   }
 
-  def encode_queue_entry_record(out: OutputStream, v: QueueEntryRecord) = to_pb(v).freeze.writeUnframed(out)
-  def decode_queue_entry_record(in: InputStream):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(in)
+  def encode_queue_entry_record(out: OutputStream, v: QueueEntryRecord) = to_pb(v).freeze.writeFramed(out)
+  def decode_queue_entry_record(in: InputStream):QueueEntryRecord = QueueEntryPB.FACTORY.parseFramed(in)
 
-  implicit def encode_queue_entry_record(v: QueueEntryRecord) = to_pb(v).freeze.toUnframedByteArray
-  implicit def decode_queue_entry_record(data: Array[Byte]):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
+  implicit def encode_queue_entry_record(v: QueueEntryRecord) = to_pb(v).freeze.toFramedByteArray
+  implicit def decode_queue_entry_record(data: Array[Byte]):QueueEntryRecord = QueueEntryPB.FACTORY.parseFramed(data)
 
-  implicit def encode_queue_entry_record_buffer(v: QueueEntryRecord) = to_pb(v).freeze.toUnframedBuffer
-  implicit def decode_queue_entry_record_buffer(data: Buffer):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
+  implicit def encode_queue_entry_record_buffer(v: QueueEntryRecord) = to_pb(v).freeze.toFramedBuffer
+  implicit def decode_queue_entry_record_buffer(data: Buffer):QueueEntryRecord = QueueEntryPB.FACTORY.parseFramed(data)
 
 }

@@ -18,48 +18,88 @@ package org.apache.activemq.apollo.broker.store
  */
 import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util._
-import java.io.{InputStream, OutputStream}
 import java.util.concurrent.atomic.AtomicReference
-import org.fusesource.hawtbuf.Buffer
-import java.util.zip.{ZipFile, ZipEntry, ZipOutputStream}
-import FileSupport._
+import org.apache.activemq.apollo.util.tar._
+import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
+import java.io._
+import org.apache.activemq.apollo.util.FileSupport._
+import org.fusesource.hawtbuf.proto.MessageBuffer
 
-trait StreamManager[A] {
-  def using_version_stream(func: (A)=>Unit)
-  def using_map_stream(func: (A)=>Unit)
-  def using_queue_stream(func: (A)=>Unit)
-  def using_message_stream(func: (A)=>Unit)
-  def using_queue_entry_stream(func: (A)=>Unit)
+case class ExportStreamManager(target:OutputStream, version:Int) {
+  val stream = new TarOutputStream(new GZIPOutputStream(target))
+
+  var seq:Long = 0;
+  
+  def finish = stream.close()
+
+  private def store(ext:String, value:Buffer) = {
+    var entry = new TarEntry(seq.toString + "." + ext)
+    seq += 1
+    entry.setSize(value.length())
+    stream.putNextEntry(entry);
+    value.writeTo(stream)
+    stream.closeEntry();
+  }
+
+  private def store(ext:String, value:MessageBuffer[_,_]) = {
+    var entry = new TarEntry(seq.toString + "." + ext)
+    seq += 1
+    entry.setSize(value.serializedSizeFramed())
+    stream.putNextEntry(entry);
+    value.writeFramed(stream)
+    stream.closeEntry();
+  }
+
+  store("ver", new AsciiBuffer(version.toString))
+
+  def store_queue(value:QueuePB.Getter) = {
+    store("que", value.freeze())
+  }
+  def store_queue_entry(value:QueueEntryPB.Getter) = {
+    store("qen", value.freeze())
+  }
+  def store_message(value:MessagePB.Getter) = {
+    store("msg", value.freeze())
+  }
+  def store_map_entry(value:MapEntryPB.Getter) = {
+    store("map", value.freeze())
+  }
+
 }
 
-case class ZipOputputStreamManager(out:ZipOutputStream) extends StreamManager[OutputStream]() {
-  def entry(name:String, func: (OutputStream) => Unit) = {
-    out.putNextEntry(new ZipEntry(name));
-    func(out)
-    out.closeEntry();
-  }
-  def using_version_stream(func: (OutputStream) => Unit) = entry("version.txt", func)
-  def using_queue_stream(func: (OutputStream) => Unit) = entry("queues.dat", func)
-  def using_queue_entry_stream(func: (OutputStream) => Unit) = entry("queue_entries.dat", func)
-  def using_message_stream(func: (OutputStream) => Unit) = entry("messages.dat", func)
-  def using_map_stream(func: (OutputStream) => Unit) = entry("map.dat", func)
-}
+case class ImportStreamManager(source:InputStream) {
+  
+  val stream = new TarInputStream(new GZIPInputStream(source))
 
-case class ZipInputStreamManager(zip:ZipFile) extends StreamManager[InputStream]() {
-  def entry(name:String, func: (InputStream) => Unit) = {
-    val entry = zip.getEntry(name)
-    if(entry == null) {
-      sys.error("Invalid data file, zip entry not found: "+name);
+  val version = try {
+    var entry = stream.getNextEntry
+    if( entry.getName != "0.ver" ) {
+      throw new Exception("0.ver entry missing")
     }
-    using(zip.getInputStream(entry)) { is=>
-      func(is)
+    read_text(stream).toInt
+  } catch {
+    case e => new IOException("Could not determine export format version: "+e)
+  }
+  
+  def getNext:AnyRef = {
+    var entry = stream.getNextEntry
+    if( entry==null ) {
+      return null;
+    }
+
+    if( entry.getName.endsWith(".qen") ) {
+      QueueEntryPB.FACTORY.parseFramed(stream)
+    } else if( entry.getName.endsWith(".msg") ) {
+      MessagePB.FACTORY.parseFramed(stream)
+    } else if( entry.getName.endsWith(".que") ) {
+      QueuePB.FACTORY.parseFramed(stream)
+    } else if( entry.getName.endsWith(".map") ) {
+      MapEntryPB.FACTORY.parseFramed(stream)
+    } else {
+      throw new Exception("Unknown entry: "+entry.getName)
     }
   }
-  def using_version_stream(func: (InputStream) => Unit) = entry("version.txt", func)
-  def using_queue_stream(func: (InputStream) => Unit) = entry("queues.dat", func)
-  def using_queue_entry_stream(func: (InputStream) => Unit) = entry("queue_entries.dat", func)
-  def using_message_stream(func: (InputStream) => Unit) = entry("messages.dat", func)
-  def using_map_stream(func: (InputStream) => Unit) = entry("map.dat", func)
 }
 
 
@@ -146,14 +186,12 @@ trait Store extends ServiceTrait {
   def load_message(messageKey:Long, locator:AtomicReference[Object])(callback:(Option[MessageRecord])=>Unit )
 
   /**
-   * Exports the contents of the store to the provided streams.  Each stream should contain
-   * a list of framed protobuf objects with the corresponding object types.
+   * Exports the contents of the store to the provided stream.
    */
-  def export_pb(streams:StreamManager[OutputStream], cb:(Option[String])=>Unit):Unit
+  def export_data(os:OutputStream, cb:(Option[String])=>Unit):Unit
 
   /**
-   * Imports a previously exported set of streams.  This deletes any previous data
-   * in the store.
+   * Imports a previous export from the input stream.
    */
-  def import_pb(streams:StreamManager[InputStream], cb:(Option[String])=>Unit):Unit
+  def import_data(is:InputStream, cb:(Option[String])=>Unit):Unit
 }
