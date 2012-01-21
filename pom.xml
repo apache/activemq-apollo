@@ -100,7 +100,6 @@
     <hawtbuf-version>1.8</hawtbuf-version>
     <stompjms-version>1.7</stompjms-version>
     
-    <jdbm-version>2.0.1</jdbm-version>
     <bdb-version>4.1.10</bdb-version>
 
     <leveldb-api-version>0.1</leveldb-api-version>
@@ -126,8 +125,6 @@
     <!-- disable unique version timestamps in snapshots -->
     <uniqueVersion>false</uniqueVersion>
     
-    <cascal-version>1.3-SNAPSHOT</cascal-version>
-    <hawtdb-version>1.6</hawtdb-version>
     <josql-version>1.5</josql-version>
     
     <!-- osgi stuff -->
@@ -470,10 +467,7 @@
     <profile>
       <id>unstable</id>
       <modules>
-        <!-- <module>apollo-cassandra</module> -->
-        <module>apollo-hawtdb</module>
         <module>apollo-openwire</module>
-        <module>apollo-jdbm2</module>
       </modules>
     </profile>
 

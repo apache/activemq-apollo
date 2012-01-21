@@ -181,8 +181,6 @@
                   <include name="**/package-info.java" />
                   <include name="**/*DTO.java" />
                   <exclude name="apollo-openwire/**" />
-                  <exclude name="apollo-cassandra/**" />
-                  <exclude name="apollo-hawtdb/**" />
                   <exclude name="**/.git/**" />
                   <exclude name="**/.svn/**" />
                 </schemagen>

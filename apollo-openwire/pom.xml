@@ -60,7 +60,7 @@
     <!-- so we can test against a persisentce store -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-hawtdb</artifactId>
+      <artifactId>apollo-leveldb</artifactId>
       <version>1.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
