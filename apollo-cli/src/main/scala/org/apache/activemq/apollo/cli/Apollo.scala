@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.cli
 
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import org.apache.karaf.shell.console.Main
 import org.apache.karaf.shell.console.jline.Console
 import jline.Terminal
@@ -24,11 +23,11 @@ import org.fusesource.jansi.Ansi
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.felix.service.command.CommandSession
 import org.apache.felix.gogo.runtime.CommandProcessorImpl
-import org.apache.activemq.apollo.util.FileSupport.RichFile._
 import java.util.logging.LogManager
 import java.io.{FileInputStream, File, PrintStream, InputStream}
 import org.apache.log4j.PropertyConfigurator
 import java.util.Properties
+import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 
 /**
  * <p>
@@ -36,7 +35,7 @@ import java.util.Properties
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object Apollo {
+object Apollo extends Apollo {
   def main(args: Array[String]) = {
 
     if( System.getProperty("java.util.logging.config.file") == null ) {
@@ -58,12 +57,9 @@ object Apollo {
       }
     }
 
-    // Just in case your running a sub command an not
-    // the broker
-    PropertyConfigurator.configure(new Properties())
-
     Ansi.ansi()
-    new Apollo().run(args)
+    Apollo.run(("apollo"::args.toList).toArray)
+    System.exit(0)
   }
 
   // Some ANSI helpers...
@@ -81,6 +77,8 @@ object Apollo {
       banner_displayed = true
     }
   }
+
+  override def getDiscoveryResource = "META-INF/services/org.apache.activemq.apollo/apollo-main.index"
 
   def print_tips(out: PrintStream) = using(getClass().getResourceAsStream("tips.txt")) { source=>
     copy(source, out)
@@ -131,10 +129,41 @@ class Apollo extends Main with Action {
     }
   }
 
+  @option(name = "--log", description="The logging level use.")
+  var log_level:String = "NONE"
+
   @argument(name = "args", description = "apollo sub command arguments", multiValued=true)
-  var args = Array[String]()
+  var args:Array[String] = _
 
   def execute(session: CommandSession): AnyRef = {
+    
+    // Just in case your running a sub command an not
+    // the broker
+    var log_properties: Properties = new Properties()
+    log_properties.put("log4j.appender.console", "org.apache.log4j.ConsoleAppender")
+    log_properties.put("log4j.appender.console.layout", "org.apache.log4j.PatternLayout")
+    log_properties.put("log4j.appender.console.layout.ConversionPattern", "%-5p | %m%n")
+
+
+    log_level = log_level.toUpperCase()
+    log_level match {
+      case "NONE" => log_properties.clear()
+      log_properties.put("log4j.rootLogger", "FATAL")
+      case "FATAL" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+      case "ERROR" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+      case "WARN" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+      case "INFO" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+      case "DEBUG" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+      case "TRACE" =>
+        log_properties.put("log4j.rootLogger", log_level+", console")
+    }
+    PropertyConfigurator.configure(log_properties)
+    
     run(session, args)
     null
   }
