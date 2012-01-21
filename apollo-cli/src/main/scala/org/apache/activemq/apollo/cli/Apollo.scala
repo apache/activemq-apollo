@@ -27,6 +27,8 @@ import org.apache.felix.gogo.runtime.CommandProcessorImpl
 import org.apache.activemq.apollo.util.FileSupport.RichFile._
 import java.util.logging.LogManager
 import java.io.{FileInputStream, File, PrintStream, InputStream}
+import org.apache.log4j.PropertyConfigurator
+import java.util.Properties
 
 /**
  * <p>
@@ -38,10 +40,10 @@ object Apollo {
   def main(args: Array[String]) = {
 
     if( System.getProperty("java.util.logging.config.file") == null ) {
-      val home = System.getProperty("apollo.home")
+      val home = System.getProperty("apollo.home", ".")
       var jul_config = new File(home) / "etc" / "jul.properties"
 
-      val base = System.getProperty("apollo.base")
+      val base = System.getProperty("apollo.base", ".")
       if ( base !=null ) {
         val file = new File(base) / "etc" / "jul.properties"
         if  ( file.exists()  ) {
@@ -49,10 +51,16 @@ object Apollo {
         }
       }
 
-      using(new FileInputStream(jul_config)) { is =>
-        LogManager.getLogManager.readConfiguration(is)
+      if( jul_config.exists() ) {
+        using(new FileInputStream(jul_config)) { is =>
+          LogManager.getLogManager.readConfiguration(is)
+        }
       }
     }
+
+    // Just in case your running a sub command an not
+    // the broker
+    PropertyConfigurator.configure(new Properties())
 
     Ansi.ansi()
     new Apollo().run(args)
