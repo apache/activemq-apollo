@@ -103,7 +103,7 @@
     <bdb-version>4.1.10</bdb-version>
 
     <leveldb-api-version>0.1</leveldb-api-version>
-    <leveldb-version>0.2-SNAPSHOT</leveldb-version>
+    <leveldb-version>0.2</leveldb-version>
     <leveldbjni-version>1.1</leveldbjni-version>
 
     <jasypt-version>1.6</jasypt-version>
