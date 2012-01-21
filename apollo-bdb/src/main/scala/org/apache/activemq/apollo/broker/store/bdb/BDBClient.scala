@@ -358,7 +358,7 @@ class BDBClient(store: BDBStore) {
                   to_pb(action.message_record)
                 }
 
-                messages_db.put(tx, action.message_record.key, pb)
+                messages_db.put(tx, action.message_record.key, pb.freeze)
               }
 
               action.enqueues.foreach { queueEntry =>
@@ -567,7 +567,7 @@ class BDBClient(store: BDBStore) {
         streams.using_queue_stream { queue_stream =>
           queues_db.cursor(tx) { (_, value) =>
             val record:QueueRecord = value
-            record.writeFramed(queue_stream)
+            record.freeze.writeFramed(queue_stream)
             true
           }
         }
@@ -588,7 +588,7 @@ class BDBClient(store: BDBStore) {
         streams.using_queue_entry_stream { queue_entry_stream=>
           entries_db.cursor(tx) { (key, value) =>
             val record:QueueEntryRecord = value
-            record.writeFramed(queue_entry_stream)
+            record.freeze.writeFramed(queue_entry_stream)
             true
           }
         }

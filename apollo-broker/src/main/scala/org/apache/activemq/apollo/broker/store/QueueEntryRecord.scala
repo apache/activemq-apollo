@@ -20,6 +20,7 @@ package org.apache.activemq.apollo.broker.store
 
 
 import org.fusesource.hawtbuf.Buffer
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -29,7 +30,7 @@ class QueueEntryRecord {
   var queue_key = 0L
   var entry_seq = 0L
   var message_key = 0L
-  var message_locator:Buffer = _
+  var message_locator:AtomicReference[Object] = _
   var attachment:Buffer = _
   var size = 0
   var expiration = 0L

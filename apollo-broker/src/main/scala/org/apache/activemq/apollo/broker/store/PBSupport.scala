@@ -27,7 +27,7 @@ import org.fusesource.hawtbuf.Buffer
  */
 object PBSupport {
 
-  implicit def to_pb(v: MessageRecord):MessagePB.Buffer = {
+  implicit def to_pb(v: MessageRecord):MessagePB.Bean = {
     val pb = new MessagePB.Bean
     pb.setMessageKey(v.key)
     pb.setProtocol(v.protocol)
@@ -35,7 +35,7 @@ object PBSupport {
     pb.setValue(v.buffer)
     if(v.expiration!=0)
       pb.setExpiration(v.expiration)
-    pb.freeze
+    pb
   }
 
   implicit def from_pb(pb: MessagePB.Getter):MessageRecord = {
@@ -48,51 +48,49 @@ object PBSupport {
     rc
   }
 
-  def encode_message_record(out: OutputStream, v: MessageRecord) = to_pb(v).writeUnframed(out)
+  def encode_message_record(out: OutputStream, v: MessageRecord) = to_pb(v).freeze.writeUnframed(out)
   def decode_message_record(in: InputStream):MessageRecord = MessagePB.FACTORY.parseUnframed(in)
 
-  implicit def encode_message_record(v: MessageRecord):Array[Byte] = to_pb(v).toUnframedByteArray
+  implicit def encode_message_record(v: MessageRecord):Array[Byte] = to_pb(v).freeze.toUnframedByteArray
   implicit def decode_message_record(data: Array[Byte]):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
 
-  implicit def encode_message_record_buffer(v: MessageRecord) = to_pb(v).toUnframedBuffer
+  implicit def encode_message_record_buffer(v: MessageRecord) = to_pb(v).freeze.toUnframedBuffer
   implicit def decode_message_record_buffer(data: Buffer):MessageRecord = MessagePB.FACTORY.parseUnframed(data)
 
 
-  implicit def to_pb(v: QueueRecord):QueuePB.Buffer = {
+  implicit def to_pb(v: QueueRecord):QueuePB.Bean = {
     val pb = new QueuePB.Bean
     pb.setKey(v.key)
     pb.setBindingData(v.binding_data)
     pb.setBindingKind(v.binding_kind)
-    pb.freeze
+    pb
   }
 
   implicit def from_pb(pb: QueuePB.Getter):QueueRecord = {
     QueueRecord(pb.getKey, pb.getBindingKind, pb.getBindingData)
   }
 
-  def encode_queue_record(out: OutputStream, v: QueueRecord) = to_pb(v).writeUnframed(out)
+  def encode_queue_record(out: OutputStream, v: QueueRecord) = to_pb(v).freeze.writeUnframed(out)
   def decode_queue_record(in: InputStream):QueueRecord = QueuePB.FACTORY.parseUnframed(in)
 
-  implicit def encode_queue_record(v: QueueRecord) = to_pb(v).toUnframedByteArray
+  implicit def encode_queue_record(v: QueueRecord) = to_pb(v).freeze.toUnframedByteArray
   implicit def decode_queue_record(data: Array[Byte]):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
 
-  implicit def encode_queue_record_buffer(v: QueueRecord) = to_pb(v).toUnframedBuffer
+  implicit def encode_queue_record_buffer(v: QueueRecord) = to_pb(v).freeze.toUnframedBuffer
   implicit def decode_queue_record_buffer(data: Buffer):QueueRecord = QueuePB.FACTORY.parseUnframed(data)
 
-  implicit def to_pb(v: QueueEntryRecord):QueueEntryPB.Buffer = {
+  implicit def to_pb(v: QueueEntryRecord):QueueEntryPB.Bean = {
     val pb = new QueueEntryPB.Bean
     pb.setQueueKey(v.queue_key)
     pb.setQueueSeq(v.entry_seq)
     pb.setMessageKey(v.message_key)
     pb.setAttachment(v.attachment)
     pb.setSize(v.size)
-    if(v.message_locator!=0)
-      pb.setMessageLocator(v.message_locator)
     if(v.expiration!=0)
       pb.setExpiration(v.expiration)
     if(v.redeliveries!=0)
       pb.setRedeliveries(v.redeliveries)
-    pb.freeze
+    pb
   }
 
   implicit def from_pb(pb: QueueEntryPB.Getter):QueueEntryRecord = {
@@ -100,7 +98,6 @@ object PBSupport {
     rc.queue_key = pb.getQueueKey
     rc.entry_seq = pb.getQueueSeq
     rc.message_key = pb.getMessageKey
-    rc.message_locator = pb.getMessageLocator
     rc.attachment = pb.getAttachment
     rc.size = pb.getSize
     rc.expiration = pb.getExpiration
@@ -108,13 +105,13 @@ object PBSupport {
     rc
   }
 
-  def encode_queue_entry_record(out: OutputStream, v: QueueEntryRecord) = to_pb(v).writeUnframed(out)
+  def encode_queue_entry_record(out: OutputStream, v: QueueEntryRecord) = to_pb(v).freeze.writeUnframed(out)
   def decode_queue_entry_record(in: InputStream):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(in)
 
-  implicit def encode_queue_entry_record(v: QueueEntryRecord) = to_pb(v).toUnframedByteArray
+  implicit def encode_queue_entry_record(v: QueueEntryRecord) = to_pb(v).freeze.toUnframedByteArray
   implicit def decode_queue_entry_record(data: Array[Byte]):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
 
-  implicit def encode_queue_entry_record_buffer(v: QueueEntryRecord) = to_pb(v).toUnframedBuffer
+  implicit def encode_queue_entry_record_buffer(v: QueueEntryRecord) = to_pb(v).freeze.toUnframedBuffer
   implicit def decode_queue_entry_record_buffer(data: Buffer):QueueEntryRecord = QueueEntryPB.FACTORY.parseUnframed(data)
 
 }

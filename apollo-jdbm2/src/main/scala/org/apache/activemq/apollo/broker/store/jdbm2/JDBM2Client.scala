@@ -386,7 +386,7 @@ class JDBM2Client(store: JDBM2Store) {
               to_pb(action.message_record)
             }
 
-            messages_db.put(action.message_record.key, pb)
+            messages_db.put(action.message_record.key, pb.freeze)
             if( action.message_record.key > last_message_key ) {
               last_message_key = action.message_record.key
               recman.setNamedObject("last_message_key", last_message_key)
@@ -514,7 +514,7 @@ class JDBM2Client(store: JDBM2Store) {
       streams.using_queue_stream { queue_stream=>
         queues_db.cursor { (_, value) =>
           val record:QueueRecord = value
-          record.writeFramed(queue_stream)
+          record.freeze.writeFramed(queue_stream)
           true
         }
       }
@@ -532,7 +532,7 @@ class JDBM2Client(store: JDBM2Store) {
       streams.using_queue_entry_stream { queue_entry_stream=>
         entries_db.cursor { (_, value) =>
           val record:QueueEntryRecord = value
-          record.writeFramed(queue_entry_stream)
+          record.freeze.writeFramed(queue_entry_stream)
           true
         }
       }

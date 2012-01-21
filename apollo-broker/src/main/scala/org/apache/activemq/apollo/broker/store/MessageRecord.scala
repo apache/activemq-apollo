@@ -32,6 +32,6 @@ class MessageRecord {
   var buffer: Buffer = _
   var direct_buffer: DirectBuffer = _
   var expiration = 0L
-  var locator:AtomicReference[Array[Byte]] = _
+  var locator:AtomicReference[Object] = _
 
 }

@@ -166,7 +166,7 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
             } else {
               copy.uow.retain
             }
-            copy.storeLocator = new AtomicReference[Array[Byte]]()
+            copy.storeLocator = new AtomicReference[Object]()
             copy.storeKey = copy.uow.store(copy.createMessageRecord)
           }
 

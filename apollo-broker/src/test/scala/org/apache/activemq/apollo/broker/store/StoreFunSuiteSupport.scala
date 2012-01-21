@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.util.{LoggingTracker, FunSuiteSupport, LongCou
 import org.scalatest.BeforeAndAfterEach
 import java.io.File
 import org.apache.activemq.apollo.util.FileSupport._
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * <p>Implements generic testing of Store implementations.</p>
@@ -95,26 +96,29 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     queue_a.key
   }
 
-  def add_message(batch:StoreUOW, content:String):Long = {
+  def add_message(batch:StoreUOW, content:String) = {
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
     message.buffer = ascii(content).buffer
     message.size = message.buffer.length
-    batch.store(message)
+    message.locator = new AtomicReference[Object]()
+    val key = batch.store(message)
+    (key, message.locator)
   }
 
 
-  def entry(queue_key:Long, entry_seq:Long, message_key:Long=0) = {
+  def entry(queue_key:Long, entry_seq:Long, message_key:(Long, AtomicReference[Object])) = {
     var queueEntry = new QueueEntryRecord
     queueEntry.queue_key = queue_key
     queueEntry.entry_seq = entry_seq
-    queueEntry.message_key = message_key
+    queueEntry.message_key = message_key._1
+    queueEntry.message_locator = message_key._2
     queueEntry
   }
 
   def populate(queue_key:Long, messages:List[String], first_seq:Long=1) = {
     var batch = store.create_uow
-    var msg_keys = ListBuffer[Long]()
+    var msg_keys = ListBuffer[(Long, AtomicReference[Object])]()
     var next_seq = first_seq
 
     messages.foreach { message=>
@@ -131,7 +135,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     batch.release
 
     msg_keys.foreach { msgKey =>
-      store.flush_message(msgKey) {}
+      store.flush_message(msgKey._1) {}
     }
     tracker.await
     msg_keys
@@ -141,7 +145,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head, null)(cb) )
+    val rc:Option[MessageRecord] = CB( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
     }
@@ -172,8 +176,8 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
-    val rc:Seq[QueueEntryRecord] = CB( cb=> store.list_queue_entries(A,msg_keys.head, msg_keys.last)(cb) )
-    expect(msg_keys.toSeq) {
+    val rc:Seq[QueueEntryRecord] = CB( cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb) )
+    expect(msg_keys.toSeq.map(_._1)) {
       rc.map( _.message_key )
     }
   }
@@ -211,7 +215,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     batch.on_complete(task.run)
     batch.release
 
-    store.flush_message(m1) {}
+    store.flush_message(m1._1) {}
 
     expect(true) {
       tracker.await(1, TimeUnit.SECONDS)

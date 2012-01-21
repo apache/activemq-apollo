@@ -31,28 +31,25 @@ import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
 import collection.immutable.TreeMap
 import org.fusesource.leveldbjni.internal.Util
 import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
-import java.util.concurrent.atomic.AtomicReference
 import org.apache.activemq.apollo.broker.Broker
 import org.apache.activemq.apollo.util.ProcessSupport._
 import collection.mutable.{HashMap, ListBuffer}
 import org.apache.activemq.apollo.dto.JsonCodec
-import java.util.Map
 import org.iq80.leveldb._
 import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
-import org.apache.activemq.apollo.broker.store.PBSupport._
-import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait._
+import org.apache.activemq.apollo.broker.store.PBSupport
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object LevelDBClient extends Log {
 
-  final val message_prefix = 'm'.toByte
   final val queue_prefix = 'q'.toByte
   final val queue_entry_prefix = 'e'.toByte
   final val map_prefix = 'p'.toByte
+  final val tmp_prefix = 't'.toByte
 
-  final val message_prefix_array = Array(message_prefix)
   final val queue_prefix_array = Array(queue_prefix)
   final val map_prefix_array = Array(map_prefix)
   final val queue_entry_prefix_array = Array(queue_entry_prefix)
@@ -216,7 +213,6 @@ class LevelDBClient(store: LevelDBStore) {
   }
 
   def log_size = {
-    import OptionSupport._
     Option(config.log_size).map(MemoryPropertyEditor.parse(_)).map{size=>
       if(size == MemoryPropertyEditor.parse("2G")) {
         Int.MaxValue // which is 2G - 1 (close enough!)
@@ -266,7 +262,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     index_options.cacheSize(Option(config.index_cache_size).map(MemoryPropertyEditor.parse(_).toLong).getOrElse(1024*1024*256L))
     index_options.logger(new Logger() {
-      def log(msg: String) = debug(store.store_kind+": "+msg.stripSuffix("\n"))
+      def log(msg: String) = trace(store.store_kind+": "+msg.stripSuffix("\n"))
     })
 
     log = create_log
@@ -348,43 +344,27 @@ class LevelDBClient(store: LevelDBStore) {
               case (kind, data, next_pos) =>
                 kind match {
                   case LOG_ADD_MESSAGE =>
-                    replay_operations+=1
-                    val record: MessageRecord = data
-                    index.put(encode_key(message_prefix, record.key), encode_locator(pos, data.length))
                   case LOG_ADD_QUEUE_ENTRY =>
                     replay_operations+=1
-                    val record: QueueEntryRecord = data
-                    index.put(encode_key(queue_entry_prefix, record.queue_key, record.entry_seq), data)
-                    
-                    // Figure out which log file this message reference is pointing at..
-                    val pos = (if(record.message_locator!=null) {
-                      Some(decode_locator(record.message_locator)._1)
-                    } else {
-                      index.get(encode_key(message_prefix, record.message_key)).map(decode_locator(_)._1)
-                    })
-                    
-                    // Increment it.
+                    val record = QueueEntryPB.FACTORY.parseUnframed(data)
+                    val pos = decode_vlong(record.getMessageLocator)
+                    index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), data)
                     pos.foreach(log_ref_increment(_))
+
                   case LOG_REMOVE_QUEUE_ENTRY =>
                     replay_operations+=1
                     index.get(data, new ReadOptions).foreach { value=>
-                      val record: QueueEntryRecord = value
-  
-                      // Figure out which log file this message reference is pointing at..
-                      val pos = (if(record.message_locator!=null) {
-                        Some(decode_locator(record.message_locator)._1)
-                      } else {
-                        index.get(encode_key(message_prefix, record.message_key)).map(decode_locator(_)._1)
-                      })
+                      val record = QueueEntryPB.FACTORY.parseUnframed(value)
+                      val pos = decode_vlong(record.getMessageLocator)
                       pos.foreach(log_ref_decrement(_))
-
                       index.delete(data)
                     }
                     
                   case LOG_ADD_QUEUE =>
                     replay_operations+=1
-                    val record: QueueRecord = data
-                    index.put(encode_key(queue_prefix, record.key), data)
+                    val record = QueuePB.FACTORY.parseUnframed(data)
+                    index.put(encode_key(queue_prefix, record.getKey), data)
+
                   case LOG_REMOVE_QUEUE =>
                     replay_operations+=1
                     val ro = new ReadOptions
@@ -397,8 +377,8 @@ class LevelDBClient(store: LevelDBStore) {
 
                       // Figure out what log file that message entry was in so we can,
                       // decrement the log file reference.
-                      val entry_record:QueueEntryRecord = value
-                      val pos = decode_locator(entry_record.getMessageLocator)._1
+                      val record = QueueEntryPB.FACTORY.parseUnframed(value)
+                      val pos = decode_vlong(record.getMessageLocator)
                       log_ref_decrement(pos)
                       true
                     }
@@ -441,21 +421,22 @@ class LevelDBClient(store: LevelDBStore) {
     index.cursor_prefixed(queue_entry_prefix_array) { (key, value)=>
       try {
         val (_, queue_key, seq_key) = decode_long_long_key(key)
-        val record: QueueEntryRecord = value
+        val record = QueueEntryPB.FACTORY.parseUnframed(value)
+        val (pos, len) = decode_locator(record.getMessageLocator)
         if (record.getQueueKey != queue_key) {
           throw new IOException("key missmatch")
         }
         if (record.getQueueSeq != seq_key) {
           throw new IOException("key missmatch")
         }
-        val pos = decode_locator(record.getMessageLocator)._1
         log.log_info(pos).foreach {
           log_info =>
             actual_log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
         }
         referenced_queues += queue_key
       } catch {
-        case _ =>
+        case e =>
+          trace("invalid queue entry record: %s, error: %s", new Buffer(key), e)
           fixed_records += 1
           // Invalid record.
           index.delete(key)
@@ -467,13 +448,14 @@ class LevelDBClient(store: LevelDBStore) {
     index.cursor_prefixed(queue_prefix_array) { (key, value)=>
       try {
         val (_, queue_key) = decode_long_key(key)
-        val record: QueueRecord = value
+        val record = QueuePB.FACTORY.parseUnframed(value)
         if (record.getKey != queue_key) {
           throw new IOException("key missmatch")
         }
         referenced_queues -= queue_key
       } catch {
-        case _ =>
+        case e =>
+          trace("invalid queue record: %s, error: %s", new Buffer(key), e)
           fixed_records += 1
           // Invalid record.
           index.delete(key)
@@ -484,11 +466,11 @@ class LevelDBClient(store: LevelDBStore) {
     referenced_queues.foreach { queue_key=>
       // We have queue entries for a queue that does not exist..
       index.cursor_prefixed(encode_key(queue_entry_prefix, queue_key)) { (key, value)=>
-
+        trace("invalid queue entry record: %s, error: queue key does not exits %s", new Buffer(key), queue_key)
         fixed_records += 1
         index.delete(key)
-        val entry_record:QueueEntryRecord = value
-        val pos = decode_locator(entry_record.getMessageLocator)._1
+        val record = QueueEntryPB.FACTORY.parseUnframed(value)
+        val pos = decode_vlong(record.getMessageLocator)
         log.log_info(pos).foreach { log_info =>
           actual_log_refs.get(log_info.position).foreach { counter =>
             if (counter.decrementAndGet() == 0) {
@@ -501,6 +483,7 @@ class LevelDBClient(store: LevelDBStore) {
     }
 
     if( actual_log_refs != log_refs ) {
+      debug("expected != actual log references. expected: %s, actual %s", log_refs, actual_log_refs)
       log_refs.clear()
       log_refs ++= actual_log_refs
     }
@@ -679,6 +662,7 @@ class LevelDBClient(store: LevelDBStore) {
     try{
       log.close
       directory.list_files.foreach(_.recursive_delete)
+      log_refs.clear()
     } finally {
       retry {
         log.open
@@ -690,26 +674,34 @@ class LevelDBClient(store: LevelDBStore) {
   def add_queue(record: QueueRecord, callback:Runnable) = {
     retry_using_index {
       log.appender { appender =>
-        appender.append(LOG_ADD_QUEUE, record)
-        index.put(encode_key(queue_prefix, record.key), record)
+        val value:Buffer = PBSupport.encode_queue_record(record)
+        appender.append(LOG_ADD_QUEUE, value)
+        index.put(encode_key(queue_prefix, record.key), value)
       }
     }
     callback.run
   }
 
-  def log_ref_decrement(pos: Long) {
-    log.log_info(pos).foreach { log_info =>
-      log_refs.get(log_info.position).foreach { counter =>
-        if (counter.decrementAndGet() == 0) {
-          log_refs.remove(log_info.position)
+  def log_ref_decrement(pos: Long) = this.synchronized {
+    log.log_info(pos) match {
+      case Some(log_info)=>
+        log_refs.get(log_info.position).foreach { counter =>
+          val count = counter.decrementAndGet()
+          if (count == 0) {
+            log_refs.remove(log_info.position)
+          }
         }
-      }
+      case None =>
+        warn("Invalid log position: "+pos)
     }
   }
 
-  def log_ref_increment(pos: Long) {
-    log.log_info(pos).foreach { log_info =>
-      log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
+  def log_ref_increment(pos: Long) = this.synchronized {
+    log.log_info(pos) match {
+      case Some(log_info)=>
+        val count = log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
+      case None =>
+        warn("Invalid log position: "+pos)
     }
   }
 
@@ -726,8 +718,8 @@ class LevelDBClient(store: LevelDBStore) {
 
           // Figure out what log file that message entry was in so we can,
           // decrement the log file reference.
-          val entry_record:QueueEntryRecord = value
-          val pos = decode_locator(entry_record.getMessageLocator)._1
+          val record = QueueEntryPB.FACTORY.parseUnframed(value)
+          val pos = decode_vlong(record.getMessageLocator)
           log_ref_decrement(pos)
           true
         }
@@ -758,38 +750,40 @@ class LevelDBClient(store: LevelDBStore) {
 
             uow.actions.foreach { case (msg, action) =>
               val message_record = action.message_record
-              var pos = -1L
-              var len = 0
-              var locator_buffer:Buffer = null
+              var locator:(Long, Int) = null
 
               if (message_record != null) {
-                val message_data:Array[Byte] = message_record
-                len = message_data.length
-                pos = appender.append(LOG_ADD_MESSAGE, message_data)
-                val locator_data = encode_locator(pos, len)
-                locator_buffer = new Buffer(locator_data)
-                if( message_record.locator !=null ) {
-                  message_record.locator.set(locator_data);
-                }
-                batch.put(encode_key(message_prefix, action.message_record.key), locator_data)
+                val message_data = PBSupport.encode_message_record(message_record)
+                val len = message_data.length
+                val pos = appender.append(LOG_ADD_MESSAGE, message_data)
+                locator = (pos, len)
+                message_record.locator.set(locator);
               }
 
               action.dequeues.foreach { entry =>
-                if( locator_buffer==null && entry.message_locator!=null ) {
-                  locator_buffer = entry.message_locator
-                  val t = decode_locator(locator_buffer)
-                  pos = t._1
-                  len = t._2
+                if( locator==null ) {
+                  locator = entry.message_locator.get().asInstanceOf[(Long, Int)]
                 }
+                val (pos, len) = locator
                 val key = encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq)
                 appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
                 batch.delete(key)
                 log_ref_decrement(pos)
               }
 
+              var locator_buffer:Buffer = null
               action.enqueues.foreach { entry =>
-                entry.message_locator = locator_buffer
-                val encoded:Array[Byte] = entry
+                val (pos, len) = locator
+                entry.message_locator.set(locator)
+
+                if ( locator_buffer==null ) {
+                  locator_buffer = encode_locator(pos, len)
+                }
+
+                val record = PBSupport.to_pb(entry)
+                record.setMessageLocator(locator_buffer)
+
+                val encoded = record.freeze().toUnframedBuffer
                 appender.append(LOG_ADD_QUEUE_ENTRY, encoded)
                 batch.put(encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
                 
@@ -815,7 +809,7 @@ class LevelDBClient(store: LevelDBStore) {
   val metric_load_from_index_counter = new TimeCounter
   var metric_load_from_index = metric_load_from_index_counter(false)
 
-  def loadMessages(requests: ListBuffer[(Long, AtomicReference[Array[Byte]], (Option[MessageRecord])=>Unit)]):Unit = {
+  def loadMessages(requests: ListBuffer[(Long, AtomicReference[Object], (Option[MessageRecord])=>Unit)]):Unit = {
 
     val ro = new ReadOptions
     ro.verifyChecksums(verify_checksums)
@@ -825,40 +819,14 @@ class LevelDBClient(store: LevelDBStore) {
       index.snapshot { snapshot =>
         ro.snapshot(snapshot)
         requests.flatMap { x =>
-          val (message_key, locator, callback) = x
+          val (_, locator, callback) = x
           val record = metric_load_from_index_counter.time {
-            var pos = 0L
-            var len = 0
-            var locator_data:Array[Byte] = null
-            if( locator!=null ) {
-              locator_data = locator.get()
-              if( locator_data!=null ) {
-                val t = decode_locator(locator_data)
-                pos = t._1
-                len = t._2
-              }
-            }
-            if( pos == 0L ) {
-              index.get(encode_key(message_prefix, message_key), ro) match {
-                case Some(value) =>
-                  locator_data = value
-                  val t = decode_locator(locator_data)
-                  pos = t._1
-                  len = t._2
-
-                case None =>
-                  pos = 0L
-              }
-            }
-            if (pos == 0L ) {
-              None
-            } else {
-              log.read(pos, len).map { data =>
-                val rc:MessageRecord = data
-                rc.locator = new AtomicReference[Array[Byte]](locator_data)
-                assert( rc.protocol!=null )
-                rc
-              }
+            val (pos, len ) = locator.get().asInstanceOf[(Long, Int)]
+            log.read(pos, len).map { data =>
+              val rc = PBSupport.decode_message_record(data)
+              rc.locator = locator
+              assert( rc.protocol!=null )
+              rc
             }
           }
           if( record.isDefined ) {
@@ -880,16 +848,13 @@ class LevelDBClient(store: LevelDBStore) {
       index.snapshot { snapshot =>
         ro.snapshot(snapshot)
         missing.foreach { x =>
-          val (message_key, locator, callback) = x
-          val record = metric_load_from_index_counter.time {
-            index.get(encode_key(message_prefix, message_key), ro).flatMap{ locator_data=>
-              val (pos, len) = decode_locator(locator_data)
-              log.read(pos, len).map { data =>
-                val rc:MessageRecord = data
-                rc.locator = new AtomicReference[Array[Byte]](locator_data)
-                assert( rc.protocol!=null )
-                rc
-              }
+          val (_, locator, callback) = x
+          val record:Option[MessageRecord] = metric_load_from_index_counter.time {
+            val (pos, len ) = locator.get().asInstanceOf[(Long, Int)]
+            log.read(pos, len).map { x =>
+              val rc:MessageRecord = PBSupport.decode_message_record(x)
+              rc.locator = locator
+              rc
             }
           }
           callback(record)
@@ -917,7 +882,9 @@ class LevelDBClient(store: LevelDBStore) {
       val ro = new ReadOptions
       ro.fillCache(false)
       ro.verifyChecksums(verify_checksums)
-      index.get(encode_key(queue_prefix, queue_key), ro).map( x=> decode_queue_record(x)  )
+      index.get(encode_key(queue_prefix, queue_key), ro).map{ x=>
+        PBSupport.decode_queue_record(x)
+      }
     }
   }
 
@@ -939,17 +906,18 @@ class LevelDBClient(store: LevelDBStore) {
             group.first_entry_seq = current_key
           }
 
-          val entry:QueueEntryRecord = value
+          val entry = QueueEntryPB.FACTORY.parseUnframed(value)
+          val pos = decode_vlong(entry.getMessageLocator)
 
           group.last_entry_seq = current_key
           group.count += 1
-          group.size += entry.size
+          group.size += entry.getSize
 
           if(group.expiration == 0){
-            group.expiration = entry.expiration
+            group.expiration = entry.getExpiration
           } else {
-            if( entry.expiration != 0 ) {
-              group.expiration = entry.expiration.min(group.expiration)
+            if( entry.getExpiration != 0 ) {
+              group.expiration = entry.getExpiration.min(group.expiration)
             }
           }
 
@@ -979,7 +947,10 @@ class LevelDBClient(store: LevelDBStore) {
         val start = encode_key(queue_entry_prefix, queue_key, firstSeq)
         val end = encode_key(queue_entry_prefix, queue_key, lastSeq+1)
         index.cursor_range( start, end, ro ) { (key, value) =>
-          rc += value
+          val record = QueueEntryPB.FACTORY.parseUnframed(value)
+          val entry = PBSupport.from_pb(record)
+          entry.message_locator = new AtomicReference[Object](decode_locator(record.getMessageLocator))
+          rc += entry
           true
         }
       }
@@ -987,11 +958,7 @@ class LevelDBClient(store: LevelDBStore) {
     rc
   }
 
-  def getLastMessageKey:Long = {
-    retry_using_index {
-      index.last_key(message_prefix_array).map(decode_long_key(_)._2).getOrElse(0)
-    }
-  }
+  def getLastMessageKey:Long = 0
 
   def get(key: Buffer):Option[Buffer] = {
     retry_using_index {
@@ -1040,71 +1007,78 @@ class LevelDBClient(store: LevelDBStore) {
   //
   // Collects detailed usage information about the journal like who's referencing it.
   //
-  def get_log_usage_details = {
-
-    val usage_map = new ApolloTreeMap[Long,UsageCounter]()
-    log.log_mutex.synchronized {
-      log.log_infos.foreach(entry=> usage_map.put(entry._1, UsageCounter(entry._2)) )
-    }
-
-    def lookup_usage(pos: Long) = {
-      var entry = usage_map.floorEntry(pos)
-      if (entry != null) {
-        val usage = entry.getValue()
-        if (pos < usage.info.limit) {
-          Some(usage)
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    }
-
-    val ro = new ReadOptions()
-    ro.fillCache(false)
-    ro.verifyChecksums(verify_checksums)
-
-    retry_using_index {
-      index.snapshot { snapshot =>
-        ro.snapshot(snapshot)
-
-        // Figure out which journal files are still in use by which queues.
-        index.cursor_prefixed(queue_entry_prefix_array, ro) { (_,value) =>
-
-          val entry_record:QueueEntryRecord = value
-          val pos = if(entry_record.message_locator!=null) {
-            Some(decode_locator(entry_record.message_locator)._1)
-          } else {
-            index.get(encode_key(message_prefix, entry_record.message_key)).map(decode_locator(_)._1)
-          }
-
-          pos.flatMap(lookup_usage(_)).foreach { usage =>
-            if( usage.first_reference_queue == null ) {
-              usage.first_reference_queue = index.get(encode_key(queue_prefix, entry_record.queue_key), ro).map( x=> decode_queue_record(x) ).getOrElse(null)
-            }
-            usage.increment(entry_record.size)
-          }
-
-          true
-        }
-      }
-    }
-
-    import collection.JavaConversions._
-    usage_map.values.toSeq.toArray
-  }
+//  def get_log_usage_details = {
+//
+//    val usage_map = new ApolloTreeMap[Long,UsageCounter]()
+//    log.log_mutex.synchronized {
+//      log.log_infos.foreach(entry=> usage_map.put(entry._1, UsageCounter(entry._2)) )
+//    }
+//
+//    def lookup_usage(pos: Long) = {
+//      var entry = usage_map.floorEntry(pos)
+//      if (entry != null) {
+//        val usage = entry.getValue()
+//        if (pos < usage.info.limit) {
+//          Some(usage)
+//        } else {
+//          None
+//        }
+//      } else {
+//        None
+//      }
+//    }
+//
+//    val ro = new ReadOptions()
+//    ro.fillCache(false)
+//    ro.verifyChecksums(verify_checksums)
+//
+//    retry_using_index {
+//      index.snapshot { snapshot =>
+//        ro.snapshot(snapshot)
+//
+//        // Figure out which journal files are still in use by which queues.
+//        index.cursor_prefixed(queue_entry_prefix_array, ro) { (_,value) =>
+//
+//          val entry_record:QueueEntryRecord = value
+//          val pos = if(entry_record.message_locator!=null) {
+//            Some(decode_locator(entry_record.message_locator)._1)
+//          } else {
+//            index.get(encode_key(message_prefix, entry_record.message_key)).map(decode_locator(_)._1)
+//          }
+//
+//          pos.flatMap(lookup_usage(_)).foreach { usage =>
+//            if( usage.first_reference_queue == null ) {
+//              usage.first_reference_queue = index.get(encode_key(queue_prefix, entry_record.queue_key), ro).map( x=> decode_queue_record(x) ).getOrElse(null)
+//            }
+//            usage.increment(entry_record.size)
+//          }
+//
+//          true
+//        }
+//      }
+//    }
+//
+//    import collection.JavaConversions._
+//    usage_map.values.toSeq.toArray
+//  }
 
 
   def export_pb(streams:StreamManager[OutputStream]):Result[Zilch,String] = {
     try {
       retry_using_index {
+        
+        // Delete all the tmp keys..
+        index.cursor_keys_prefixed(Array(tmp_prefix)) { key =>
+          index.delete(key)
+          true
+        }
+        
         index.snapshot { snapshot=>
           val ro = new ReadOptions
           ro.snapshot(snapshot)
           ro.verifyChecksums(verify_checksums)
           ro.fillCache(false)
-
+          
           def write_framed(stream:OutputStream, value:Array[Byte]) = {
             val helper = new AbstractVarIntSupport {
               def readByte: Byte = throw new UnsupportedOperationException
@@ -1128,24 +1102,44 @@ class LevelDBClient(store: LevelDBStore) {
           }
 
           streams.using_queue_stream { stream =>
-            index.cursor_prefixed(queue_prefix_array, ro) { (_, value) =>
+            index.cursor_prefixed(queue_prefix_array) { (_, value) =>
               write_framed(stream, value)
+            }
+          }
+
+          // Figure out the active log locations..
+          streams.using_queue_entry_stream { stream=>
+            index.cursor_prefixed(queue_entry_prefix_array, ro) { (_, value) =>
+              write_framed(stream, value)
+              val record = QueueEntryPB.FACTORY.parseUnframed(value)
+              val (pos, len) = decode_locator(record.getMessageLocator)
+              index.put(encode_key(tmp_prefix, pos), encode_vlong(len))
+              true
             }
           }
 
           streams.using_message_stream { stream=>
-            index.cursor_prefixed(message_prefix_array, ro) { (_, value) =>
-              write_framed(stream, value)
-            }
-          }
-
-          streams.using_queue_entry_stream { stream=>
-            index.cursor_prefixed(queue_entry_prefix_array, ro) { (_, value) =>
-              write_framed(stream, value)
+            index.cursor_prefixed(Array(tmp_prefix), ro) { (key, value) =>
+              val (_, pos) = decode_long_key(key)
+              val len = decode_vlong(value).toInt
+              log.read(pos, len).foreach { value =>
+                // Set the message key to be the position in the log.
+                val pb = MessagePB.FACTORY.parseUnframed(value).copy
+                pb.setMessageKey(pos)
+                write_framed(stream, pb.freeze.toUnframedBuffer)
+              }
+              true
             }
           }
 
         }
+
+        // Delete all the tmp keys..
+        index.cursor_keys_prefixed(Array(tmp_prefix)) { key =>
+          index.delete(key)
+          true
+        }
+
       }
       Success(Zilch)
     } catch {
@@ -1157,7 +1151,10 @@ class LevelDBClient(store: LevelDBStore) {
   def import_pb(streams:StreamManager[InputStream]):Result[Zilch,String] = {
     try {
       purge
-
+      log_refs.clear()
+          
+      val actual_log_refs = HashMap[Long, LongCounter]()
+      
       retry_using_index {
         def foreach[Buffer] (stream:InputStream, fact:PBMessageFactory[_,_])(func: (Buffer)=>Unit):Unit = {
           var done = false
@@ -1180,31 +1177,42 @@ class LevelDBClient(store: LevelDBStore) {
 
           streams.using_queue_stream { stream=>
             foreach[QueuePB.Buffer](stream, QueuePB.FACTORY) { record=>
-              index.put(encode_key(queue_prefix, record.key), record.toUnframedByteArray)
+              index.put(encode_key(queue_prefix, record.getKey), record.toUnframedByteArray)
             }
           }
 
           streams.using_message_stream { stream=>
             foreach[MessagePB.Buffer](stream, MessagePB.FACTORY) { record=>
-              val message_data = record.toUnframedByteArray
+              val message_data = record.toUnframedBuffer
               val pos = appender.append(LOG_ADD_MESSAGE, message_data)
-              index.put(encode_key(message_prefix, record.key), encode_locator(pos, message_data.length))
+              index.put(encode_key(tmp_prefix, record.getMessageKey), encode_locator(pos, message_data.length))
             }
           }
 
           streams.using_queue_entry_stream { stream=>
             foreach[QueueEntryPB.Buffer](stream, QueueEntryPB.FACTORY) { record=>
-              val r:QueueEntryRecord = record
               val copy = record.copy();
-              index.get(encode_key(message_prefix, r.message_key)).foreach { locator=>
-                copy.setMessageLocator(new Buffer(locator))
-                index.put(encode_key(queue_entry_prefix, r.queue_key, r.entry_seq), copy.freeze().toUnframedByteArray)
+              index.get(encode_key(tmp_prefix, record.getMessageKey)).foreach { locator=>
+                val (pos, len) = decode_locator(locator)
+                copy.setMessageLocator(locator)
+                index.put(encode_key(queue_entry_prefix, record.getQueueKey, record.getQueueSeq), copy.freeze().toUnframedBuffer)
+                
+                log.log_info(pos).foreach { log_info =>
+                  log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
+                }
               }
             }
           }
         }
-
       }
+
+      store_log_refs
+      // Delete all the tmp keys..
+      index.cursor_keys_prefixed(Array(tmp_prefix)) { key =>
+        index.delete(key)
+        true
+      }
+      
       snapshot_index
       Success(Zilch)
 

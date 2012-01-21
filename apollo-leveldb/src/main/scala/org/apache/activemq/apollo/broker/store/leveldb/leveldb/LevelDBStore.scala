@@ -202,12 +202,12 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  val load_source = createSource(new ListEventAggregator[(Long, AtomicReference[Array[Byte]], (Option[MessageRecord])=>Unit)](), dispatch_queue)
+  val load_source = createSource(new ListEventAggregator[(Long, AtomicReference[Object], (Option[MessageRecord])=>Unit)](), dispatch_queue)
   load_source.setEventHandler(^{drain_loads});
   load_source.resume
 
 
-  def load_message(messageKey: Long, locator:AtomicReference[Array[Byte]])(callback: (Option[MessageRecord]) => Unit) = {
+  def load_message(messageKey: Long, locator:AtomicReference[Object])(callback: (Option[MessageRecord]) => Unit) = {
     message_load_latency_counter.start { end=>
       load_source.merge((messageKey, locator, { (result)=>
         end()

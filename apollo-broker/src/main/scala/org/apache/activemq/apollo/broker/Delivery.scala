@@ -194,7 +194,7 @@ class Delivery {
    * After the store persists the message he may be able to supply us with  locator handle
    * which will load the message faster than looking it up via the store key.
    */
-  var storeLocator:AtomicReference[Array[Byte]] = null
+  var storeLocator:AtomicReference[Object] = null
 
   /**
    * The transaction the delivery is participating in.

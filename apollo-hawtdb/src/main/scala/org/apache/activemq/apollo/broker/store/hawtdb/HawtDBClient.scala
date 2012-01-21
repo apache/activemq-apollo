@@ -31,12 +31,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.apache.activemq.apollo.util.{TreeMap=>ApolloTreeMap}
 import collection.immutable.TreeMap
 import org.fusesource.hawtbuf.{Buffer, AbstractVarIntSupport}
-import java.util.concurrent.atomic.AtomicReference
 import scala.Predef._
 import org.fusesource.hawtdb.api._
 import org.fusesource.hawtbuf.Buffer._
 import org.fusesource.hawtdb.internal.page.LFUPageCache
 import org.fusesource.hawtdispatch._
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -474,6 +474,25 @@ class HawtDBClient(store: HawtDBStore) {
     callback.run
   }
 
+  def encode_locator(value:AtomicReference[Object]):Buffer = {
+    if(value==null)
+      return null
+    val l = value.get().asInstanceOf[java.lang.Long]
+    if(l==null)
+      return null
+    encode_locator(l.longValue())
+  }
+
+  def encode_locator(value:Long):Buffer = {
+    encode_long(value.asInstanceOf[Long])
+  }
+
+  def decode_locator(value:Buffer):AtomicReference[Object] = {
+    if(value==null)
+      return null
+    new AtomicReference[Object](decode_long(value).asInstanceOf[AnyRef])
+  }
+  
   def store(uows: Seq[HawtDBStore#DelayableUOW], callback:Runnable) {
     retry_using_index { index =>
       log.appender { appender =>
@@ -500,17 +519,16 @@ class HawtDBClient(store: HawtDBStore) {
 
             if (message_record != null) {
               pos = appender.append(LOG_ADD_MESSAGE, message_record)
-              val pos_encoded = encode_long(pos)
-              pos_buffer = new Buffer(pos_encoded)
+              pos_buffer = encode_locator(pos)
               if( message_record.locator !=null ) {
-                message_record.locator.set(pos_encoded.toByteArray);
+                message_record.locator.set(pos.asInstanceOf[AnyRef]);
               }
-              index.put(encode(message_prefix, action.message_record.key), pos_encoded)
+              index.put(encode(message_prefix, action.message_record.key), pos_buffer)
             }
 
             action.dequeues.foreach { entry =>
-              if( pos_buffer==null && entry.message_locator!=null ) {
-                pos_buffer = entry.message_locator
+              if( pos_buffer==null ) {
+                pos_buffer = encode_locator(entry.message_locator)
               }
               val key = encode(queue_entry_prefix, entry.queue_key, entry.entry_seq)
               appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
@@ -518,7 +536,7 @@ class HawtDBClient(store: HawtDBStore) {
             }
 
             action.enqueues.foreach { entry =>
-              entry.message_locator = pos_buffer
+              entry.message_locator = decode_locator(pos_buffer)
               val encoded:Buffer = entry
               appender.append(LOG_ADD_QUEUE_ENTRY, encoded)
               index.put(encode(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
@@ -540,7 +558,7 @@ class HawtDBClient(store: HawtDBStore) {
   val metric_load_from_index_counter = new TimeCounter
   var metric_load_from_index = metric_load_from_index_counter(false)
 
-  def loadMessages(requests: ListBuffer[(Long, AtomicReference[Array[Byte]], (Option[MessageRecord])=>Unit)]):Unit = {
+  def loadMessages(requests: ListBuffer[(Long, AtomicReference[Object], (Option[MessageRecord])=>Unit)]):Unit = {
 
     val missing = retry_using_index { index =>
       requests.flatMap { x =>
@@ -549,7 +567,7 @@ class HawtDBClient(store: HawtDBStore) {
           var pos = 0L
           var pos_array:Array[Byte] = null
           if( locator!=null ) {
-            pos_array = locator.get()
+            pos_array = encode_locator(locator).toByteArray
             if( pos_array!=null ) {
               pos = decode_long(new Buffer(pos_array))
             }
@@ -568,7 +586,7 @@ class HawtDBClient(store: HawtDBStore) {
           } else {
             log.read(pos).map { case (prefix, data, _)=>
               val rc:MessageRecord = data
-              rc.locator = new AtomicReference[Array[Byte]](pos_array)
+              rc.locator = new AtomicReference[Object](pos.asInstanceOf[AnyRef])
               rc
             }
           }
@@ -595,7 +613,7 @@ class HawtDBClient(store: HawtDBStore) {
             val pos = decode_long(pos_buffer)
             log.read(pos).map { case (prefix, data, _)=>
               val rc:MessageRecord = data
-              rc.locator = new AtomicReference[Array[Byte]](pos_buffer.toByteArray)
+              rc.locator = new AtomicReference[AnyRef](pos.asInstanceOf[AnyRef])
               rc
             }
           }
@@ -734,7 +752,7 @@ class HawtDBClient(store: HawtDBStore) {
         index.cursor_prefixed(queue_entry_prefix_array) { (_,value) =>
           val entry_record:QueueEntryRecord = value
           val pos = if(entry_record.message_locator!=null) {
-            decode_long(entry_record.message_locator)
+            entry_record.message_locator.get().asInstanceOf[Long].longValue()
           } else {
             index.get(encode(message_prefix, entry_record.message_key)).map(decode_long(_)).getOrElse(0L)
           }

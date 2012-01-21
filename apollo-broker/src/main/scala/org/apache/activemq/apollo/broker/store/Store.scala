@@ -110,7 +110,7 @@ trait Store extends ServiceTrait {
   /**
    * Loads a delivery with the associated id from persistent storage.
    */
-  def load_message(messageKey:Long, locator:AtomicReference[Array[Byte]])(callback:(Option[MessageRecord])=>Unit )
+  def load_message(messageKey:Long, locator:AtomicReference[Object])(callback:(Option[MessageRecord])=>Unit )
 
   /**
    * Exports the contents of the store to the provided streams.  Each stream should contain
