@@ -20,13 +20,10 @@ import org.apache.felix.gogo.commands.{Action, Option => option, Argument => arg
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
-import scala.util.continuations._
-import java.util.zip.ZipFile
 import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
-import org.apache.activemq.apollo.broker.store.ImportStreamManager._
-import org.apache.activemq.apollo.broker.store.{ImportStreamManager, StreamManager, StoreFactory}
-import java.io.{FileInputStream, BufferedInputStream, InputStream, File}
+import org.apache.activemq.apollo.broker.store.{ImportStreamManager, StoreFactory}
+import java.io.{FileInputStream, BufferedInputStream, File}
 
 
 /**
@@ -84,9 +81,9 @@ class StoreImport extends Action {
       ServiceControl.start(store, "store startup")
 
       session.getConsole.println("Importing: "+file)
-      using( ImportStreamManager(new BufferedInputStream(new FileInputStream(file)))) { manager =>
+      using( new BufferedInputStream(new FileInputStream(file)) ) { is =>
         sync_cb[Option[String]] { cb =>
-          store.import_data(manager, cb)
+          store.import_data(is, cb)
         }.foreach(error _)
       }
 

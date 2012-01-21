@@ -262,7 +262,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     index_options.cacheSize(Option(config.index_cache_size).map(MemoryPropertyEditor.parse(_).toLong).getOrElse(1024*1024*256L))
     index_options.logger(new Logger() {
-      def log(msg: String) = trace(store.store_kind+": "+msg.stripSuffix("\n"))
+      def log(msg: String) = trace(msg.stripSuffix("\n"))
     })
 
     log = create_log

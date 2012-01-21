@@ -20,13 +20,10 @@ import org.apache.felix.gogo.commands.{Action, Option => option, Argument => arg
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
-import java.util.zip.{ZipEntry, ZipOutputStream}
 import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
 import java.io._
-import java.util.concurrent.CountDownLatch
-import org.apache.activemq.apollo.broker.store.ExportStreamManager._
-import org.apache.activemq.apollo.broker.store.{ExportStreamManager, StreamManager, StoreFactory}
+import org.apache.activemq.apollo.broker.store.StoreFactory
 
 /**
  * The apollo stop command
@@ -83,9 +80,9 @@ class StoreExport extends Action {
       ServiceControl.start(store, "store startup")
 
       session.getConsole.println("Exporting... (this might take a while)")
-      using( ExportStreamManager(new BufferedOutputStream(new FileOutputStream(file)))) { manager=>
+      using( new BufferedOutputStream(new FileOutputStream(file)) ) { os=>
         sync_cb[Option[String]] { cb =>
-          store.export_data(manager, cb)
+          store.export_data(os, cb)
         }.foreach(error _)
       }
       ServiceControl.stop(store, "store stop");

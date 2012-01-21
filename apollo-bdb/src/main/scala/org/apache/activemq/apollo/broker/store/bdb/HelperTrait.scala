@@ -26,8 +26,8 @@ import org.fusesource.hawtbuf._
 
 object HelperTrait {
 
-  implicit def to_message_buffer(entry: DatabaseEntry): MessagePB.Buffer = MessagePB.FACTORY.parseUnframed(entry.getData)
-  implicit def to_database_entry(v: MessagePB.Buffer): DatabaseEntry = new DatabaseEntry(v.toUnframedByteArray)
+  implicit def to_message_buffer(entry: DatabaseEntry): MessagePB.Buffer = MessagePB.FACTORY.parseFramed(entry.getData)
+  implicit def to_database_entry(v: MessagePB.Buffer): DatabaseEntry = new DatabaseEntry(v.toFramedByteArray)
 
   implicit def to_queue_entry_record(entry: DatabaseEntry): QueueEntryRecord = entry.getData
   implicit def to_database_entry(v: QueueEntryRecord): DatabaseEntry = new DatabaseEntry(v)

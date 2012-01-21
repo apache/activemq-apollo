@@ -550,19 +550,19 @@ class BDBClient(store: BDBStore) {
         import ctx._
 
         messages_db.cursor(tx) { (_, value) =>
-          val record = MessagePB.FACTORY.parseUnframed(value.getData)
+          val record = MessagePB.FACTORY.parseFramed(value.getData)
           manager.store_message(record)
           true
         }
 
         entries_db.cursor(tx) { (key, value) =>
-          val record = QueueEntryPB.FACTORY.parseUnframed(value.getData)
+          val record = QueueEntryPB.FACTORY.parseFramed(value.getData)
           manager.store_queue_entry(record)
           true
         }
 
         queues_db.cursor(tx) { (_, value) =>
-          val record = QueuePB.FACTORY.parseUnframed(value)
+          val record = QueuePB.FACTORY.parseFramed(value)
           manager.store_queue(record)
           true
         }
@@ -599,16 +599,17 @@ class BDBClient(store: BDBStore) {
         while(manager.getNext match {
 
           case record:MessagePB.Buffer =>
-            messages_db.put(tx, record.getMessageKey, record.toUnframedBuffer)
+            messages_db.put(tx, record.getMessageKey, record.toFramedBuffer)
             true
 
           case record:QueueEntryPB.Buffer =>
-            entries_db.put(tx, (record.getQueueKey, record.getQueueSeq), record.toUnframedBuffer)
+            entries_db.put(tx, (record.getQueueKey, record.getQueueSeq), record.toFramedBuffer)
             add_and_get(message_refs_db, record.getMessageKey, 1, tx)
             true
 
           case record:QueuePB.Buffer =>
-            queues_db.put(tx, record.getKey, record.toUnframedBuffer)
+            var key: Long = record.getKey
+            queues_db.put(tx, key, record.toFramedBuffer)
             true
 
           case record:MapEntryPB.Buffer =>
