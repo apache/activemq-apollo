@@ -788,7 +788,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       var elapsed = System.currentTimeMillis-now
       now += elapsed
 
-      println("consumers_keeping_up_counter: "+consumers_keeping_up_counter)
       consumers_keeping_up_historically = consumers_keeping_up_counter!=0
       consumers_keeping_up_counter = 0
       
