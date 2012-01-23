@@ -25,6 +25,12 @@ h1 Topic: #{id}
 p state: #{state} #{ uptime(state_since) } ago
 h3 Topic Domain
 
+h4 Enqueue/Deqeueue Counters
+
+p enqueued: #{metrics.enqueue_item_counter} messages (#{memory(metrics.enqueue_size_counter)}), #{uptime(metrics.enqueue_ts)} ago
+
+p dequeued: #{metrics.dequeue_item_counter} messages (#{memory(metrics.dequeue_size_counter)}), #{uptime(metrics.dequeue_ts)} ago
+
 h4 Producers
 p total producers ever : #{metrics.producer_counter}
 ul
