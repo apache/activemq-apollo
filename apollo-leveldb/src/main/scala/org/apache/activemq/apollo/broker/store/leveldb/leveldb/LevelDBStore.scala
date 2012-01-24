@@ -267,7 +267,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         rc.index_snapshot_pos = client.last_index_snapshot_pos
         rc.log_stats = {
           var row_layout = "%-20s | %-10s | %-10s\n"
-          row_layout.format("File", "References", "Total Size")+
+          row_layout.format("Log File", "Message References", "File Size")+
           client.log.log_infos.map{case (id,info)=> id -> client.log_refs.get(id).map(_.get)}.toSeq.flatMap { case (id, refs)=>
             try {
               val file = LevelDBClient.create_sequence_file(client.directory, id, LevelDBClient.LOG_SUFFIX)
