@@ -335,11 +335,11 @@ trait DelayingStoreSupport extends Store with BaseService {
     rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
     rc.pending_stores = pending_stores.size
 
-    import collection.JavaConversions._
-    println("--------------")
-    pending_stores.valuesIterator.foreach{ action =>
-      println(action.uow.state+": "+action.uow.uow_id+" "+action.uow.delayable)
-    }
+//    import collection.JavaConversions._
+//    println("--------------")
+//    pending_stores.valuesIterator.foreach{ action =>
+//      println(action.uow.state+": "+action.uow.uow_id+" "+action.uow.delayable)
+//    }
   }
 
   def key(x:QueueEntryRecord) = (x.queue_key, x.entry_seq)
