@@ -82,6 +82,28 @@ snakeyaml.org
 
 -------------------------------------------------------------------------
 
+This product includes software (snappy java implementation) developed at
+https://github.com/dain/snappy
+
+-------------------------------------------------------------------------
+
+This product includes software (leveldb java implementation) developed at
+https://github.com/dain/leveldb
+
+-------------------------------------------------------------------------
+
+This product includes software (leveldb native implementation) developed at
+http://code.google.com/p/leveldb/
 
 
-    
+-------------------------------------------------------------------------
+
+This product includes software (snappy native implementation) developed at
+http://code.google.com/p/snappy/
+
+-------------------------------------------------------------------------
+
+This product includes software (snappy-java) developed at
+http://code.google.com/p/snappy-java/
+
+-------------------------------------------------------------------------
