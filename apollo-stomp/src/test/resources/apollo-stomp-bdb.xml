@@ -23,7 +23,7 @@
 
     <queue name="unified.**" unified="true"/>
 
-    <bdb_store directory="${basedir}/target/test-data"/>
+    <bdb_store directory="${basedir}/target/bdb-test-data"/>
   </virtual_host>
 
   <web_admin bind="http://127.0.0.1:0"/>

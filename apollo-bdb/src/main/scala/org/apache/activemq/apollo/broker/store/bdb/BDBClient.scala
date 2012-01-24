@@ -26,8 +26,12 @@ import org.apache.activemq.apollo.util._
 import java.io.{InputStream, OutputStream}
 import com.sleepycat.je._
 import org.fusesource.hawtbuf.Buffer
+import FileSupport._
 
-object BDBClient extends Log
+object BDBClient extends Log {
+  final val STORE_SCHEMA_PREFIX = "bdb_store:"
+  final val STORE_SCHEMA_VERSION = 1
+}
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -73,8 +77,26 @@ class BDBClient(store: BDBStore) {
 
     directory.mkdirs
 
-    direct_buffer_allocator = new FileDirectBufferAllocator(direct_buffer_file)
+    val version_file = directory / "store-version.txt"
+    if( version_file.exists( ) ) {
+      val ver = try {
+        var tmp: String = version_file.read_text().trim()
+        if( tmp.startsWith(STORE_SCHEMA_PREFIX) ) {
+          tmp.stripPrefix(STORE_SCHEMA_PREFIX).toInt
+        } else {
+          -1
+        }
+      } catch {
+        case e => throw new Exception("Unexpected version file format: "+version_file)
+      }
+      ver match {
+        case STORE_SCHEMA_VERSION => // All is good.
+        case _ => throw new Exception("Cannot open the store.  It's schema version is not supported.")
+      }
+    }
+    version_file.write_text(STORE_SCHEMA_PREFIX+STORE_SCHEMA_VERSION)
 
+    direct_buffer_allocator = new FileDirectBufferAllocator(direct_buffer_file)
     environment = new Environment(directory, env_config);
 
     with_ctx() { ctx=>

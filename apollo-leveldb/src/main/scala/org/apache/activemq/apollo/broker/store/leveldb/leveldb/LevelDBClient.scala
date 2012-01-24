@@ -45,6 +45,9 @@ import org.fusesource.hawtbuf.{AsciiBuffer, Buffer, AbstractVarIntSupport}
  */
 object LevelDBClient extends Log {
 
+  final val STORE_SCHEMA_PREFIX = "leveldb_store:"
+  final val STORE_SCHEMA_VERSION = 1
+
   final val queue_prefix = 'q'.toByte
   final val queue_entry_prefix = 'e'.toByte
   final val map_prefix = 'p'.toByte
@@ -228,6 +231,7 @@ class LevelDBClient(store: LevelDBStore) {
   def start() = {
     import OptionSupport._
 
+
     val factory_names = Option(config.index_factory).getOrElse("org.fusesource.leveldbjni.JniDBFactory, org.iq80.leveldb.impl.Iq80DBFactory")
     factory = factory_names.split("""(,|\s)+""").map(_.trim()).flatMap { name=>
       try {
@@ -279,7 +283,6 @@ class LevelDBClient(store: LevelDBStore) {
     }
 
     lock_file = new LockFile(directory / "lock", true)
-
     def time[T](func: =>T):Long = {
       val start = System.nanoTime()
       func  
@@ -288,6 +291,26 @@ class LevelDBClient(store: LevelDBStore) {
 
     // Lock before we open anything..
     lock_store
+
+    // Lets check store compatibility...
+    val version_file = directory / "store-version.txt"
+    if( version_file.exists( ) ) {
+      val ver = try {
+        var tmp: String = version_file.read_text().trim()
+        if( tmp.startsWith(STORE_SCHEMA_PREFIX) ) {
+          tmp.stripPrefix(STORE_SCHEMA_PREFIX).toInt
+        } else {
+          -1
+        }
+      } catch {
+        case e => throw new Exception("Unexpected version file format: "+version_file)
+      }
+      ver match {
+        case STORE_SCHEMA_VERSION => // All is good.
+        case _ => throw new Exception("Cannot open the store.  It's schema version is not supported.")
+      }
+    }
+    version_file.write_text(STORE_SCHEMA_PREFIX+STORE_SCHEMA_VERSION)
 
     val log_open_duration = time {
       retry {

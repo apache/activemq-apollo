@@ -23,7 +23,7 @@
 
     <queue name="unified.**" unified="true"/>
 
-    <leveldb_store directory="${basedir}/target/test-data"/>
+    <leveldb_store directory="${basedir}/target/leveldb-test-data"/>
   </virtual_host>
 
   <web_admin bind="http://127.0.0.1:0"/>
