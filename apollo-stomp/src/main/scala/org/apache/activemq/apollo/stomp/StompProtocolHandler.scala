@@ -425,7 +425,9 @@ class StompProtocolHandler extends ProtocolHandler {
     override def dispose() = dispatchQueue {
       ack_handler.close
       credit_window_filter.disable
-      sink_manager.close(consumer_sink)
+      sink_manager.close(consumer_sink, (frame)=>{
+        debug("Got frame after consumer was disposed.");
+      })
       super.dispose()
     }
 
@@ -512,7 +514,12 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       def dispose = {
-        session_manager.close(downstream)
+        session_manager.close(downstream, (delivery)=>{
+          // We have been closed so we have to nak any deliveries.
+          if( delivery.ack!=null ) {
+            delivery.ack(Undelivered, delivery.uow)
+          }
+        })
         release
       }
 

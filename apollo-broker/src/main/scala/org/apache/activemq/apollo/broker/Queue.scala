@@ -27,7 +27,6 @@ import org.apache.activemq.apollo.util.list._
 import org.fusesource.hawtdispatch.{ListEventAggregator, DispatchQueue, BaseRetained}
 import OptionSupport._
 import java.util.concurrent.atomic.{AtomicReference, AtomicInteger}
-import org.fusesource.hawtbuf.Buffer
 import java.lang.UnsupportedOperationException
 import security.SecuredResource._
 import security.{SecuredResource, SecurityContext}
@@ -466,6 +465,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var stop_listener_waiting_for_flush:Runnable = _
 
   protected def _stop(on_completed: Runnable) = {
+
+    // Now that we are stopping the queue will no longer be 'full'
+    // draining will nack all enqueue attempts.
+    messages.refiller.run
+
     // Disconnect the producers..
     producers.foreach { producer =>
       disconnect(producer)
@@ -520,17 +524,34 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
     var refiller: Runnable = null
 
-    def full = (producer_swapped_in.size >= producer_swapped_in.size_max) || is_enqueue_throttled || !service_state.is_started || (tune_quota >=0 && queue_size > tune_quota)
+    def is_quota_exceeded = (tune_quota >= 0 && queue_size > tune_quota)
+    def is_enqueue_throttled = (enqueues_remaining!=null && enqueues_remaining.get() <= 0)
+    def is_enqueue_buffer_maxed = (producer_swapped_in.size >= producer_swapped_in.size_max)
+
+    def full = if( service_state.is_started ) {
+      is_enqueue_buffer_maxed || is_enqueue_throttled || is_quota_exceeded
+    } else if( service_state.is_starting) {
+      true
+    } else {
+      false
+    }
 
     def offer(delivery: Delivery): Boolean = {
       if (full) {
         false
       } else {
 
-        // Don't even enqueue if the message has expired.
+        // Don't even enqueue if the message has expired or the queue has stopped.
         val expiration = delivery.message.expiration
-        if( expiration != 0 && expiration <= now ) {
-          expired(delivery)
+        val expired = expiration != 0 && expiration <= now
+
+        if( !service_state.is_started || expired) {
+          if( delivery.ack!=null ) {
+            delivery.ack(if ( expired ) Expired else Undelivered, delivery.uow)
+          }
+          if( delivery.uow!=null ) {
+            delivery.uow.release()
+          }
           return true
         }
 
@@ -838,7 +859,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var max_enqueue_rate = Int.MaxValue
   var enqueues_remaining:LongCounter = _
   
-  def is_enqueue_throttled = enqueues_remaining!=null && enqueues_remaining.get() <= 0
 
   def enqueue_remaining_take(amount:Int) = {
     if(enqueues_remaining!=null) {
@@ -912,12 +932,15 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       change_producer_capacity( session_max )
     }
 
-    def close = {
-      session_manager.close(downstream)
-      dispatch_queue {
-        change_producer_capacity( -session_max )
-        inbound_sessions -= this
-      }
+    def close = dispatch_queue {
+      session_manager.close(downstream, (delivery)=>{
+        // We have been closed so we have to nak any deliveries.
+        if( delivery.ack!=null ) {
+          delivery.ack(Undelivered, delivery.uow)
+        }
+      })
+      change_producer_capacity( -session_max )
+      inbound_sessions -= this
       release
     }
 
@@ -1428,14 +1451,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override  def as_loaded = this
 
     def store = {
-      if(!storing) {
+      // We should no longer be storing stuff if stopped.
+      assert(queue.service_state.is_starting_or_started)
+      if(!stored && !storing) {
         storing = true
         delivery.uow.enqueue(toQueueEntryRecord)
         queue.swapping_out_size+=size
         delivery.uow.on_flush { canceled =>
           queue.swap_out_completes_source.merge(^{
-            queue.swapping_out_size-=size
             this.swapped_out(!canceled)
+            queue.swapping_out_size-=size
             if( queue.swapping_out_size==0 ) {
               queue.on_queue_flushed
             }

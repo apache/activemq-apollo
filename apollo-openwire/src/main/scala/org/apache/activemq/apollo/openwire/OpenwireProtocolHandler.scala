@@ -798,7 +798,10 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     override def dispose() = dispatchQueue {
       ack_handler.close
       super.dispose()
-      sink_manager.close(consumer_sink)
+      sink_manager.close(consumer_sink,(frame)=>{
+        debug("Got command after consumer was disposed.");
+      })
+
     }
     
     
@@ -931,7 +934,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
 
       def dispose = {
-        session_manager.close(downstream)
+        session_manager.close(downstream,(delivery)=>{
+          // We have been closed so we have to nak any deliveries.
+          if( delivery.ack!=null ) {
+            delivery.ack(Undelivered, delivery.uow)
+          }
+        })
         if( info.getDestination.isTemporary ) {
           reset {
             val rc = host.router.delete(destination, security_context)
@@ -1149,9 +1157,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
 
       if( uow!=null ) {
-        uow.on_complete(^{
-          onComplete
-        })
+        uow.on_complete(onComplete)
         uow.release
       } else {
         onComplete

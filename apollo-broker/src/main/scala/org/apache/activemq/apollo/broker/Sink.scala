@@ -193,17 +193,19 @@ class SinkMux[T](val downstream:Sink[T]) {
 
   class ManagedSink extends Sink[T] {
 
-    var closed = false
+    var rejection_handler:(T)=>Unit = _
     var refiller:Runnable = NOOP
 
     def offer(value: T) = {
-      if ( closed ) {
-        true
+      if ( full ) {
+        false
       } else {
-        downstream.offer(value)
+        val accepted = downstream.offer(value)
+        assert(accepted)
+        true
       }
     }
-    def full = !closed && downstream.full
+    def full = downstream.full && rejection_handler==null
   }
   
   def open():Sink[T] = {
@@ -212,14 +214,15 @@ class SinkMux[T](val downstream:Sink[T]) {
     sink
   }
 
-  def close(sink:Sink[T]):Unit = {
+  def close(sink:Sink[T], rejection_handler:(T)=>Unit):Unit = {
     sink match {
       case sink:ManagedSink =>
-        sink.closed = true
+        assert(sink.rejection_handler==null)
+        sink.rejection_handler = rejection_handler
         sink.refiller.run()
         sinks -= sink
       case _ =>
-        error("We did not open that sink")
+        sys.error("We did not open that sink")
     }
   }
 }
@@ -349,13 +352,13 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
     session
   }
 
-  def close(session:Sink[T]):Unit = {
+  def close(session:Sink[T], rejection_handler:(T)=>Unit):Unit = {
     consumer_queue <<| ^{
       session match {
         case s:Session[T] =>
           sessions -= s
           s.producer_queue {
-            s.close
+            s.close(rejection_handler)
           }
       }
     }
@@ -388,18 +391,13 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   }
   credit_adder.resume
 
-  private var closed = false
-  private var _full = credits <= 0
-
+  private var rejection_handler: (T)=>Unit = _
+  
   private def add_credits(value:Int) = {
+    val was_full = _full
     credits += value;
-    if( closed || credits <= 0 ) {
-      _full = true
-    } else if( credits >= 0 ) {
-      if( _full ) {
-        _full  = false
-        refiller.run
-      }
+    if( was_full && !_full ) {
+      refiller.run
     }
   }
 
@@ -414,29 +412,35 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
     producer_queue.assertExecuting()
     _full
   }
+  
+  def _full = credits <= 0 && rejection_handler == null
 
   override def offer(value: T) = {
     producer_queue.assertExecuting()
-    if( _full || closed ) {
+    if( _full ) {
       false
     } else {
-      val size = sizer.size(value)
-
-      enqueue_item_counter += 1
-      enqueue_size_counter += size
-      enqueue_ts = mux.time_stamp
-
-      add_credits(-size)
-      downstream.merge((this, value))
+      if( rejection_handler!=null ) {
+        rejection_handler(value)
+      } else {
+        val size = sizer.size(value)
+  
+        enqueue_item_counter += 1
+        enqueue_size_counter += size
+        enqueue_ts = mux.time_stamp
+  
+        add_credits(-size)
+        downstream.merge((this, value))
+      }
       true
     }
   }
 
-  def close = {
+  def close(rejection_handler:(T)=>Unit) = {
     producer_queue.assertExecuting()
-    if( !closed ) {
-      closed=true
-    }
+    assert(this.rejection_handler==null)
+    this.rejection_handler=rejection_handler
+    refiller.run
   }
 
 }
