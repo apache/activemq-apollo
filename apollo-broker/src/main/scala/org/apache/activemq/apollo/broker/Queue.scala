@@ -763,8 +763,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     // Combine swapped items into swapped ranges
     if( individual_swapped_items > tune_swap_range_size*2 ) {
 
-      debug("Looking for swapped entries to combine")
-
       var distance_from_sub = tune_swap_range_size;
       var cur = entries.getHead
       var combine_counter = 0;
@@ -792,7 +790,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         }
         cur = next
       }
-      debug("combined %d entries", combine_counter)
+      trace("combined %d entries", combine_counter)
     }
     
     if(!messages.full) {
@@ -888,14 +886,17 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       case (entry, consumed, uow) =>
         consumed match {
           case Consumed =>
+//            debug("ack consumed: ("+store_id+","+entry.entry.seq+")")
             entry.ack(uow)
           case Expired=>
+//            debug("ack expired: ("+store_id+","+entry.entry.seq+")")
             entry.entry.queue.expired(entry.entry, false)
             entry.ack(uow)
           case Delivered =>
             entry.entry.redelivered
             entry.nack
-          case Poisoned    =>
+          case Poisoned =>
+            // TODO: send to DLQ once that is supported.
             entry.entry.redelivered
             entry.nack
           case Undelivered =>
@@ -2203,7 +2204,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     def ack(uow:StoreUOW):Unit = {
       assert_executing
       if(!isLinked) {
-        debug("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
+        debug("Unexpected ack: message seq allready acked: "+entry.seq)
         return
       }
 
@@ -2241,7 +2242,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     def nack:Unit = {
       assert_executing
       if(!isLinked) {
-        warn("Internal protocol error: message delivery acked/nacked multiple times: "+entry.seq)
+        debug("Unexpected nack: message seq allready acked: "+entry.seq)
         return
       }
 

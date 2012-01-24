@@ -799,7 +799,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       ack_handler.close
       super.dispose()
       sink_manager.close(consumer_sink,(frame)=>{
-        debug("Got command after consumer was disposed.");
+        // No point in sending the frame down to the socket..
       })
 
     }

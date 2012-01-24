@@ -426,7 +426,7 @@ class StompProtocolHandler extends ProtocolHandler {
       ack_handler.close
       credit_window_filter.disable
       sink_manager.close(consumer_sink, (frame)=>{
-        debug("Got frame after consumer was disposed.");
+        // No point in sending the frame down to the socket..
       })
       super.dispose()
     }

@@ -196,16 +196,20 @@ class SinkMux[T](val downstream:Sink[T]) {
     var rejection_handler:(T)=>Unit = _
     var refiller:Runnable = NOOP
 
+    def full = downstream.full && rejection_handler==null
+
     def offer(value: T) = {
       if ( full ) {
         false
       } else {
-        val accepted = downstream.offer(value)
-        assert(accepted)
-        true
+        if( rejection_handler!=null ) {
+          rejection_handler(value)
+          true
+        } else {
+          downstream.offer(value)
+        }
       }
     }
-    def full = downstream.full && rejection_handler==null
   }
   
   def open():Sink[T] = {
