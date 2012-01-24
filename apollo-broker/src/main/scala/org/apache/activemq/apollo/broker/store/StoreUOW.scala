@@ -77,13 +77,15 @@ trait StoreUOW extends Retained {
    * has written to disk and flushed of the application
    * buffers.
    */
-  def on_flush(callback: (Boolean)=>Unit)
+  def on_flush(callback: (Boolean)=>Unit):Unit
+  def on_flush(callback: =>Unit):Unit = on_flush((canceled)=>{callback})
 
   /**
    * The specified callback is executed once the UOW
    * has fully completed, that is it's been flushed and
    * and synced to disk.
    */
-  def on_complete(callback: =>Unit)
+  def on_complete(callback: (Boolean)=>Unit):Unit
+  def on_complete(callback: =>Unit):Unit = on_complete((canceled)=>{callback})
 
 }

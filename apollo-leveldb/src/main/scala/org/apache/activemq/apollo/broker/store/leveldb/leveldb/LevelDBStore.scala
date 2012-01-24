@@ -58,6 +58,8 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
 
   override def toString = store_kind+" store at "+config.directory
 
+  override protected def locator_based = true
+
   def flush_delay = config.flush_delay.getOrElse(500)
   
   protected def get_next_msg_key = next_msg_key.getAndIncrement
@@ -244,7 +246,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         message_load_latency = message_load_latency_counter(true)
 //        client.metric_journal_append = client.metric_journal_append_counter(true)
 //        client.metric_index_update = client.metric_index_update_counter(true)
-        commit_latency = commit_latency_counter(true)
+        close_latency = close_latency_counter(true)
         message_load_batch_size =  message_load_batch_size_counter(true)
 
         poll_stats

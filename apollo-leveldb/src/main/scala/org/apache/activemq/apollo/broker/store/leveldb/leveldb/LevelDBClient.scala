@@ -764,6 +764,7 @@ class LevelDBClient(store: LevelDBStore) {
                 if( locator==null ) {
                   locator = entry.message_locator.get().asInstanceOf[(Long, Int)]
                 }
+                assert(locator!=null)
                 val (pos, len) = locator
                 val key = encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq)
                 appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
@@ -773,6 +774,7 @@ class LevelDBClient(store: LevelDBStore) {
 
               var locator_buffer:Buffer = null
               action.enqueues.foreach { entry =>
+                assert(locator!=null)
                 val (pos, len) = locator
                 entry.message_locator.set(locator)
 

@@ -106,6 +106,9 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
   }
 
   case class ProxyConsumerSession(proxy:ProxyDeliveryConsumer, session:DeliverySession) extends DeliverySession with SessionSinkFilter[Delivery] {
+
+    override def toString = proxy.consumer.toString
+
     def downstream = session
 
     dispatch_queue {
@@ -133,6 +136,8 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
     def offer(value: Delivery) = {
       val copy = value.copy();
+      copy.uow = value.uow
+      copy.ack = value.ack
       copy.sender = destination_dto
       downstream.offer(copy)
     }

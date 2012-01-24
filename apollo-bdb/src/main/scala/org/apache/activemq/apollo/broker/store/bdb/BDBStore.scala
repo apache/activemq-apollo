@@ -207,7 +207,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
         message_load_latency = message_load_latency_counter(true)
 //        client.metric_journal_append = client.metric_journal_append_counter(true)
 //        client.metric_index_update = client.metric_index_update_counter(true)
-        commit_latency = commit_latency_counter(true)
+        close_latency = close_latency_counter(true)
         message_load_batch_size =  message_load_batch_size_counter(true)
 
         poll_stats
