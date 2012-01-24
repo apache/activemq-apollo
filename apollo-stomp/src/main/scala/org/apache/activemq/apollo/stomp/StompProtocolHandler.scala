@@ -71,6 +71,12 @@ object StompProtocolHandler extends Log {
   val DEFAULT_INBOUND_HEARTBEAT = 10*1000L
   var inbound_heartbeat = DEFAULT_INBOUND_HEARTBEAT
 
+  val WAITING_ON_CLIENT_REQUEST: () => String = () => {
+    "client request"
+  }
+  val WAITING_ON_SHUTDOWN: () => String = () => {
+    "shutdown"
+  }
 
   def noop = shift {  k: (Unit=>Unit) => k() }
   def unit:Unit = {}
@@ -551,7 +557,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var heart_beat_monitor = new HeartBeatMonitor
   val security_context = new SecurityContext
-  var waiting_on:String = "client request"
+  var waiting_on: ()=>String = WAITING_ON_CLIENT_REQUEST
   var config:StompDTO = _
   var session_id:String = _
 
@@ -632,7 +638,7 @@ class StompProtocolHandler extends ProtocolHandler {
     rc.protocol_version = if( protocol_version == null ) null else protocol_version.toString
     rc.user = security_context.user
     rc.subscription_count = consumers.size
-    rc.waiting_on = waiting_on
+    rc.waiting_on = waiting_on()
     rc
   }
 
@@ -663,7 +669,7 @@ class StompProtocolHandler extends ProtocolHandler {
   private def die[T](headers:HeaderMap, body:String):T = {
     if( !dead ) {
       dead = true
-      waiting_on = "shutdown"
+      waiting_on = WAITING_ON_SHUTDOWN
       connection.transport.resumeRead
 
       if( body.isEmpty ) {
@@ -801,13 +807,13 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def suspend_read(reason:String) = {
-    waiting_on = reason
+  def suspend_read(reason: =>String) = {
+    waiting_on = reason _
     connection.transport.suspendRead
     heart_beat_monitor.suspendRead
   }
   def resume_read() = {
-    waiting_on = "client request"
+    waiting_on = WAITING_ON_CLIENT_REQUEST
     connection.transport.resumeRead
     heart_beat_monitor.resumeRead
   }
