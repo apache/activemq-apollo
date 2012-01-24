@@ -50,7 +50,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   var clients = List[StompClient]()
 
   override protected def afterAll() = {
-    broker.stop
+    ServiceControl.stop(broker, "Stopping broker")
   }
 
   override protected def afterEach() = {
@@ -1121,7 +1121,7 @@ class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
   }
 }
 
-class DurableSubscriptionOnBDBTest extends StompTestSupport {
+class DurableSubscriptionOnBDBTest extends DurableSubscriptionOnLevelDBTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 }
 
