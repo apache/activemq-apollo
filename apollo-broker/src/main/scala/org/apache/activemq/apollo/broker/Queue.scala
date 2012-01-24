@@ -63,7 +63,7 @@ import Queue._
 class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
   def id = binding.id
 
-  override def toString = binding.destination.toString
+  override def toString = binding.toString
 
   def virtual_host = router.virtual_host
 

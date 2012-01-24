@@ -163,6 +163,7 @@ class QueueDomainQueueBinding(val binding_data:Buffer, val binding_dto:QueueDest
 
   def config(host:VirtualHost):QueueDTO = queue_config(host, destination)
 
+  override def toString = "queue: "+id
 }
 
 
@@ -247,6 +248,7 @@ class DurableSubscriptionQueueBinding(val binding_data:Buffer, val binding_dto:D
 
   def config(host:VirtualHost):DurableSubscriptionDTO = dsub_config(host, binding_dto.subscription_id)
 
+  override def toString = "dsub: "+binding_dto.subscription_id
 }
 
 
@@ -291,4 +293,5 @@ class TempQueueBinding(val key:AnyRef, val destination:Path, val binding_dto:Des
     case _ => false
   }
 
+  override def toString = "temp queue: "+key
 }

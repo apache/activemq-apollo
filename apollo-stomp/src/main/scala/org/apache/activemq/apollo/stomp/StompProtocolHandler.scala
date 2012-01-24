@@ -170,6 +170,9 @@ class StompProtocolHandler extends ProtocolHandler {
 //      r.release
 //    }
 
+
+    override def toString = "stomp subscription"+subscription_id.map(" id: "+_+",").getOrElse("")+" remote address: "+security_context.remote_address
+
     override def start_from_tail = from_seq == -1
 
     var starting_seq:Long = 0L

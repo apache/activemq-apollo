@@ -768,6 +768,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 //      r.release
 //    }
 
+    override def toString = "openwire consumer id:"+info.getConsumerId+", remote address: "+security_context.remote_address
+
     var selector_expression:BooleanExpression = _
     var destination:Array[DestinationDTO] = _
 
