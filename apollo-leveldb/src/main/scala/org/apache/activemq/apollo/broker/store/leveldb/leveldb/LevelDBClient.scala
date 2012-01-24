@@ -817,7 +817,7 @@ class LevelDBClient(store: LevelDBStore) {
                 
               }
             }
-            if( !uow.complete_listeners.isEmpty ) {
+            if( uow.flush_sync ) {
               sync_needed = true
             }
           }

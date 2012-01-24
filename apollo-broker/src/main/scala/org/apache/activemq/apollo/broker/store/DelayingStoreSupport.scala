@@ -130,6 +130,8 @@ trait DelayingStoreSupport extends Store with BaseService {
 
     // User might request the UOW to flush asap
     var flush_asap = false
+    // Or perhaps the user needs a disk sync too.
+    var flush_sync = false
     // Or to get canceled..
     var canceled = false
 
@@ -141,7 +143,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       this._state = next
     }
 
-    var complete_listeners = ListBuffer[(Boolean) => Unit]()
+    private var complete_listeners = ListBuffer[(Boolean) => Unit]()
 
     var actions = Map[Long, MessageAction]()
     var map_actions = Map[Buffer, Buffer]()
@@ -168,6 +170,7 @@ trait DelayingStoreSupport extends Store with BaseService {
         if( state eq UowCompleted ) {
           true
         } else {
+          flush_sync = true
           complete_listeners += callback
           false
         }
@@ -176,9 +179,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       }
     }
     
-    def complete_asap = flush_it
-
-    def flush_it() = this.synchronized { 
+    def complete_asap = this.synchronized {
       flush_asap=true
       if( state eq UowDelayed ) {
         queue_flush(this)
@@ -334,19 +335,11 @@ trait DelayingStoreSupport extends Store with BaseService {
     rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
     rc.pending_stores = pending_stores.size
 
-//    import collection.JavaConversions._
-//    var last = ""
-//    var count = 0
-//    pending_stores.valuesIterator.map(_.uow.status).foreach{ line =>
-//      if( last!= "" && last!=line) {
-//        println(last+" occured "+count+" times")
-//        count = 0
-//      }
-//      count += 1
-//      last = line
-//    }
-//    println(last+" occured "+count+" times")
-//    println("--------------")
+    import collection.JavaConversions._
+    println("--------------")
+    pending_stores.valuesIterator.foreach{ action =>
+      println(action.uow.state+": "+action.uow.uow_id+" "+action.uow.delayable)
+    }
   }
 
   def key(x:QueueEntryRecord) = (x.queue_key, x.entry_seq)
@@ -452,7 +445,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       case null => cb
       case action =>
         val uow = action.uow
-        uow.on_complete( (canceled)=>{ cb } )
+        uow.on_flush( (canceled)=>{ cb } )
         uow.complete_asap
     }
   })

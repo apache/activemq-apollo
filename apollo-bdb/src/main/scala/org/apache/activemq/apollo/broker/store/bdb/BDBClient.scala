@@ -341,7 +341,7 @@ class BDBClient(store: BDBStore) {
   }
 
   def store(uows: Seq[BDBStore#DelayableUOW], callback:Runnable) {
-    val sync = uows.find( ! _.complete_listeners.isEmpty ).isDefined
+    val sync = uows.find( _.flush_sync ).isDefined
     with_ctx(sync) { ctx=>
       import ctx._
       var sync_lobs = false
