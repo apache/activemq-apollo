@@ -134,6 +134,17 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     msg_keys
   }
 
+  test("add and list queues") {
+    val A = add_queue("A")
+    val B = add_queue("B")
+    val C = add_queue("C")
+
+    val seq:Seq[Long] = List(A,B,C).toSeq
+    expectCB(seq) { cb=>
+      store.list_queues(cb)
+    }
+  }
+
   test("export and import") {
     val A = add_queue("A")
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
@@ -186,17 +197,6 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val rc:Option[MessageRecord] = sync_cb( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
     expect(ascii("message 1").buffer) {
       rc.get.buffer
-    }
-  }
-
-  test("add and list queues") {
-    val A = add_queue("A")
-    val B = add_queue("B")
-    val C = add_queue("C")
-
-    val seq:Seq[Long] = List(A,B,C).toSeq
-    expectCB(seq) { cb=>
-      store.list_queues(cb)
     }
   }
 

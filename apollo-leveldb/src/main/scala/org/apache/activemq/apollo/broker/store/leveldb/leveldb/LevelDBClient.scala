@@ -243,7 +243,7 @@ class LevelDBClient(store: LevelDBStore) {
     }.headOption.getOrElse(throw new Exception("Could not load any of the index factory classes: "+factory_names))
 
     if( factory.getClass.getName == "org.iq80.leveldb.impl.Iq80DBFactory") {
-      warn("Using the pure java LevelDB implementation which is still experimental.  Production users should use the JNI based LevelDB implementation instead.")
+      warn("Using the pure java LevelDB implementation which is still experimental.  If the JNI version is not available for your platform, please switch to the BDB store instead. http://activemq.apache.org/apollo/documentation/user-manual.html#BDB_Store")
     }
 
     sync = config.sync.getOrElse(true);
