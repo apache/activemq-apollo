@@ -41,7 +41,6 @@ Ready to start hacking on ${project_name}?
 
 * [`apollo-dto` API](../documentation/api/apollo-dto/index.html)
 * [`apollo-util` API](../documentation/api/apollo-util/index.html)
-* [`apollo-transport` API](../documentation/api/apollo-transport/index.html)
 * [`apollo-broker` API](../documentation/api/apollo-broker/index.html)
 
 Looking for the website documentation of a different ${project_name} [version](${website_base_url}/versions/index.html)?

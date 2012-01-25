@@ -301,12 +301,6 @@
                     </artifactItem>
                     <artifactItem>
                       <groupId>org.apache.activemq</groupId>
-                      <artifactId>apollo-transport</artifactId>
-                      <classifier>scaladoc</classifier> 
-                      <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-transport</outputDirectory>
-                    </artifactItem>
-                    <artifactItem>
-                      <groupId>org.apache.activemq</groupId>
                       <artifactId>apollo-util</artifactId>
                       <classifier>scaladoc</classifier> 
                       <outputDirectory>${basedir}/target/sitegen/documentation/api/apollo-util</outputDirectory>
