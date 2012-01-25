@@ -322,7 +322,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
     val target = destination match {
       case null=>
-        // this is the unified queue case..
+        // this is the mirrored queue case..
         consumer
       case destination:TopicDestinationDTO=>
         var target = consumer

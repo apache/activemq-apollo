@@ -28,20 +28,20 @@ Apollo is the fastest and most robust STOMP server.
 
 Apollo Features:
 
-* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
-  Support
-* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
-  Support
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol Support
 * [Topics and Queues](${website_base_url}/documentation/user-manual.html#Destination_Types)
 * [Queue Browsers](${website_base_url}/documentation/user-manual.html#Browsing_Subscriptions)
 * [Durable Subscriptions on Topics](${website_base_url}/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Mirrored Queues](${website_base_url}/documentation/user-manual.html#Mirrored_Queues)
 * [Reliable Messaging](${website_base_url}/documentation/user-manual.html#Reliable_Messaging)
-* Message swapping
+* [Message Expiration](${website_base_url}/documentation/user-manual.html#Message_Expiration)
+* [Message Swapping](${website_base_url}/documentation/architecture.html#Message_Swapping)
 * [Message Selectors](${website_base_url}/documentation/user-manual.html#Message_Selectors)
 * [JAAS Authentication](${website_base_url}/documentation/user-manual.html#Authentication)
-* [ACL Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
-* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS)
-* [REST Based Management](${website_base_url}/documentation/architecture.html#REST_Based_Management)
+* [ACL based Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS) and Certificate based Authentication
+* [REST Management API](${website_base_url}/documentation/management-api.html)
   
 Noteworthy changes since the last beta include:
 

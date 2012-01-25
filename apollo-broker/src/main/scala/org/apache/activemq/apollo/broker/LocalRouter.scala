@@ -738,7 +738,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       add_destination(path, queue)
 
       import OptionSupport._
-      if( queue.config.unified.getOrElse(false) ) {
+      if( queue.config.mirrored.getOrElse(false) ) {
         // hook up the queue to be a subscriber of the topic.
 
         val topic = local_topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.path), null).success
@@ -751,7 +751,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       remove_destination(path, queue)
 
       import OptionSupport._
-      if( queue.config.unified.getOrElse(false) ) {
+      if( queue.config.mirrored.getOrElse(false) ) {
         // unhook the queue from the topic
         val topic = local_topic_domain.get_or_create_destination(path, new TopicDestinationDTO(queue.binding.binding_dto.path), null).success
         topic.unbind(queue, false)

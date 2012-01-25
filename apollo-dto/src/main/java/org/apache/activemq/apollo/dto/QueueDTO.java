@@ -41,13 +41,14 @@ public class QueueDTO extends StringIdDTO {
     public Integer auto_delete_after;
 
     /**
-     * If set to true, then routing then there is no difference between
-     * sending to a queue or topic of the same name.  The first time
-     * a queue is created, it will act like if a durable
-     * subscription was created on the topic.
+     * If set to true, then once the queue
+     * is created all messages sent to the queue
+     * will be mirrored to a topic of the same name
+     * and all messages sent to the topic will be mirror
+     * to the queue.
      */
     @XmlAttribute
-    public Boolean unified;
+    public Boolean mirrored;
 
     /**
      *  The amount of memory buffer space to use per consumer.
@@ -143,7 +144,7 @@ public class QueueDTO extends StringIdDTO {
         if (swap != null ? !swap.equals(queueDTO.swap) : queueDTO.swap != null) return false;
         if (swap_range_size != null ? !swap_range_size.equals(queueDTO.swap_range_size) : queueDTO.swap_range_size != null)
             return false;
-        if (unified != null ? !unified.equals(queueDTO.unified) : queueDTO.unified != null) return false;
+        if (mirrored != null ? !mirrored.equals(queueDTO.mirrored) : queueDTO.mirrored != null) return false;
 
         return true;
     }
@@ -152,7 +153,7 @@ public class QueueDTO extends StringIdDTO {
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
-        result = 31 * result + (unified != null ? unified.hashCode() : 0);
+        result = 31 * result + (mirrored != null ? mirrored.hashCode() : 0);
         result = 31 * result + (consumer_buffer != null ? consumer_buffer.hashCode() : 0);
         result = 31 * result + (persistent != null ? persistent.hashCode() : 0);
         result = 31 * result + (swap != null ? swap.hashCode() : 0);

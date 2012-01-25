@@ -21,7 +21,7 @@
   <virtual_host id="default" purge_on_startup="true">
     <host_name>localhost</host_name>
 
-    <queue name="unified.**" unified="true"/>
+    <queue name="mirrored.**" mirrored="true"/>
 
     <bdb_store directory="${basedir}/target/test-data"/>
   </virtual_host>

@@ -236,8 +236,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     auto_delete_after = config.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured queues,
-      // non destination queues, or unified queues.
-      if( config.unified.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
+      // non destination queues, or mirrored queues.
+      if( config.mirrored.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
         auto_delete_after = 0
       }
     }
@@ -1018,8 +1018,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
     import OptionSupport._
-    if( config.unified.getOrElse(false) ) {
-      // this is a unified queue.. actually have the produce bind to the topic, instead of the
+    if( config.mirrored.getOrElse(false) ) {
+      // this is a mirrored queue.. actually have the produce bind to the topic, instead of the
       val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
       val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
       topic.connect(destination, producer)
@@ -1035,7 +1035,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def disconnect (producer:BindableDeliveryProducer) = {
     import OptionSupport._
-    if( config.unified.getOrElse(false) ) {
+    if( config.mirrored.getOrElse(false) ) {
       val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
       val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
       topic.disconnect(producer)

@@ -240,9 +240,11 @@ queue will be created when the broker first starts up.
 
 A `queue` element may be configured with the following attributes:
 
-* `unified` : If set to true, then routing then there is no difference
-  between sending to a queue or topic of the same name.  See the
-  [Unified Destinations](#Unified_Destinations) documentation for more 
+* `mirrored` : If set to true, If set to true, then once the queue
+  is created all messages sent to the queue will be mirrored to a 
+  topic of the same name and all messages sent to the topic will be mirror
+  to the queue.  See the
+  [Mirrored Queues](Mirrored_Queues) documentation for more 
   details.  Defaults to false.
 
 * `consumer_buffer` : The amount of memory buffer space allocated to each
@@ -331,18 +333,27 @@ then you must set the `topic` attribute and optionally the `selector` attribute.
 A `dsub` element may be configured with all the 
 attributes available on the `queue` element.
 
-##### Unified Destinations
+##### Mirrored Queues
 
-Unified destinations can be used so that you can mix queue and topic 
+A mirrored queue, once create will copy all messages sent
+to the queue to a topic of the same name and conversely
+the queue will receive a copy of all messages sent to the topic.
+
+Mirrored queues can be used to mix queue and topic 
 behavior on one logical destination.  For example, lets assumed `foo` 
-is configured as a unified destination and you have 2 subscribers
-on queue `foo` and 2 subscribers on topic `foo`, then when you publish to
-queue `foo` or topic `foo`, the 2 queue subscribers will load balance
-their messages and the 2 topic subscribers will each get a copy of the message.
+is configured as a mirrored destination and you have 2 subscribers
+on queue `foo` and 2 subscribers on topic `foo`.  On the producer side,
+publishers can send either the queue or topic and get the same results.
+On the consumer side, the 2 consumers the the queue foo will get queue
+semantics and message from the queue will be load balanced between 
+the 2 consumers.  The 2 consumers on the topic foo will each 
+get a copy of every message sent.  You can even create durable subscriptions
+on the topic which then effectively becomes a queue which mirrors the 
+original queue.
 
-It is important to note that the unified subscription will not start 
-retaining it's messages in a queue until a queue subscriber subscribes from
-it.
+It is important to note that the mirroring will not start until the queue
+is created which typically happens you first send a message to the queue
+or subscribe to it.
 
 ##### Message Stores
 

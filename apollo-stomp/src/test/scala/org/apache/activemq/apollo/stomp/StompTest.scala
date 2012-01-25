@@ -1125,7 +1125,7 @@ class DurableSubscriptionOnBDBTest extends DurableSubscriptionOnLevelDBTest {
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 }
 
-class StompUnifiedQueueTest extends StompTestSupport {
+class StompMirroredQueueTest extends StompTestSupport {
 
   test("Topic gets copy of message sent to queue") {
     connect("1.1")
@@ -1133,7 +1133,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     // Connect to subscribers
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/topic/unified.a\n" +
+      "destination:/topic/mirrored.a\n" +
       "id:1\n" +
       "receipt:0\n" +
       "\n")
@@ -1142,7 +1142,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/queue/unified.a\n" +
+        "destination:/queue/mirrored.a\n" +
         "\n" +
         "message:"+id+"\n")
     }
@@ -1163,7 +1163,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     // Connect to subscribers
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/queue/unified.b\n" +
+      "destination:/queue/mirrored.b\n" +
       "id:1\n" +
       "receipt:0\n" +
       "\n")
@@ -1172,7 +1172,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/topic/unified.b\n" +
+        "destination:/topic/mirrored.b\n" +
         "\n" +
         "message:"+id+"\n")
     }
@@ -1194,7 +1194,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/topic/unified.c\n" +
+        "destination:/topic/mirrored.c\n" +
         "\n" +
         "message:"+id+"\n")
     }
@@ -1204,7 +1204,7 @@ class StompUnifiedQueueTest extends StompTestSupport {
     // Connect to subscribers
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/queue/unified.c\n" +
+      "destination:/queue/mirrored.c\n" +
       "id:1\n" +
       "receipt:0\n" +
       "\n")

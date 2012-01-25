@@ -20,11 +20,11 @@
   <virtual_host id="default">
     <host_name>test</host_name>
 
-    <topic id="unified.*"/>
-    <topic id="notunified.*"/>
+    <topic id="mirrored.*"/>
+    <topic id="notmirrored.*"/>
 
-    <queue id="unified.a" kind="ptp" queue_buffer="333" unified="true"/>
-    <queue id="unified.*" kind="ds" queue_buffer="444" unified="true"/>
+    <queue id="mirrored.a" kind="ptp" queue_buffer="333" mirrored="true"/>
+    <queue id="mirrored.*" kind="ds" queue_buffer="444" mirrored="true"/>
     <queue queue_buffer="111"/>
 
   </virtual_host>

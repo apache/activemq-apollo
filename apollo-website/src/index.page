@@ -42,6 +42,7 @@ ActiveMQ 5.x JMS clients.
 * [Topics and Queues](documentation/user-manual.html#Destination_Types)
 * [Queue Browsers](documentation/user-manual.html#Browsing_Subscriptions)
 * [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Mirrored Queues](documentation/user-manual.html#Mirrored_Queues)
 * [Reliable Messaging](documentation/user-manual.html#Reliable_Messaging)
 * [Message Expiration](documentation/user-manual.html#Message_Expiration)
 * [Message Swapping](documentation/architecture.html#Message_Swapping)
