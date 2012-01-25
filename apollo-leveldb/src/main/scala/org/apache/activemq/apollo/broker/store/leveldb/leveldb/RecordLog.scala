@@ -70,7 +70,7 @@ case class RecordLog(directory: File, logSuffix:String) {
 
   directory.mkdirs()
 
-  var logSize = 1024 * 1024 * 100
+  var logSize = 1024 * 1024 * 100L
   var current_appender:LogAppender = _
   var verify_checksums = false
   var sync = false
@@ -122,9 +122,11 @@ case class RecordLog(directory: File, logSuffix:String) {
     channel.position(logSize-1)
     channel.write(new Buffer(1).toByteBuffer)
     channel.force(true)
-    channel.position(0)
+    if( sync ) {
+      channel.position(0)
+    }
 
-    val write_buffer = new DataByteArrayOutputStream((BUFFER_SIZE)+BUFFER_SIZE)
+    val write_buffer = new DataByteArrayOutputStream(BUFFER_SIZE+LOG_HEADER_SIZE)
 
     def force = {
       flush
@@ -194,7 +196,7 @@ case class RecordLog(directory: File, logSuffix:String) {
       }
     }
 
-    override def check_read_flush(end_offset:Int) = {
+    override def check_read_flush(end_offset:Long) = {
       if( flushed_offset.get() < end_offset )  {
         this.synchronized {
           println("read flush")
@@ -216,10 +218,12 @@ case class RecordLog(directory: File, logSuffix:String) {
       fd.close()
     }
 
-    def check_read_flush(end_offset:Int) = {}
+    def check_read_flush(end_offset:Long) = {}
     
     def read(record_position:Long, length:Int) = {
-      val offset = (record_position-position).toInt
+      val offset = record_position-position
+      assert(offset >=0 )
+      
       check_read_flush(offset+LOG_HEADER_SIZE+length)
       
       if(verify_checksums) {
@@ -273,7 +277,7 @@ case class RecordLog(directory: File, logSuffix:String) {
     }
 
     def read(record_position:Long) = {
-      val offset = (record_position-position).toInt
+      val offset = record_position-position
       val header = new Buffer(LOG_HEADER_SIZE)
       channel.read(header.toByteBuffer, offset)
       val is = header.bigEndianEditor();
@@ -300,7 +304,7 @@ case class RecordLog(directory: File, logSuffix:String) {
     }
 
     def check(record_position:Long):Option[(Long, Option[Long])] = {
-      var offset = (record_position-position).toInt
+      var offset = record_position-position
       val header = new Buffer(LOG_HEADER_SIZE)
       channel.read(header.toByteBuffer, offset)
       val is = header.bigEndianEditor();

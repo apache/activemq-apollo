@@ -216,16 +216,7 @@ class LevelDBClient(store: LevelDBStore) {
   }
 
   def log_size = {
-    Option(config.log_size).map(MemoryPropertyEditor.parse(_)).map{size=>
-      if(size == MemoryPropertyEditor.parse("2G")) {
-        Int.MaxValue // which is 2G - 1 (close enough!)
-      } else if(size > Int.MaxValue) {
-        warn("leveldb log_size was configured to be '"+config.log_size+"' but the maximum supported log size is 2G")
-        Int.MaxValue
-      } else {
-        size.toInt
-      }
-    }.getOrElse(1024 * 1024 * 100)
+    Option(config.log_size).map(MemoryPropertyEditor.parse(_)).getOrElse(1024 * 1024 * 100L)
   }
 
   def start() = {
