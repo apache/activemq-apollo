@@ -52,7 +52,10 @@ class Create extends Action {
 
   @option(name = "--with-ssl", description = "Generate an SSL enabled configuraiton")
   val with_ssl = true
-  
+
+  @option(name = "--encoding", description = "The encoding that text files should use")
+  val encoding = "UTF-8"
+
   var broker_security_config =
   """
   <authentication domain="apollo"/>
@@ -85,14 +88,14 @@ class Create extends Action {
       etc.mkdirs
 
       if (create_log_config) {
-        write("etc/log4j.properties", etc/"log4j.properties")
+        write("etc/log4j.properties", etc/"log4j.properties", false, true)
       }
 
       if ( create_login_config ) {
-        write("etc/users.properties", etc/"users.properties")
-        write("etc/groups.properties", etc/"groups.properties")
-        write("etc/login.config", etc/"login.config")
-        write("etc/black-list.txt", etc/"black-list.txt")
+        write("etc/users.properties", etc/"users.properties", false, true)
+        write("etc/groups.properties", etc/"groups.properties", false, true)
+        write("etc/login.config", etc/"login.config", false, true)
+        write("etc/black-list.txt", etc/"black-list.txt", false, true)
       }
 
       // Generate a keystore with a new key
@@ -194,17 +197,11 @@ class Create extends Action {
     null
   }
 
-  def write(source:String, target:File, filter:Boolean=false, target_encoding:String=null) = {
+  def write(source:String, target:File, filter:Boolean=false, text:Boolean=false) = {
     if( target.exists && !force ) {
       error("The file '%s' already exists.  Use --force to overwrite.".format(target))
     }
-    if( filter || target_encoding!=null ) {
-
-      val encoding = if( target_encoding!=null ) {
-        target_encoding
-      } else {
-        "UTF-8"
-      }
+    if( filter || text ) {
 
       val out = new ByteArrayOutputStream()
       using(getClass.getResourceAsStream(source)) { in=>
@@ -233,8 +230,10 @@ class Create extends Action {
         replace("${broker_security_config}", broker_security_config)
         replace("${host_security_config}", host_security_config)
       }
-      // and then writing out in the new target encoding.
-      val in = new ByteArrayInputStream(content.getBytes(encoding))
+
+      // and then writing out in the new target encoding..  Let's also replace \n with the values
+      // that is correct for the current platform.
+      val in = new ByteArrayInputStream(content.replaceAll("""\r?\n""",  Matcher.quoteReplacement(System.getProperty("line.separator"))).getBytes(encoding))
 
       using(new FileOutputStream(target)) { out=>
         copy(in, out)
