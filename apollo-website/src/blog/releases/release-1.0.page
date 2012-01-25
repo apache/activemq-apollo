@@ -1,0 +1,73 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blog_post: true
+title: Apollo 1.0
+author: Hiram Chirino
+author_url: http://fusesource.com
+created_at: 2012-01-24 12:06:40 -0000
+--- 
+
+The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
+availability of Apollo 1.0. ActiveMQ Apollo is a faster, more reliable, easier 
+to maintain messaging broker built from the foundations of the original ActiveMQ. 
+Apollo is the fastest and most robust STOMP server.
+
+Apollo Features:
+
+* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
+  Support
+* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
+  Support
+* [Topics and Queues](${website_base_url}/documentation/user-manual.html#Destination_Types)
+* [Queue Browsers](${website_base_url}/documentation/user-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](${website_base_url}/documentation/user-manual.html#Topic_Durable_Subscriptions)
+* [Reliable Messaging](${website_base_url}/documentation/user-manual.html#Reliable_Messaging)
+* Message swapping
+* [Message Selectors](${website_base_url}/documentation/user-manual.html#Message_Selectors)
+* [JAAS Authentication](${website_base_url}/documentation/user-manual.html#Authentication)
+* [ACL Authorization](${website_base_url}/documentation/user-manual.html#Authorization)
+* [SSL/TLS Support](${website_base_url}/documentation/user-manual.html#Using_SSL_TLS)
+* [REST Based Management](${website_base_url}/documentation/architecture.html#REST_Based_Management)
+  
+Noteworthy changes since the last beta include:
+
+* [APLO-120] - Add a --with-ssl option to the apollo create command to control if an SSL enabled configuration is created.
+* [APLO-134] - LevelDB store should use a file lock so a broker instance get exclusive access to the store data.
+* [APLO-135] - Add example to the distro that shows how you can boot up an embedded broker in a Java app.
+* [APLO-109] - Apollo should run with assertions enabled by default unless APOLLO_ASSERTIONS=false is set in the env.
+* [APLO-110] - Provide more information in case of authentication failure
+* [APLO-112] - Support for TLS 1.2
+* [APLO-118] - All configuration attributes which configure memory/disk usage sizes should support values like "1k" "2G" etc.
+* [APLO-124] - call the LoginModule.logout method
+* [APLO-125] - Client authentication error message
+* [APLO-128] - Simplify the leveldb-store's log record format so that every record has a checksum which can be used to quickly validate all read data in case your paranoid about data corruption in your FS
+* [APLO-130] - Allow acquired queue entries to get swapped.  This is especially handy if the entry was already persisted anyways.
+* [APLO-131] - Stores should track "storage schema version number" to detect when the store is incompatible with a new broker version.
+
+Further information:
+
+* [Download](${website_base_url}/download.html)
+* [Issues Fixed](https://issues.apache.org/jira/secure/ReleaseNote.jspa?version=12316435&styleName=Text&projectId=12311310&Create=Create)
+* [Documentation](${website_base_url}/versions/1.0/website/documentation)
+
+[Feedback](http://activemq.apache.org/community/index.html) is always welcome! 
+
+
+
+
+
+

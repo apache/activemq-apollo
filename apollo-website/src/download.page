@@ -50,7 +50,7 @@ Download it today!
 - for( version <- project_versions.headOption )
   :&markdown
     ### #{project_name} #{version} 
-    [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
+    [Release Notes](blog/releases/release-#{version}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
     
   table.download
     tr 
@@ -77,11 +77,15 @@ Download it today!
     a(href="#") Older Versions
   div.hide
     - for( version <- project_versions.drop(1) )
+      - val release_version = if( version.startsWith("1.0-beta" ) ) 
+        - version.replace('.','-')
+      - else
+        - version
       h3.accordion 
         a(href="#") #{project_name} #{version} 
       div.hide
-        :markdown
-          [Release Notes](blog/releases/release-#{version.replace('.','-')}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
+        :&markdown
+          [Release Notes](blog/releases/release-#{release_version}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
         table.download
           tr 
             td Binaries for Unix/Linux/OS X:
