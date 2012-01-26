@@ -72,9 +72,6 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("")
     out.println("import org.apache.activemq.apollo.openwire.codec.*;")
     out.println("import org.apache.activemq.apollo.openwire.command.*;")
-    out.println("import org.apache.activemq.apollo.filter.BooleanExpression;")
-    out.println("import org.fusesource.hawtbuf.Buffer;")
-
 
     out.println("")
     out.println("")
@@ -90,10 +87,9 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println(" * Marshalling code for Open Wire Format for " + getClassName() + "")
     out.println(" *")
     out.println(" *")
-    out.println(" * NOTE!: This file is auto generated - do not modify!")
-    out.println(" *        if you need to make a change, please see the modify the code generator")
-    out.println(" *        in the apollo-openwire-generator module.")
-    out.println(" * ")
+    out.println(" * NOTE!: This file is auto generated - do not modify!");
+    out.println(" *        Modify the 'apollo-openwire-generator' module instead.");
+    out.println(" *")
     out.println(" */")
     out.println("public " + getAbstractClassText + "class " + getClassName() + " extends " + getBaseClass + " {")
     out.println("")
@@ -230,7 +226,6 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
 
   private def generateLicence(out: PrintWriter): Unit = {
     out.println("/**")
-    out.println(" *")
     out.println(" * Licensed to the Apache Software Foundation (ASF) under one or more")
     out.println(" * contributor license agreements.  See the NOTICE file distributed with")
     out.println(" * this work for additional information regarding copyright ownership.")
@@ -238,7 +233,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println(" * (the \"License\"); you may not use this file except in compliance with")
     out.println(" * the License.  You may obtain a copy of the License at")
     out.println(" *")
-    out.println(" * http://www.apache.org/licenses/LICENSE-2.0")
+    out.println(" *      http://www.apache.org/licenses/LICENSE-2.0")
     out.println(" *")
     out.println(" * Unless required by applicable law or agreed to in writing, software")
     out.println(" * distributed under the License is distributed on an \"AS IS\" BASIS,")
@@ -279,9 +274,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println(" * MarshallerFactory for Open Wire Format.")
     out.println(" *")
     out.println(" *")
-    out.println(" * NOTE!: This file is auto generated - do not modify!")
-    out.println(" *        if you need to make a change, please see the modify the code generator")
-    out.println(" *        in the apollo-openwire-generator module.")
+    out.println(" * NOTE!: This file is auto generated - do not modify!");
+    out.println(" *        Modify the 'apollo-openwire-generator' module instead.");
     out.println(" *")
     out.println(" * ")
     out.println(" */")
@@ -390,11 +384,11 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     } else if (`type` == "Buffer") {
       out.println("        info." + setter + "(tightUnmarshalBuffer(dataIn, bs));")
     } else if (isThrowable(property.getType)) {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") tightUnmarsalThrowable(wireFormat, dataIn, bs));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")tightUnmarsalThrowable(wireFormat, dataIn, bs));")
     } else if (isCachedProperty(property)) {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") tightUnmarsalCachedObject(wireFormat, dataIn, bs));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")tightUnmarsalCachedObject(wireFormat, dataIn, bs));")
     } else {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") tightUnmarsalNestedObject(wireFormat, dataIn, bs));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")tightUnmarsalNestedObject(wireFormat, dataIn, bs));")
     }
   }
 
@@ -445,7 +439,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       } else if (`type` == "int") {
         baseSize += 4
       } else if (`type` == "long") {
-        out.println("        rc+=tightMarshalLong1(wireFormat, " + getter + ", bs);")
+        out.println("        rc += tightMarshalLong1(wireFormat, " + getter + ", bs);")
       } else if (`type` == "String") {
         out.println("        rc += tightMarshalString1(" + getter + ", bs);")
       } else if (`type` == "byte[]") {
@@ -607,13 +601,13 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         out.println("        info." + setter + "(looseUnmarshalByteArray(dataIn));")
       }
     } else if (`type` == "Buffer") {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarshalBuffer(dataIn));")
+      out.println("        info." + setter + "(looseUnmarshalBuffer(dataIn));")
     } else if (isThrowable(property.getType)) {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarsalThrowable(wireFormat, dataIn));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")looseUnmarsalThrowable(wireFormat, dataIn));")
     } else if (isCachedProperty(property)) {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarsalCachedObject(wireFormat, dataIn));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")looseUnmarsalCachedObject(wireFormat, dataIn));")
     } else {
-      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarsalNestedObject(wireFormat, dataIn));")
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")looseUnmarsalNestedObject(wireFormat, dataIn));")
     }
   }
 
@@ -626,7 +620,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       out.println("        {")
       out.println("            " + arrayType + " value[] = new " + arrayType + "[" + size.asInt + "];")
       out.println("            " + "for( int i=0; i < " + size.asInt + "; i++ ) {")
-      out.println("                value[i] = (" + arrayType + ") looseUnmarsalNestedObject(wireFormat,dataIn);")
+      out.println("                value[i] = (" + arrayType + ")looseUnmarsalNestedObject(wireFormat,dataIn);")
       out.println("            }")
       out.println("            info." + setter + "(value);")
       out.println("        }")
@@ -635,7 +629,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       out.println("            short size = dataIn.readShort();")
       out.println("            " + arrayType + " value[] = new " + arrayType + "[size];")
       out.println("            for( int i=0; i < size; i++ ) {")
-      out.println("                value[i] = (" + arrayType + ") looseUnmarsalNestedObject(wireFormat,dataIn);")
+      out.println("                value[i] = (" + arrayType + ")looseUnmarsalNestedObject(wireFormat,dataIn);")
       out.println("            }")
       out.println("            info." + setter + "(value);")
       out.println("        }")
