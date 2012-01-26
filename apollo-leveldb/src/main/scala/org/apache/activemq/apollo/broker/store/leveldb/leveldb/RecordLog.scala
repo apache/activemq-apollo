@@ -199,7 +199,6 @@ case class RecordLog(directory: File, logSuffix:String) {
     override def check_read_flush(end_offset:Long) = {
       if( flushed_offset.get() < end_offset )  {
         this.synchronized {
-          println("read flush")
           flush
         }
       }
