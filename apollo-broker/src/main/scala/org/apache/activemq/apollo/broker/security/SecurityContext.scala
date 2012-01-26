@@ -39,7 +39,7 @@ class SecurityContext {
   var local_address:SocketAddress = _
   var remote_address:SocketAddress = _
   var login_context:LoginContext = _
-  var connection_id:Option[Long] = None
+  var session_id:Option[String] = None
 
   def credential_dump = {
     var rc = List[String]()

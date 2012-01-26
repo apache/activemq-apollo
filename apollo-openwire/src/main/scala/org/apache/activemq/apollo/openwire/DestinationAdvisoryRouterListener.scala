@@ -175,7 +175,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def send(delivery:Delivery): Unit = {
     val message = delivery.message.asInstanceOf[OpenwireMessage].message
-    val dest: Array[DestinationDTO] = to_destination_dto(message.getDestination)
+    val dest: Array[DestinationDTO] = to_destination_dto(message.getDestination,null)
     val key = dest.toList
 
     val route = producerRoutes.get(key) match {

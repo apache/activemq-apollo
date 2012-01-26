@@ -67,6 +67,8 @@ trait ProtocolHandler {
 
   def protocol:String
 
+  def session_id:Option[String]
+
   var connection:BrokerConnection = null;
 
   def set_connection(brokerConnection:BrokerConnection) = {

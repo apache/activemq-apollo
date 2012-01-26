@@ -20,8 +20,8 @@ import java.util.LinkedList
 import java.util.regex._
 import collection.JavaConversions._
 import org.apache.activemq.apollo.util.path.PathParser.PartFilter
-import util.matching.Regex
 import collection.mutable.ListBuffer
+import org.fusesource.hawtbuf.{DataByteArrayOutputStream, AsciiBuffer}
 
 /**
   * Holds the delimiters used to parse paths.
@@ -108,6 +108,44 @@ object PathParser {
     }
   }
 
+
+  def sanitize_destination_part(value:String) = {
+    val buffer = new AsciiBuffer(value)
+    val rc = new StringBuffer(value.length())
+    var i = 0
+    val l = buffer.length
+    while( i < l ) {
+      val c = buffer.data(i)
+      if(
+        ('a' <= c && c <= 'z') ||
+        ('A' <= c && c <= 'Z') ||
+        ('0' <= c && c <= '9') ||
+        c=='_' || c=='-' || c=='~' || c==':'
+      ) {
+        rc.append(c.toChar)
+      } else {
+        rc.append("%%%02x".format(c))
+      }
+      i += 1
+    }
+    rc.toString
+  }
+
+  def unsanitize_destination_part(value:String):String = {
+    val rc = new DataByteArrayOutputStream
+    var pos = value
+    while( pos.length() > 0 ) {
+      if( pos.startsWith("%") && pos.length()> 3 ) {
+        val dec = pos.substring(1,3)
+        rc.writeByte(Integer.parseInt(dec, 16))
+        pos = pos.substring(3);
+      } else {
+        rc.writeByte(pos.charAt(0))
+        pos = pos.substring(1)
+      }
+    }
+    rc.toBuffer.utf8().toString
+  }
 }
 
 class PathParser {
@@ -117,7 +155,7 @@ class PathParser {
   var regex_wildcard_start = "{"
   var regex_wildcard_end = "}"
   var path_separator = "."
-  var part_pattern = Pattern.compile("[ a-zA-Z0-9\\_\\-\\%\\~]+")
+  var part_pattern = Pattern.compile("[ a-zA-Z0-9\\_\\-\\%\\~\\:]+")
 
   def copy(other:PathParser) = {
     any_descendant_wildcard = other.any_descendant_wildcard

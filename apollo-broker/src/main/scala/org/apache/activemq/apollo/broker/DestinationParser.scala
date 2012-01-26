@@ -28,6 +28,7 @@ import scala.Array
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class DestinationParser extends PathParser {
+  import PathParser._
 
   var queue_prefix = "queue:"
   var topic_prefix = "topic:"

@@ -348,12 +348,12 @@ class Broker() extends BaseService with SecuredResource {
 
   def schedule_virtualhost_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
     if( service_state.is_started ) {
-      val active_connections = connections.keySet
+      val active_sessions = connections.values.flatMap(_.session_id).toSet
 
       virtual_hosts.values.foreach { host=>
         host.dispatch_queue {
           if(host.service_state.is_started) {
-            host.router.remove_temp_destinations(active_connections)
+            host.router.remove_temp_destinations(active_sessions)
           }
         }
       }

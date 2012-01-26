@@ -36,11 +36,10 @@ import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
-import org.apache.activemq.apollo.openwire.DestinationConverter._
 import org.apache.activemq.apollo.broker._
 import protocol._
 import security.SecurityContext
-
+import DestinationConverter._
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -97,7 +96,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   private def queue = connection.dispatch_queue
 
-  var session_id: AsciiBuffer = _
   var wire_format: OpenWireFormat = _
   var login: Option[AsciiBuffer] = None
   var passcode: Option[AsciiBuffer] = None
@@ -111,6 +109,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   var current_command: Object = _
 
   var codec:OpenwireCodec = _
+  var temp_destination_map = HashMap[ActiveMQDestination, DestinationDTO]()
+
+  def session_id = security_context.session_id
 
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
@@ -179,7 +180,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   }
 
   override def on_transport_connected():Unit = {
-    security_context.connection_id = Some(connection.id)
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
 
@@ -421,11 +421,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def on_connection_info(info: ConnectionInfo) = {
     val id = info.getConnectionId()
-    if (!all_connections.contains(id)) {
+    if (connection_context==null) {
       new ConnectionContext(info).attach
 
       security_context.user = info.getUserName
       security_context.password = info.getPassword
+      security_context.session_id = Some(sanitize_destination_part(info.getConnectionId.toString))
 
       reset {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
@@ -458,7 +459,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def on_session_info(info: SessionInfo) = {
     val id = info.getSessionId();
     if (!all_sessions.contains(id)) {
-      val parent = all_connections.get(id.getParentId()).getOrElse(die("Cannot add a session to a connection that had not been registered."))
+      val parent = get_context(id.getParentId())
       new SessionContext(parent, info).attach
     }
     ack(info);
@@ -484,7 +485,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   }
 
   def on_destination_info(info:DestinationInfo) = {
-    val destinations = to_destination_dto(info.getDestination)
+    val destinations = to_destination_dto(info.getDestination, this)
 //    if( info.getDestination.isTemporary ) {
 //      destinations.foreach(_.temp_owner = connection.id)
 //    }
@@ -506,7 +507,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def on_remove_info(info: RemoveInfo) = {
     info.getObjectId match {
-      case id: ConnectionId => all_connections.get(id).foreach(_.dettach)
+      case id: ConnectionId => Option(connection_context).foreach(_.dettach)
       case id: SessionId => all_sessions.get(id).foreach(_.dettach)
       case id: ProducerId => all_producers.get(id).foreach(_.dettach)
       case id: ConsumerId => all_consumers.get(id).foreach(_.dettach )
@@ -516,8 +517,15 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     ack(info)
   }
 
+  def get_context(id:ConnectionId) = {
+    if(connection_context!=null && connection_context.info.getConnectionId == id)
+      connection_context
+    else
+      die("Cannot add a session to a connection that had not been registered.")
+  }
+  
   def on_transaction_info(info:TransactionInfo) = {
-    val parent = all_connections.get(info.getConnectionId()).getOrElse(die("Cannot add a session to a connection that had not been registered."))
+    val parent = get_context(info.getConnectionId())
     val id = info.getTransactionId
     info.getType match {
       case TransactionInfo.BEGIN =>
@@ -591,7 +599,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def perform_send(msg:ActiveMQMessage, uow:StoreUOW=null): Unit = {
 
-    val destiantion = to_destination_dto(msg.getDestination)
+    val destiantion = to_destination_dto(msg.getDestination, this)
     val key = destiantion.toList
     producerRoutes.get(key) match {
       case null =>
@@ -685,8 +693,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   //      host.createQueue(destination);
   //      return ack(info);
   //  }
-
-  val all_connections = new HashMap[ConnectionId, ConnectionContext]();
+  var connection_context:ConnectionContext= null
+  
   val all_sessions = new HashMap[SessionId, SessionContext]();
   val all_producers = new HashMap[ProducerId, ProducerContext]();
   val all_consumers = new HashMap[ConsumerId, ConsumerContext]();
@@ -701,15 +709,18 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def default_session_id = new SessionId(info.getConnectionId(), -1)
 
     def attach = {
+      if( connection_context!=null ) {
+        die("Only one logic connection is supported.")
+      }
       // create the default session.
       new SessionContext(this, new SessionInfo(default_session_id)).attach
-      all_connections.put(info.getConnectionId, this)
+      connection_context = this
     }
 
     def dettach = {
       sessions.values.toArray.foreach(_.dettach)
       transactions.values.toArray.foreach(_.dettach)
-      all_connections.remove(info.getConnectionId)
+      connection_context = null
     }
   }
 
@@ -811,7 +822,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def attach = {
 
       if( info.getDestination == null ) fail("destination was not set")
-      destination = to_destination_dto(info.getDestination)
+      destination = to_destination_dto(info.getDestination, OpenwireProtocolHandler.this)
 
       // if they are temp dests.. attach our owner id so that we don't
       // get rejected.

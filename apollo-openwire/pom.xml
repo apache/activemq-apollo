@@ -60,19 +60,6 @@
     <!-- so we can test against a persisentce store -->
     <dependency>
       <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-leveldb</artifactId>
-      <version>1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-bdb</artifactId>
-      <version>1.1-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
       <version>1.1-SNAPSHOT</version>
       <type>test-jar</type>
@@ -85,6 +72,33 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-bdb</artifactId>
+      <version>1.1-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-leveldb</artifactId>
+      <version>1.1-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jetty.aggregate</groupId>
+      <artifactId>jetty-all-server</artifactId>
+      <version>${jetty-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-web</artifactId>
+      <version>1.1-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+
 
     <dependency>
       <groupId>junit</groupId>
