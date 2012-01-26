@@ -37,6 +37,7 @@ import org.fusesource.hawtbuf.ByteArrayInputStream;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
 /**
+ * @openwire:marshaller
  */
 public class ActiveMQObjectMessage extends ActiveMQMessage {
     

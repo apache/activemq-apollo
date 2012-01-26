@@ -33,7 +33,7 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 /**
-
+ * @openwire:marshaller
  */
 public class ActiveMQMapMessage extends ActiveMQMessage {
 

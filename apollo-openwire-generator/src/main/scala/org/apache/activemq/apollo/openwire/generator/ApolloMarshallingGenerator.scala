@@ -8,16 +8,12 @@ import java.util.Collections
 import java.util.Comparator
 import java.util.List
 
-import org.codehaus.jam.JAnnotation
-import org.codehaus.jam.JAnnotationValue
-import org.codehaus.jam.JClass
-import org.codehaus.jam.JPackage
-import org.codehaus.jam.JProperty
 import org.apache.activemq.openwire.tool.MultiSourceGenerator
 import collection.JavaConversions._
 import org.apache.tools.ant.Project
 import org.apache.tools.ant.taskdefs.FixCRLF
 import org.apache.tools.ant.taskdefs.FixCRLF.CrLf
+import org.codehaus.jam._
 
 /**
  * <p>
@@ -35,6 +31,36 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     return answer
   }
 
+
+  def includeInThisVersion(annotation: JAnnotation) = {
+    Option(annotation.getValue("version")).map(_.asInt() <= getOpenwireVersion).getOrElse(true)
+  }
+
+  override protected def isValidClass(jclass: JClass): Boolean = {
+    val annotation = jclass.getAnnotation("openwire:marshaller")
+    if (annotation == null) {
+      return false
+    }
+    if(!includeInThisVersion(annotation)) {
+      return false
+    }
+    return !manuallyMaintainedClasses.contains(jclass.getSimpleName)
+  }
+
+  override def isValidProperty(it: JProperty): Boolean = {
+    val getter = it.getGetter
+    if( getter == null || it.getSetter == null || getter.isStatic  )
+      return false
+    val annotation = getter.getAnnotation("openwire:property")
+    if (annotation == null) {
+      return false
+    }
+    if(!includeInThisVersion(annotation)) {
+      return false
+    }
+    return true
+  }
+
   protected def generateFile(out: PrintWriter): Unit = {
     generateLicence(out)
     out.println("")
@@ -46,6 +72,9 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("")
     out.println("import org.apache.activemq.apollo.openwire.codec.*;")
     out.println("import org.apache.activemq.apollo.openwire.command.*;")
+    out.println("import org.apache.activemq.apollo.filter.BooleanExpression;")
+    out.println("import org.fusesource.hawtbuf.Buffer;")
+
 
     out.println("")
     out.println("")
@@ -358,8 +387,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       } else {
         out.println("        info." + setter + "(tightUnmarshalByteArray(dataIn, bs));")
       }
-    } else if (`type` == "ByteSequence") {
-      out.println("        info." + setter + "(tightUnmarshalByteSequence(dataIn, bs));")
+    } else if (`type` == "Buffer") {
+      out.println("        info." + setter + "(tightUnmarshalBuffer(dataIn, bs));")
     } else if (isThrowable(property.getType)) {
       out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") tightUnmarsalThrowable(wireFormat, dataIn, bs));")
     } else if (isCachedProperty(property)) {
@@ -425,8 +454,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         } else {
           out.println("        rc += tightMarshalConstByteArray1(" + getter + ", bs, " + size.asInt + ");")
         }
-      } else if (`type` == "ByteSequence") {
-        out.println("        rc += tightMarshalByteSequence1(" + getter + ", bs);")
+      } else if (`type` == "Buffer") {
+        out.println("        rc += tightMarshalBuffer1(" + getter + ", bs);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
           out.println("        rc += tightMarshalObjectArrayConstSize1(wireFormat, " + getter + ", bs, " + size.asInt + ");")
@@ -473,8 +502,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         } else {
           out.println("        tightMarshalByteArray2(" + getter + ", dataOut, bs);")
         }
-      } else if (`type` == "ByteSequence") {
-        out.println("        tightMarshalByteSequence2(" + getter + ", dataOut, bs);")
+      } else if (`type` == "Buffer") {
+        out.println("        tightMarshalBuffer2(" + getter + ", dataOut, bs);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
           out.println("        tightMarshalObjectArrayConstSize2(wireFormat, " + getter + ", dataOut, bs, " + size.asInt + ");")
@@ -520,8 +549,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         } else {
           out.println("        looseMarshalByteArray(wireFormat, " + getter + ", dataOut);")
         }
-      } else if (`type` == "ByteSequence") {
-        out.println("        looseMarshalByteSequence(wireFormat, " + getter + ", dataOut);")
+      } else if (`type` == "Buffer") {
+        out.println("        looseMarshalBuffer(wireFormat, " + getter + ", dataOut);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
           out.println("        looseMarshalObjectArrayConstSize(wireFormat, " + getter + ", dataOut, " + size.asInt + ");")
@@ -577,8 +606,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       } else {
         out.println("        info." + setter + "(looseUnmarshalByteArray(dataIn));")
       }
-    } else if (`type` == "ByteSequence") {
-      out.println("        info." + setter + "(looseUnmarshalByteSequence(dataIn));")
+    } else if (`type` == "Buffer") {
+      out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarshalBuffer(dataIn));")
     } else if (isThrowable(property.getType)) {
       out.println("        info." + setter + "((" + property.getType.getQualifiedName + ") looseUnmarsalThrowable(wireFormat, dataIn));")
     } else if (isCachedProperty(property)) {
@@ -613,6 +642,20 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       out.println("        else {")
       out.println("            info." + setter + "(null);")
       out.println("        }")
+    }
+  }
+
+  override def isMarshallAware(j: JClass): Boolean = {
+    if (filePostFix.endsWith("java")) {
+      j.getInterfaces.foreach { x=>
+        if (x.getQualifiedName == "org.apache.activemq.apollo.openwire.command.MarshallAware") {
+          return true
+        }
+      }
+      return false
+    } else {
+      var simpleName = j.getSimpleName
+      return (simpleName == "ActiveMQMessage") || (simpleName == "WireFormatInfo")
     }
   }
 
