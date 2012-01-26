@@ -21,29 +21,29 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.BrokerInfo;
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
+
+
 
 /**
- * Marshalling code for Open Wire Format for BrokerInfoMarshaller NOTE!: This
- * file is auto generated - do not modify! if you need to make a change, please
- * see the modify the groovy scripts in the under src/gram/script and then use
- * maven openwire:generate to regenerate this file.
- * 
+ * Marshalling code for Open Wire Format for BrokerInfoMarshaller
+ *
+ *
+ * NOTE!: This file is auto generated - do not modify!
+ *        Modify the 'apollo-openwire-generator' module instead.
+ *
  */
 public class BrokerInfoMarshaller extends BaseCommandMarshaller {
 
     /**
      * Return the type of Data Structure we marshal
-     * 
      * @return short representation of the type data structure
      */
     public byte getDataStructureType() {
         return BrokerInfo.DATA_STRUCTURE_TYPE;
     }
-
+    
     /**
      * @return a new object instance
      */
@@ -53,7 +53,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -68,11 +68,12 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         if (bs.readBoolean()) {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerInfo value[] = new org.apache.activemq.apollo.openwire.command.BrokerInfo[size];
-            for (int i = 0; i < size; i++) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo)tightUnmarsalNestedObject(wireFormat, dataIn, bs);
+            for( int i=0; i < size; i++ ) {
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo) tightUnmarsalNestedObject(wireFormat,dataIn, bs);
             }
             info.setPeerBrokerInfos(value);
-        } else {
+        }
+        else {
             info.setPeerBrokerInfos(null);
         }
         info.setBrokerName(tightUnmarshalString(dataIn, bs));
@@ -81,6 +82,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         info.setFaultTolerantConfiguration(bs.readBoolean());
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream
@@ -103,7 +105,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
 
     /**
      * Write a object instance to data output stream
-     * 
+     *
      * @param o the instance to be marshaled
      * @param dataOut the output stream
      * @throws IOException thrown if an error occurs
@@ -124,7 +126,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -139,11 +141,12 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         if (dataIn.readBoolean()) {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerInfo value[] = new org.apache.activemq.apollo.openwire.command.BrokerInfo[size];
-            for (int i = 0; i < size; i++) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo)looseUnmarsalNestedObject(wireFormat, dataIn);
+            for( int i=0; i < size; i++ ) {
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setPeerBrokerInfos(value);
-        } else {
+        }
+        else {
             info.setPeerBrokerInfos(null);
         }
         info.setBrokerName(looseUnmarshalString(dataIn));
@@ -152,6 +155,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         info.setFaultTolerantConfiguration(dataIn.readBoolean());
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream

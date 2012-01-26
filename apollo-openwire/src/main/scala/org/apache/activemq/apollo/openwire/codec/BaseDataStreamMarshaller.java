@@ -14,18 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.openwire.codec.v1;
+package org.apache.activemq.apollo.openwire.codec;
+
+import org.apache.activemq.apollo.openwire.command.DataStructure;
+import org.fusesource.hawtbuf.Buffer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.DataStreamMarshaller;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
-import org.fusesource.hawtbuf.Buffer;
 
 public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
 
@@ -200,7 +197,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
                                 .newInstance(new Object[] {tightUnmarshalString(dataIn, bs),
                                                            tightUnmarshalString(dataIn, bs),
                                                            tightUnmarshalString(dataIn, bs),
-                                                           new Integer(dataIn.readInt())});
+                                                           Integer.valueOf(dataIn.readInt())});
                         } catch (IOException e) {
                             throw e;
                         } catch (Throwable e) {
@@ -416,7 +413,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return rc;
     }
 
-    protected int tightMarshalByteSequence1(Buffer data, BooleanStream bs) throws IOException {
+    protected int tightMarshalBuffer1(Buffer data, BooleanStream bs) throws IOException {
         bs.writeBoolean(data != null);
         if (data != null) {
             return data.getLength() + 4;
@@ -425,7 +422,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalByteSequence2(Buffer data, DataOutput dataOut, BooleanStream bs)
+    protected void tightMarshalBuffer2(Buffer data, DataOutput dataOut, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             dataOut.writeInt(data.getLength());
@@ -433,7 +430,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Buffer tightUnmarshalByteSequence(DataInput dataIn, BooleanStream bs) throws IOException {
+    protected Buffer tightUnmarshalBuffer(DataInput dataIn, BooleanStream bs) throws IOException {
         Buffer rc = null;
         if (bs.readBoolean()) {
             int size = dataIn.readInt();
@@ -521,7 +518,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
                                 .newInstance(new Object[] {looseUnmarshalString(dataIn),
                                                            looseUnmarshalString(dataIn),
                                                            looseUnmarshalString(dataIn),
-                                                           new Integer(dataIn.readInt())});
+                                                           Integer.valueOf(dataIn.readInt())});
                         } catch (IOException e) {
                             throw e;
                         } catch (Throwable e) {
@@ -623,7 +620,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return rc;
     }
 
-    protected void looseMarshalByteSequence(OpenWireFormat wireFormat, Buffer data, DataOutput dataOut)
+    protected void looseMarshalBuffer(OpenWireFormat wireFormat, Buffer data, DataOutput dataOut)
         throws IOException {
         dataOut.writeBoolean(data != null);
         if (data != null) {
@@ -632,7 +629,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Buffer looseUnmarshalByteSequence(DataInput dataIn) throws IOException {
+    protected Buffer looseUnmarshalBuffer(DataInput dataIn) throws IOException {
         Buffer rc = null;
         if (dataIn.readBoolean()) {
             int size = dataIn.readInt();

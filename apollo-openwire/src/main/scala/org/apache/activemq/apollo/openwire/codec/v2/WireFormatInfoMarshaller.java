@@ -21,10 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.WireFormatInfo;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
 
 
 
@@ -33,9 +31,7 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
@@ -71,7 +67,7 @@ public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
         
         info.setMagic(tightUnmarshalConstByteArray(dataIn, bs, 8));
         info.setVersion(dataIn.readInt());
-        info.setMarshalledProperties(tightUnmarshalByteSequence(dataIn, bs));
+        info.setMarshalledProperties(tightUnmarshalBuffer(dataIn, bs));
 
         info.afterUnmarshall(wireFormat);
 
@@ -89,7 +85,7 @@ public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
 
         int rc = super.tightMarshal1(wireFormat, o, bs);
         rc += tightMarshalConstByteArray1(info.getMagic(), bs, 8);
-        rc += tightMarshalByteSequence1(info.getMarshalledProperties(), bs);
+        rc += tightMarshalBuffer1(info.getMarshalledProperties(), bs);
 
         return rc + 4;
     }
@@ -107,7 +103,7 @@ public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
         WireFormatInfo info = (WireFormatInfo)o;
         tightMarshalConstByteArray2(info.getMagic(), dataOut, bs, 8);
         dataOut.writeInt(info.getVersion());
-        tightMarshalByteSequence2(info.getMarshalledProperties(), dataOut, bs);
+        tightMarshalBuffer2(info.getMarshalledProperties(), dataOut, bs);
 
         info.afterMarshall(wireFormat);
 
@@ -129,7 +125,7 @@ public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
         
         info.setMagic(looseUnmarshalConstByteArray(dataIn, 8));
         info.setVersion(dataIn.readInt());
-        info.setMarshalledProperties(looseUnmarshalByteSequence(dataIn));
+        info.setMarshalledProperties(looseUnmarshalBuffer(dataIn));
 
         info.afterUnmarshall(wireFormat);
 
@@ -148,7 +144,7 @@ public class WireFormatInfoMarshaller extends BaseDataStreamMarshaller {
         super.looseMarshal(wireFormat, o, dataOut);
         looseMarshalConstByteArray(wireFormat, info.getMagic(), dataOut, 8);
         dataOut.writeInt(info.getVersion());
-        looseMarshalByteSequence(wireFormat, info.getMarshalledProperties(), dataOut);
+        looseMarshalBuffer(wireFormat, info.getMarshalledProperties(), dataOut);
 
     }
 }

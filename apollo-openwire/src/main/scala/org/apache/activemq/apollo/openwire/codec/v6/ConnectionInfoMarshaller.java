@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,16 +24,15 @@ import java.io.IOException;
 import org.apache.activemq.apollo.openwire.codec.*;
 import org.apache.activemq.apollo.openwire.command.*;
 
+
+
 /**
  * Marshalling code for Open Wire Format for ConnectionInfoMarshaller
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
- * @version $Revision: 961783 $
  */
 public class ConnectionInfoMarshaller extends BaseCommandMarshaller {
 
@@ -64,7 +62,7 @@ public class ConnectionInfoMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         ConnectionInfo info = (ConnectionInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setClientId(tightUnmarshalString(dataIn, bs));
         info.setPassword(tightUnmarshalString(dataIn, bs));
         info.setUserName(tightUnmarshalString(dataIn, bs));
@@ -146,7 +144,7 @@ public class ConnectionInfoMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         ConnectionInfo info = (ConnectionInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setClientId(looseUnmarshalString(dataIn));
         info.setPassword(looseUnmarshalString(dataIn));
         info.setUserName(looseUnmarshalString(dataIn));
@@ -155,7 +153,7 @@ public class ConnectionInfoMarshaller extends BaseCommandMarshaller {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerId value[] = new org.apache.activemq.apollo.openwire.command.BrokerId[size];
             for( int i=0; i < size; i++ ) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId) looseUnmarsalNestedObject(wireFormat,dataIn);
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setBrokerPath(value);
         }

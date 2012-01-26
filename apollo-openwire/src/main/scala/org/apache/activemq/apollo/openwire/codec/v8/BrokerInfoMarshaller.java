@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,11 +31,8 @@ import org.apache.activemq.apollo.openwire.command.*;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
- * 
  */
 public class BrokerInfoMarshaller extends BaseCommandMarshaller {
 
@@ -66,7 +62,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         BrokerInfo info = (BrokerInfo)o;
-        info.setBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setBrokerURL(tightUnmarshalString(dataIn, bs));
 
         if (bs.readBoolean()) {
@@ -110,7 +106,7 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         bs.writeBoolean(info.isFaultTolerantConfiguration());
         bs.writeBoolean(info.isDuplexConnection());
         bs.writeBoolean(info.isNetworkConnection());
-        rc+=tightMarshalLong1(wireFormat, info.getConnectionId(), bs);
+        rc += tightMarshalLong1(wireFormat, info.getConnectionId(), bs);
         rc += tightMarshalString1(info.getBrokerUploadUrl(), bs);
         rc += tightMarshalString1(info.getNetworkProperties(), bs);
 
@@ -154,14 +150,14 @@ public class BrokerInfoMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         BrokerInfo info = (BrokerInfo)o;
-        info.setBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setBrokerURL(looseUnmarshalString(dataIn));
 
         if (dataIn.readBoolean()) {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerInfo value[] = new org.apache.activemq.apollo.openwire.command.BrokerInfo[size];
             for( int i=0; i < size; i++ ) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo) looseUnmarsalNestedObject(wireFormat,dataIn);
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerInfo)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setPeerBrokerInfos(value);
         }

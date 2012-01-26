@@ -21,29 +21,29 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.LocalTransactionId;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
+
+
 
 /**
- * Marshalling code for Open Wire Format for LocalTransactionIdMarshaller NOTE!:
- * This file is auto generated - do not modify! if you need to make a change,
- * please see the modify the groovy scripts in the under src/gram/script and
- * then use maven openwire:generate to regenerate this file.
- * 
+ * Marshalling code for Open Wire Format for LocalTransactionIdMarshaller
+ *
+ *
+ * NOTE!: This file is auto generated - do not modify!
+ *        Modify the 'apollo-openwire-generator' module instead.
+ *
  */
 public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
     /**
      * Return the type of Data Structure we marshal
-     * 
      * @return short representation of the type data structure
      */
     public byte getDataStructureType() {
         return LocalTransactionId.DATA_STRUCTURE_TYPE;
     }
-
+    
     /**
      * @return a new object instance
      */
@@ -53,7 +53,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -66,6 +66,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
         info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream
@@ -83,7 +84,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
     /**
      * Write a object instance to data output stream
-     * 
+     *
      * @param o the instance to be marshaled
      * @param dataOut the output stream
      * @throws IOException thrown if an error occurs
@@ -99,7 +100,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -112,6 +113,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
         info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)looseUnmarsalCachedObject(wireFormat, dataIn));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream

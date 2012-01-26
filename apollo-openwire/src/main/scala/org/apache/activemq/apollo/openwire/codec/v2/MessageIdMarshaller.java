@@ -21,31 +21,29 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.MessageId;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
+
+
 
 /**
  * Marshalling code for Open Wire Format for MessageIdMarshaller
- * 
- * 
- * NOTE!: This file is auto generated - do not modify! if you need to make a
- * change, please see the modify the groovy scripts in the under src/gram/script
- * and then use maven openwire:generate to regenerate this file.
- * 
+ *
+ *
+ * NOTE!: This file is auto generated - do not modify!
+ *        Modify the 'apollo-openwire-generator' module instead.
+ *
  */
 public class MessageIdMarshaller extends BaseDataStreamMarshaller {
 
     /**
      * Return the type of Data Structure we marshal
-     * 
      * @return short representation of the type data structure
      */
     public byte getDataStructureType() {
         return MessageId.DATA_STRUCTURE_TYPE;
     }
-
+    
     /**
      * @return a new object instance
      */
@@ -55,22 +53,21 @@ public class MessageIdMarshaller extends BaseDataStreamMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
      */
-    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs)
-        throws IOException {
+    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs) throws IOException {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         MessageId info = (MessageId)o;
-        info.setProducerId((org.apache.activemq.apollo.openwire.command.ProducerId)tightUnmarsalCachedObject(wireFormat,
-                                                                                             dataIn, bs));
+        info.setProducerId((org.apache.activemq.apollo.openwire.command.ProducerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setProducerSequenceId(tightUnmarshalLong(wireFormat, dataIn, bs));
         info.setBrokerSequenceId(tightUnmarshalLong(wireFormat, dataIn, bs));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream
@@ -89,13 +86,12 @@ public class MessageIdMarshaller extends BaseDataStreamMarshaller {
 
     /**
      * Write a object instance to data output stream
-     * 
+     *
      * @param o the instance to be marshaled
      * @param dataOut the output stream
      * @throws IOException thrown if an error occurs
      */
-    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs)
-        throws IOException {
+    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs) throws IOException {
         super.tightMarshal2(wireFormat, o, dataOut, bs);
 
         MessageId info = (MessageId)o;
@@ -107,7 +103,7 @@ public class MessageIdMarshaller extends BaseDataStreamMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -116,12 +112,12 @@ public class MessageIdMarshaller extends BaseDataStreamMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         MessageId info = (MessageId)o;
-        info.setProducerId((org.apache.activemq.apollo.openwire.command.ProducerId)looseUnmarsalCachedObject(wireFormat,
-                                                                                             dataIn));
+        info.setProducerId((org.apache.activemq.apollo.openwire.command.ProducerId)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setProducerSequenceId(looseUnmarshalLong(wireFormat, dataIn));
         info.setBrokerSequenceId(looseUnmarshalLong(wireFormat, dataIn));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream

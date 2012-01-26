@@ -21,10 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.RemoveSubscriptionInfo;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
 
 
 
@@ -33,9 +31,7 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class RemoveSubscriptionInfoMarshaller extends BaseCommandMarshaller {
@@ -66,7 +62,7 @@ public class RemoveSubscriptionInfoMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         RemoveSubscriptionInfo info = (RemoveSubscriptionInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setSubscriptionName(tightUnmarshalString(dataIn, bs));
         info.setClientId(tightUnmarshalString(dataIn, bs));
 
@@ -116,7 +112,7 @@ public class RemoveSubscriptionInfoMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         RemoveSubscriptionInfo info = (RemoveSubscriptionInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setSubscriptionName(looseUnmarshalString(dataIn));
         info.setClientId(looseUnmarshalString(dataIn));
 

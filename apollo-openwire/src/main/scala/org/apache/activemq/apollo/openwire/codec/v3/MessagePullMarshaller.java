@@ -21,31 +21,29 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.MessagePull;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
+
+
 
 /**
  * Marshalling code for Open Wire Format for MessagePullMarshaller
- * 
- * 
- * NOTE!: This file is auto generated - do not modify! if you need to make a
- * change, please see the modify the groovy scripts in the under src/gram/script
- * and then use maven openwire:generate to regenerate this file.
- * 
+ *
+ *
+ * NOTE!: This file is auto generated - do not modify!
+ *        Modify the 'apollo-openwire-generator' module instead.
+ *
  */
 public class MessagePullMarshaller extends BaseCommandMarshaller {
 
     /**
      * Return the type of Data Structure we marshal
-     * 
      * @return short representation of the type data structure
      */
     public byte getDataStructureType() {
         return MessagePull.DATA_STRUCTURE_TYPE;
     }
-
+    
     /**
      * @return a new object instance
      */
@@ -55,29 +53,23 @@ public class MessagePullMarshaller extends BaseCommandMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
      */
-    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs)
-        throws IOException {
+    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs) throws IOException {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         MessagePull info = (MessagePull)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)tightUnmarsalCachedObject(wireFormat,
-                                                                                             dataIn, bs));
-        info
-            .setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(
-                                                                                                       wireFormat,
-                                                                                                       dataIn,
-                                                                                                       bs));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setTimeout(tightUnmarshalLong(wireFormat, dataIn, bs));
         info.setCorrelationId(tightUnmarshalString(dataIn, bs));
-        info.setMessageId((org.apache.activemq.apollo.openwire.command.MessageId)tightUnmarsalNestedObject(wireFormat,
-                                                                                           dataIn, bs));
+        info.setMessageId((org.apache.activemq.apollo.openwire.command.MessageId)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream
@@ -98,13 +90,12 @@ public class MessagePullMarshaller extends BaseCommandMarshaller {
 
     /**
      * Write a object instance to data output stream
-     * 
+     *
      * @param o the instance to be marshaled
      * @param dataOut the output stream
      * @throws IOException thrown if an error occurs
      */
-    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs)
-        throws IOException {
+    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs) throws IOException {
         super.tightMarshal2(wireFormat, o, dataOut, bs);
 
         MessagePull info = (MessagePull)o;
@@ -118,7 +109,7 @@ public class MessagePullMarshaller extends BaseCommandMarshaller {
 
     /**
      * Un-marshal an object instance from the data input stream
-     * 
+     *
      * @param o the object to un-marshal
      * @param dataIn the data input stream to build the object from
      * @throws IOException
@@ -127,18 +118,14 @@ public class MessagePullMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         MessagePull info = (MessagePull)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)looseUnmarsalCachedObject(wireFormat,
-                                                                                             dataIn));
-        info
-            .setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(
-                                                                                                       wireFormat,
-                                                                                                       dataIn));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setTimeout(looseUnmarshalLong(wireFormat, dataIn));
         info.setCorrelationId(looseUnmarshalString(dataIn));
-        info
-            .setMessageId((org.apache.activemq.apollo.openwire.command.MessageId)looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setMessageId((org.apache.activemq.apollo.openwire.command.MessageId)looseUnmarsalNestedObject(wireFormat, dataIn));
 
     }
+
 
     /**
      * Write the booleans that this object uses to a BooleanStream

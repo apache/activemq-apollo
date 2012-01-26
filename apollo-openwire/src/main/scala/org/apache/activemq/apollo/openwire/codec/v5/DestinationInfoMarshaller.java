@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,9 +31,7 @@ import org.apache.activemq.apollo.openwire.command.*;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class DestinationInfoMarshaller extends BaseCommandMarshaller {
@@ -65,8 +62,8 @@ public class DestinationInfoMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         DestinationInfo info = (DestinationInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setOperationType(dataIn.readByte());
         info.setTimeout(tightUnmarshalLong(wireFormat, dataIn, bs));
 
@@ -95,7 +92,7 @@ public class DestinationInfoMarshaller extends BaseCommandMarshaller {
         int rc = super.tightMarshal1(wireFormat, o, bs);
         rc += tightMarshalCachedObject1(wireFormat, (DataStructure)info.getConnectionId(), bs);
         rc += tightMarshalCachedObject1(wireFormat, (DataStructure)info.getDestination(), bs);
-        rc+=tightMarshalLong1(wireFormat, info.getTimeout(), bs);
+        rc += tightMarshalLong1(wireFormat, info.getTimeout(), bs);
         rc += tightMarshalObjectArray1(wireFormat, info.getBrokerPath(), bs);
 
         return rc + 1;
@@ -131,8 +128,8 @@ public class DestinationInfoMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         DestinationInfo info = (DestinationInfo)o;
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) looseUnmarsalCachedObject(wireFormat, dataIn));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setOperationType(dataIn.readByte());
         info.setTimeout(looseUnmarshalLong(wireFormat, dataIn));
 
@@ -140,7 +137,7 @@ public class DestinationInfoMarshaller extends BaseCommandMarshaller {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerId value[] = new org.apache.activemq.apollo.openwire.command.BrokerId[size];
             for( int i=0; i < size; i++ ) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId) looseUnmarsalNestedObject(wireFormat,dataIn);
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setBrokerPath(value);
         }

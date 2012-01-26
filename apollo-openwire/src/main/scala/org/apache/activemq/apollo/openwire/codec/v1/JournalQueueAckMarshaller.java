@@ -21,10 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.JournalQueueAck;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
 
 
 
@@ -33,9 +31,7 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class JournalQueueAckMarshaller extends BaseDataStreamMarshaller {
@@ -66,8 +62,8 @@ public class JournalQueueAckMarshaller extends BaseDataStreamMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         JournalQueueAck info = (JournalQueueAck)o;
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalNestedObject(wireFormat, dataIn, bs));
-        info.setMessageAck((org.apache.activemq.apollo.openwire.command.MessageAck) tightUnmarsalNestedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
+        info.setMessageAck((org.apache.activemq.apollo.openwire.command.MessageAck)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
 
     }
 
@@ -113,8 +109,8 @@ public class JournalQueueAckMarshaller extends BaseDataStreamMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         JournalQueueAck info = (JournalQueueAck)o;
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalNestedObject(wireFormat, dataIn));
-        info.setMessageAck((org.apache.activemq.apollo.openwire.command.MessageAck) looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setMessageAck((org.apache.activemq.apollo.openwire.command.MessageAck)looseUnmarsalNestedObject(wireFormat, dataIn));
 
     }
 

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,16 +23,16 @@ import java.io.IOException;
 
 import org.apache.activemq.apollo.openwire.codec.*;
 import org.apache.activemq.apollo.openwire.command.*;
+
+
+
 /**
  * Marshalling code for Open Wire Format for MessageDispatchMarshaller
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
- * @version $Revision: 902908 $
  */
 public class MessageDispatchMarshaller extends BaseCommandMarshaller {
 
@@ -63,9 +62,9 @@ public class MessageDispatchMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         MessageDispatch info = (MessageDispatch)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
-        info.setMessage((org.apache.activemq.apollo.openwire.command.Message) tightUnmarsalNestedObject(wireFormat, dataIn, bs));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setMessage((org.apache.activemq.apollo.openwire.command.Message)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
         info.setRedeliveryCounter(dataIn.readInt());
 
     }
@@ -115,9 +114,9 @@ public class MessageDispatchMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         MessageDispatch info = (MessageDispatch)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId) looseUnmarsalCachedObject(wireFormat, dataIn));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalCachedObject(wireFormat, dataIn));
-        info.setMessage((org.apache.activemq.apollo.openwire.command.Message) looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setMessage((org.apache.activemq.apollo.openwire.command.Message)looseUnmarsalNestedObject(wireFormat, dataIn));
         info.setRedeliveryCounter(dataIn.readInt());
 
     }

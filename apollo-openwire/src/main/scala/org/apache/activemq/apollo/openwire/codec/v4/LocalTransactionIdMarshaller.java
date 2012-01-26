@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,9 +31,7 @@ import org.apache.activemq.apollo.openwire.command.*;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
@@ -66,7 +63,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
         LocalTransactionId info = (LocalTransactionId)o;
         info.setValue(tightUnmarshalLong(wireFormat, dataIn, bs));
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
 
     }
 
@@ -79,7 +76,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
         LocalTransactionId info = (LocalTransactionId)o;
 
         int rc = super.tightMarshal1(wireFormat, o, bs);
-        rc+=tightMarshalLong1(wireFormat, info.getValue(), bs);
+        rc += tightMarshalLong1(wireFormat, info.getValue(), bs);
         rc += tightMarshalCachedObject1(wireFormat, (DataStructure)info.getConnectionId(), bs);
 
         return rc + 0;
@@ -113,7 +110,7 @@ public class LocalTransactionIdMarshaller extends TransactionIdMarshaller {
 
         LocalTransactionId info = (LocalTransactionId)o;
         info.setValue(looseUnmarshalLong(wireFormat, dataIn));
-        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setConnectionId((org.apache.activemq.apollo.openwire.command.ConnectionId)looseUnmarsalCachedObject(wireFormat, dataIn));
 
     }
 

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,11 +31,8 @@ import org.apache.activemq.apollo.openwire.command.*;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
- * 
  */
 public class SubscriptionInfoMarshaller extends BaseDataStreamMarshaller {
 
@@ -67,10 +63,10 @@ public class SubscriptionInfoMarshaller extends BaseDataStreamMarshaller {
 
         SubscriptionInfo info = (SubscriptionInfo)o;
         info.setClientId(tightUnmarshalString(dataIn, bs));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setSelector(tightUnmarshalString(dataIn, bs));
         info.setSubscriptionName(tightUnmarshalString(dataIn, bs));
-        info.setSubscribedDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalNestedObject(wireFormat, dataIn, bs));
+        info.setSubscribedDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
 
     }
 
@@ -123,10 +119,10 @@ public class SubscriptionInfoMarshaller extends BaseDataStreamMarshaller {
 
         SubscriptionInfo info = (SubscriptionInfo)o;
         info.setClientId(looseUnmarshalString(dataIn));
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setSelector(looseUnmarshalString(dataIn));
         info.setSubscriptionName(looseUnmarshalString(dataIn));
-        info.setSubscribedDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setSubscribedDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalNestedObject(wireFormat, dataIn));
 
     }
 

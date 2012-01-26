@@ -26,7 +26,7 @@ import java.net.URL;
 
 /**
  * @version $Revision: $
- * @openwire:marshaller code="29"
+ * @openwire:marshaller code="29" version=3
  */
 public class ActiveMQBlobMessage extends ActiveMQMessage {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_BLOB_MESSAGE;

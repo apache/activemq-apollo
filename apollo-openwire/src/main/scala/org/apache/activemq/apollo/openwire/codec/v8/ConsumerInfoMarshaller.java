@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -7,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,11 +31,8 @@ import org.apache.activemq.apollo.openwire.command.*;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
- * 
  */
 public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
 
@@ -66,9 +62,9 @@ public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
         super.tightUnmarshal(wireFormat, o, dataIn, bs);
 
         ConsumerInfo info = (ConsumerInfo)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setBrowser(bs.readBoolean());
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
         info.setPrefetchSize(dataIn.readInt());
         info.setMaximumPendingMessageLimit(dataIn.readInt());
         info.setDispatchAsync(bs.readBoolean());
@@ -90,7 +86,7 @@ public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
         else {
             info.setBrokerPath(null);
         }
-        info.setAdditionalPredicate((org.apache.activemq.apollo.filter.BooleanExpression) tightUnmarsalNestedObject(wireFormat, dataIn, bs));
+        info.setAdditionalPredicate((org.apache.activemq.apollo.openwire.command.BooleanExpression)tightUnmarsalNestedObject(wireFormat, dataIn, bs));
         info.setNetworkSubscription(bs.readBoolean());
         info.setOptimizedAcknowledge(bs.readBoolean());
         info.setNoRangeAcks(bs.readBoolean());
@@ -180,9 +176,9 @@ public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
         super.looseUnmarshal(wireFormat, o, dataIn);
 
         ConsumerInfo info = (ConsumerInfo)o;
-        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setConsumerId((org.apache.activemq.apollo.openwire.command.ConsumerId)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setBrowser(dataIn.readBoolean());
-        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setDestination((org.apache.activemq.apollo.openwire.command.ActiveMQDestination)looseUnmarsalCachedObject(wireFormat, dataIn));
         info.setPrefetchSize(dataIn.readInt());
         info.setMaximumPendingMessageLimit(dataIn.readInt());
         info.setDispatchAsync(dataIn.readBoolean());
@@ -197,14 +193,14 @@ public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.BrokerId value[] = new org.apache.activemq.apollo.openwire.command.BrokerId[size];
             for( int i=0; i < size; i++ ) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId) looseUnmarsalNestedObject(wireFormat,dataIn);
+                value[i] = (org.apache.activemq.apollo.openwire.command.BrokerId)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setBrokerPath(value);
         }
         else {
             info.setBrokerPath(null);
         }
-        info.setAdditionalPredicate((org.apache.activemq.apollo.filter.BooleanExpression) looseUnmarsalNestedObject(wireFormat, dataIn));
+        info.setAdditionalPredicate((org.apache.activemq.apollo.openwire.command.BooleanExpression)looseUnmarsalNestedObject(wireFormat, dataIn));
         info.setNetworkSubscription(dataIn.readBoolean());
         info.setOptimizedAcknowledge(dataIn.readBoolean());
         info.setNoRangeAcks(dataIn.readBoolean());
@@ -213,7 +209,7 @@ public class ConsumerInfoMarshaller extends BaseCommandMarshaller {
             short size = dataIn.readShort();
             org.apache.activemq.apollo.openwire.command.ConsumerId value[] = new org.apache.activemq.apollo.openwire.command.ConsumerId[size];
             for( int i=0; i < size; i++ ) {
-                value[i] = (org.apache.activemq.apollo.openwire.command.ConsumerId) looseUnmarsalNestedObject(wireFormat,dataIn);
+                value[i] = (org.apache.activemq.apollo.openwire.command.ConsumerId)looseUnmarsalNestedObject(wireFormat,dataIn);
             }
             info.setNetworkConsumerPath(value);
         }

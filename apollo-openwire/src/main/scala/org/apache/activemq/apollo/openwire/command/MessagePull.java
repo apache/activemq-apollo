@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.openwire.command;
 /**
  * Used to pull messages on demand.
  * 
- * @openwire:marshaller code="20"
+ * @openwire:marshaller code="20" version="2"
  * 
  */
 public class MessagePull extends BaseCommand {

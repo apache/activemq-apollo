@@ -21,10 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.NetworkBridgeFilter;
-import org.apache.activemq.apollo.openwire.codec.BooleanStream;
-import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
+import org.apache.activemq.apollo.openwire.codec.*;
+import org.apache.activemq.apollo.openwire.command.*;
 
 
 
@@ -33,9 +31,7 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
  */
 public class NetworkBridgeFilterMarshaller extends BaseDataStreamMarshaller {
@@ -67,7 +63,7 @@ public class NetworkBridgeFilterMarshaller extends BaseDataStreamMarshaller {
 
         NetworkBridgeFilter info = (NetworkBridgeFilter)o;
         info.setNetworkTTL(dataIn.readInt());
-        info.setNetworkBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId) tightUnmarsalCachedObject(wireFormat, dataIn, bs));
+        info.setNetworkBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId)tightUnmarsalCachedObject(wireFormat, dataIn, bs));
 
     }
 
@@ -113,7 +109,7 @@ public class NetworkBridgeFilterMarshaller extends BaseDataStreamMarshaller {
 
         NetworkBridgeFilter info = (NetworkBridgeFilter)o;
         info.setNetworkTTL(dataIn.readInt());
-        info.setNetworkBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId) looseUnmarsalCachedObject(wireFormat, dataIn));
+        info.setNetworkBrokerId((org.apache.activemq.apollo.openwire.command.BrokerId)looseUnmarsalCachedObject(wireFormat, dataIn));
 
     }
 

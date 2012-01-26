@@ -25,17 +25,16 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
  *
  *
  * NOTE!: This file is auto generated - do not modify!
- *        if you need to make a change, please see the modify the groovy scripts in the
- *        under src/gram/script and then use maven openwire:generate to regenerate 
- *        this file.
+ *        Modify the 'apollo-openwire-generator' module instead.
  *
+ * 
  */
-public final class MarshallerFactory {
+public class MarshallerFactory {
 
     /**
      * Creates a Map of command type -> Marshallers
      */
-    private static final DataStreamMarshaller MARSHALLER[] = new DataStreamMarshaller[256];
+    static final private DataStreamMarshaller marshaller[] = new DataStreamMarshaller[256];
     static {
 
         add(new ActiveMQBlobMessageMarshaller());
@@ -97,14 +96,11 @@ public final class MarshallerFactory {
 
     }
 
-    private MarshallerFactory() {        
+    static private void add(DataStreamMarshaller dsm) {
+        marshaller[dsm.getDataStructureType()] = dsm;
     }
     
-    private static void add(DataStreamMarshaller dsm) {
-        MARSHALLER[dsm.getDataStructureType()] = dsm;
-    }
-    
-    public static DataStreamMarshaller[] createMarshallerMap(OpenWireFormat wireFormat) {
-        return MARSHALLER;
+    static public DataStreamMarshaller[] createMarshallerMap(OpenWireFormat wireFormat) {
+        return marshaller;
     }
 }
