@@ -468,6 +468,7 @@
       <id>unstable</id>
       <modules>
         <module>apollo-openwire</module>
+        <module>apollo-openwire-generator</module>
       </modules>
     </profile>
 
