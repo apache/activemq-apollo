@@ -172,6 +172,7 @@
     <module>apollo-web</module>
     <module>apollo-cli</module>
     <module>apollo-website</module>
+    <module>apollo-openwire</module>
     <module>apollo-distro</module>
   </modules>
 
@@ -463,20 +464,24 @@
 
   <profiles>
     
+    <profile>
+      <id>itests</id>
+      <modules>
+        <module>apollo-itests</module>
+      </modules>
+    </profile>
+
     <!-- to build the unstable modules -->
     <profile>
       <id>unstable</id>
       <modules>
-        <module>apollo-openwire</module>
-        <module>apollo-openwire-generator</module>
       </modules>
     </profile>
 
     <profile>
-      <!-- TODO - for now until tests become stable -->
-      <id>itests</id>
+      <id>openwire-generate</id>
       <modules>
-        <module>apollo-itests</module>
+        <module>apollo-openwire-generator</module>
       </modules>
     </profile>
     

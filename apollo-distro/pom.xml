@@ -70,6 +70,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-openwire</artifactId>
+      <version>1.1-SNAPSHOT</version>
+    </dependency> 
+    
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
       <version>1.1-SNAPSHOT</version>
       <type>jar</type>
@@ -126,19 +132,12 @@
   </dependencies>
   
   <profiles>
-    
     <!-- to include the unstable modules -->
     <profile>
       <id>unstable</id>
       <dependencies>
-        <dependency>
-          <groupId>org.apache.activemq</groupId>
-          <artifactId>apollo-openwire</artifactId>
-          <version>${project.version}</version>
-        </dependency> 
       </dependencies>
     </profile>
-    
   </profiles>
     
   <build>
