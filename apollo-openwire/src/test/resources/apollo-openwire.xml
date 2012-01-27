@@ -24,5 +24,6 @@
     </virtual_host>
 
     <connector id="tcp" protocol="openwire" bind="tcp://0.0.0.0:0"/>
+    <!--<web_admin bind="http://127.0.0.1:61680"/>-->
 
 </broker>

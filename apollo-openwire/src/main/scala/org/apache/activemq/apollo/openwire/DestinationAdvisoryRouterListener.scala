@@ -80,7 +80,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_create(dest: DomainDestination, security: SecurityContext) = {
     val ow_destination = to_activemq_destination(Array(dest.destination_dto))
-    if (!AdvisorySupport.isAdvisoryTopic(ow_destination)) {
+    if (ow_destination!=null && !AdvisorySupport.isAdvisoryTopic(ow_destination)) {
       destination_advisories.getOrElseUpdate(ow_destination, {
         var info = new DestinationInfo(null, DestinationInfo.ADD_OPERATION_TYPE, ow_destination)
         val topic = AdvisorySupport.getDestinationAdvisoryTopic(ow_destination);
@@ -93,7 +93,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_destroy(dest: DomainDestination, security: SecurityContext) = {
     val destination = to_activemq_destination(Array(dest.destination_dto))
-    if (!AdvisorySupport.isAdvisoryTopic(destination)) {
+    if (destination!=null && !AdvisorySupport.isAdvisoryTopic(destination)) {
       for (info <- destination_advisories.remove(destination)) {
         var info = new DestinationInfo(null, DestinationInfo.REMOVE_OPERATION_TYPE, destination)
         val topic = AdvisorySupport.getDestinationAdvisoryTopic(destination);
@@ -104,7 +104,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_bind(dest: DomainDestination, consumer: DeliveryConsumer, security: SecurityContext) = {
     val destination = to_activemq_destination(Array(dest.destination_dto))
-    if (AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
+    if (destination!=null && AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
       // replay the destination advisories..
       val producer = new ProducerRoute {
         override def on_connected = {

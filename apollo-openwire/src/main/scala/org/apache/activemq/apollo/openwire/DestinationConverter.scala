@@ -66,28 +66,31 @@ object DestinationConverter {
   def to_activemq_destination(dest:Array[DestinationDTO]):ActiveMQDestination = {
     import collection.JavaConversions._
 
-    val rc = dest.map { dest =>
+    val rc = dest.flatMap { dest =>
 
       val temp = dest.path.headOption == Some("temp")
       dest match {
         case dest:QueueDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempQueue(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
+            Some(new ActiveMQTempQueue(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":")))
           } else {
             val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(OPENWIRE_PARSER.unsanitize_destination_part(_)))
-            new ActiveMQQueue(name)
+            Some(new ActiveMQQueue(name))
           }
         case dest:TopicDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempTopic(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
+            Some(new ActiveMQTempTopic(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":")))
           } else {
             val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(OPENWIRE_PARSER.unsanitize_destination_part(_)))
-            new ActiveMQTopic(name)
+            Some(new ActiveMQTopic(name))
           }
+        case _ => None 
       }
     }
 
-    if( rc.length == 1) {
+    if( rc.length == 0) {
+      null
+    } else if( rc.length == 1) {
       rc(0)
     } else {
       val c = new ActiveMQQueue()
