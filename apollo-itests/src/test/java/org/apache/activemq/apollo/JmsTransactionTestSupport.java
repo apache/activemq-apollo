@@ -22,15 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 
  */
-public abstract class JmsTransactionTestSupport extends JmsTestSupport implements MessageListener {
+public abstract class JmsTransactionTestSupport extends JmsTestBase implements MessageListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(JmsTransactionTestSupport.class);
     private static final int MESSAGE_COUNT = 5;
@@ -49,34 +47,12 @@ public abstract class JmsTransactionTestSupport extends JmsTestSupport implement
     private List<Message> ackMessages = new ArrayList<Message>(MESSAGE_COUNT);
     private boolean resendPhase;
 
-    public JmsTransactionTestSupport() {
-        super();
-    }
-
-    public void initCombos() {
-        super.initCombos();
-    }
-
-    /*
-    public JmsTransactionTestSupport(String name) {
-        super(name);
-    }
-    */
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see junit.framework.TestCase#setUp()
-     */
     protected void setUp() throws Exception {
-        broker.start();
-        //broker.waitUntilStarted();
-
+        super.setUp();
         resourceProvider = getJmsResourceProvider();
         topic = resourceProvider.isTopic();
         // We will be using transacted sessions.
         setSessionTransacted();
-        connectionFactory = newConnectionFactory();
         reconnect();
     }
 
@@ -98,25 +74,6 @@ public abstract class JmsTransactionTestSupport extends JmsTestSupport implement
 
     protected void rollbackTx() throws Exception {
         session.rollback();
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see junit.framework.TestCase#tearDown()
-     */
-    protected void tearDown() throws Exception {
-        LOG.info("Closing down connection");
-
-        session.close();
-        session = null;
-        connection.stop();
-        connection = null;
-
-        broker.stop();
-        broker = null;
-
-        LOG.info("Connection closed.");
     }
 
     protected abstract JmsResourceProvider getJmsResourceProvider();
@@ -621,13 +578,12 @@ public abstract class JmsTransactionTestSupport extends JmsTestSupport implement
      * @throws javax.jms.JMSException
      */
     protected void reconnect() throws Exception {
-
         if (connection != null) {
             // Close the prev connection.
             connection.close();
         }
         session = null;
-        connection = resourceProvider.createConnection(connectionFactory);
+        connection = resourceProvider.createConnection(getConnectionFactory());
         reconnectSession();
         connection.start();
     }
@@ -643,7 +599,7 @@ public abstract class JmsTransactionTestSupport extends JmsTestSupport implement
         }
 
         session = resourceProvider.createSession(connection);
-        destination = resourceProvider.createDestination(session, getSubject());
+        destination = resourceProvider.createDestination(session, getDestinationName());
         producer = resourceProvider.createProducer(session, destination);
         consumer = resourceProvider.createConsumer(session, destination);
     }

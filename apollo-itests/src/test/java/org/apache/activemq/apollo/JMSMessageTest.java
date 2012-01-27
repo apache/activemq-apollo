@@ -20,7 +20,6 @@ import junit.framework.Test;
 import org.fusesource.stomp.jms.StompJmsSession;
 
 import javax.jms.*;
-import java.net.URISyntaxException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Vector;
@@ -30,7 +29,7 @@ import java.util.Vector;
  * 
  * 
  */
-public class JMSMessageTest extends JmsTestSupport {
+public class JMSMessageTest extends JmsTestBase {
 
     public Destination destination;
     public int deliveryMode = DeliveryMode.NON_PERSISTENT;

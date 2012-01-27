@@ -16,10 +16,9 @@
  */
 package org.apache.activemq.apollo.test;
 
-import org.apache.activemq.apollo.TestSupport;
+import org.apache.activemq.apollo.JmsTestBase;
 
 import javax.jms.*;
-import java.util.regex.Pattern;
 
 /**
  * 
@@ -32,9 +31,9 @@ public class JmsResourceProvider {
     private int deliveryMode = DeliveryMode.PERSISTENT;
     private String durableName = "DummyName";
     private String clientID = getClass().getName();
-    private TestSupport support;
+    private JmsTestBase support;
     
-    public JmsResourceProvider(TestSupport support) {
+    public JmsResourceProvider(JmsTestBase support) {
         this.support = support;
     }
 
@@ -44,7 +43,7 @@ public class JmsResourceProvider {
      * @see org.apache.activemq.apollo.test.JmsResourceProvider#createConnectionFactory()
      */
     public ConnectionFactory createConnectionFactory() throws Exception {
-        return support.createConnectionFactory();
+        return support.getConnectionFactory();
     }
 
     /**

@@ -42,7 +42,7 @@ public class JmsTopicTransactionTest extends JmsTransactionTestSupport {
 
     @Override
     public void runBare() throws Throwable {
-        if (broker instanceof StompBroker) {
+        if (brokerAdmin instanceof StompBrokerAdmin) {
             // TODO - seem to have a broker hang on some of these tests when STOMP is used
             return;
         }
