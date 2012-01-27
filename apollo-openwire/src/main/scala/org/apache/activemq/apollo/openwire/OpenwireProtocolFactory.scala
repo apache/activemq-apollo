@@ -75,9 +75,9 @@ class OpenwireProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
   def isIdentifiable() = true
 
-  def maxIdentificaionLength() = 4 + MAGIC.length
+  def maxIdentificaionLength() = 5 + MAGIC.length
 
   def matchesIdentification(buffer: Buffer):Boolean = {
-    buffer.length >= 4 + MAGIC.length && buffer.containsAt(MAGIC, 4)
+    buffer.length >= 4 + MAGIC.length && buffer.containsAt(MAGIC, 5)
   }
 }
