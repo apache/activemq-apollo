@@ -46,7 +46,7 @@ class TransactionTest extends OpenwireTestSupport {
     m2.getText should equal (messages(1).getText)
     consumer_session.rollback
 
-    m2 = consumer.receive(1000).asInstanceOf[TextMessage]
+    m2 = consumer.receive(2000).asInstanceOf[TextMessage]
     m2 should not be (null)
     m2.getText should equal (messages(1).getText)
     consumer_session.commit

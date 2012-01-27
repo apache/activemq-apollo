@@ -16,12 +16,10 @@
  */
 package org.apache.activemq.apollo.openwire
 
-import java.util.regex.{Matcher, Pattern}
 import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
 import org.apache.activemq.apollo.broker.DestinationParser
-import org.fusesource.hawtbuf.Buffer.utf8
 import org.apache.activemq.apollo.openwire.command._
-import org.fusesource.hawtbuf._
+import org.apache.activemq.apollo.util.path.PathParser._
 
 /**
  * <p>

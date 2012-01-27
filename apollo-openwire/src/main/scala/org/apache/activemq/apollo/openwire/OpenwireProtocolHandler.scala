@@ -40,6 +40,7 @@ import org.apache.activemq.apollo.broker._
 import protocol._
 import security.SecurityContext
 import DestinationConverter._
+import org.apache.activemq.apollo.util.path.PathParser._
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
