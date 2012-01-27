@@ -40,7 +40,6 @@ import org.apache.activemq.apollo.broker._
 import protocol._
 import security.SecurityContext
 import DestinationConverter._
-import org.apache.activemq.apollo.util.path.PathParser._
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -427,7 +426,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       security_context.user = info.getUserName
       security_context.password = info.getPassword
-      security_context.session_id = Some(sanitize_destination_part(info.getConnectionId.toString))
+      security_context.session_id = Some(OPENWIRE_PARSER.sanitize_destination_part(info.getConnectionId.toString))
 
       reset {
         if( host.authenticator!=null &&  host.authorizer!=null ) {

@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.openwire
 import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
 import org.apache.activemq.apollo.broker.DestinationParser
 import org.apache.activemq.apollo.openwire.command._
-import org.apache.activemq.apollo.util.path.PathParser._
 
 /**
  * <p>
@@ -43,18 +42,18 @@ object DestinationConverter {
       var name = dest.getPhysicalName
       Array(dest.getDestinationType match {
         case QUEUE_TYPE =>
-          var path_parts = OPENWIRE_PARSER.parts(name).map(sanitize_destination_part(_))
+          var path_parts = OPENWIRE_PARSER.parts(name).map(OPENWIRE_PARSER.sanitize_destination_part(_, true))
           new QueueDestinationDTO(path_parts)
         case TOPIC_TYPE =>
-          var path_parts = OPENWIRE_PARSER.parts(name).map(sanitize_destination_part(_))
+          var path_parts = OPENWIRE_PARSER.parts(name).map(OPENWIRE_PARSER.sanitize_destination_part(_, true))
           new TopicDestinationDTO(path_parts)
         case TEMP_QUEUE_TYPE =>
           val (connectionid, rest)= name.splitAt(name.lastIndexOf(':'))
-          val real_path = ("temp" :: handler.broker.id :: sanitize_destination_part(connectionid) :: sanitize_destination_part(rest.substring(1)) :: Nil).toArray
+          val real_path = ("temp" :: handler.broker.id :: OPENWIRE_PARSER.sanitize_destination_part(connectionid) :: OPENWIRE_PARSER.sanitize_destination_part(rest.substring(1)) :: Nil).toArray
           new QueueDestinationDTO( real_path ).temp(true)
         case TEMP_TOPIC_TYPE =>
           val (connectionid, rest)= name.splitAt(name.lastIndexOf(':'))
-          val real_path = ("temp" :: handler.broker.id :: sanitize_destination_part(connectionid) :: sanitize_destination_part(rest.substring(1)) :: Nil).toArray
+          val real_path = ("temp" :: handler.broker.id :: OPENWIRE_PARSER.sanitize_destination_part(connectionid) :: OPENWIRE_PARSER.sanitize_destination_part(rest.substring(1)) :: Nil).toArray
           new TopicDestinationDTO( real_path ).temp(true)
       })
     } else {
@@ -73,16 +72,16 @@ object DestinationConverter {
       dest match {
         case dest:QueueDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempQueue(dest.path.toList.drop(2).map(unsanitize_destination_part(_)).mkString(":"))
+            new ActiveMQTempQueue(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
           } else {
-            val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(unsanitize_destination_part(_)))
+            val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(OPENWIRE_PARSER.unsanitize_destination_part(_)))
             new ActiveMQQueue(name)
           }
         case dest:TopicDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempTopic(dest.path.toList.drop(2).map(unsanitize_destination_part(_)).mkString(":"))
+            new ActiveMQTempTopic(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
           } else {
-            val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(unsanitize_destination_part(_)))
+            val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList.map(OPENWIRE_PARSER.unsanitize_destination_part(_)))
             new ActiveMQTopic(name)
           }
       }

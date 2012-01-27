@@ -21,7 +21,7 @@ import java.util.regex._
 import collection.JavaConversions._
 import org.apache.activemq.apollo.util.path.PathParser.PartFilter
 import collection.mutable.ListBuffer
-import org.fusesource.hawtbuf.{DataByteArrayOutputStream, AsciiBuffer}
+import org.fusesource.hawtbuf.{Buffer, DataByteArrayOutputStream, AsciiBuffer}
 
 /**
   * Holds the delimiters used to parse paths.
@@ -108,44 +108,6 @@ object PathParser {
     }
   }
 
-
-  def sanitize_destination_part(value:String) = {
-    val buffer = new AsciiBuffer(value)
-    val rc = new StringBuffer(value.length())
-    var i = 0
-    val l = buffer.length
-    while( i < l ) {
-      val c = buffer.data(i)
-      if(
-        ('a' <= c && c <= 'z') ||
-        ('A' <= c && c <= 'Z') ||
-        ('0' <= c && c <= '9') ||
-        c=='_' || c=='-' || c=='~' || c==':'
-      ) {
-        rc.append(c.toChar)
-      } else {
-        rc.append("%%%02x".format(c))
-      }
-      i += 1
-    }
-    rc.toString
-  }
-
-  def unsanitize_destination_part(value:String):String = {
-    val rc = new DataByteArrayOutputStream
-    var pos = value
-    while( pos.length() > 0 ) {
-      if( pos.startsWith("%") && pos.length()> 3 ) {
-        val dec = pos.substring(1,3)
-        rc.writeByte(Integer.parseInt(dec, 16))
-        pos = pos.substring(3);
-      } else {
-        rc.writeByte(pos.charAt(0))
-        pos = pos.substring(1)
-      }
-    }
-    rc.toBuffer.utf8().toString
-  }
 }
 
 class PathParser {
@@ -165,6 +127,44 @@ class PathParser {
     this
   }
 
+  def sanitize_destination_part(value:String, wildcards:Boolean=false) = {
+    val rc = new StringBuffer(value.length())
+    var pos = new Buffer(value.getBytes("UTF-8"))
+    while( pos.length > 0 ) {
+      val c = pos.get(0).toChar
+      val cs = c.toString
+      if((wildcards && (
+              cs == any_descendant_wildcard ||
+              cs == any_child_wildcard ||
+              cs == regex_wildcard_start ||
+              cs == regex_wildcard_end
+          ))|| part_pattern.matcher(cs).matches() ) {
+        rc.append(c)
+      } else {
+        rc.append("%%%02x".format(pos.get(0)))
+      }
+      pos.moveHead(1)
+    }
+    rc.toString
+  }
+
+  def unsanitize_destination_part(value:String):String = {
+    val rc = new DataByteArrayOutputStream
+    var pos = value
+    while( pos.length() > 0 ) {
+      if( pos.startsWith("%") && pos.length()> 3 ) {
+        val dec = pos.substring(1,3)
+        rc.writeByte(Integer.parseInt(dec, 16))
+        pos = pos.substring(3);
+      } else {
+        rc.writeByte(pos.charAt(0))
+        pos = pos.substring(1)
+      }
+    }
+    rc.toBuffer.utf8().toString
+  }
+  
+  
   def decode_path(subject: java.util.Collection[String]): Path = decode_path(subject.toIterable)
 
   def decode_path(subject: Iterable[String]): Path = {

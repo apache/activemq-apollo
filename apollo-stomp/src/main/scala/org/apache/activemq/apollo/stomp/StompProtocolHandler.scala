@@ -55,7 +55,6 @@ object BufferSupport {
 }
 
 import BufferSupport._
-import PathParser._
 
 object StompProtocolHandler extends Log {
 
@@ -929,7 +928,7 @@ class StompProtocolHandler extends ProtocolHandler {
         noop
       } else {
         this.host=host
-        security_context.session_id = Some("%s-%x-".format(sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
+        security_context.session_id = Some("%s-%x-".format(destination_parser.sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
         connection_log = host.connection_log
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspend_read("authenticating and authorizing connect")
