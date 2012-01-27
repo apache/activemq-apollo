@@ -34,18 +34,18 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  */
 public class JmsTestBase extends CombinationTestSupport {
-    protected static final Logger LOG = LoggerFactory.getLogger(BrokerAdmin.class);
-    public BrokerAdmin brokerAdmin;
+    protected static final Logger LOG = LoggerFactory.getLogger(BrokerProtocol.class);
+    public BrokerProtocol protocol;
 
     public void initCombos() {
-        ArrayList<Object> brokerAdmins = new ArrayList<Object>();
-        brokerAdmins.add(new StompBrokerAdmin());
+        ArrayList<Object> protocols = new ArrayList<Object>();
+        protocols.add(new StompBrokerProtocol());
         try {
             Class.forName("org.apache.activemq.apollo.openwire.OpenwireProtocolHandler", false, JmsTestBase.class.getClassLoader());
-            brokerAdmins.add(new OpenwireBrokerAdmin());
+            protocols.add(new OpenwireBrokerProtocol());
         } catch (ClassNotFoundException e) {
         }
-        addCombinationValues("brokerAdmin", brokerAdmins.toArray());
+        addCombinationValues("protocol", protocols.toArray());
     }
 
     public String brokerConfig = "xml:classpath:apollo.xml";
@@ -62,9 +62,9 @@ public class JmsTestBase extends CombinationTestSupport {
             File file = new File(".");
             System.setProperty("basedir", file.getAbsolutePath());
         }
-        broker = brokerAdmin.create(brokerConfig);
-        brokerAdmin.start(broker);
-        factory = brokerAdmin.getConnectionFactory(broker);
+        broker = protocol.create(brokerConfig);
+        protocol.start(broker);
+        factory = protocol.getConnectionFactory(broker);
 
         connection = factory.createConnection(userName, password);
         connections.add(connection);
@@ -83,7 +83,7 @@ public class JmsTestBase extends CombinationTestSupport {
 
         connection = null;
         if(broker!=null) {
-            brokerAdmin.stop(broker);
+            protocol.stop(broker);
             broker = null;
         }
         super.tearDown();

@@ -16,11 +16,11 @@
  */
 package org.apache.activemq.apollo;
 
-import org.fusesource.stomp.jms.StompJmsConnectionFactory;
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import static java.lang.String.*;
 
 import javax.jms.ConnectionFactory;
-
-import static java.lang.String.format;
 
 /**
  * <p>
@@ -28,19 +28,18 @@ import static java.lang.String.format;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class StompBrokerAdmin extends BrokerAdmin {
-
+public class OpenwireBrokerProtocol extends BrokerProtocol {
+    
     @Override
     ConnectionFactory getConnectionFactory(Object broker) {
-        StompJmsConnectionFactory factory = new StompJmsConnectionFactory();
-        factory.setBrokerURI(format("tcp://localhost:%s", port(broker)));
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory();
+        factory.setBrokerURL(format("tcp://localhost:%s", port(broker)));
         return factory;
     }
 
-//    def broker_config_uri = "xml:classpath:apollo-stomp.xml"
-//
-//    protected def getInitialContextFactoryClass = "org.fusesource.stompjms.jndi.StompJmsInitialContextFactory"
-//
-//    def getConnectionUri = "tcp://localhost:%s".format(port);
+    @Override
+    public String toString() {
+        return "OpenWire";
+    }
 
 }

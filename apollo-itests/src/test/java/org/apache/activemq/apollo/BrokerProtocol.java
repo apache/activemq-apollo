@@ -31,8 +31,8 @@ import java.net.InetSocketAddress;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract public class BrokerAdmin {
-    protected static final Logger LOG = LoggerFactory.getLogger(BrokerAdmin.class);
+abstract public class BrokerProtocol {
+    protected static final Logger LOG = LoggerFactory.getLogger(BrokerProtocol.class);
 
     public Object create(String config) {
         LOG.info("Loading broker configuration from the classpath with URI: " + config);
