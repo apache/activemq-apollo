@@ -1216,7 +1216,7 @@ class StompProtocolHandler extends ProtocolHandler {
       } }
 
       if( !topics.isEmpty ) {
-        val dsub = new DurableSubscriptionDestinationDTO(decode_header(id))
+        val dsub = new DurableSubscriptionDestinationDTO(destination_parser.sanitize_destination_part(decode_header(id)))
         dsub.selector = if (selector == null) null else selector._1
         topics.foreach( dsub.topics.add(_) )
         dsubs += dsub

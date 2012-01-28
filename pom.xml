@@ -464,6 +464,7 @@
 
   <profiles>
     
+    <!-- Integration tests.  Take a long time to run so, disabled by default -->
     <profile>
       <id>itests</id>
       <modules>

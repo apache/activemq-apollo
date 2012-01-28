@@ -130,7 +130,7 @@ class DestinationParser extends PathParser {
       var name = value.substring(topic_prefix.length)
       return new TopicDestinationDTO(parts(name))
     } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
-      var name = value.substring(dsub_prefix.length)
+      var name = sanitize_destination_part(value.substring(dsub_prefix.length))
       return new DurableSubscriptionDestinationDTO(name).direct();
     } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
       var name = value.substring(temp_topic_prefix.length)
