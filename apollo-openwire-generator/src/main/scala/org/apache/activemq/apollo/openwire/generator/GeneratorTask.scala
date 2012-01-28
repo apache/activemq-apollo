@@ -45,7 +45,10 @@ object GeneratorTask {
 class GeneratorTask extends Task {
 
   @BeanProperty
-  var version = 2
+  var first = 1
+
+  @BeanProperty
+  var version = 1
 
   @BeanProperty
   var sourceDir = new File("./src/main/scala")
@@ -64,11 +67,16 @@ class GeneratorTask extends Task {
 
       var jam = jamServiceFactory.createService(params)
 
-      var script = new ApolloMarshallingGenerator
-      script.setJam(jam)
-      script.setTargetDir(targetDir.getCanonicalPath)
-      script.setOpenwireVersion(version)
-      script.run
+      for( i <- first.to(version)) {
+        println("======================================================")
+        println(" Generating Marshallers for OpenWire version: " + i)
+        println("======================================================")
+        var script = new ApolloMarshallingGenerator
+        script.setJam(jam)
+        script.setTargetDir(targetDir.getCanonicalPath)
+        script.setOpenwireVersion(i)
+        script.run
+      }
 
     } catch {
       case e: Exception => throw new BuildException(e)

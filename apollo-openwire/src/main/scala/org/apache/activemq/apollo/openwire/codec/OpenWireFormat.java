@@ -24,8 +24,6 @@ import org.fusesource.hawtbuf.BufferEditor;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.channels.ReadableByteChannel;
@@ -194,7 +192,7 @@ public final class OpenWireFormat {
 
     public synchronized Object unmarshal(Buffer sequence) throws IOException {
         bytesIn.restart(sequence);
-        // DataInputStream dis = new DataInputStream(new
+        // DataByteArrayInputStreamStream dis = new DataByteArrayInputStreamStream(new
         // ByteArrayInputStream(sequence));
 
         if (!sizePrefixDisabled) {
@@ -219,7 +217,7 @@ public final class OpenWireFormat {
         return command;
     }
 
-    public synchronized void marshal(Object o, DataOutput dataOut) throws IOException {
+    public synchronized void marshal(Object o, DataByteArrayOutputStream dataOut) throws IOException {
 
         if (cacheEnabled) {
             runMarshallCacheEvictionSweep();
@@ -248,7 +246,7 @@ public final class OpenWireFormat {
                 dsm.tightMarshal2(this, c, dataOut, bs);
 
             } else {
-                DataOutput looseOut = dataOut;
+                DataByteArrayOutputStream looseOut = dataOut;
 
                 if (!sizePrefixDisabled) {
                     bytesOut.restart();
@@ -274,8 +272,8 @@ public final class OpenWireFormat {
         }
     }
 
-    public Object unmarshal(DataInput dis) throws IOException {
-        DataInput dataIn = dis;
+    public Object unmarshal(DataByteArrayInputStream dis) throws IOException {
+        DataByteArrayInputStream dataIn = dis;
         if (!sizePrefixDisabled) {
             int size = dis.readInt();
             if (size > maxFrameSize) {
@@ -315,7 +313,7 @@ public final class OpenWireFormat {
      * Used by NIO or AIO transports; note that the size is not written as part
      * of this method.
      */
-    public void tightMarshal2(Object o, DataOutput ds, BooleanStream bs) throws IOException {
+    public void tightMarshal2(Object o, DataByteArrayOutputStream ds, BooleanStream bs) throws IOException {
         if (cacheEnabled) {
             runMarshallCacheEvictionSweep();
         }
@@ -356,7 +354,7 @@ public final class OpenWireFormat {
         this.version = version;
     }
 
-    public Object doUnmarshal(DataInput dis) throws IOException {
+    public Object doUnmarshal(DataByteArrayInputStream dis) throws IOException {
         byte dataType = dis.readByte();
         receivingMessage.set(true);
         if (dataType != NULL_TYPE) {
@@ -408,7 +406,7 @@ public final class OpenWireFormat {
         return 1 + dsm.tightMarshal1(this, o, bs);
     }
 
-    public void tightMarshalNestedObject2(DataStructure o, DataOutput ds, BooleanStream bs) throws IOException {
+    public void tightMarshalNestedObject2(DataStructure o, DataByteArrayOutputStream ds, BooleanStream bs) throws IOException {
         if (!bs.readBoolean()) {
             return;
         }
@@ -430,7 +428,7 @@ public final class OpenWireFormat {
         }
     }
 
-    public DataStructure tightUnmarshalNestedObject(DataInput dis, BooleanStream bs) throws IOException {
+    public DataStructure tightUnmarshalNestedObject(DataByteArrayInputStream dis, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
 
             byte dataType = dis.readByte();
@@ -463,7 +461,7 @@ public final class OpenWireFormat {
         }
     }
 
-    public DataStructure looseUnmarshalNestedObject(DataInput dis) throws IOException {
+    public DataStructure looseUnmarshalNestedObject(DataByteArrayInputStream dis) throws IOException {
         if (dis.readBoolean()) {
 
             byte dataType = dis.readByte();
@@ -480,7 +478,7 @@ public final class OpenWireFormat {
         }
     }
 
-    public void looseMarshalNestedObject(DataStructure o, DataOutput dataOut) throws IOException {
+    public void looseMarshalNestedObject(DataStructure o, DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeBoolean(o != null);
         if (o != null) {
             byte type = o.getDataStructureType();

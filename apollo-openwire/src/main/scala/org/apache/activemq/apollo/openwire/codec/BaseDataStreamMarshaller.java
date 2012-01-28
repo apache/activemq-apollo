@@ -18,9 +18,9 @@ package org.apache.activemq.apollo.openwire.codec;
 
 import org.apache.activemq.apollo.openwire.command.DataStructure;
 import org.fusesource.hawtbuf.Buffer;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 
@@ -46,11 +46,11 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return 0;
     }
 
-    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs)
+    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataByteArrayOutputStream dataOut, BooleanStream bs)
         throws IOException {
     }
 
-    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs)
+    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataByteArrayInputStream dataIn, BooleanStream bs)
         throws IOException {
     }
 
@@ -74,7 +74,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    public void tightMarshalLong2(OpenWireFormat wireFormat, long o, DataOutput dataOut, BooleanStream bs)
+    public void tightMarshalLong2(OpenWireFormat wireFormat, long o, DataByteArrayOutputStream dataOut, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             if (bs.readBoolean()) {
@@ -89,7 +89,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    public long tightUnmarshalLong(OpenWireFormat wireFormat, DataInput dataIn, BooleanStream bs)
+    public long tightUnmarshalLong(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             if (bs.readBoolean()) {
@@ -118,7 +118,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return answer & 0xffffffffL;
     }
 
-    protected DataStructure tightUnmarsalNestedObject(OpenWireFormat wireFormat, DataInput dataIn,
+    protected DataStructure tightUnmarsalNestedObject(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn,
                                                       BooleanStream bs) throws IOException {
         return wireFormat.tightUnmarshalNestedObject(dataIn, bs);
     }
@@ -128,12 +128,12 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return wireFormat.tightMarshalNestedObject1(o, bs);
     }
 
-    protected void tightMarshalNestedObject2(OpenWireFormat wireFormat, DataStructure o, DataOutput dataOut,
+    protected void tightMarshalNestedObject2(OpenWireFormat wireFormat, DataStructure o, DataByteArrayOutputStream dataOut,
                                              BooleanStream bs) throws IOException {
         wireFormat.tightMarshalNestedObject2(o, dataOut, bs);
     }
 
-    protected DataStructure tightUnmarsalCachedObject(OpenWireFormat wireFormat, DataInput dataIn,
+    protected DataStructure tightUnmarsalCachedObject(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn,
                                                       BooleanStream bs) throws IOException {
         if (wireFormat.isCacheEnabled()) {
             if (bs.readBoolean()) {
@@ -167,7 +167,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalCachedObject2(OpenWireFormat wireFormat, DataStructure o, DataOutput dataOut,
+    protected void tightMarshalCachedObject2(OpenWireFormat wireFormat, DataStructure o, DataByteArrayOutputStream dataOut,
                                              BooleanStream bs) throws IOException {
         if (wireFormat.isCacheEnabled()) {
             Short index = wireFormat.getMarshallCacheIndex(o);
@@ -182,7 +182,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Throwable tightUnmarsalThrowable(OpenWireFormat wireFormat, DataInput dataIn, BooleanStream bs)
+    protected Throwable tightUnmarsalThrowable(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             String clazz = tightUnmarshalString(dataIn, bs);
@@ -258,7 +258,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalThrowable2(OpenWireFormat wireFormat, Throwable o, DataOutput dataOut,
+    protected void tightMarshalThrowable2(OpenWireFormat wireFormat, Throwable o, DataByteArrayOutputStream dataOut,
                                           BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
             tightMarshalString2(o.getClass().getName(), dataOut, bs);
@@ -279,7 +279,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     }
 
     @SuppressWarnings("deprecation")
-    protected String tightUnmarshalString(DataInput dataIn, BooleanStream bs) throws IOException {
+    protected String tightUnmarshalString(DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
             if (bs.readBoolean()) {
                 int size = dataIn.readShort();
@@ -332,7 +332,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalString2(String value, DataOutput dataOut, BooleanStream bs) throws IOException {
+    protected void tightMarshalString2(String value, DataByteArrayOutputStream dataOut, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
             // If we verified it only holds ascii values
             if (bs.readBoolean()) {
@@ -361,7 +361,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     }
 
     protected void tightMarshalObjectArray2(OpenWireFormat wireFormat, DataStructure[] objects,
-                                            DataOutput dataOut, BooleanStream bs) throws IOException {
+                                            DataByteArrayOutputStream dataOut, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
             dataOut.writeShort(objects.length);
             for (int i = 0; i < objects.length; i++) {
@@ -374,12 +374,12 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return i;
     }
 
-    protected void tightMarshalConstByteArray2(byte[] data, DataOutput dataOut, BooleanStream bs, int i)
+    protected void tightMarshalConstByteArray2(byte[] data, DataByteArrayOutputStream dataOut, BooleanStream bs, int i)
         throws IOException {
         dataOut.write(data, 0, i);
     }
 
-    protected byte[] tightUnmarshalConstByteArray(DataInput dataIn, BooleanStream bs, int i)
+    protected byte[] tightUnmarshalConstByteArray(DataByteArrayInputStream dataIn, BooleanStream bs, int i)
         throws IOException {
         byte data[] = new byte[i];
         dataIn.readFully(data);
@@ -395,7 +395,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalByteArray2(byte[] data, DataOutput dataOut, BooleanStream bs)
+    protected void tightMarshalByteArray2(byte[] data, DataByteArrayOutputStream dataOut, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             dataOut.writeInt(data.length);
@@ -403,7 +403,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected byte[] tightUnmarshalByteArray(DataInput dataIn, BooleanStream bs) throws IOException {
+    protected byte[] tightUnmarshalByteArray(DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {
         byte rc[] = null;
         if (bs.readBoolean()) {
             int size = dataIn.readInt();
@@ -422,7 +422,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void tightMarshalBuffer2(Buffer data, DataOutput dataOut, BooleanStream bs)
+    protected void tightMarshalBuffer2(Buffer data, DataByteArrayOutputStream dataOut, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
             dataOut.writeInt(data.getLength());
@@ -430,7 +430,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Buffer tightUnmarshalBuffer(DataInput dataIn, BooleanStream bs) throws IOException {
+    protected Buffer tightUnmarshalBuffer(DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {
         Buffer rc = null;
         if (bs.readBoolean()) {
             int size = dataIn.readInt();
@@ -445,31 +445,31 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     // The loose marshaling logic
     //
 
-    public void looseMarshal(OpenWireFormat wireFormat, Object o, DataOutput dataOut) throws IOException {
+    public void looseMarshal(OpenWireFormat wireFormat, Object o, DataByteArrayOutputStream dataOut) throws IOException {
     }
 
-    public void looseUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn) throws IOException {
+    public void looseUnmarshal(OpenWireFormat wireFormat, Object o, DataByteArrayInputStream dataIn) throws IOException {
     }
 
-    public void looseMarshalLong(OpenWireFormat wireFormat, long o, DataOutput dataOut) throws IOException {
+    public void looseMarshalLong(OpenWireFormat wireFormat, long o, DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeLong(o);
     }
 
-    public long looseUnmarshalLong(OpenWireFormat wireFormat, DataInput dataIn) throws IOException {
+    public long looseUnmarshalLong(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn) throws IOException {
         return dataIn.readLong();
     }
 
-    protected DataStructure looseUnmarsalNestedObject(OpenWireFormat wireFormat, DataInput dataIn)
+    protected DataStructure looseUnmarsalNestedObject(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn)
         throws IOException {
         return wireFormat.looseUnmarshalNestedObject(dataIn);
     }
 
-    protected void looseMarshalNestedObject(OpenWireFormat wireFormat, DataStructure o, DataOutput dataOut)
+    protected void looseMarshalNestedObject(OpenWireFormat wireFormat, DataStructure o, DataByteArrayOutputStream dataOut)
         throws IOException {
         wireFormat.looseMarshalNestedObject(o, dataOut);
     }
 
-    protected DataStructure looseUnmarsalCachedObject(OpenWireFormat wireFormat, DataInput dataIn)
+    protected DataStructure looseUnmarsalCachedObject(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn)
         throws IOException {
         if (wireFormat.isCacheEnabled()) {
             if (dataIn.readBoolean()) {
@@ -486,7 +486,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void looseMarshalCachedObject(OpenWireFormat wireFormat, DataStructure o, DataOutput dataOut)
+    protected void looseMarshalCachedObject(OpenWireFormat wireFormat, DataStructure o, DataByteArrayOutputStream dataOut)
         throws IOException {
         if (wireFormat.isCacheEnabled()) {
             Short index = wireFormat.getMarshallCacheIndex(o);
@@ -503,7 +503,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Throwable looseUnmarsalThrowable(OpenWireFormat wireFormat, DataInput dataIn)
+    protected Throwable looseUnmarsalThrowable(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn)
         throws IOException {
         if (dataIn.readBoolean()) {
             String clazz = looseUnmarshalString(dataIn);
@@ -543,7 +543,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void looseMarshalThrowable(OpenWireFormat wireFormat, Throwable o, DataOutput dataOut)
+    protected void looseMarshalThrowable(OpenWireFormat wireFormat, Throwable o, DataByteArrayOutputStream dataOut)
         throws IOException {
         dataOut.writeBoolean(o != null);
         if (o != null) {
@@ -564,7 +564,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected String looseUnmarshalString(DataInput dataIn) throws IOException {
+    protected String looseUnmarshalString(DataByteArrayInputStream dataIn) throws IOException {
         if (dataIn.readBoolean()) {
             return dataIn.readUTF();
         } else {
@@ -572,7 +572,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void looseMarshalString(String value, DataOutput dataOut) throws IOException {
+    protected void looseMarshalString(String value, DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeBoolean(value != null);
         if (value != null) {
             dataOut.writeUTF(value);
@@ -580,7 +580,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     }
 
     protected void looseMarshalObjectArray(OpenWireFormat wireFormat, DataStructure[] objects,
-                                           DataOutput dataOut) throws IOException {
+                                           DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeBoolean(objects != null);
         if (objects != null) {
             dataOut.writeShort(objects.length);
@@ -590,18 +590,18 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected void looseMarshalConstByteArray(OpenWireFormat wireFormat, byte[] data, DataOutput dataOut,
+    protected void looseMarshalConstByteArray(OpenWireFormat wireFormat, byte[] data, DataByteArrayOutputStream dataOut,
                                               int i) throws IOException {
         dataOut.write(data, 0, i);
     }
 
-    protected byte[] looseUnmarshalConstByteArray(DataInput dataIn, int i) throws IOException {
+    protected byte[] looseUnmarshalConstByteArray(DataByteArrayInputStream dataIn, int i) throws IOException {
         byte data[] = new byte[i];
         dataIn.readFully(data);
         return data;
     }
 
-    protected void looseMarshalByteArray(OpenWireFormat wireFormat, byte[] data, DataOutput dataOut)
+    protected void looseMarshalByteArray(OpenWireFormat wireFormat, byte[] data, DataByteArrayOutputStream dataOut)
         throws IOException {
         dataOut.writeBoolean(data != null);
         if (data != null) {
@@ -610,7 +610,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected byte[] looseUnmarshalByteArray(DataInput dataIn) throws IOException {
+    protected byte[] looseUnmarshalByteArray(DataByteArrayInputStream dataIn) throws IOException {
         byte rc[] = null;
         if (dataIn.readBoolean()) {
             int size = dataIn.readInt();
@@ -620,7 +620,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         return rc;
     }
 
-    protected void looseMarshalBuffer(OpenWireFormat wireFormat, Buffer data, DataOutput dataOut)
+    protected void looseMarshalBuffer(OpenWireFormat wireFormat, Buffer data, DataByteArrayOutputStream dataOut)
         throws IOException {
         dataOut.writeBoolean(data != null);
         if (data != null) {
@@ -629,7 +629,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected Buffer looseUnmarshalBuffer(DataInput dataIn) throws IOException {
+    protected Buffer looseUnmarshalBuffer(DataByteArrayInputStream dataIn) throws IOException {
         Buffer rc = null;
         if (dataIn.readBoolean()) {
             int size = dataIn.readInt();

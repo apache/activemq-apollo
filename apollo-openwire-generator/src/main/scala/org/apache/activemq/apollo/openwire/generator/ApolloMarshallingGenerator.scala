@@ -66,8 +66,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("")
     out.println("package org.apache.activemq.apollo.openwire.codec.v" + getOpenwireVersion + ";")
     out.println("")
-    out.println("import java.io.DataInput;")
-    out.println("import java.io.DataOutput;")
+    out.println("import org.fusesource.hawtbuf.DataByteArrayInputStream;")
+    out.println("import org.fusesource.hawtbuf.DataByteArrayOutputStream;")
     out.println("import java.io.IOException;")
     out.println("")
     out.println("import org.apache.activemq.apollo.openwire.codec.*;")
@@ -117,7 +117,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("     * @param dataIn the data input stream to build the object from")
     out.println("     * @throws IOException")
     out.println("     */")
-    out.println("    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn, BooleanStream bs) throws IOException {")
+    out.println("    public void tightUnmarshal(OpenWireFormat wireFormat, Object o, DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {")
     out.println("        super.tightUnmarshal(wireFormat, o, dataIn, bs);")
     if (!getProperties.isEmpty) {
       out.println("")
@@ -163,7 +163,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("     * @param dataOut the output stream")
     out.println("     * @throws IOException thrown if an error occurs")
     out.println("     */")
-    out.println("    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataOutput dataOut, BooleanStream bs) throws IOException {")
+    out.println("    public void tightMarshal2(OpenWireFormat wireFormat, Object o, DataByteArrayOutputStream dataOut, BooleanStream bs) throws IOException {")
     out.println("        super.tightMarshal2(wireFormat, o, dataOut, bs);")
     if (!getProperties.isEmpty) {
       out.println("")
@@ -184,7 +184,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("     * @param dataIn the data input stream to build the object from")
     out.println("     * @throws IOException")
     out.println("     */")
-    out.println("    public void looseUnmarshal(OpenWireFormat wireFormat, Object o, DataInput dataIn) throws IOException {")
+    out.println("    public void looseUnmarshal(OpenWireFormat wireFormat, Object o, DataByteArrayInputStream dataIn) throws IOException {")
     out.println("        super.looseUnmarshal(wireFormat, o, dataIn);")
     if (!getProperties.isEmpty) {
       out.println("")
@@ -207,7 +207,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     out.println("    /**")
     out.println("     * Write the booleans that this object uses to a BooleanStream")
     out.println("     */")
-    out.println("    public void looseMarshal(OpenWireFormat wireFormat, Object o, DataOutput dataOut) throws IOException {")
+    out.println("    public void looseMarshal(OpenWireFormat wireFormat, Object o, DataByteArrayOutputStream dataOut) throws IOException {")
     if (!getProperties.isEmpty) {
       out.println("")
       out.println("        " + getJclass.getSimpleName + " info = (" + getJclass.getSimpleName + ")o;")

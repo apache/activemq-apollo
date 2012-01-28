@@ -16,11 +16,11 @@
  */
 package org.apache.activemq.apollo.openwire.codec;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.activemq.apollo.openwire.command.DataStructure;
+import org.fusesource.hawtbuf.DataByteArrayInputStream;
+import org.fusesource.hawtbuf.DataByteArrayOutputStream;
+
+import java.io.IOException;
 
 public interface DataStreamMarshaller {
 
@@ -28,10 +28,10 @@ public interface DataStreamMarshaller {
     DataStructure createObject();
 
     int tightMarshal1(OpenWireFormat format, Object c, BooleanStream bs) throws IOException;
-    void tightMarshal2(OpenWireFormat format, Object c, DataOutput ds, BooleanStream bs) throws IOException;
-    void tightUnmarshal(OpenWireFormat format, Object data, DataInput dis, BooleanStream bs) throws IOException;
+    void tightMarshal2(OpenWireFormat format, Object c, DataByteArrayOutputStream ds, BooleanStream bs) throws IOException;
+    void tightUnmarshal(OpenWireFormat format, Object data, DataByteArrayInputStream dis, BooleanStream bs) throws IOException;
 
-    void looseMarshal(OpenWireFormat format, Object c, DataOutput ds) throws IOException;
-    void looseUnmarshal(OpenWireFormat format, Object data, DataInput dis) throws IOException;
+    void looseMarshal(OpenWireFormat format, Object c, DataByteArrayOutputStream ds) throws IOException;
+    void looseUnmarshal(OpenWireFormat format, Object data, DataByteArrayInputStream dis) throws IOException;
     
 }

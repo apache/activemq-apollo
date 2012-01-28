@@ -31,6 +31,12 @@
 
   <name>${project.artifactId}</name>
 
+  <properties>
+    <openwire-src>${basedir}/src/main/scala</openwire-src>
+    <openwire-first>1</openwire-first>
+    <openwire-version>8</openwire-version>
+  </properties>
+
   <dependencies>
 
     <dependency>
@@ -119,82 +125,66 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-openwire-generator</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
   
   <build>
     <plugins>
 
-      <!-- Generate a test jar for the test cases in this package -->
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
         <executions>
           <execution>
+            <id>default</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <tasks>
+                <echo>Running OpenWire Generator</echo>
+                <taskdef name="generate" classname="org.apache.activemq.apollo.openwire.generator.GeneratorTask"
+                         classpathref="maven.test.classpath"/>
+                <generate 
+                  first="${openwire-first}" 
+                  version="${openwire-version}" 
+                  sourceDir="${openwire-src}"
+                  targetDir="${project.build.directory}/generated-sources/openwire"
+                  />
+              </tasks>
+            </configuration>
             <goals>
-              <goal>test-jar</goal>
+              <goal>run</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/openwire</source>
+              </sources>                  
+            </configuration>
           </execution>
         </executions>
       </plugin>
 
     </plugins>
   </build>
-
-
-  <profiles>
-    <!-- run with: mvn -P openwire-generate generate-sources -->
-    <profile>
-      <id>openwire-generate</id>
-      <properties>
-        <openwire-src>${basedir}/src/main/scala</openwire-src>
-        <openwire-version>8</openwire-version>
-      </properties>
-      <dependencies>
-        <!-- we add this here so the reactor builds it first -->
-        <dependency>
-          <groupId>org.apache.activemq</groupId>
-          <artifactId>apollo-openwire-generator</artifactId>
-          <version>${project.version}</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <version>1.7</version>
-            <executions>
-              <execution>
-                <id>default</id>
-                <phase>generate-sources</phase>
-                <configuration>
-                  <tasks>
-                    <echo>Running OpenWire Generator</echo>
-                    <taskdef name="generate" classname="org.apache.activemq.apollo.openwire.generator.GeneratorTask"/>
-                    <generate 
-                      version="${openwire-version}" 
-                      sourceDir="${openwire-src}"
-                      targetDir="${basedir}/src/main/scala"
-                      />
-                  </tasks>
-                </configuration>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-            </executions>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.activemq</groupId>
-                <artifactId>apollo-openwire-generator</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 
 </project>
