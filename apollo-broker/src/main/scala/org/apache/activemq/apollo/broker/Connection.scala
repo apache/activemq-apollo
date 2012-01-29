@@ -142,9 +142,10 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
     result.state = service_state.toString
     result.state_since = service_state.since
     result.protocol = protocol_handler.protocol
-    result.transport = transport.getTypeId
+    result.connector = connector.id
     result.remote_address = transport.getRemoteAddress.toString
     result.local_address = transport.getLocalAddress.toString
+    result.protocol_session_id = protocol_handler.session_id.getOrElse(null)
     val wf = transport.getProtocolCodec
     if( wf!=null ) {
       result.write_counter = wf.getWriteCounter

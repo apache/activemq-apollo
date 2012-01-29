@@ -58,10 +58,10 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
 	public long write_counter;
 
     /**
-     * The transport the connection is using.
+     * The connector that created the connection.
      */
 	@XmlAttribute
-	public String transport;
+	public String connector;
 
     /**
      * The protocol the connection is using.
@@ -72,7 +72,7 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
     /**
      * The version of the protocol being used.
      */
-	@XmlAttribute
+	@XmlAttribute(name="protocol_version")
 	public String protocol_version;
 
     /**
@@ -86,6 +86,12 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
      */
 	@XmlAttribute(name="local_address")
 	public String local_address;
+
+    /**
+     * The session id of the protocol.
+     */
+	@XmlAttribute(name="protocol_session_id")
+	public String protocol_session_id;
 
     /**
      * The connected user
