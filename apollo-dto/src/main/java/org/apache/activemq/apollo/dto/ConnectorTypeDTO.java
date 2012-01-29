@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.dto;
 
 import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -27,7 +28,8 @@ import java.util.List;
  */
 @XmlType(name = "connector_type")
 @XmlAccessorType(XmlAccessType.FIELD)
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+@JsonTypeIdResolver(ApolloTypeIdResolver.class)
 abstract public class ConnectorTypeDTO extends ServiceDTO {
 
     /**

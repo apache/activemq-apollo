@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.openwire.dto
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,14 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.leveldb
-
-import org.apache.activemq.apollo.util.JaxbModule
-
+import org.apache.activemq.apollo.util.DtoModule
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ExtensionJaxbModule extends JaxbModule {
-  def xml_package = "org.apache.activemq.apollo.broker.store.leveldb.dto"
+class Module extends DtoModule {
+
+  def dto_package = "org.apache.activemq.apollo.openwire.dto"
+  def extension_classes = Array(classOf[OpenwireConnectionStatusDTO], classOf[OpenwireDTO])
+
 }

@@ -18,10 +18,10 @@ package org.apache.activemq.apollo.dto;
 
 
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
+
+import javax.xml.bind.annotation.*;
 
 /**
  * <p>
@@ -31,6 +31,9 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="connection_status")
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "connection_status_type")
+@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeIdResolver(ApolloTypeIdResolver.class)
 public class ConnectionStatusDTO extends ServiceStatusDTO {
 
     /**

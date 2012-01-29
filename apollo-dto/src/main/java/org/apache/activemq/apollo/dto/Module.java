@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.apache.activemq.apollo.util.JaxbModule;
+import org.apache.activemq.apollo.util.DtoModule;
 
 /**
  * <p>
@@ -24,8 +24,18 @@ import org.apache.activemq.apollo.util.JaxbModule;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class PrimaryJaxbModule implements JaxbModule {
-    public String xml_package() {
+public class Module implements DtoModule {
+    public String dto_package() {
         return "org.apache.activemq.apollo.dto";
+    }
+    public Class<?>[] extension_classes() {
+        return new Class<?>[]{
+                AcceptingConnectorDTO.class,
+                TopicDestinationDTO.class,
+                DurableSubscriptionDestinationDTO.class,
+                QueueDestinationDTO.class,
+                NullStoreDTO.class,
+                SimpleStoreStatusDTO.class
+        };
     }
 }

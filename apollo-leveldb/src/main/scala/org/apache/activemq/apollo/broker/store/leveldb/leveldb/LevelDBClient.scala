@@ -46,7 +46,7 @@ import org.fusesource.hawtbuf.{AsciiBuffer, Buffer, AbstractVarIntSupport}
 object LevelDBClient extends Log {
 
   final val STORE_SCHEMA_PREFIX = "leveldb_store:"
-  final val STORE_SCHEMA_VERSION = 1
+  final val STORE_SCHEMA_VERSION = 2
 
   final val queue_prefix = 'q'.toByte
   final val queue_entry_prefix = 'e'.toByte

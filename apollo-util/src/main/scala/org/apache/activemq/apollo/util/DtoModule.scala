@@ -14,13 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.stomp
-
-import org.apache.activemq.apollo.util.JaxbModule
+package org.apache.activemq.apollo.util
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ExtensionJaxbModule extends JaxbModule {
-  def xml_package = "org.apache.activemq.apollo.stomp.dto"
+trait DtoModule {
+  def dto_package:String
+  def extension_classes:Array[Class[_]]
 }
+
+/**
+ * <p>
+ * </p>
+ *
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object DtoModule {
+
+  val finder = new ClassFinder[DtoModule]("META-INF/services/org.apache.activemq.apollo/dto-module.index",classOf[DtoModule])
+  val packages = finder.singletons.map(_.dto_package).toArray
+  val extension_classes = (finder.singletons.foldLeft(Set[Class[_]]()){ (x,y)=>
+    x ++ y.extension_classes
+  }).toArray
+}
+

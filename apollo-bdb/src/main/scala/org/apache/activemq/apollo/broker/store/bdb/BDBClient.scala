@@ -30,7 +30,7 @@ import FileSupport._
 
 object BDBClient extends Log {
   final val STORE_SCHEMA_PREFIX = "bdb_store:"
-  final val STORE_SCHEMA_VERSION = 1
+  final val STORE_SCHEMA_VERSION = 2
 }
 /**
  *

@@ -405,7 +405,7 @@ parameter to define the order in which they are returned.  Example:
       `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/store.json`
       {pygmentize:: js}
       {
-        "@class": "org.apache.activemq.apollo.broker.store.bdb.dto.BDBStoreStatusDTO",
+        "@class": "bdb_store_status",
         "id": "bdb store at /Users/chirino/opt/default/data",
         "state": "STARTED",
         "state_since": 1314573798939,
@@ -454,7 +454,7 @@ parameter to define the order in which they are returned.  Example:
           "other": []
         },
         "binding": {
-          "@class": "org.apache.activemq.apollo.dto.QueueDestinationDTO",
+          "@class": "queue_destination",
           "path": ["example-5"]
         },
         "metrics": {

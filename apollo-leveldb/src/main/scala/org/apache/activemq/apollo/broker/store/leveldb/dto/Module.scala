@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.bdb
+package org.apache.activemq.apollo.broker.store.leveldb.dto
+import org.apache.activemq.apollo.util.DtoModule
 
-import org.apache.activemq.apollo.util.JaxbModule
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class ExtensionJaxbModule extends JaxbModule {
-  def xml_package = "org.apache.activemq.apollo.broker.store.bdb.dto"
+class Module extends DtoModule {
+  def dto_package = "org.apache.activemq.apollo.broker.store.leveldb.dto"
+  def extension_classes = Array(classOf[LevelDBStoreDTO], classOf[LevelDBStoreStatusDTO])
 }

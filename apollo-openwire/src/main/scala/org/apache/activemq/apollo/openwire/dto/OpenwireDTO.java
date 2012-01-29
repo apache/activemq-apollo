@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.*;
 /**
  * Allow you to customize the openwire protocol implementation.
  */
-@XmlRootElement(name="stomp")
+@XmlRootElement(name="openwire")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class OpenwireDTO extends ProtocolDTO {
 
