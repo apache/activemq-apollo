@@ -22,6 +22,7 @@ import org.apache.activemq.apollo.broker.Message
 import OpenwireConstants._
 import org.apache.activemq.apollo.broker.protocol.{ProtocolCodecFactory, Protocol, ProtocolFactory}
 import org.fusesource.hawtbuf.Buffer
+import org.apache.activemq.apollo.util.Log
 
 /**
  * <p>
@@ -47,7 +48,7 @@ object OpenwireProtocolFactory extends ProtocolFactory {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol {
+object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol with Log {
 
   def createProtocolHandler = new OpenwireProtocolHandler
 
@@ -57,6 +58,11 @@ object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol {
 
   def decode(message: MessageRecord) = {
     OpenwireCodec.decode(message)
+  }
+
+  lazy val log_exerimental_warning = {
+    warn("The OpenWire protocol implementation is still experimental and not recommended for production use.  Production users should use ActiveMQ instead.")
+    null
   }
 }
 
@@ -71,7 +77,10 @@ class OpenwireProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
   def id = PROTOCOL
 
-  def createProtocolCodec() = new OpenwireCodec();
+  def createProtocolCodec() = {
+    OpenwireProtocol.log_exerimental_warning
+    new OpenwireCodec();
+  }
 
   def isIdentifiable() = true
 
