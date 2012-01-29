@@ -30,6 +30,10 @@ import java.util.List;
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 abstract public class ConnectorTypeDTO extends ServiceDTO {
 
+    /**
+     *  The maximum number of concurrently open connections this connector will accept before it stops accepting
+     *  additional connections. If not set, then there is no limit.
+     */
     @XmlAttribute(name = "connection_limit")
     public Integer connection_limit;
 

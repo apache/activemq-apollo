@@ -24,13 +24,13 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * <p>
- *     Collects metrics about the status of a queue since the
- *     time a broker gets started.
+ *     Collects metrics about the status of a destination since the
+ *     time the broker was started.
  * </p>
  *
  * <p>
- *     Note that you may need to do a little math to compute how much
- *     the number of message swapped on disk:
+ *     Note: To compute the total size in bytes of messages that are in persistent
+ *     storage use the following algorithm:
  *
  *     swapped_out_size = queue_size - swapped_in_size
  *
@@ -80,7 +80,7 @@ public class DestMetricsDTO {
     public long dequeue_size_counter;
 
     /**
-     * The time stamp of when the last dequeue to a consumers occurred.
+     * The time stamp of when the last dequeue to consumers occurred.
      */
     @XmlAttribute(name="dequeue_ts")
     public long dequeue_ts;
@@ -108,7 +108,7 @@ public class DestMetricsDTO {
     public long producer_count;
 
     /**
-     * The current number of producers consuming from the destination.
+     * The current number of consumers consuming from the destination.
      */
     @XmlAttribute(name="consumer_count")
     public long consumer_count;
@@ -188,7 +188,7 @@ public class DestMetricsDTO {
 
     /**
      * The total size in bytes of messages that are being
-     * loaded from persistent storage into RAM
+     * loaded from persistent storage into RAM.
      */
     @XmlAttribute(name="swapping_in_size")
     public long swapping_in_size;

@@ -30,7 +30,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 abstract public class ServiceDTO extends StringIdDTO {
 
     /**
-     * Should this service be running?
+     * If set to true, then the connector host will be enabled.
+     * If set to false, then the connector host will be disabled.
      */
     @XmlAttribute
     public Boolean enabled;

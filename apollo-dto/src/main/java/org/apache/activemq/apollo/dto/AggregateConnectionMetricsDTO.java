@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * <p>
+ * Collects aggregated metrics on all connections.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

@@ -23,6 +23,7 @@ import javax.xml.bind.annotation.XmlValue;
 
 /**
  * <p>
+ * This class is used to more finely control how user headers are added to received STOMP messages.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -49,7 +50,7 @@ public class AddUserHeaderDTO {
     /**
      * The user sending the message may have many principals,
      * setting the kind will only select those principals who's
-     * class name matches the kind.
+     * class name matches the kind.  Defaults to *.
      */
     @XmlAttribute(name="kind")
     public String kind;

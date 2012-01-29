@@ -25,6 +25,7 @@ import java.util.List;
 
 /**
  * <p>
+ * Sets the JAAS authentication used to access the broker.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -32,9 +33,15 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AuthenticationDTO {
 
+    /**
+     * Used to enable/disable authentication in a virtual host.
+     */
     @XmlAttribute
     public Boolean enabled;
 
+    /**
+     * Specifies the name of the JAAS domain.
+     */
     @XmlAttribute
     public String domain;
 

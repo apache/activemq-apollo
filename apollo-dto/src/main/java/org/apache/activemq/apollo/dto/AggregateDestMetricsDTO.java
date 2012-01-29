@@ -20,6 +20,7 @@ import javax.xml.bind.annotation.*;
 
 /**
  * <p>
+ * Collects aggregated metrics on all destinations
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

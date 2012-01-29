@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.io.File;
 
 /**
- *
+ *  Used to specify the location of key store and key store access
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -38,7 +38,7 @@ public class KeyStorageDTO {
     public File file;
 
     /**
-     * The key store password
+     * The key store password.
      */
     @XmlAttribute
     public String password;
@@ -50,19 +50,19 @@ public class KeyStorageDTO {
     public String key_password;
 
     /**
-     * The type of key store.  If not set, defaults to JKS
+     * The type of key store.  If not set, defaults to JKS.
      */
     @XmlAttribute(name="store_type")
     public String store_type;
 
     /**
-     * The trust management algorithm.  If not set, defaults to SunX509
+     * The trust management algorithm.  If not set, defaults to SunX509.
      */
     @XmlAttribute(name="trust_algorithm")
     public String trust_algorithm;
 
     /**
-     * The key management algorithm.  If not set, defaults to SunX509
+     * The key management algorithm.  If not set, defaults to SunX509.
      */
     @XmlAttribute(name="key_algorithm")
     public String key_algorithm;

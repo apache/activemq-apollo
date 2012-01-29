@@ -21,6 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * <p>
+ * A broker connector is used to accept new connections to the broker.
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlRootElement(name = "connector")
@@ -28,13 +32,14 @@ import java.util.List;
 public class AcceptingConnectorDTO extends ConnectorTypeDTO {
 
   /**
-   * The transport uri which it will accept connections on.
+   * The transport that the connector will listen on, it includes the ip address and port that it will bind to.
+   * Transports are specified using a URI syntax.
    */
   @XmlAttribute
   public String bind;
 
   /**
-   * The protocol that the transport will use.
+   * Defaults to 'any' which means that any of the broker's supported protocols can connect via this transport.
    */
   @XmlAttribute
   public String protocol;
