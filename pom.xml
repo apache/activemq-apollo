@@ -584,6 +584,12 @@
           <name>apache-release</name>
         </property>
       </activation>
+      <properties>
+        <test>false</test>
+      </properties>
+      <modules>
+        <module>apollo-itests</module>
+      </modules>
       <build>
         <plugins>
           <plugin>
