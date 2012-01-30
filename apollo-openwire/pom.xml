@@ -13,21 +13,20 @@
     License for the specific language governing permissions and
     limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-openwire</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0</version>
 
   <name>${project.artifactId}</name>
 
@@ -42,7 +41,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
     </dependency>
 
     <!-- Scala Support -->
@@ -67,14 +66,14 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -82,13 +81,13 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-leveldb</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <scope>test</scope>
     </dependency>
 
@@ -101,7 +100,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0</version>
       <scope>test</scope>
     </dependency>
 
@@ -148,14 +147,8 @@
             <configuration>
               <tasks>
                 <echo>Running OpenWire Generator</echo>
-                <taskdef name="generate" classname="org.apache.activemq.apollo.openwire.generator.GeneratorTask"
-                         classpathref="maven.test.classpath"/>
-                <generate 
-                  first="${openwire-first}" 
-                  version="${openwire-version}" 
-                  sourceDir="${openwire-src}"
-                  targetDir="${project.build.directory}/generated-sources/openwire"
-                  />
+                <taskdef name="generate" classname="org.apache.activemq.apollo.openwire.generator.GeneratorTask" classpathref="maven.test.classpath" />
+                <generate first="${openwire-first}" version="${openwire-version}" sourceDir="${openwire-src}" targetDir="${project.build.directory}/generated-sources/openwire" />
               </tasks>
             </configuration>
             <goals>
