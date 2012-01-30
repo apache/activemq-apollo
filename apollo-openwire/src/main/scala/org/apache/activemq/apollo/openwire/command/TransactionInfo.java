@@ -86,27 +86,4 @@ public class TransactionInfo extends BaseCommand {
         this.type = type;
     }
 
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        switch (type) {
-        case TransactionInfo.BEGIN:
-            return visitor.processBeginTransaction(this);
-        case TransactionInfo.END:
-            return visitor.processEndTransaction(this);
-        case TransactionInfo.PREPARE:
-            return visitor.processPrepareTransaction(this);
-        case TransactionInfo.COMMIT_ONE_PHASE:
-            return visitor.processCommitTransactionOnePhase(this);
-        case TransactionInfo.COMMIT_TWO_PHASE:
-            return visitor.processCommitTransactionTwoPhase(this);
-        case TransactionInfo.ROLLBACK:
-            return visitor.processRollbackTransaction(this);
-        case TransactionInfo.RECOVER:
-            return visitor.processRecoverTransactions(this);
-        case TransactionInfo.FORGET:
-            return visitor.processForgetTransaction(this);
-        default:
-            throw new IOException("Transaction info type unknown: " + type);
-        }
-    }
-
 }

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * @openwire:marshaller code="123"
  */
@@ -23,7 +25,7 @@ public class ProducerId implements DataStructure {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.PRODUCER_ID;
 
-    protected String connectionId;
+    protected UTF8Buffer connectionId;
     protected long sessionId;
     protected long value;
 
@@ -92,7 +94,7 @@ public class ProducerId implements DataStructure {
             sessionKey = sessionKey.substring(0, p);
         }
         // The rest is the value
-        connectionId = sessionKey;
+        connectionId = new UTF8Buffer(sessionKey);
     }
 
     public String toString() {
@@ -109,11 +111,11 @@ public class ProducerId implements DataStructure {
     /**
      * @openwire:property version=1 cache=true
      */
-    public String getConnectionId() {
+    public UTF8Buffer getConnectionId() {
         return connectionId;
     }
 
-    public void setConnectionId(String connectionId) {
+    public void setConnectionId(UTF8Buffer connectionId) {
         this.connectionId = connectionId;
     }
 

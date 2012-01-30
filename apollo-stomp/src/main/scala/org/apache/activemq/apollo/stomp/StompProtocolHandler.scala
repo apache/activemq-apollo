@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
+import path.PathParser._
 import scala.util.continuations._
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
@@ -1035,12 +1036,41 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var message_id_counter = 0;
 
+  def encode_destination(value: Array[DestinationDTO]): String = {
+    if (value == null) {
+      null
+    } else {
+      val rc = new StringBuilder
+      value.foreach { dest =>
+        if (rc.length != 0 ) {
+          assert( destination_parser.destination_separator!=null )
+          rc.append(destination_parser.destination_separator)
+        }
+        import collection.JavaConversions._
+        dest match {
+          case d:QueueDestinationDTO =>
+            rc.append(destination_parser.queue_prefix)
+            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+          case d:DurableSubscriptionDestinationDTO =>
+            rc.append(destination_parser.dsub_prefix)
+            rc.append(destination_parser.unsanitize_destination_part(d.subscription_id))
+          case d:TopicDestinationDTO =>
+            rc.append(destination_parser.topic_prefix)
+            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+          case _ =>
+            throw new Exception("Uknown destination type: "+dest.getClass);
+        }
+      }
+      rc.toString
+    }
+  }
+
   def updated_headers(destination: Array[DestinationDTO], headers:HeaderMap) = {
     var rc:HeaderMap=Nil
 
     // Do we need to re-write the destination names?
     if( destination.find(_.temp()).isDefined ) {
-      rc ::= (DESTINATION -> encode_header(destination_parser.encode_destination(destination)))
+      rc ::= (DESTINATION -> encode_header(encode_destination(destination)))
     }
     get(headers, REPLY_TO).foreach { value=>
       // we may need to translate local temp destination names to broker destination names
@@ -1048,7 +1078,7 @@ class StompProtocolHandler extends ProtocolHandler {
         try {
           val dests: Array[DestinationDTO] = value
           if (dests.find(_.temp()).isDefined) {
-            rc ::= (REPLY_TO -> encode_header(destination_parser.encode_destination(dests)))
+            rc ::= (REPLY_TO -> encode_header(encode_destination(dests)))
           }
         } catch {
           case _=> // the translation is a best effort thing.

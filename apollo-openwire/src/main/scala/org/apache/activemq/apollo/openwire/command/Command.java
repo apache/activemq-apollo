@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * The Command Pattern so that we can send and receive commands on the different
  * transports
@@ -53,21 +51,4 @@ public interface Command extends DataStructure {
 
     boolean isShutdownInfo();
 
-    Response visit(CommandVisitor visitor) throws Exception;
-
-    /**
-     * The endpoint within the transport where this message came from which
-     * could be null if the transport only supports a single endpoint.
-     */
-    Endpoint getFrom();
-
-    void setFrom(Endpoint from);
-
-    /**
-     * The endpoint within the transport where this message is going to - null
-     * means all endpoints.
-     */
-    Endpoint getTo();
-
-    void setTo(Endpoint to);
 }

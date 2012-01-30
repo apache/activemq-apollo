@@ -20,7 +20,7 @@ import org.apache.activemq.apollo.util.Callback;
 import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.apache.activemq.apollo.openwire.support.Settings;
 import org.apache.activemq.apollo.openwire.support.TypeConversionSupport;
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import static org.fusesource.hawtbuf.Buffer.*;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -35,12 +35,9 @@ public class ActiveMQMessage extends Message {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_MESSAGE;
     private static final Map<String, PropertySetter> JMS_PROPERTY_SETERS = new HashMap<String, PropertySetter>();
 
-    protected transient Callback acknowledgeCallback;
-
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
     }
-
 
     public Message copy() {
         ActiveMQMessage copy = new ActiveMQMessage();
@@ -50,7 +47,6 @@ public class ActiveMQMessage extends Message {
 
     protected void copy(ActiveMQMessage copy) {
         super.copy(copy);
-        copy.acknowledgeCallback = acknowledgeCallback;
     }
 
     public int hashCode() {
@@ -76,178 +72,9 @@ public class ActiveMQMessage extends Message {
         return thisMsg != null && oMsg != null && oMsg.equals(thisMsg);
     }
 
-    public void acknowledge() throws OpenwireException {
-        if (acknowledgeCallback != null) {
-            try {
-                acknowledgeCallback.execute();
-            } catch (OpenwireException e) {
-                throw e;
-            } catch (Throwable e) {
-                throw new OpenwireException(e);
-            }
-        }
-    }
-
     public void clearBody() throws OpenwireException {
         setContent(null);
         readOnlyBody = false;
-    }
-
-    public String getJMSMessageID() {
-        MessageId messageId = this.getMessageId();
-        if (messageId == null) {
-            return null;
-        }
-        return messageId.toString();
-    }
-
-    /**
-     * Seems to be invalid because the parameter doesn't initialize MessageId
-     * instance variables ProducerId and ProducerSequenceId
-     *
-     * @param value
-     * @throws OpenwireException
-     */
-    public void setJMSMessageID(String value) throws OpenwireException {
-        if (value != null) {
-            try {
-                MessageId id = new MessageId(value);
-                this.setMessageId(id);
-            } catch (NumberFormatException e) {
-                // we must be some foreign JMS provider or strange user-supplied
-                // String
-                // so lets set the IDs to be 1
-                MessageId id = new MessageId();
-                id.setTextView(value);
-                this.setMessageId(messageId);
-            }
-        } else {
-            this.setMessageId(null);
-        }
-    }
-
-    /**
-     * This will create an object of MessageId. For it to be valid, the instance
-     * variable ProducerId and producerSequenceId must be initialized.
-     *
-     * @param producerId
-     * @param producerSequenceId
-     * @throws OpenwireException
-     */
-    public void setJMSMessageID(ProducerId producerId, long producerSequenceId) throws OpenwireException {
-        MessageId id = null;
-        try {
-            id = new MessageId(producerId, producerSequenceId);
-            this.setMessageId(id);
-        } catch (Throwable e) {
-            throw new OpenwireException("Invalid message id '" + id + "', reason: " + e.getMessage(), e);
-        }
-    }
-
-    public long getJMSTimestamp() {
-        return this.getTimestamp();
-    }
-
-    public void setJMSTimestamp(long timestamp) {
-        this.setTimestamp(timestamp);
-    }
-
-    public String getJMSCorrelationID() {
-        return this.getCorrelationId();
-    }
-
-    public void setJMSCorrelationID(String correlationId) {
-        this.setCorrelationId(correlationId);
-    }
-
-    public byte[] getJMSCorrelationIDAsBytes() throws OpenwireException {
-        return encodeString(this.getCorrelationId());
-    }
-
-    public void setJMSCorrelationIDAsBytes(byte[] correlationId) throws OpenwireException {
-        this.setCorrelationId(decodeString(correlationId));
-    }
-
-    public String getJMSXMimeType() {
-        return "jms/message";
-    }
-
-    protected static String decodeString(byte[] data) throws OpenwireException {
-        try {
-            if (data == null) {
-                return null;
-            }
-            return new String(data, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new OpenwireException("Invalid UTF-8 encoding: " + e.getMessage());
-        }
-    }
-
-    protected static byte[] encodeString(String data) throws OpenwireException {
-        try {
-            if (data == null) {
-                return null;
-            }
-            return data.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new OpenwireException("Invalid UTF-8 encoding: " + e.getMessage());
-        }
-    }
-
-    public ActiveMQDestination getJMSReplyTo() {
-        return this.getReplyTo();
-    }
-
-    public void setJMSReplyTo(ActiveMQDestination destination) throws OpenwireException {
-        this.setReplyTo(destination);
-    }
-
-    public ActiveMQDestination getJMSDestination() {
-        return this.getDestination();
-    }
-
-    public void setJMSDestination(ActiveMQDestination destination) throws OpenwireException {
-        this.setDestination(destination);
-    }
-
-    public int getJMSDeliveryMode() {
-        return this.isPersistent() ? 2 : 1;
-    }
-
-    public void setJMSDeliveryMode(int mode) {
-        this.setPersistent(mode == 2);
-    }
-
-    public boolean getJMSRedelivered() {
-        return this.isRedelivered();
-    }
-
-    public void setJMSRedelivered(boolean redelivered) {
-        this.setRedelivered(redelivered);
-    }
-
-    public String getJMSType() {
-        return this.getType();
-    }
-
-    public void setJMSType(String type) {
-        this.setType(type);
-    }
-
-    public long getJMSExpiration() {
-        return this.getExpiration();
-    }
-
-    public void setJMSExpiration(long expiration) {
-        this.setExpiration(expiration);
-    }
-
-    public int getJMSPriority() {
-        return this.getPriority();
-    }
-
-    public void setJMSPriority(int priority) {
-        this.setPriority((byte) priority);
     }
 
     public void clearProperties() {
@@ -292,7 +119,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSXGroupID cannot be set from a " + value.getClass().getName() + ".");
                 }
-                message.setGroupID(rc);
+                message.setGroupID(utf8(rc));
             }
         });
         JMS_PROPERTY_SETERS.put("JMSXGroupSeq", new PropertySetter() {
@@ -310,7 +137,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSCorrelationID cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSCorrelationID(rc);
+                message.setCorrelationId(utf8(rc));
             }
         });
         JMS_PROPERTY_SETERS.put("JMSDeliveryMode", new PropertySetter() {
@@ -320,12 +147,11 @@ public class ActiveMQMessage extends Message {
                     Boolean bool = (Boolean) TypeConversionSupport.convert(value, Boolean.class);
                     if (bool == null) {
                         throw new OpenwireException("Property JMSDeliveryMode cannot be set from a " + value.getClass().getName() + ".");
-                    }
-                    else {
+                    } else {
                         rc = bool.booleanValue() ? 2 : 1;
                     }
                 }
-                ((ActiveMQMessage) message).setJMSDeliveryMode(rc);
+                message.setPersistent(rc.intValue()==2);
             }
         });
         JMS_PROPERTY_SETERS.put("JMSExpiration", new PropertySetter() {
@@ -334,7 +160,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSExpiration cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSExpiration(rc.longValue());
+                message.setExpiration(rc.longValue());
             }
         });
         JMS_PROPERTY_SETERS.put("JMSPriority", new PropertySetter() {
@@ -343,7 +169,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSPriority cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSPriority(rc.intValue());
+                message.setPriority((byte) rc.intValue());
             }
         });
         JMS_PROPERTY_SETERS.put("JMSRedelivered", new PropertySetter() {
@@ -352,7 +178,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSRedelivered cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSRedelivered(rc.booleanValue());
+                message.setRedelivered(rc.booleanValue());
             }
         });
         JMS_PROPERTY_SETERS.put("JMSReplyTo", new PropertySetter() {
@@ -370,7 +196,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSTimestamp cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSTimestamp(rc.longValue());
+                message.setTimestamp(rc.longValue());
             }
         });
         JMS_PROPERTY_SETERS.put("JMSType", new PropertySetter() {
@@ -379,7 +205,7 @@ public class ActiveMQMessage extends Message {
                 if (rc == null) {
                     throw new OpenwireException("Property JMSType cannot be set from a " + value.getClass().getName() + ".");
                 }
-                ((ActiveMQMessage) message).setJMSType(rc);
+                message.setType(utf8(rc));
             }
         });
     }
@@ -411,16 +237,6 @@ public class ActiveMQMessage extends Message {
         }
     }
 
-    public void setProperties(Map properties) throws OpenwireException {
-        for (Iterator iter = properties.entrySet().iterator(); iter.hasNext();) {
-            Map.Entry entry = (Map.Entry) iter.next();
-
-            // Lets use the object property method as we may contain standard
-            // extension headers like JMSXGroupID
-            setObjectProperty((String) entry.getKey(), entry.getValue());
-        }
-    }
-
     protected void checkValidObject(Object value) throws OpenwireException {
 
         boolean valid = value instanceof Boolean || value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long;
@@ -442,11 +258,7 @@ public class ActiveMQMessage extends Message {
         if (name == null) {
             throw new NullPointerException("Property name cannot be null");
         }
-//        try {
         return createFilterable().getProperty(name);
-//        } catch (FilterException e) {
-//            throw new JMSException(e);
-//        }
     }
 
     public boolean getBooleanProperty(String name) throws OpenwireException {
@@ -609,14 +421,6 @@ public class ActiveMQMessage extends Message {
         return false;
     }
 
-    public Callback getAcknowledgeCallback() {
-        return acknowledgeCallback;
-    }
-
-    public void setAcknowledgeCallback(Callback acknowledgeCallback) {
-        this.acknowledgeCallback = acknowledgeCallback;
-    }
-
     /**
      * Send operation event listener. Used to get the message ready to be sent.
      */
@@ -625,7 +429,4 @@ public class ActiveMQMessage extends Message {
         setReadOnlyProperties(true);
     }
 
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processMessage(this);
-    }
 }

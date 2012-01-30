@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * An indication to the transport layer that a flush is required.
  * 
@@ -30,10 +28,6 @@ public class FlushCommand extends BaseCommand {
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processFlush(this);
     }
 
 }

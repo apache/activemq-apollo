@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.util._
 import java.util.Map.Entry
 import org.apache.activemq.apollo.broker._
 import org.fusesource.hawtdispatch._
+import org.fusesource.hawtbuf.UTF8Buffer
 
 /**
  * <p>
@@ -58,7 +59,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
   final val advisoryProducerId = new ProducerId
   final val messageIdGenerator = new LongSequenceGenerator
 
-  advisoryProducerId.setConnectionId(ID_GENERATOR.generateId)
+  advisoryProducerId.setConnectionId(new UTF8Buffer(ID_GENERATOR.generateId))
 
 
   class ProducerRoute extends DeliveryProducerRoute(router) {
@@ -160,7 +161,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
     //set the data structure
     message.setDataStructure(command);
     message.setPersistent(false);
-    message.setType(AdvisorySupport.ADIVSORY_MESSAGE_TYPE);
+    message.setType(AdvisorySupport.ADIVSORY_MESSAGE_TYPE_BUFFER);
     message.setMessageId(new MessageId(advisoryProducerId, messageIdGenerator.getNextSequenceId()));
 //    message.setTargetConsumerId(targetConsumerId);
     message.setDestination(topic);

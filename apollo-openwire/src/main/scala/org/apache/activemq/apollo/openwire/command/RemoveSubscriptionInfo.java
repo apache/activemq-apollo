@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * @openwire:marshaller code="9"
@@ -27,8 +27,8 @@ public class RemoveSubscriptionInfo extends BaseCommand {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.REMOVE_SUBSCRIPTION_INFO;
 
     protected ConnectionId connectionId;
-    protected String clientId;
-    protected String subscriptionName;
+    protected UTF8Buffer clientId;
+    protected UTF8Buffer subscriptionName;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -48,27 +48,23 @@ public class RemoveSubscriptionInfo extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getSubscriptionName() {
+    public UTF8Buffer getSubscriptionName() {
         return subscriptionName;
     }
 
-    public void setSubscriptionName(String subscriptionName) {
+    public void setSubscriptionName(UTF8Buffer subscriptionName) {
         this.subscriptionName = subscriptionName;
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getClientId() {
+    public UTF8Buffer getClientId() {
         return clientId;
     }
 
-    public void setClientId(String clientId) {
+    public void setClientId(UTF8Buffer clientId) {
         this.clientId = clientId;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processRemoveSubscription(this);
     }
 
 }

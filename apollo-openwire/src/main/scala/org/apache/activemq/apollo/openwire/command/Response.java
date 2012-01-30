@@ -48,7 +48,4 @@ public class Response extends BaseCommand {
         return false;
     }
 
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return null;
-    }
 }

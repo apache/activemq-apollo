@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * 
  * @openwire:marshaller code="4"
@@ -60,10 +58,6 @@ public class SessionInfo extends BaseCommand {
         RemoveInfo command = new RemoveInfo(getSessionId());
         command.setResponseRequired(isResponseRequired());
         return command;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processAddSession(this);
     }
 
 }

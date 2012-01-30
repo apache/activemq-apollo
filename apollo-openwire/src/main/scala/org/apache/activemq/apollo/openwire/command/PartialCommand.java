@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * Represents a partial command; a large command that has been split up into
  * pieces.
@@ -31,9 +29,6 @@ public class PartialCommand implements Command {
 
     private int commandId;
     private byte[] data;
-
-    private transient Endpoint from;
-    private transient Endpoint to;
 
     public PartialCommand() {
     }
@@ -64,26 +59,6 @@ public class PartialCommand implements Command {
 
     public void setData(byte[] data) {
         this.data = data;
-    }
-
-    public Endpoint getFrom() {
-        return from;
-    }
-
-    public void setFrom(Endpoint from) {
-        this.from = from;
-    }
-
-    public Endpoint getTo() {
-        return to;
-    }
-
-    public void setTo(Endpoint to) {
-        this.to = to;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        throw new IllegalStateException("The transport layer should filter out PartialCommand instances but received: " + this);
     }
 
     public boolean isResponseRequired() {

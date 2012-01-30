@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * @openwire:marshaller code="22"
  * @version $Revision: 1.11 $
@@ -209,10 +207,6 @@ public class MessageAck extends BaseCommand {
 
     public void setMessageCount(int messageCount) {
         this.messageCount = messageCount;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processMessageAck(this);
     }
 
     /**

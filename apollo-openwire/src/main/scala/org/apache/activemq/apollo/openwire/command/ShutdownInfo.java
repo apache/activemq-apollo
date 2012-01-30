@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * 
  * @openwire:marshaller code="11"
@@ -28,10 +26,6 @@ public class ShutdownInfo extends BaseCommand {
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processShutdown(this);
     }
 
     public boolean isShutdownInfo() {

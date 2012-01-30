@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * Used to start and stop transports as well as terminating clients.
@@ -25,22 +25,20 @@ import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
  * @version $Revision: 1.1 $
  */
 public class ConnectionControl extends BaseCommand {
+    public static final UTF8Buffer EMPTY = new UTF8Buffer("");
+
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.CONNECTION_CONTROL;
     protected boolean suspend;
     protected boolean resume;
     protected boolean close;
     protected boolean exit;
     protected boolean faultTolerant;
-    protected String connectedBrokers="";
-    protected String reconnectTo = "";
+    protected UTF8Buffer connectedBrokers = EMPTY;
+    protected UTF8Buffer reconnectTo = EMPTY;
     protected boolean rebalanceConnection;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processConnectionControl(this);
     }
 
     /**
@@ -122,14 +120,14 @@ public class ConnectionControl extends BaseCommand {
      * @openwire:property version=6 cache=false
      * @return connected brokers.
      */
-    public String getConnectedBrokers() {
+    public UTF8Buffer getConnectedBrokers() {
         return this.connectedBrokers;
     }
 
     /**
      * @param connectedBrokers the connectedBrokers to set
      */
-    public void setConnectedBrokers(String connectedBrokers) {
+    public void setConnectedBrokers(UTF8Buffer connectedBrokers) {
         this.connectedBrokers = connectedBrokers;
     }
 
@@ -137,14 +135,14 @@ public class ConnectionControl extends BaseCommand {
      *  @openwire:property version=6 cache=false
      * @return the reconnectTo
      */
-    public String getReconnectTo() {
+    public UTF8Buffer getReconnectTo() {
         return this.reconnectTo;
     }
 
     /**
      * @param reconnectTo the reconnectTo to set
      */
-    public void setReconnectTo(String reconnectTo) {
+    public void setReconnectTo(UTF8Buffer reconnectTo) {
         this.reconnectTo = reconnectTo;
     }
 

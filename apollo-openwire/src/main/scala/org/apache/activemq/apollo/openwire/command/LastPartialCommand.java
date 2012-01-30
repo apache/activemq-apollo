@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * Represents the end marker of a stream of {@link PartialCommand} instances.
  * 
@@ -34,18 +32,4 @@ public class LastPartialCommand extends PartialCommand {
         return DATA_STRUCTURE_TYPE;
     }
 
-    public Response visit(CommandVisitor visitor) throws Exception {
-        throw new IllegalStateException("The transport layer should filter out LastPartialCommand instances but received: " + this);
-    }
-
-    /**
-     * Lets copy across any transient fields from this command 
-     * to the complete command when it is unmarshalled on the other end
-     *
-     * @param completeCommand the newly unmarshalled complete command
-     */
-    public void configure(Command completeCommand) {
-        // copy across the transient properties added by the low level transport
-        completeCommand.setFrom(getFrom());
-    }
 }

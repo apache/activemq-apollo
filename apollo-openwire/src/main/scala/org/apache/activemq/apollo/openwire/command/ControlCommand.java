@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * Used to start and stop transports as well as terminating clients.
@@ -29,7 +29,7 @@ public class ControlCommand extends BaseCommand {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.CONTROL_COMMAND;
 
-    private String command;
+    private UTF8Buffer command;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -38,15 +38,12 @@ public class ControlCommand extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getCommand() {
+    public UTF8Buffer getCommand() {
         return command;
     }
 
-    public void setCommand(String command) {
+    public void setCommand(UTF8Buffer command) {
         this.command = command;
     }
 
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processControlCommand(this);
-    }
 }

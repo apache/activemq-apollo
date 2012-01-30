@@ -21,41 +21,41 @@ import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
- * @org.apache.xbean.XBean element="topic" description="An ActiveMQ Topic
- *                         Destination"
  * @openwire:marshaller code="101"
  * @version $Revision: 1.5 $
  */
 public class ActiveMQTopic extends ActiveMQDestination {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_TOPIC;
-    private static final long serialVersionUID = 7300307405896488588L;
 
     public ActiveMQTopic() {
     }
 
     public ActiveMQTopic(String name) {
-        super(name);
+        super(strip(name));
+    }
+    private static String strip(String name) {
+        if(name.startsWith(TOPIC_QUALIFIED_PREFIX)) {
+            return name.substring(TOPIC_QUALIFIED_PREFIX.length());
+        } else {
+            return name;
+        }
     }
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
     }
 
+    public String getQualifiedPrefix() {
+        return TOPIC_QUALIFIED_PREFIX;
+    }
+
     public boolean isTopic() {
         return true;
     }
 
-    public String getTopicName() throws OpenwireException {
-        return getPhysicalName();
-    }
-
     public byte getDestinationType() {
         return TOPIC_TYPE;
-    }
-
-    protected String getQualifiedPrefix() {
-        return TOPIC_QUALIFIED_PREFIX;
     }
 
 }

@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * 
  * @openwire:marshaller code="6"
@@ -99,10 +97,6 @@ public class ProducerInfo extends BaseCommand {
 
     public void setBrokerPath(BrokerId[] brokerPath) {
         this.brokerPath = brokerPath;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processAddProducer(this);
     }
 
     /**

@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * @openwire:marshaller code="122"
  */
@@ -23,7 +25,7 @@ public class ConsumerId implements DataStructure {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.CONSUMER_ID;
 
-    protected String connectionId;
+    protected UTF8Buffer connectionId;
     protected long sessionId;
     protected long value;
 
@@ -85,11 +87,11 @@ public class ConsumerId implements DataStructure {
     /**
      * @openwire:property version=1
      */
-    public String getConnectionId() {
+    public UTF8Buffer getConnectionId() {
         return connectionId;
     }
 
-    public void setConnectionId(String connectionId) {
+    public void setConnectionId(UTF8Buffer connectionId) {
         this.connectionId = connectionId;
     }
 

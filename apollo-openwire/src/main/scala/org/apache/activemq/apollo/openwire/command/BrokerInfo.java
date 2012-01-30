@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * When a client connects to a broker, the broker send the client a BrokerInfo
@@ -30,17 +30,17 @@ import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
 public class BrokerInfo extends BaseCommand {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.BROKER_INFO;
     BrokerId brokerId;
-    String brokerURL;
+    UTF8Buffer brokerURL;
     boolean slaveBroker;
     boolean masterBroker;
     boolean faultTolerantConfiguration;
     boolean networkConnection;
     boolean duplexConnection;
     BrokerInfo peerBrokerInfos[];
-    String brokerName;
+    UTF8Buffer brokerName;
     long connectionId;
-    String brokerUploadUrl;
-    String networkProperties;
+    UTF8Buffer brokerUploadUrl;
+    UTF8Buffer networkProperties;
 
     public boolean isBrokerInfo() {
         return true;
@@ -64,11 +64,11 @@ public class BrokerInfo extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getBrokerURL() {
+    public UTF8Buffer getBrokerURL() {
         return brokerURL;
     }
 
-    public void setBrokerURL(String brokerURL) {
+    public void setBrokerURL(UTF8Buffer brokerURL) {
         this.brokerURL = brokerURL;
     }
 
@@ -86,16 +86,12 @@ public class BrokerInfo extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getBrokerName() {
+    public UTF8Buffer getBrokerName() {
         return brokerName;
     }
 
-    public void setBrokerName(String brokerName) {
+    public void setBrokerName(UTF8Buffer brokerName) {
         this.brokerName = brokerName;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processBrokerInfo(this);
     }
 
     /**
@@ -187,11 +183,11 @@ public class BrokerInfo extends BaseCommand {
      * 
      * @openwire:property version=3
      */
-    public String getBrokerUploadUrl() {
+    public UTF8Buffer getBrokerUploadUrl() {
         return brokerUploadUrl;
     }
 
-    public void setBrokerUploadUrl(String brokerUploadUrl) {
+    public void setBrokerUploadUrl(UTF8Buffer brokerUploadUrl) {
         this.brokerUploadUrl = brokerUploadUrl;
     }
 
@@ -199,14 +195,14 @@ public class BrokerInfo extends BaseCommand {
      * @openwire:property version=3 cache=false
      * @return the networkProperties
      */
-    public String getNetworkProperties() {
+    public UTF8Buffer getNetworkProperties() {
         return this.networkProperties;
     }
 
     /**
      * @param networkProperties the networkProperties to set
      */
-    public void setNetworkProperties(String networkProperties) {
+    public void setNetworkProperties(UTF8Buffer networkProperties) {
         this.networkProperties = networkProperties;
     }
 }

@@ -31,10 +31,6 @@ public class ConnectionError extends BaseCommand {
         return DATA_STRUCTURE_TYPE;
     }
 
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return visitor.processConnectionError(this);
-    }
-
     /**
      * @openwire:property version=1
      */

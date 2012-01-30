@@ -20,6 +20,7 @@ import org.apache.activemq.apollo.openwire.command.DataStructure;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -31,8 +32,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     static {
         Constructor constructor = null;
         try {
-            constructor = StackTraceElement.class.getConstructor(new Class[] {String.class, String.class,
-                                                                              String.class, int.class});
+            constructor = StackTraceElement.class.getConstructor(new Class[] {UTF8Buffer.class, UTF8Buffer.class,
+                                                                              UTF8Buffer.class, int.class});
         } catch (Throwable e) {
         }
         STACK_TRACE_ELEMENT_CONSTRUCTOR = constructor;
@@ -185,8 +186,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     protected Throwable tightUnmarsalThrowable(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn, BooleanStream bs)
         throws IOException {
         if (bs.readBoolean()) {
-            String clazz = tightUnmarshalString(dataIn, bs);
-            String message = tightUnmarshalString(dataIn, bs);
+            UTF8Buffer clazz = tightUnmarshalString(dataIn, bs);
+            UTF8Buffer message = tightUnmarshalString(dataIn, bs);
             Throwable o = createThrowable(clazz, message);
             if (wireFormat.isStackTraceEnabled()) {
                 if (STACK_TRACE_ELEMENT_CONSTRUCTOR != null) {
@@ -222,11 +223,11 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    private Throwable createThrowable(String className, String message) {
+    private Throwable createThrowable(UTF8Buffer className, UTF8Buffer message) {
         try {
-            Class clazz = Class.forName(className, false, BaseDataStreamMarshaller.class.getClassLoader());
-            Constructor constructor = clazz.getConstructor(new Class[] {String.class});
-            return (Throwable)constructor.newInstance(new Object[] {message});
+            Class clazz = Class.forName(className.toString(), false, BaseDataStreamMarshaller.class.getClassLoader());
+            Constructor constructor = clazz.getConstructor(new Class[] {UTF8Buffer.class});
+            return (Throwable)constructor.newInstance(new Object[] {message.toString()});
         } catch (Throwable e) {
             return new Throwable(className + ": " + message);
         }
@@ -240,16 +241,16 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         } else {
             int rc = 0;
             bs.writeBoolean(true);
-            rc += tightMarshalString1(o.getClass().getName(), bs);
-            rc += tightMarshalString1(o.getMessage(), bs);
+            rc += tightMarshalString1(new UTF8Buffer(o.getClass().getName()), bs);
+            rc += tightMarshalString1(new UTF8Buffer(o.getMessage()), bs);
             if (wireFormat.isStackTraceEnabled()) {
                 rc += 2;
                 StackTraceElement[] stackTrace = o.getStackTrace();
                 for (int i = 0; i < stackTrace.length; i++) {
                     StackTraceElement element = stackTrace[i];
-                    rc += tightMarshalString1(element.getClassName(), bs);
-                    rc += tightMarshalString1(element.getMethodName(), bs);
-                    rc += tightMarshalString1(element.getFileName(), bs);
+                    rc += tightMarshalString1(new UTF8Buffer(element.getClassName()), bs);
+                    rc += tightMarshalString1(new UTF8Buffer(element.getMethodName()), bs);
+                    rc += tightMarshalString1(new UTF8Buffer(element.getFileName()), bs);
                     rc += 4;
                 }
                 rc += tightMarshalThrowable1(wireFormat, o.getCause(), bs);
@@ -261,16 +262,16 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     protected void tightMarshalThrowable2(OpenWireFormat wireFormat, Throwable o, DataByteArrayOutputStream dataOut,
                                           BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
-            tightMarshalString2(o.getClass().getName(), dataOut, bs);
-            tightMarshalString2(o.getMessage(), dataOut, bs);
+            tightMarshalString2(new UTF8Buffer(o.getClass().getName()), dataOut, bs);
+            tightMarshalString2(new UTF8Buffer(o.getMessage()), dataOut, bs);
             if (wireFormat.isStackTraceEnabled()) {
                 StackTraceElement[] stackTrace = o.getStackTrace();
                 dataOut.writeShort(stackTrace.length);
                 for (int i = 0; i < stackTrace.length; i++) {
                     StackTraceElement element = stackTrace[i];
-                    tightMarshalString2(element.getClassName(), dataOut, bs);
-                    tightMarshalString2(element.getMethodName(), dataOut, bs);
-                    tightMarshalString2(element.getFileName(), dataOut, bs);
+                    tightMarshalString2(new UTF8Buffer(element.getClassName()), dataOut, bs);
+                    tightMarshalString2(new UTF8Buffer(element.getMethodName()), dataOut, bs);
+                    tightMarshalString2(new UTF8Buffer(element.getFileName()), dataOut, bs);
                     dataOut.writeInt(element.getLineNumber());
                 }
                 tightMarshalThrowable2(wireFormat, o.getCause(), dataOut, bs);
@@ -279,68 +280,44 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     }
 
     @SuppressWarnings("deprecation")
-    protected String tightUnmarshalString(DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {
+    protected UTF8Buffer tightUnmarshalString(DataByteArrayInputStream dataIn, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
-            if (bs.readBoolean()) {
-                int size = dataIn.readShort();
-                byte data[] = new byte[size];
-                dataIn.readFully(data);
-                // Yes deprecated, but we know what we are doing.
-                // This allows us to create a String from a ASCII byte array. (no UTF-8 decoding)
-                return new String(data, 0);
-            } else {
-                return dataIn.readUTF();
-            }
+            boolean ascii = bs.readBoolean(); // ignored for now.
+            int size = dataIn.readShort();
+            return dataIn.readBuffer(size).utf8();
         } else {
             return null;
         }
     }
 
-    protected int tightMarshalString1(String value, BooleanStream bs) throws IOException {
+    protected int tightMarshalString1(UTF8Buffer value, BooleanStream bs) throws IOException {
         bs.writeBoolean(value != null);
         if (value != null) {
 
-            int strlen = value.length();
-            int utflen = 0;
-            char[] charr = new char[strlen];
-            int c = 0;
-            boolean isOnlyAscii = true;
+            boolean ascii = false;
+//  we could check to see if its' really ascii.. for now punt.
+//            boolean ascii = true;
+//            int last = value.offset+value.length;
+//            for (int i = value.offset; i < last; i++) {
+//                if( (value.data[i] & 0x80) !=0 ) {
+//                    ascii = false;
+//                }
+//            }
 
-            value.getChars(0, strlen, charr, 0);
-
-            for (int i = 0; i < strlen; i++) {
-                c = charr[i];
-                if ((c >= 0x0001) && (c <= 0x007F)) {
-                    utflen++;
-                } else if (c > 0x07FF) {
-                    utflen += 3;
-                    isOnlyAscii = false;
-                } else {
-                    isOnlyAscii = false;
-                    utflen += 2;
-                }
-            }
-
-            if (utflen >= Short.MAX_VALUE) {
-                throw new IOException("Encountered a String value that is too long to encode.");
-            }
-            bs.writeBoolean(isOnlyAscii);
-            return utflen + 2;
+            bs.writeBoolean(ascii);
+            return value.length() + 2;
 
         } else {
             return 0;
         }
     }
 
-    protected void tightMarshalString2(String value, DataByteArrayOutputStream dataOut, BooleanStream bs) throws IOException {
+    protected void tightMarshalString2(UTF8Buffer value, DataByteArrayOutputStream dataOut, BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
             // If we verified it only holds ascii values
-            if (bs.readBoolean()) {
-                dataOut.writeShort(value.length());
-                dataOut.writeBytes(value);
-            } else {
-                dataOut.writeUTF(value);
-            }
+            bs.readBoolean();
+            dataOut.writeShort(value.length);
+            dataOut.write(value);
         }
     }
 
@@ -506,8 +483,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     protected Throwable looseUnmarsalThrowable(OpenWireFormat wireFormat, DataByteArrayInputStream dataIn)
         throws IOException {
         if (dataIn.readBoolean()) {
-            String clazz = looseUnmarshalString(dataIn);
-            String message = looseUnmarshalString(dataIn);
+            UTF8Buffer clazz = looseUnmarshalString(dataIn);
+            UTF8Buffer message = looseUnmarshalString(dataIn);
             Throwable o = createThrowable(clazz, message);
             if (wireFormat.isStackTraceEnabled()) {
                 if (STACK_TRACE_ELEMENT_CONSTRUCTOR != null) {
@@ -547,16 +524,16 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         throws IOException {
         dataOut.writeBoolean(o != null);
         if (o != null) {
-            looseMarshalString(o.getClass().getName(), dataOut);
-            looseMarshalString(o.getMessage(), dataOut);
+            looseMarshalString(new UTF8Buffer(o.getClass().getName()), dataOut);
+            looseMarshalString(new UTF8Buffer(o.getMessage()), dataOut);
             if (wireFormat.isStackTraceEnabled()) {
                 StackTraceElement[] stackTrace = o.getStackTrace();
                 dataOut.writeShort(stackTrace.length);
                 for (int i = 0; i < stackTrace.length; i++) {
                     StackTraceElement element = stackTrace[i];
-                    looseMarshalString(element.getClassName(), dataOut);
-                    looseMarshalString(element.getMethodName(), dataOut);
-                    looseMarshalString(element.getFileName(), dataOut);
+                    looseMarshalString(new UTF8Buffer(element.getClassName()), dataOut);
+                    looseMarshalString(new UTF8Buffer(element.getMethodName()), dataOut);
+                    looseMarshalString(new UTF8Buffer(element.getFileName()), dataOut);
                     dataOut.writeInt(element.getLineNumber());
                 }
                 looseMarshalThrowable(wireFormat, o.getCause(), dataOut);
@@ -564,18 +541,20 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         }
     }
 
-    protected String looseUnmarshalString(DataByteArrayInputStream dataIn) throws IOException {
+    protected UTF8Buffer looseUnmarshalString(DataByteArrayInputStream dataIn) throws IOException {
         if (dataIn.readBoolean()) {
-            return dataIn.readUTF();
+            int size = dataIn.readShort();
+            return dataIn.readBuffer(size).utf8();
         } else {
             return null;
         }
     }
 
-    protected void looseMarshalString(String value, DataByteArrayOutputStream dataOut) throws IOException {
+    protected void looseMarshalString(UTF8Buffer value, DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeBoolean(value != null);
         if (value != null) {
-            dataOut.writeUTF(value);
+            dataOut.writeShort(value.length);
+            dataOut.write(value);
         }
     }
 

@@ -16,18 +16,20 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * @openwire:marshaller code="124"
  */
 public class BrokerId implements DataStructure {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.BROKER_ID;
-    protected String value;
+    protected UTF8Buffer value;
 
     public BrokerId() {
     }
 
-    public BrokerId(String brokerId) {
+    public BrokerId(UTF8Buffer brokerId) {
         this.value = brokerId;
     }
 
@@ -51,17 +53,17 @@ public class BrokerId implements DataStructure {
     }
 
     public String toString() {
-        return value;
+        return value.toString();
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getValue() {
+    public UTF8Buffer getValue() {
         return value;
     }
 
-    public void setValue(String brokerId) {
+    public void setValue(UTF8Buffer brokerId) {
         this.value = brokerId;
     }
 

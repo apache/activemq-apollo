@@ -21,43 +21,40 @@ import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.fusesource.hawtbuf.AsciiBuffer;
 
 /**
- * 
- * @org.apache.xbean.XBean element="queue" description="An ActiveMQ Queue
- *                         Destination"
- * 
  * @openwire:marshaller code="100"
  * @version $Revision: 1.5 $
  */
 public class ActiveMQQueue extends ActiveMQDestination {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_QUEUE;
-    private static final long serialVersionUID = -3885260014960795889L;
 
     public ActiveMQQueue() {
     }
 
     public ActiveMQQueue(String name) {
-        super(name);
+        super(strip(name));
     }
-
+    private static String strip(String name) {
+        if(name.startsWith(QUEUE_QUALIFIED_PREFIX)) {
+            return name.substring(QUEUE_QUALIFIED_PREFIX.length());
+        } else {
+            return name;
+        }
+    }
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
+    }
+
+    public String getQualifiedPrefix() {
+        return QUEUE_QUALIFIED_PREFIX;
     }
 
     public boolean isQueue() {
         return true;
     }
 
-    public String getQueueName() throws OpenwireException {
-        return getPhysicalName();
-    }
-
     public byte getDestinationType() {
         return QUEUE_TYPE;
-    }
-
-    protected String getQualifiedPrefix() {
-        return QUEUE_QUALIFIED_PREFIX;
     }
 
 }

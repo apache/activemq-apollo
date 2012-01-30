@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.openwire.command;
 
 import org.apache.activemq.apollo.openwire.support.OpenwireException;
 import org.apache.activemq.apollo.openwire.support.blob.BlobUploader;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,11 +32,11 @@ import java.net.URL;
 public class ActiveMQBlobMessage extends ActiveMQMessage {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_BLOB_MESSAGE;
 
-    public static final String BINARY_MIME_TYPE = "application/octet-stream";
+    public static final UTF8Buffer BINARY_MIME_TYPE = new UTF8Buffer("application/octet-stream");
 
-    private String remoteBlobUrl;
-    private String mimeType;
-    private String name;
+    private UTF8Buffer remoteBlobUrl;
+    private UTF8Buffer mimeType;
+    private UTF8Buffer name;
     private boolean deletedByBroker;
 
     private transient BlobUploader blobUploader;
@@ -63,11 +64,11 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
     /**
      * @openwire:property version=3 cache=false
      */
-    public String getRemoteBlobUrl() {
+    public UTF8Buffer getRemoteBlobUrl() {
         return remoteBlobUrl;
     }
 
-    public void setRemoteBlobUrl(String remoteBlobUrl) {
+    public void setRemoteBlobUrl(UTF8Buffer remoteBlobUrl) {
         this.remoteBlobUrl = remoteBlobUrl;
         url = null;
     }
@@ -78,18 +79,18 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
      * 
      * @openwire:property version=3 cache=true
      */
-    public String getMimeType() {
+    public UTF8Buffer getMimeType() {
         if (mimeType == null) {
             return BINARY_MIME_TYPE;
         }
         return mimeType;
     }
 
-    public void setMimeType(String mimeType) {
+    public void setMimeType(UTF8Buffer mimeType) {
         this.mimeType = mimeType;
     }
 
-    public String getName() {
+    public UTF8Buffer getName() {
         return name;
     }
 
@@ -99,7 +100,7 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
      * 
      * @openwire:property version=3 cache=false
      */
-    public void setName(String name) {
+    public void setName(UTF8Buffer name) {
         this.name = name;
     }
 
@@ -114,7 +115,7 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
         this.deletedByBroker = deletedByBroker;
     }
 
-    public String getJMSXMimeType() {
+    public UTF8Buffer getJMSXMimeType() {
         return getMimeType();
     }
 
@@ -129,7 +130,7 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
     public URL getURL() throws OpenwireException {
         if (url == null && remoteBlobUrl != null) {
             try {
-                url = new URL(remoteBlobUrl);
+                url = new URL(remoteBlobUrl.toString());
             } catch (MalformedURLException e) {
                 throw new OpenwireException(e);
             }
@@ -139,7 +140,7 @@ public class ActiveMQBlobMessage extends ActiveMQMessage {
 
     public void setURL(URL url) {
         this.url = url;
-        remoteBlobUrl = url != null ? url.toExternalForm() : null;
+        remoteBlobUrl = url != null ? new UTF8Buffer(url.toExternalForm()) : null;
     }
 
     public org.apache.activemq.apollo.openwire.support.blob.BlobUploader getBlobUploader() {

@@ -50,10 +50,6 @@ public class ConsumerControl extends BaseCommand {
         return DATA_STRUCTURE_TYPE;
     }
 
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return visitor.processConsumerControl(this);
-    }
-
     /**
      * @openwire:property version=1
      * @return Returns the close.

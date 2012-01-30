@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.openwire.command;
 
 
 import org.apache.activemq.apollo.util.IntrospectionSupport;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * Used to represent a durable subscription.
@@ -31,9 +32,9 @@ public class SubscriptionInfo implements DataStructure {
 
     protected ActiveMQDestination subscribedDestination;
     protected ActiveMQDestination destination;
-    protected String clientId;
-    protected String subscriptionName;
-    protected String selector;
+    protected UTF8Buffer clientId;
+    protected UTF8Buffer subscriptionName;
+    protected UTF8Buffer selector;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -42,11 +43,11 @@ public class SubscriptionInfo implements DataStructure {
     /**
      * @openwire:property version=1
      */
-    public String getClientId() {
+    public UTF8Buffer getClientId() {
         return clientId;
     }
 
-    public void setClientId(String clientId) {
+    public void setClientId(UTF8Buffer clientId) {
         this.clientId = clientId;
     }
 
@@ -67,22 +68,22 @@ public class SubscriptionInfo implements DataStructure {
     /**
      * @openwire:property version=1
      */
-    public String getSelector() {
+    public UTF8Buffer getSelector() {
         return selector;
     }
 
-    public void setSelector(String selector) {
+    public void setSelector(UTF8Buffer selector) {
         this.selector = selector;
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getSubscriptionName() {
+    public UTF8Buffer getSubscriptionName() {
         return subscriptionName;
     }
 
-    public void setSubscriptionName(String subscriptionName) {
+    public void setSubscriptionName(UTF8Buffer subscriptionName) {
         this.subscriptionName = subscriptionName;
     }
 

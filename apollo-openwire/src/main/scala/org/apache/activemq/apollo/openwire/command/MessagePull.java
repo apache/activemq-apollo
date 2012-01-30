@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * Used to pull messages on demand.
  * 
@@ -30,14 +32,10 @@ public class MessagePull extends BaseCommand {
     protected ActiveMQDestination destination;
     protected long timeout;
     private MessageId messageId;
-    private String correlationId;
+    private UTF8Buffer correlationId;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
-    }
-
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return visitor.processMessagePull(this);
     }
 
     /**
@@ -87,11 +85,11 @@ public class MessagePull extends BaseCommand {
      *
      * @openwire:property version=3
      */
-    public String getCorrelationId() {
+    public UTF8Buffer getCorrelationId() {
         return correlationId;
     }
 
-    public void setCorrelationId(String correlationId) {
+    public void setCorrelationId(UTF8Buffer correlationId) {
         this.correlationId = correlationId;
     }
 

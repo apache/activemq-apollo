@@ -171,16 +171,21 @@ class PathParser {
     return new Path(subject.toList.map(decode_part(_)))
   }
 
-  def parts(subject: String): Array[String] = {
-    if(path_separator!=null) {
+  def parts(subject: String, sanitize:Boolean=false): Array[String] = {
+    val rc = if(path_separator!=null) {
       subject.split(Pattern.quote(path_separator))
     } else {
       Array(subject)
     }
+    if (sanitize) {
+      rc.map(sanitize_destination_part(_, true))
+    } else {
+      rc
+    }
   }
 
-  def decode_path(subject: String): Path = {
-    return decode_path(parts(subject))
+  def decode_path(subject: String, sanitize:Boolean=false): Path = {
+    return decode_path(parts(subject, sanitize))
   }
 
   def regex_map[T](text:String, pattern: Pattern)(func: Either[CharSequence, Matcher] => T) = {
@@ -240,25 +245,34 @@ class PathParser {
     * Converts the path back to the string representation.
     * @return
     */
-  def encode_path(path: Path): String = encode_path(path_parts(path))
+  def encode_path(path: Path, unsanitize_destinations:Boolean=false): String = encode_path_iter(path_parts(path))
 
-  def path_parts(path: Path):Array[String] = {
+  def path_parts(path: Path, unsanitize_destinations:Boolean=false):Array[String] = {
     (path.parts.map( _ match {
       case RootPart => ""
       case AnyChildPart => any_child_wildcard
       case AnyDescendantPart => any_descendant_wildcard
       case RegexChildPart(_, original) => original
-      case LiteralPart(value) => value
+      case LiteralPart(value) =>
+        if(unsanitize_destinations) {
+          unsanitize_destination_part(value)
+        } else {
+          value
+        }
     })).toArray
   }
 
-  def encode_path(parts: Iterable[String]): String = {
+  def encode_path_iter(parts: Iterable[String], unsanitize_destinations:Boolean=false): String = {
     var buffer: StringBuffer = new StringBuffer
     for (p <- parts) {
       if ( buffer.length() != 0) {
         buffer.append(path_separator)
       }
-      buffer.append(p)
+      if(unsanitize_destinations) {
+        buffer.append(unsanitize_destination_part(p))
+      } else {
+        buffer.append(p)
+      }
     }
     return buffer.toString
   }

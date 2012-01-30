@@ -40,6 +40,7 @@ import org.apache.activemq.apollo.broker._
 import protocol._
 import security.SecurityContext
 import DestinationConverter._
+import Buffer._
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -412,9 +413,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     // Give the client some info about this broker.
     val brokerInfo = new BrokerInfo();
-    brokerInfo.setBrokerId(new BrokerId(host.config.id));
-    brokerInfo.setBrokerName(host.config.id);
-    brokerInfo.setBrokerURL(host.broker.get_connect_address);
+    brokerInfo.setBrokerId(new BrokerId(utf8(host.config.id)));
+    brokerInfo.setBrokerName(utf8(host.config.id));
+    brokerInfo.setBrokerURL(utf8(host.broker.get_connect_address));
     connection_session.offer(brokerInfo);
   }
 
@@ -427,8 +428,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     if (connection_context==null) {
       new ConnectionContext(info).attach
 
-      security_context.user = info.getUserName
-      security_context.password = info.getPassword
+      security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
+      security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
       security_context.session_id = Some(OPENWIRE_PARSER.sanitize_destination_part(info.getConnectionId.toString))
 
       reset {
@@ -847,7 +848,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         case null=> null
         case x=>
           try {
-            SelectorParser.parse(x)
+            SelectorParser.parse(x.toString)
           } catch {
             case e:FilterException =>
               fail("Invalid selector expression: "+e.getMessage)
@@ -863,7 +864,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         subscription_id += info.getSubscriptionName
 
         val rc = new DurableSubscriptionDestinationDTO(subscription_id)
-        rc.selector = info.getSelector
+        rc.selector = Option(info.getSelector).map(_.toString).getOrElse(null)
 
         destination.foreach { _ match {
           case x:TopicDestinationDTO=>

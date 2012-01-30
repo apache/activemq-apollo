@@ -82,10 +82,6 @@ public class ReplayCommand extends BaseCommand {
         this.lastAckNumber = lastSequenceNumber;
     }
 
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return null;
-    }
-
     /**
      * Is used to specify the first sequence number to be replayed
      * 

@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * A ProducerAck command is sent by a broker to a producer to let it know it has
  * received and processed messages that it has produced. The producer will be
@@ -50,10 +48,6 @@ public class ProducerAck extends BaseCommand {
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processProducerAck(this);
     }
 
     /**

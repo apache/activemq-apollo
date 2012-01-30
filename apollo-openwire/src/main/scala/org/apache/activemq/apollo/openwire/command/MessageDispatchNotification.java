@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * @openwire:marshaller code="90"
  */
@@ -70,10 +68,6 @@ public class MessageDispatchNotification extends BaseCommand {
 
     public void setDeliverySequenceId(long deliverySequenceId) {
         this.deliverySequenceId = deliverySequenceId;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processMessageDispatchNotification(this);
     }
 
     /**

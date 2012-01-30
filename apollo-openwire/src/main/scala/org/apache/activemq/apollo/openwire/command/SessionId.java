@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * 
  * @openwire:marshaller code="121"
@@ -24,7 +26,7 @@ public class SessionId implements DataStructure {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.SESSION_ID;
 
-    protected String connectionId;
+    protected UTF8Buffer connectionId;
     protected long value;
 
     protected transient int hashCode;
@@ -86,11 +88,11 @@ public class SessionId implements DataStructure {
     /**
      * @openwire:property version=1 cache=true
      */
-    public String getConnectionId() {
+    public UTF8Buffer getConnectionId() {
         return connectionId;
     }
 
-    public void setConnectionId(String connectionId) {
+    public void setConnectionId(UTF8Buffer connectionId) {
         this.connectionId = connectionId;
     }
 

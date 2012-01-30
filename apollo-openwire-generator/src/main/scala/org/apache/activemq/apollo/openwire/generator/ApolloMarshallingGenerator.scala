@@ -390,6 +390,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       out.println("        info." + setter + "(dataIn.readInt());")
     } else if (property_type == "long") {
       out.println("        info." + setter + "(tightUnmarshalLong(wireFormat, dataIn, bs));")
+    } else if (property_type == "UTF8Buffer") {
+      out.println("        info." + setter + "(tightUnmarshalString(dataIn, bs));")
     } else if (property_type == "String") {
       out.println("        info." + setter + "(tightUnmarshalString(dataIn, bs));")
     } else if (property_type == "byte[]") {
@@ -457,6 +459,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         baseSize += 4
       } else if (property_type == "long") {
         out.println("        rc += tightMarshalLong1(wireFormat, " + getter + ", bs);")
+      } else if (property_type == "UTF8Buffer") {
+        out.println("        rc += tightMarshalString1(" + getter + ", bs);")
       } else if (property_type == "String") {
         out.println("        rc += tightMarshalString1(" + getter + ", bs);")
       } else if (property_type == "byte[]") {
@@ -505,6 +509,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         out.println("        dataOut.writeInt(" + getter + ");")
       } else if (property_type == "long") {
         out.println("        tightMarshalLong2(wireFormat, " + getter + ", dataOut, bs);")
+      } else if (property_type == "UTF8Buffer") {
+        out.println("        tightMarshalString2(" + getter + ", dataOut, bs);")
       } else if (property_type == "String") {
         out.println("        tightMarshalString2(" + getter + ", dataOut, bs);")
       } else if (property_type == "byte[]") {
@@ -552,6 +558,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
         out.println("        dataOut.writeInt(" + getter + ");")
       } else if (property_type == "long") {
         out.println("        looseMarshalLong(wireFormat, " + getter + ", dataOut);")
+      } else if (property_type == "UTF8Buffer") {
+        out.println("        looseMarshalString(" + getter + ", dataOut);")
       } else if (property_type == "String") {
         out.println("        looseMarshalString(" + getter + ", dataOut);")
       } else if (property_type == "byte[]") {
@@ -609,6 +617,8 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       out.println("        info." + setter + "(dataIn.readInt());")
     } else if (property_type == "long") {
       out.println("        info." + setter + "(looseUnmarshalLong(wireFormat, dataIn));")
+    } else if (property_type == "UTF8Buffer") {
+      out.println("        info." + setter + "(looseUnmarshalString(dataIn));")
     } else if (property_type == "String") {
       out.println("        info." + setter + "(looseUnmarshalString(dataIn));")
     } else if (property_type == "byte[]") {
