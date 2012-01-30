@@ -34,7 +34,6 @@
 
   <properties>
     <maven-compiler-plugin-version>2.3.2</maven-compiler-plugin-version>
-    <stompjms-client-version>1.7</stompjms-client-version>
   </properties>
 
   <dependencies>
@@ -48,7 +47,7 @@
     <dependency>
       <groupId>org.fusesource.stompjms</groupId>
       <artifactId>stompjms-client</artifactId>
-      <version>${stompjms-client-version}</version>
+      <version>${stompjms-version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
