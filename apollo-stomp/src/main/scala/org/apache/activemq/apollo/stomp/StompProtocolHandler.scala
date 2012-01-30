@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
+import path.PathParser._
 import scala.util.continuations._
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
@@ -566,7 +567,6 @@ class StompProtocolHandler extends ProtocolHandler {
   val security_context = new SecurityContext
   var waiting_on: ()=>String = WAITING_ON_CLIENT_REQUEST
   var config:StompDTO = _
-  var session_id:String = _
 
   var protocol_filters = List[ProtocolFilter]()
 
@@ -574,6 +574,8 @@ class StompProtocolHandler extends ProtocolHandler {
   var temp_destination_map = HashMap[DestinationDTO, DestinationDTO]()
 
   var codec:StompCodec = _
+
+  def session_id = security_context.session_id
 
   implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
     val rc = destination_parser.decode_multi_destination(value.toString)
@@ -584,7 +586,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( dest.temp() ) {
         temp_destination_map.getOrElseUpdate(dest, {
           import scala.collection.JavaConversions._
-          val real_path= ("temp" :: broker.id :: connection.id.toString :: dest.path.toList).toArray
+          val real_path= ("temp" :: broker.id :: session_id.get :: dest.path.toList).toArray
           dest match {
             case dest:QueueDestinationDTO => new QueueDestinationDTO( real_path ).temp(true)
             case dest:TopicDestinationDTO => new TopicDestinationDTO( real_path ).temp(true)
@@ -833,7 +835,6 @@ class StompProtocolHandler extends ProtocolHandler {
       case _ => None
     }
 
-    security_context.connection_id = Some(connection.id)
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
     security_context.user = get(headers, LOGIN).map(decode_header _).getOrElse(null)
@@ -892,9 +893,7 @@ class StompProtocolHandler extends ProtocolHandler {
       var connected_headers = ListBuffer((VERSION, protocol_version))
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
-      val v = encode_header("%s-%x-".format(this.host.config.id, this.host.session_counter.incrementAndGet))
-      session_id = v.toString 
-      connected_headers += SESSION->v
+      connected_headers += SESSION->encode_header(session_id.get)
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
       connected_headers += HEART_BEAT->outbound_heart_beat_header
@@ -930,6 +929,7 @@ class StompProtocolHandler extends ProtocolHandler {
         noop
       } else {
         this.host=host
+        security_context.session_id = Some("%s-%x".format(destination_parser.sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
         connection_log = host.connection_log
         if( host.authenticator!=null &&  host.authorizer!=null ) {
           suspend_read("authenticating and authorizing connect")
@@ -1036,12 +1036,41 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var message_id_counter = 0;
 
+  def encode_destination(value: Array[DestinationDTO]): String = {
+    if (value == null) {
+      null
+    } else {
+      val rc = new StringBuilder
+      value.foreach { dest =>
+        if (rc.length != 0 ) {
+          assert( destination_parser.destination_separator!=null )
+          rc.append(destination_parser.destination_separator)
+        }
+        import collection.JavaConversions._
+        dest match {
+          case d:QueueDestinationDTO =>
+            rc.append(destination_parser.queue_prefix)
+            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+          case d:DurableSubscriptionDestinationDTO =>
+            rc.append(destination_parser.dsub_prefix)
+            rc.append(destination_parser.unsanitize_destination_part(d.subscription_id))
+          case d:TopicDestinationDTO =>
+            rc.append(destination_parser.topic_prefix)
+            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+          case _ =>
+            throw new Exception("Uknown destination type: "+dest.getClass);
+        }
+      }
+      rc.toString
+    }
+  }
+
   def updated_headers(destination: Array[DestinationDTO], headers:HeaderMap) = {
     var rc:HeaderMap=Nil
 
     // Do we need to re-write the destination names?
     if( destination.find(_.temp()).isDefined ) {
-      rc ::= (DESTINATION -> encode_header(destination_parser.encode_destination(destination)))
+      rc ::= (DESTINATION -> encode_header(encode_destination(destination)))
     }
     get(headers, REPLY_TO).foreach { value=>
       // we may need to translate local temp destination names to broker destination names
@@ -1049,7 +1078,7 @@ class StompProtocolHandler extends ProtocolHandler {
         try {
           val dests: Array[DestinationDTO] = value
           if (dests.find(_.temp()).isDefined) {
-            rc ::= (REPLY_TO -> encode_header(destination_parser.encode_destination(dests)))
+            rc ::= (REPLY_TO -> encode_header(encode_destination(dests)))
           }
         } catch {
           case _=> // the translation is a best effort thing.
@@ -1060,7 +1089,7 @@ class StompProtocolHandler extends ProtocolHandler {
     // Do we need to add the message id?
     if( get( headers, MESSAGE_ID) == None ) {
       message_id_counter += 1
-      rc ::= (MESSAGE_ID -> ascii(session_id+message_id_counter))
+      rc ::= (MESSAGE_ID -> ascii(session_id.get+message_id_counter))
     }
 
     if( config.add_timestamp_header!=null ) {
@@ -1217,7 +1246,7 @@ class StompProtocolHandler extends ProtocolHandler {
       } }
 
       if( !topics.isEmpty ) {
-        val dsub = new DurableSubscriptionDestinationDTO(decode_header(id))
+        val dsub = new DurableSubscriptionDestinationDTO(destination_parser.sanitize_destination_part(decode_header(id)))
         dsub.selector = if (selector == null) null else selector._1
         topics.foreach( dsub.topics.add(_) )
         dsubs += dsub

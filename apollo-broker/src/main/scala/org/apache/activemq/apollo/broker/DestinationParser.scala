@@ -35,6 +35,7 @@ class DestinationParser extends PathParser {
   var temp_queue_prefix = "temp-queue:"
   var temp_topic_prefix = "temp-topic:"
   var destination_separator = ","
+  var sanitize_destinations = false
 
   def copy(other:DestinationParser) = {
     super.copy(other)
@@ -59,20 +60,32 @@ class DestinationParser extends PathParser {
         }
         dest match {
           case d:QueueDestinationDTO =>
-            if( queue_prefix!=null ) {
-              rc.append(queue_prefix)
+            if ( d.temp() ) {
+              if( temp_queue_prefix!=null ) {
+                rc.append(temp_queue_prefix)
+              }
+            } else {
+              if( queue_prefix!=null ) {
+                rc.append(queue_prefix)
+              }
             }
-            rc.append(encode_path(dest.path.toIterable))
+            rc.append(encode_path_iter(dest.path.toIterable, sanitize_destinations))
           case d:DurableSubscriptionDestinationDTO =>
             if( dsub_prefix!=null ) {
               rc.append(dsub_prefix)
             }
-            rc.append(d.subscription_id)
+            rc.append(unsanitize_destination_part(d.subscription_id))
           case d:TopicDestinationDTO =>
-            if( topic_prefix!=null ) {
-              rc.append(topic_prefix)
+            if ( d.temp() ) {
+              if( temp_topic_prefix!=null ) {
+                rc.append(temp_topic_prefix)
+              }
+            } else {
+              if( topic_prefix!=null ) {
+                rc.append(topic_prefix)
+              }
             }
-            rc.append(encode_path(dest.path.toIterable))
+            rc.append(encode_path_iter(dest.path.toIterable, sanitize_destinations))
           case _ =>
             throw new Exception("Uknown destination type: "+dest.getClass);
         }
@@ -125,19 +138,19 @@ class DestinationParser extends PathParser {
   def decode_single_destination(value: String, unqualified: (String) => DestinationDTO): DestinationDTO = {
     if (queue_prefix != null && value.startsWith(queue_prefix)) {
       var name = value.substring(queue_prefix.length)
-      return new QueueDestinationDTO(parts(name))
+      return new QueueDestinationDTO(parts(name, sanitize_destinations))
     } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
       var name = value.substring(topic_prefix.length)
-      return new TopicDestinationDTO(parts(name))
+      return new TopicDestinationDTO(parts(name, sanitize_destinations))
     } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
-      var name = value.substring(dsub_prefix.length)
+      var name = sanitize_destination_part(value.substring(dsub_prefix.length))
       return new DurableSubscriptionDestinationDTO(name).direct();
     } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
       var name = value.substring(temp_topic_prefix.length)
-      return new TopicDestinationDTO(parts(name)).temp(true)
+      return new TopicDestinationDTO(parts(name, sanitize_destinations)).temp(true)
     } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
       var name = value.substring(temp_queue_prefix.length)
-      return new QueueDestinationDTO(parts(name)).temp(true)
+      return new QueueDestinationDTO(parts(name, sanitize_destinations)).temp(true)
     } else if (unqualified != null) {
       return unqualified(value)
     } else {

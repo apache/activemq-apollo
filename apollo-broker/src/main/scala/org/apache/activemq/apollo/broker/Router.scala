@@ -48,7 +48,7 @@ trait Router extends Service {
 
   def apply_update(on_completed:Runnable):Unit
 
-  def remove_temp_destinations(active_connections:scala.collection.Set[Long]):Unit
+  def remove_temp_destinations(active_connections:scala.collection.Set[String]):Unit
 }
 
 /**

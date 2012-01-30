@@ -18,8 +18,6 @@ package org.apache.activemq.apollo.openwire.command;
 
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * Removes a consumer, producer, session or connection.
  * 
@@ -63,21 +61,6 @@ public class RemoveInfo extends BaseCommand {
 
     public void setLastDeliveredSequenceId(long lastDeliveredSequenceId) {
         this.lastDeliveredSequenceId = lastDeliveredSequenceId;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        switch (objectId.getDataStructureType()) {
-        case ConnectionId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveConnection(this, (ConnectionId)objectId, lastDeliveredSequenceId);
-        case SessionId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveSession(this, (SessionId)objectId, lastDeliveredSequenceId);
-        case ConsumerId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveConsumer(this, (ConsumerId)objectId, lastDeliveredSequenceId);
-        case ProducerId.DATA_STRUCTURE_TYPE:
-            return visitor.processRemoveProducer(this, (ProducerId)objectId);
-        default:
-            throw new IOException("Unknown remove command type: " + objectId.getDataStructureType());
-        }
     }
 
     /**

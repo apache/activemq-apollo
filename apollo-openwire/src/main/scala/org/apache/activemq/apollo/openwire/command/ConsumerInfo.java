@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.activemq.apollo.filter.BooleanExpression;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * @openwire:marshaller code="5"
@@ -40,8 +41,8 @@ public class ConsumerInfo extends BaseCommand {
     protected int maximumPendingMessageLimit;
     protected boolean browser;
     protected boolean dispatchAsync;
-    protected String selector;
-    protected String subscriptionName;
+    protected UTF8Buffer selector;
+    protected UTF8Buffer subscriptionName;
     protected boolean noLocal;
     protected boolean exclusive;
     protected boolean retroactive;
@@ -206,11 +207,11 @@ public class ConsumerInfo extends BaseCommand {
      * 
      * @openwire:property version=1
      */
-    public String getSelector() {
+    public UTF8Buffer getSelector() {
         return selector;
     }
 
-    public void setSelector(String selector) {
+    public void setSelector(UTF8Buffer selector) {
         this.selector = selector;
     }
 
@@ -219,11 +220,11 @@ public class ConsumerInfo extends BaseCommand {
      * 
      * @openwire:property version=1
      */
-    public String getSubscriptionName() {
+    public UTF8Buffer getSubscriptionName() {
         return subscriptionName;
     }
 
-    public void setSubscriptionName(String durableSubscriptionId) {
+    public void setSubscriptionName(UTF8Buffer durableSubscriptionId) {
         this.subscriptionName = durableSubscriptionId;
     }
 
@@ -232,7 +233,7 @@ public class ConsumerInfo extends BaseCommand {
      * @return
      * @see getSubscriptionName
      */
-    public String getSubcriptionName() {
+    public UTF8Buffer getSubcriptionName() {
         return subscriptionName;
     }
 
@@ -241,7 +242,7 @@ public class ConsumerInfo extends BaseCommand {
      * @see setSubscriptionName
      * @param durableSubscriptionId
      */
-    public void setSubcriptionName(String durableSubscriptionId) {
+    public void setSubcriptionName(UTF8Buffer durableSubscriptionId) {
         this.subscriptionName = durableSubscriptionId;
     }
 
@@ -342,10 +343,6 @@ public class ConsumerInfo extends BaseCommand {
 
     public void setAdditionalPredicate(BooleanExpression additionalPredicate) {
         this.additionalPredicate = additionalPredicate;
-    }
-
-    public Response visit(org.apache.activemq.apollo.openwire.support.state.CommandVisitor visitor) throws Exception {
-        return visitor.processAddConsumer(this);
     }
 
     /**

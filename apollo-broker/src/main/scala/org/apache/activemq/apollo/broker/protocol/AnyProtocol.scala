@@ -154,6 +154,8 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   var discriminated = false
 
+  def session_id = None
+
   override def on_transport_command(command: AnyRef) = {
 
     if (!command.isInstanceOf[ProtocolDetected]) {

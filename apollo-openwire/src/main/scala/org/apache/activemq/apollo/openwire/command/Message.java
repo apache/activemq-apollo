@@ -32,6 +32,7 @@ import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayInputStream;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * Represents an ActiveMQ message
@@ -58,16 +59,16 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     protected long arrival;
     protected long brokerInTime;
     protected long brokerOutTime;
-    protected String correlationId;
+    protected UTF8Buffer correlationId;
     protected ActiveMQDestination replyTo;
     protected boolean persistent;
-    protected String type;
+    protected UTF8Buffer type;
     protected byte priority;
-    protected String groupID;
+    protected UTF8Buffer groupID;
     protected int groupSequence;
     protected ConsumerId targetConsumerId;
     protected boolean compressed;
-    protected String userID;
+    protected UTF8Buffer userID;
 
     protected Buffer content;
     protected Buffer marshalledProperties;
@@ -88,6 +89,22 @@ public abstract class Message extends BaseCommand implements MarshallAware {
 
     public abstract org.apache.activemq.apollo.openwire.command.Message copy();
     public abstract void clearBody() throws OpenwireException;
+
+    protected int encodedSize;
+    public int getEncodedSize() {
+        return encodedSize;
+    }
+    public void setEncodedSize(int encodedSize) {
+        this.encodedSize = encodedSize;
+    }
+
+    protected Object cachedEncoding;
+    public Object getCachedEncoding() {
+        return cachedEncoding;
+    }
+    public void setCachedEncoding(Object cachedEncoding) {
+        this.cachedEncoding = cachedEncoding;
+    }
 
     // useful to reduce the memory footprint of a persisted message
     public void clearMarshalledState() {
@@ -287,11 +304,11 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     /**
      * @openwire:property version=1
      */
-    public String getGroupID() {
+    public UTF8Buffer getGroupID() {
         return groupID;
     }
 
-    public void setGroupID(String groupID) {
+    public void setGroupID(UTF8Buffer groupID) {
         this.groupID = groupID;
     }
 
@@ -309,11 +326,11 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     /**
      * @openwire:property version=1
      */
-    public String getCorrelationId() {
+    public UTF8Buffer getCorrelationId() {
         return correlationId;
     }
 
-    public void setCorrelationId(String correlationId) {
+    public void setCorrelationId(UTF8Buffer correlationId) {
         this.correlationId = correlationId;
     }
 
@@ -375,11 +392,11 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     /**
      * @openwire:property version=1
      */
-    public String getType() {
+    public UTF8Buffer getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(UTF8Buffer type) {
         this.type = type;
     }
 
@@ -538,11 +555,11 @@ public abstract class Message extends BaseCommand implements MarshallAware {
      * 
      * @openwire:property version=1
      */
-    public String getUserID() {
+    public UTF8Buffer getUserID() {
         return userID;
     }
 
-    public void setUserID(String jmsxUserID) {
+    public void setUserID(UTF8Buffer jmsxUserID) {
         this.userID = jmsxUserID;
     }
 
@@ -812,7 +829,7 @@ public abstract class Message extends BaseCommand implements MarshallAware {
         return new Filterable() {
             public <T> T getBodyAs(Class<T> type) throws FilterException {
                 try {
-                    if( type == String.class ) {
+                    if( type == UTF8Buffer.class ) {
                         if ( Message.this instanceof ActiveMQTextMessage ) {
                             return type.cast(((ActiveMQTextMessage)Message.this).getText());
                         }

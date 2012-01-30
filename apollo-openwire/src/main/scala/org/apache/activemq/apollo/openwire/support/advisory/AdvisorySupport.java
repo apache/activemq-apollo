@@ -18,6 +18,8 @@ package org.apache.activemq.apollo.openwire.support.advisory;
 
 import org.apache.activemq.apollo.openwire.command.ActiveMQDestination;
 import org.apache.activemq.apollo.openwire.command.ActiveMQTopic;
+import org.fusesource.hawtbuf.UTF8Buffer;
+import static org.fusesource.hawtbuf.Buffer.*;
 
 public final class AdvisorySupport {
 
@@ -46,6 +48,7 @@ public final class AdvisorySupport {
     public static final String MASTER_BROKER_TOPIC_PREFIX = ADVISORY_TOPIC_PREFIX + "MasterBroker";
     public static final String AGENT_TOPIC = "ActiveMQ.Agent";
     public static final String ADIVSORY_MESSAGE_TYPE = "Advisory";
+    public static final UTF8Buffer ADIVSORY_MESSAGE_TYPE_BUFFER = utf8("Advisory");
     public static final String MSG_PROPERTY_ORIGIN_BROKER_ID="originBrokerId";
     public static final String MSG_PROPERTY_ORIGIN_BROKER_NAME="originBrokerName";
     public static final String MSG_PROPERTY_ORIGIN_BROKER_URL="originBrokerURL";
@@ -168,172 +171,52 @@ public final class AdvisorySupport {
     }
 
     public static boolean isDestinationAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isDestinationAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.equals(TEMP_QUEUE_ADVISORY_TOPIC) || destination.equals(TEMP_TOPIC_ADVISORY_TOPIC) || destination.equals(QUEUE_ADVISORY_TOPIC)
-                   || destination.equals(TOPIC_ADVISORY_TOPIC);
-        }
+        return destination.equals(TEMP_QUEUE_ADVISORY_TOPIC) || destination.equals(TEMP_TOPIC_ADVISORY_TOPIC) || destination.equals(QUEUE_ADVISORY_TOPIC)
+               || destination.equals(TOPIC_ADVISORY_TOPIC);
     }
 
     public static boolean isAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(ADVISORY_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(ADVISORY_TOPIC_PREFIX));
     }
 
     public static boolean isConnectionAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isConnectionAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.equals(CONNECTION_ADVISORY_TOPIC);
-        }
+        return destination.equals(CONNECTION_ADVISORY_TOPIC);
     }
 
     public static boolean isProducerAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isProducerAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(PRODUCER_ADVISORY_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(PRODUCER_ADVISORY_TOPIC_PREFIX));
     }
 
     public static boolean isConsumerAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isConsumerAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(CONSUMER_ADVISORY_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(CONSUMER_ADVISORY_TOPIC_PREFIX));
     }
     
     public static boolean isSlowConsumerAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isSlowConsumerAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(SLOW_CONSUMER_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(SLOW_CONSUMER_TOPIC_PREFIX));
     }
     
     public static boolean isFastProducerAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isFastProducerAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(FAST_PRODUCER_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(FAST_PRODUCER_TOPIC_PREFIX));
     }
     
     public static boolean isMessageConsumedAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isMessageConsumedAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(MESSAGE_CONSUMED_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(MESSAGE_CONSUMED_TOPIC_PREFIX));
     }
     
     public static boolean isMasterBrokerAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isMasterBrokerAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(MASTER_BROKER_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(MASTER_BROKER_TOPIC_PREFIX));
     }
     
     public static boolean isMessageDeliveredAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isMessageDeliveredAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(MESSAGE_DELIVERED_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(MESSAGE_DELIVERED_TOPIC_PREFIX));
     }
     
     public static boolean isMessageDiscardedAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isMessageDiscardedAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(MESSAGE_DISCAREDED_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(MESSAGE_DISCAREDED_TOPIC_PREFIX));
     }
     
     public static boolean isFullAdvisoryTopic(ActiveMQDestination destination) {
-        if (destination.isComposite()) {
-            ActiveMQDestination[] compositeDestinations = destination.getCompositeDestinations();
-            for (int i = 0; i < compositeDestinations.length; i++) {
-                if (isFullAdvisoryTopic(compositeDestinations[i])) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return destination.isTopic() && destination.getPhysicalName().startsWith(FULL_TOPIC_PREFIX);
-        }
+        return destination.isTopic() && destination.getPhysicalName().startsWith(utf8(FULL_TOPIC_PREFIX));
     }
 
     /**

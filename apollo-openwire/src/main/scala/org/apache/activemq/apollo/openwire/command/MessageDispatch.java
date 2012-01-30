@@ -16,8 +16,6 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * 
  * @openwire:marshaller code="21"
@@ -30,11 +28,6 @@ public class MessageDispatch extends BaseCommand {
     protected ActiveMQDestination destination;
     protected Message message;
     protected int redeliveryCounter;
-
-    protected transient long deliverySequenceId;
-    protected transient Object consumer;
-    protected transient Runnable transmitCallback;
-    protected transient Throwable rollbackCause;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -77,14 +70,6 @@ public class MessageDispatch extends BaseCommand {
         this.message = message;
     }
 
-    public long getDeliverySequenceId() {
-        return deliverySequenceId;
-    }
-
-    public void setDeliverySequenceId(long deliverySequenceId) {
-        this.deliverySequenceId = deliverySequenceId;
-    }
-
     /**
      * @openwire:property version=1
      */
@@ -96,31 +81,4 @@ public class MessageDispatch extends BaseCommand {
         this.redeliveryCounter = deliveryCounter;
     }
 
-    public Object getConsumer() {
-        return consumer;
-    }
-
-    public void setConsumer(Object consumer) {
-        this.consumer = consumer;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processMessageDispatch(this);
-    }
-
-    public Runnable getTransmitCallback() {
-        return transmitCallback;
-    }
-
-    public void setTransmitCallback(Runnable transmitCallback) {
-        this.transmitCallback = transmitCallback;
-    }
-
-    public Throwable getRollbackCause() {
-        return rollbackCause;
-    }
-
-    public void setRollbackCause(Throwable rollbackCause) {
-        this.rollbackCause = rollbackCause;
-    }
 }

@@ -27,37 +27,36 @@ import org.fusesource.hawtbuf.AsciiBuffer;
 public class ActiveMQTempQueue extends ActiveMQTempDestination {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.ACTIVEMQ_TEMP_QUEUE;
-    private static final long serialVersionUID = 6683049467527633867L;
 
     public ActiveMQTempQueue() {
     }
 
     public ActiveMQTempQueue(String name) {
-        super(name);
+        super(strip(name));
     }
 
-    public ActiveMQTempQueue(ConnectionId connectionId, long sequenceId) {
-        super(connectionId.getValue(), sequenceId);
+    private static String strip(String name) {
+        if(name.startsWith(TEMP_QUEUE_QUALIFED_PREFIX)) {
+            return name.substring(TEMP_QUEUE_QUALIFED_PREFIX.length());
+        } else {
+            return name;
+        }
     }
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
     }
 
+    public String getQualifiedPrefix() {
+        return TEMP_QUEUE_QUALIFED_PREFIX;
+    }
+
     public boolean isQueue() {
         return true;
     }
 
-    public String getQueueName() throws OpenwireException {
-        return getPhysicalName();
-    }
-
     public byte getDestinationType() {
         return TEMP_QUEUE_TYPE;
-    }
-
-    protected String getQualifiedPrefix() {
-        return TEMP_QUEUE_QUALIFED_PREFIX;
     }
 
 }

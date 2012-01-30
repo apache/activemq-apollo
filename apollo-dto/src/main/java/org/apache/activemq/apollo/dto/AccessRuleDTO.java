@@ -23,6 +23,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * <p>
+ * User authorization to broker resources is accomplished by configuring access control rules. The rules define
+ * which principals are allowed or denied access to perform actions against server resources.
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -32,16 +34,16 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class AccessRuleDTO {
 
     /**
-     * The class name of the JAAS principle that this rule will mach against.  If not set
-     * the this defaults to the default principal kinds configured on the broker or virtual host.
-     * If set to "*" then it matches all principal classes.
+     * A space separated list of class names of which will be matched against the principle type. If set to *
+     * then it matches all principal classes. Defaults to the default principal kinds configured on the broker
+     * or virtual host.
      */
     @XmlAttribute(name = "principal_kind")
     public String principal_kind;
 
     /**
      * The principal which are allowed access to the action.  If set to "+" then it matches all principals
-     * but requires at at least one.  If set to "*" the it matches all principals and even matches
+     * but requires at at least one.  If set to "*" then it matches all principals and even matches
      * the case where there are no principals associated with the subject.
      */
     @XmlAttribute
@@ -49,7 +51,7 @@ public class AccessRuleDTO {
 
     /**
      * The principal which are denied access to the action  If set to "+" then it matches all principals
-     * but requires at at least one.  If set to "*" the it matches all principals and even matches
+     * but requires at at least one.  If set to "*" then it matches all principals and even matches
      * the case where there are no principals associated with the subject.
      */
     @XmlAttribute
@@ -70,15 +72,16 @@ public class AccessRuleDTO {
     public String action;
 
     /**
-     * The kind of broker resource which matches this rule.  You can use "*" to match all types.  If not set
-     * it defaults to "*"
+     * A space separated list of broker resource types that will match this rule. You can use * to match all key.
+     * Example values 'broker queue'. Defaults to *.
      */
     @XmlAttribute
     public String kind;
 
     /**
-     * The identifier of the resource which matches this rule.  You can use "*" to match all resources.  If not set
-     * it defaults to "*"
+     * The identifier of the resource that will match this rule. You can use * to match all resources. If the
+     * kind is set to queue or topic the your can use a destination wild card to match against the destination
+     * id. Defaults to *.
      */
     @XmlAttribute
     public String id;

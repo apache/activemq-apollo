@@ -48,28 +48,41 @@ public class BrokerDTO {
     public List<ConnectorTypeDTO> connectors = new ArrayList<ConnectorTypeDTO>();
 
     /**
-     * The clients should use to connect to this
+     * The address clients should use to connect to this
      * broker.
      */
     @XmlElement(name="client_address")
     public String client_address;
 
     /**
-     * The base data directory of the broker.  It will store
-     * persistent data under it.
+     * Specifies the key store data object
      */
     @XmlElementRef
     public KeyStorageDTO key_storage;
 
+    /**
+     *   List of AccessRulesDTO objects which contain information about
+     *   user authorization to broker resources
+     */
     @XmlElement(name="access_rule")
     public List<AccessRuleDTO> access_rules = new ArrayList<AccessRuleDTO>();
 
+    /**
+     * List of WebAdminDTO objects which contain address and port information
+     * to bind to the web interface
+     */
     @XmlElement(name="web_admin")
     public List<WebAdminDTO> web_admins = new ArrayList<WebAdminDTO>();
 
+    /**
+     * List of AuthenticationDTO objects which contain JAAS authentication information
+     */
     @XmlElement(name="authentication")
     public AuthenticationDTO authentication;
 
+    /**
+     * List of LogCategoryDTO objects which configure logging
+     */
     @XmlElement(name="log_category")
     public LogCategoryDTO log_category;
 
@@ -81,8 +94,10 @@ public class BrokerDTO {
     public List<CustomServiceDTO> services = new ArrayList<CustomServiceDTO>();
 
     /**
-     * If set to strict, then the broker will not start up if there
-     * are any validation errors in the configuration file.
+     * When a broker is first started up, it will validate the configuration file against
+     * the the XSD Schema and report any errors/warnings it finds but it will continue to
+     * start the broker even it finds problems. If set to strict, then the broker will not
+     * start up if there are any validation errors in the configuration file.
      */
     @XmlAttribute(name="validation")
     public String validation;

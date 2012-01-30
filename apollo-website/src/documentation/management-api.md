@@ -93,7 +93,7 @@ Results in a [Data Page](./api/apollo-dto/org/apache/activemq/apollo/dto/DataPag
       "state_since":1306848325102,
       "read_counter":103,
       "write_counter":239110628,
-      "transport":"tcp",
+      "connector":"tcp",
       "protocol":"stomp",
       "remote_address":"/127.0.0.1:61775",
       "protocol_version":"1.0",
@@ -107,7 +107,7 @@ Results in a [Data Page](./api/apollo-dto/org/apache/activemq/apollo/dto/DataPag
       "state_since":1306848325102,
       "read_counter":227739229,
       "write_counter":113,
-      "transport":"tcp",
+      "connector:"tcp",
       "protocol":"stomp",
       "remote_address":"/127.0.0.1:61776",
       "protocol_version":"1.0",
@@ -405,7 +405,7 @@ parameter to define the order in which they are returned.  Example:
       `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/store.json`
       {pygmentize:: js}
       {
-        "@class": "org.apache.activemq.apollo.broker.store.bdb.dto.BDBStoreStatusDTO",
+        "@class": "bdb_store_status",
         "id": "bdb store at /Users/chirino/opt/default/data",
         "state": "STARTED",
         "state_since": 1314573798939,
@@ -454,7 +454,7 @@ parameter to define the order in which they are returned.  Example:
           "other": []
         },
         "binding": {
-          "@class": "org.apache.activemq.apollo.dto.QueueDestinationDTO",
+          "@class": "queue_destination",
           "path": ["example-5"]
         },
         "metrics": {
@@ -681,7 +681,7 @@ parameter to define the order in which they are returned.  Example:
         "last_write_size": 32973,
         "read_counter": 106,
         "write_counter": 632923992,
-        "transport": "tcp",
+        "connector: "tcp",
         "protocol": "stomp",
         "protocol_version": "1.0",
         "remote_address": "/127.0.0.1:51733",

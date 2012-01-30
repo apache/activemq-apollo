@@ -31,9 +31,6 @@ public abstract class BaseCommand implements Command {
     protected int commandId;
     protected boolean responseRequired;
     
-    private transient Endpoint from;
-    private transient Endpoint to;
-    
     public void copy(BaseCommand copy) {
         copy.commandId = commandId;
         copy.responseRequired = responseRequired;
@@ -106,27 +103,6 @@ public abstract class BaseCommand implements Command {
         return false;
     }
 
-    /**
-     * The endpoint within the transport where this message came from.
-     */
-    public Endpoint getFrom() {
-        return from;
-    }
 
-    public void setFrom(Endpoint from) {
-        this.from = from;
-    }
-
-    /**
-     * The endpoint within the transport where this message is going to - null means all endpoints.
-     */
-    public Endpoint getTo() {
-        return to;
-    }
-
-    public void setTo(Endpoint to) {
-        this.to = to;
-    }
-    
     
 }

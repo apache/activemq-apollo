@@ -18,8 +18,6 @@ package org.apache.activemq.apollo.openwire.command;
 
 import java.io.IOException;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
-
 /**
  * Used to create and destroy destinations on the broker.
  * 
@@ -115,15 +113,6 @@ public class DestinationInfo extends BaseCommand {
 
     public void setBrokerPath(BrokerId[] brokerPath) {
         this.brokerPath = brokerPath;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        if (isAddOperation()) {
-            return visitor.processAddDestination(this);
-        } else if (isRemoveOperation()) {
-            return visitor.processRemoveDestination(this);
-        }
-        throw new IOException("Unknown operation type: " + getOperationType());
     }
 
 }

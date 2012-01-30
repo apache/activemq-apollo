@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.openwire.command;
 
 import org.apache.activemq.apollo.util.IntrospectionSupport;
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
 
 /**
  * @openwire:marshaller code="10"
@@ -25,9 +24,6 @@ import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
 public class KeepAliveInfo extends BaseCommand {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.KEEP_ALIVE_INFO;
-
-    private transient Endpoint from;
-    private transient Endpoint to;
 
     public byte getDataStructureType() {
         return DATA_STRUCTURE_TYPE;
@@ -55,33 +51,6 @@ public class KeepAliveInfo extends BaseCommand {
 
     public boolean isWireFormatInfo() {
         return false;
-    }
-
-    /**
-     * The endpoint within the transport where this message came from.
-     */
-    public Endpoint getFrom() {
-        return from;
-    }
-
-    public void setFrom(Endpoint from) {
-        this.from = from;
-    }
-
-    /**
-     * The endpoint within the transport where this message is going to - null
-     * means all endpoints.
-     */
-    public Endpoint getTo() {
-        return to;
-    }
-
-    public void setTo(Endpoint to) {
-        this.to = to;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processKeepAlive(this);
     }
 
     public boolean isMarshallAware() {

@@ -213,7 +213,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       None
     } else {
       try {
-        Some((destination.path.get(1), destination.path.get(2).toLong))
+        Some((destination.path.get(1), destination.path.get(2)))
       } catch {
         case _ => None
       }
@@ -287,7 +287,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       for(dest <- get_destination_matches(path)) {
         if( is_temp(destination) ) {
           val owner = temp_owner(destination).get
-          for( connection <- security.connection_id) {
+          for( connection <- security.session_id) {
             if( (virtual_host.broker.id, connection) != owner ) {
               return Some("Not authorized to destroy the temp %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
             }
@@ -313,7 +313,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( is_temp(destination) ) {
         temp_owner(destination) match {
           case Some(owner) =>
-            for( connection <- security.connection_id) {
+            for( connection <- security.session_id) {
               if( (virtual_host.broker.id, connection) != owner ) {
                 return Some("Not authorized to receive from the temporary destination. Principals=%s".format(security.principal_dump))
               }
@@ -911,7 +911,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   }
   
-  def remove_temp_destinations(active_connections:scala.collection.Set[Long]) = {
+  def remove_temp_destinations(active_connections:scala.collection.Set[String]) = {
     virtual_host.dispatch_queue.assertExecuting()
     val min_create_time = virtual_host.broker.now - 1000;
 

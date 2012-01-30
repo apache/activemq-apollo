@@ -36,11 +36,11 @@ import codec.OpenWireFormat
 import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
-import org.apache.activemq.apollo.openwire.DestinationConverter._
 import org.apache.activemq.apollo.broker._
 import protocol._
 import security.SecurityContext
-
+import DestinationConverter._
+import Buffer._
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -51,7 +51,7 @@ object OpenwireProtocolHandler extends Log {
   val preferred_wireformat_settings = new WireFormatInfo();
   preferred_wireformat_settings.setVersion(OpenWireFormat.DEFAULT_VERSION);
   preferred_wireformat_settings.setStackTraceEnabled(true);
-  preferred_wireformat_settings.setCacheEnabled(true);
+  preferred_wireformat_settings.setCacheEnabled(false);
   preferred_wireformat_settings.setTcpNoDelayEnabled(true);
   preferred_wireformat_settings.setTightEncodingEnabled(true);
   preferred_wireformat_settings.setSizePrefixDisabled(false);
@@ -66,6 +66,7 @@ object OpenwireProtocolHandler extends Log {
  */
 class OpenwireProtocolHandler extends ProtocolHandler {
 
+  var connection_log:Log = OpenwireProtocolHandler
   var minimum_protocol_version = 1
 
   import OpenwireProtocolHandler._
@@ -97,7 +98,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   private def queue = connection.dispatch_queue
 
-  var session_id: AsciiBuffer = _
   var wire_format: OpenWireFormat = _
   var login: Option[AsciiBuffer] = None
   var passcode: Option[AsciiBuffer] = None
@@ -111,6 +111,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   var current_command: Object = _
 
   var codec:OpenwireCodec = _
+  var temp_destination_map = HashMap[ActiveMQDestination, DestinationDTO]()
+
+  def session_id = security_context.session_id
 
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
@@ -171,15 +174,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   override def on_transport_failure(error: IOException) = {
     if (!connection.stopped) {
-      error.printStackTrace
       suspend_read("shutdown")
-      debug(error, "Shutting connection down due to: %s", error)
+      connection_log.info(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       connection.stop
     }
   }
 
   override def on_transport_connected():Unit = {
-    security_context.connection_id = Some(connection.id)
+    connection_log = connection.connector.broker.connection_log
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
 
@@ -197,6 +199,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     reset {
       suspend_read("virtual host lookup")
       this.host = broker.get_default_virtual_host
+      connection_log = this.host.connection_log
       resume_read
       if(host==null) {
         async_die("Could not find default virtual host")
@@ -354,7 +357,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def die[T](msg: String, actual:Command=null):T = {
     if (!dead) {
       dead = true
-      debug("Shutting connection down due to: " + msg)
+
+      connection_log.info("OpenWire connection '%s' error: %s", security_context.remote_address, msg)
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
@@ -409,9 +413,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     // Give the client some info about this broker.
     val brokerInfo = new BrokerInfo();
-    brokerInfo.setBrokerId(new BrokerId(host.config.id));
-    brokerInfo.setBrokerName(host.config.id);
-    brokerInfo.setBrokerURL(host.broker.get_connect_address);
+    brokerInfo.setBrokerId(new BrokerId(utf8(host.config.id)));
+    brokerInfo.setBrokerName(utf8(host.config.id));
+    brokerInfo.setBrokerURL(utf8(host.broker.get_connect_address));
     connection_session.offer(brokerInfo);
   }
 
@@ -421,11 +425,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def on_connection_info(info: ConnectionInfo) = {
     val id = info.getConnectionId()
-    if (!all_connections.contains(id)) {
+    if (connection_context==null) {
       new ConnectionContext(info).attach
 
-      security_context.user = info.getUserName
-      security_context.password = info.getPassword
+      security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
+      security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
+      security_context.session_id = Some(OPENWIRE_PARSER.sanitize_destination_part(info.getConnectionId.toString))
 
       reset {
         if( host.authenticator!=null &&  host.authorizer!=null ) {
@@ -458,7 +463,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def on_session_info(info: SessionInfo) = {
     val id = info.getSessionId();
     if (!all_sessions.contains(id)) {
-      val parent = all_connections.get(id.getParentId()).getOrElse(die("Cannot add a session to a connection that had not been registered."))
+      val parent = get_context(id.getParentId())
       new SessionContext(parent, info).attach
     }
     ack(info);
@@ -484,7 +489,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   }
 
   def on_destination_info(info:DestinationInfo) = {
-    val destinations = to_destination_dto(info.getDestination)
+    val destinations = to_destination_dto(info.getDestination, this)
 //    if( info.getDestination.isTemporary ) {
 //      destinations.foreach(_.temp_owner = connection.id)
 //    }
@@ -506,7 +511,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def on_remove_info(info: RemoveInfo) = {
     info.getObjectId match {
-      case id: ConnectionId => all_connections.get(id).foreach(_.dettach)
+      case id: ConnectionId => Option(connection_context).foreach(_.dettach)
       case id: SessionId => all_sessions.get(id).foreach(_.dettach)
       case id: ProducerId => all_producers.get(id).foreach(_.dettach)
       case id: ConsumerId => all_consumers.get(id).foreach(_.dettach )
@@ -516,8 +521,15 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     ack(info)
   }
 
+  def get_context(id:ConnectionId) = {
+    if(connection_context!=null && connection_context.info.getConnectionId == id)
+      connection_context
+    else
+      die("Cannot add a session to a connection that had not been registered.")
+  }
+  
   def on_transaction_info(info:TransactionInfo) = {
-    val parent = all_connections.get(info.getConnectionId()).getOrElse(die("Cannot add a session to a connection that had not been registered."))
+    val parent = get_context(info.getConnectionId())
     val id = info.getTransactionId
     info.getType match {
       case TransactionInfo.BEGIN =>
@@ -591,7 +603,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def perform_send(msg:ActiveMQMessage, uow:StoreUOW=null): Unit = {
 
-    val destiantion = to_destination_dto(msg.getDestination)
+    val destiantion = to_destination_dto(msg.getDestination, this)
     val key = destiantion.toList
     producerRoutes.get(key) match {
       case null =>
@@ -634,7 +646,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // We may need to add some headers..
       val delivery = new Delivery
       delivery.message = new OpenwireMessage(message)
-      delivery.size = message.getSize
+      delivery.size = {
+        val rc = message.getEncodedSize
+        if( rc != 0 )
+          rc
+        else
+          message.getSize
+      }
       delivery.uow = uow
 
       if( message.isResponseRequired ) {
@@ -685,8 +703,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   //      host.createQueue(destination);
   //      return ack(info);
   //  }
-
-  val all_connections = new HashMap[ConnectionId, ConnectionContext]();
+  var connection_context:ConnectionContext= null
+  
   val all_sessions = new HashMap[SessionId, SessionContext]();
   val all_producers = new HashMap[ProducerId, ProducerContext]();
   val all_consumers = new HashMap[ConsumerId, ConsumerContext]();
@@ -701,15 +719,18 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def default_session_id = new SessionId(info.getConnectionId(), -1)
 
     def attach = {
+      if( connection_context!=null ) {
+        die("Only one logic connection is supported.")
+      }
       // create the default session.
       new SessionContext(this, new SessionInfo(default_session_id)).attach
-      all_connections.put(info.getConnectionId, this)
+      connection_context = this
     }
 
     def dettach = {
       sessions.values.toArray.foreach(_.dettach)
       transactions.values.toArray.foreach(_.dettach)
-      all_connections.remove(info.getConnectionId)
+      connection_context = null
     }
   }
 
@@ -811,7 +832,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def attach = {
 
       if( info.getDestination == null ) fail("destination was not set")
-      destination = to_destination_dto(info.getDestination)
+      destination = to_destination_dto(info.getDestination, OpenwireProtocolHandler.this)
 
       // if they are temp dests.. attach our owner id so that we don't
       // get rejected.
@@ -827,7 +848,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         case null=> null
         case x=>
           try {
-            SelectorParser.parse(x)
+            SelectorParser.parse(x.toString)
           } catch {
             case e:FilterException =>
               fail("Invalid selector expression: "+e.getMessage)
@@ -843,7 +864,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         subscription_id += info.getSubscriptionName
 
         val rc = new DurableSubscriptionDestinationDTO(subscription_id)
-        rc.selector = info.getSelector
+        rc.selector = Option(info.getSelector).map(_.toString).getOrElse(null)
 
         destination.foreach { _ match {
           case x:TopicDestinationDTO=>

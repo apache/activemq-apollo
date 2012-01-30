@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 import java.util.*;
 
 /**
@@ -42,22 +44,14 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
 
   private static final long serialVersionUID = -3885260014960795889L;
 
-  protected String physicalName;
-
-  protected transient ActiveMQDestination[] compositeDestinations;
-  protected transient String[] destinationPaths;
+  protected UTF8Buffer physicalName;
 
   public ActiveMQDestination() {
   }
 
   protected ActiveMQDestination(String name) {
-      setPhysicalName(name);
+      setPhysicalName(new UTF8Buffer(name));
   }
-
-  public ActiveMQDestination(ActiveMQDestination composites[]) {
-      setCompositeDestinations(composites);
-  }
-
 
   // static helper methods for working with destinations
   // -------------------------------------------------------------------------
@@ -114,114 +108,18 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
           return getClass().getName().compareTo(that.getClass().getName());
       }
   }
-
-  public boolean isComposite() {
-      return compositeDestinations != null;
-  }
-
-  public ActiveMQDestination[] getCompositeDestinations() {
-      return compositeDestinations;
-  }
-
-  public void setCompositeDestinations(ActiveMQDestination[] destinations) {
-      this.compositeDestinations = destinations;
-      this.destinationPaths = null;
-
-      StringBuffer sb = new StringBuffer();
-      for (int i = 0; i < destinations.length; i++) {
-          if (i != 0) {
-              sb.append(COMPOSITE_SEPERATOR);
-          }
-          if (getDestinationType() == destinations[i].getDestinationType()) {
-              sb.append(destinations[i].getPhysicalName());
-          } else {
-              sb.append(destinations[i].getQualifiedName());
-          }
-      }
-      physicalName = sb.toString();
-  }
-
-  public String getQualifiedName() {
-      if (isComposite()) {
-          return physicalName;
-      }
-      return getQualifiedPrefix() + physicalName;
-  }
-
-  protected abstract String getQualifiedPrefix();
+    
+  public abstract String getQualifiedPrefix();
 
   /**
    * @openwire:property version=1
    */
-  public String getPhysicalName() {
+  public UTF8Buffer getPhysicalName() {
       return physicalName;
   }
 
-  public void setPhysicalName(String physicalName) {
-      final int len = physicalName.length();
-      // options offset
-      int p = -1;
-      boolean composite = false;
-      for (int i = 0; i < len; i++) {
-          char c = physicalName.charAt(i);
-          if (c == '?') {
-              p = i;
-              break;
-          }
-          if (c == COMPOSITE_SEPERATOR) {
-              // won't be wild card
-              composite = true;
-          }
-      }
-      // Strip off any options
-      if (p >= 0) {
-          String optstring = physicalName.substring(p + 1);
-          physicalName = physicalName.substring(0, p);
-      }
+  public void setPhysicalName(UTF8Buffer physicalName) {
       this.physicalName = physicalName;
-      this.destinationPaths = null;
-      if (composite) {
-          // Check to see if it is a composite.
-          Set<String> l = new HashSet<String>();
-          StringTokenizer iter = new StringTokenizer(physicalName, "" + COMPOSITE_SEPERATOR);
-          while (iter.hasMoreTokens()) {
-              String name = iter.nextToken().trim();
-              if (name.length() == 0) {
-                  continue;
-              }
-              l.add(name);
-          }
-          compositeDestinations = new ActiveMQDestination[l.size()];
-          int counter = 0;
-          for (String dest : l) {
-              compositeDestinations[counter++] = createDestination(dest);
-          }
-      }
-  }
-
-  public ActiveMQDestination createDestination(String name) {
-      return createDestination(name, getDestinationType());
-  }
-
-  public String[] getDestinationPaths() {
-
-      if (destinationPaths != null) {
-          return destinationPaths;
-      }
-
-      List<String> l = new ArrayList<String>();
-      StringTokenizer iter = new StringTokenizer(physicalName, PATH_SEPERATOR);
-      while (iter.hasMoreTokens()) {
-          String name = iter.nextToken().trim();
-          if (name.length() == 0) {
-              continue;
-          }
-          l.add(name);
-      }
-
-      destinationPaths = new String[l.size()];
-      l.toArray(destinationPaths);
-      return destinationPaths;
   }
 
   public abstract byte getDestinationType();
@@ -254,7 +152,7 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
   }
 
   public String toString() {
-      return getQualifiedName();
+      return physicalName.toString();
   }
 
   public String getDestinationTypeAsString() {

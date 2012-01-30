@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.util._
 import java.util.Map.Entry
 import org.apache.activemq.apollo.broker._
 import org.fusesource.hawtdispatch._
+import org.fusesource.hawtbuf.UTF8Buffer
 
 /**
  * <p>
@@ -58,7 +59,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
   final val advisoryProducerId = new ProducerId
   final val messageIdGenerator = new LongSequenceGenerator
 
-  advisoryProducerId.setConnectionId(ID_GENERATOR.generateId)
+  advisoryProducerId.setConnectionId(new UTF8Buffer(ID_GENERATOR.generateId))
 
 
   class ProducerRoute extends DeliveryProducerRoute(router) {
@@ -80,7 +81,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_create(dest: DomainDestination, security: SecurityContext) = {
     val ow_destination = to_activemq_destination(Array(dest.destination_dto))
-    if (!AdvisorySupport.isAdvisoryTopic(ow_destination)) {
+    if (ow_destination!=null && !AdvisorySupport.isAdvisoryTopic(ow_destination)) {
       destination_advisories.getOrElseUpdate(ow_destination, {
         var info = new DestinationInfo(null, DestinationInfo.ADD_OPERATION_TYPE, ow_destination)
         val topic = AdvisorySupport.getDestinationAdvisoryTopic(ow_destination);
@@ -93,7 +94,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_destroy(dest: DomainDestination, security: SecurityContext) = {
     val destination = to_activemq_destination(Array(dest.destination_dto))
-    if (!AdvisorySupport.isAdvisoryTopic(destination)) {
+    if (destination!=null && !AdvisorySupport.isAdvisoryTopic(destination)) {
       for (info <- destination_advisories.remove(destination)) {
         var info = new DestinationInfo(null, DestinationInfo.REMOVE_OPERATION_TYPE, destination)
         val topic = AdvisorySupport.getDestinationAdvisoryTopic(destination);
@@ -104,7 +105,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_bind(dest: DomainDestination, consumer: DeliveryConsumer, security: SecurityContext) = {
     val destination = to_activemq_destination(Array(dest.destination_dto))
-    if (AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
+    if (destination!=null && AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
       // replay the destination advisories..
       val producer = new ProducerRoute {
         override def on_connected = {
@@ -160,7 +161,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
     //set the data structure
     message.setDataStructure(command);
     message.setPersistent(false);
-    message.setType(AdvisorySupport.ADIVSORY_MESSAGE_TYPE);
+    message.setType(AdvisorySupport.ADIVSORY_MESSAGE_TYPE_BUFFER);
     message.setMessageId(new MessageId(advisoryProducerId, messageIdGenerator.getNextSequenceId()));
 //    message.setTargetConsumerId(targetConsumerId);
     message.setDestination(topic);
@@ -175,7 +176,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def send(delivery:Delivery): Unit = {
     val message = delivery.message.asInstanceOf[OpenwireMessage].message
-    val dest: Array[DestinationDTO] = to_destination_dto(message.getDestination)
+    val dest: Array[DestinationDTO] = to_destination_dto(message.getDestination,null)
     val key = dest.toList
 
     val route = producerRoutes.get(key) match {

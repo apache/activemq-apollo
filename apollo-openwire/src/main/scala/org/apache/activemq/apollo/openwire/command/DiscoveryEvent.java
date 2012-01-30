@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * Represents a discovery event containing the details of the service
  * 
@@ -26,13 +28,13 @@ public class DiscoveryEvent implements DataStructure {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.DISCOVERY_EVENT;
 
-    protected String serviceName;
-    protected String brokerName;
+    protected UTF8Buffer serviceName;
+    protected UTF8Buffer brokerName;
 
     public DiscoveryEvent() {
     }
 
-    public DiscoveryEvent(String serviceName) {
+    public DiscoveryEvent(UTF8Buffer serviceName) {
         this.serviceName = serviceName;
     }
 
@@ -43,22 +45,22 @@ public class DiscoveryEvent implements DataStructure {
     /**
      * @openwire:property version=1
      */
-    public String getServiceName() {
+    public UTF8Buffer getServiceName() {
         return serviceName;
     }
 
-    public void setServiceName(String serviceName) {
+    public void setServiceName(UTF8Buffer serviceName) {
         this.serviceName = serviceName;
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getBrokerName() {
+    public UTF8Buffer getBrokerName() {
         return brokerName;
     }
 
-    public void setBrokerName(String name) {
+    public void setBrokerName(UTF8Buffer name) {
         this.brokerName = name;
     }
 

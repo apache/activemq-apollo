@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
+import org.fusesource.hawtbuf.UTF8Buffer;
+
 /**
  * @openwire:marshaller code="120"
  */
@@ -23,12 +25,12 @@ public class ConnectionId implements DataStructure, Comparable<ConnectionId> {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.CONNECTION_ID;
 
-    protected String value;
+    protected UTF8Buffer value;
 
     public ConnectionId() {
     }
 
-    public ConnectionId(String connectionId) {
+    public ConnectionId(UTF8Buffer connectionId) {
         this.value = connectionId;
     }
 
@@ -68,17 +70,17 @@ public class ConnectionId implements DataStructure, Comparable<ConnectionId> {
     }
 
     public String toString() {
-        return value;
+        return value.toString();
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getValue() {
+    public UTF8Buffer getValue() {
         return value;
     }
 
-    public void setValue(String connectionId) {
+    public void setValue(UTF8Buffer connectionId) {
         this.value = connectionId;
     }
 

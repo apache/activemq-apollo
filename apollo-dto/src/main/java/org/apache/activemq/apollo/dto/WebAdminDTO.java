@@ -25,6 +25,7 @@ import java.util.Set;
 
 /**
  * <p>
+ * Holds the address and port to bind the web interface
  * </p>
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -32,6 +33,9 @@ import java.util.Set;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class WebAdminDTO {
 
+    /**
+     * The address and port to bind the web interface on in URL syntax.
+     */
     @XmlAttribute
     public String bind;
 

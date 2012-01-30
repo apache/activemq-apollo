@@ -16,11 +16,10 @@
  */
 package org.apache.activemq.apollo.openwire
 
-import command._
-import org.apache.activemq.apollo.util.path.Path
-import java.util.regex.{Matcher, Pattern}
 import org.apache.activemq.apollo.dto.{TopicDestinationDTO, QueueDestinationDTO, DestinationDTO}
-import org.apache.activemq.apollo.broker.{DestinationParser, LocalRouter}
+import org.apache.activemq.apollo.broker.DestinationParser
+import org.apache.activemq.apollo.openwire.command._
+import java.lang.String
 
 /**
  * <p>
@@ -31,79 +30,71 @@ import org.apache.activemq.apollo.broker.{DestinationParser, LocalRouter}
 object DestinationConverter {
 
   val OPENWIRE_PARSER = new DestinationParser();
+  OPENWIRE_PARSER.queue_prefix = ActiveMQDestination.QUEUE_QUALIFIED_PREFIX
+  OPENWIRE_PARSER.topic_prefix = ActiveMQDestination.TOPIC_QUALIFIED_PREFIX
+  OPENWIRE_PARSER.temp_queue_prefix = ActiveMQDestination.TEMP_QUEUE_QUALIFED_PREFIX
+  OPENWIRE_PARSER.temp_topic_prefix = ActiveMQDestination.TEMP_TOPIC_QUALIFED_PREFIX
+  OPENWIRE_PARSER.dsub_prefix = null
   OPENWIRE_PARSER.path_separator = "."
   OPENWIRE_PARSER.any_child_wildcard = "*"
   OPENWIRE_PARSER.any_descendant_wildcard = ">"
+  OPENWIRE_PARSER.sanitize_destinations = true
 
-  def to_destination_dto(domain: String, parts:Array[String]): DestinationDTO = domain match {
-    case "queue" => new QueueDestinationDTO(parts)
-    case "topic" => new TopicDestinationDTO(parts)
-    case _ => throw new Exception("Uknown destination domain: " + domain);
-  }
+  def to_destination_dto(dest: ActiveMQDestination, handler:OpenwireProtocolHandler): Array[DestinationDTO] = {
+    def fallback(value:String) = {
+      OPENWIRE_PARSER.decode_single_destination(dest.getQualifiedPrefix+value, null)
+    }
+    val rc = OPENWIRE_PARSER.decode_multi_destination(dest.getPhysicalName.toString, fallback)
+    rc.foreach { dest =>
+      if( dest.temp() ) {
+        import collection.JavaConversions._
+        // Put it back together...
+        val name = dest.path.map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(OPENWIRE_PARSER.path_separator)
 
-  def to_destination_dto(domain: String, path: Path): Array[DestinationDTO] = {
-      Array(to_destination_dto(domain, OPENWIRE_PARSER.path_parts(path)))
-  }
-
-  def to_destination_dto(dest: ActiveMQDestination): Array[DestinationDTO] = {
-    if( !dest.isComposite ) {
-      import ActiveMQDestination._
-      val physicalName = dest.getPhysicalName.replaceAll(Pattern.quote(":"), Matcher.quoteReplacement("%58"))
-
-      var path = OPENWIRE_PARSER.decode_path(physicalName)
-      dest.getDestinationType match {
-        case QUEUE_TYPE =>
-          to_destination_dto("queue", path)
-        case TOPIC_TYPE =>
-          to_destination_dto("topic", path)
-        case TEMP_QUEUE_TYPE =>
-          to_destination_dto("queue", Path("ActiveMQ", "Temp") + path)
-        case TEMP_TOPIC_TYPE =>
-          to_destination_dto("topic", Path("ActiveMQ", "Temp") + path)
-      }
-    } else {
-      dest.getCompositeDestinations.map { c =>
-        to_destination_dto(c)(0)
+        val (connectionid, rest) = name.splitAt(name.lastIndexOf(':'))
+        val real_path = ("temp" :: handler.broker.id :: OPENWIRE_PARSER.sanitize_destination_part(connectionid) :: OPENWIRE_PARSER.sanitize_destination_part(rest.substring(1)) :: Nil).toArray
+        dest.path = java.util.Arrays.asList(real_path:_*)
       }
     }
+    rc
   }
 
-  def to_activemq_destination(dest:Array[DestinationDTO]):ActiveMQDestination = {
+  def to_activemq_destination(dests:Array[DestinationDTO]):ActiveMQDestination = {
     import collection.JavaConversions._
-
-    val rc = dest.map { dest =>
-      var temp = false // dest.temp_owner != null
-      val name = OPENWIRE_PARSER.encode_path(asScalaBuffer(dest.path).toList match {
-        case "ActiveMQ" :: "Temp" :: rest =>
-          temp = true
-          rest
-        case rest =>
-          rest
-      }).replaceAll(Pattern.quote("%58"), Matcher.quoteReplacement(":"))
-
+    var wrapper: (String)=> ActiveMQDestination = null
+    
+    val rc = OPENWIRE_PARSER.encode_destination(dests.flatMap{ dest=>
+      val temp = dest.path.headOption == Some("temp")
       dest match {
         case dest:QueueDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempQueue(name)
+            if(wrapper==null) 
+              wrapper = (x)=>new ActiveMQTempQueue(x)
+            var path: Array[String] = Array(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
+            Some(new QueueDestinationDTO(path).temp(true))
           } else {
-            new ActiveMQQueue(name)
+            if(wrapper==null) 
+              wrapper = (x)=>new ActiveMQQueue(x)
+            Some(dest)
           }
         case dest:TopicDestinationDTO =>
           if( temp ) {
-            new ActiveMQTempTopic(name)
+            if(wrapper==null) 
+              wrapper = (x)=>new ActiveMQTempTopic(x)
+            var path: Array[String] = Array(dest.path.toList.drop(2).map(OPENWIRE_PARSER.unsanitize_destination_part(_)).mkString(":"))
+            Some(new TopicDestinationDTO(path).temp(true))
           } else {
-            new ActiveMQTopic(name)
+            if(wrapper==null) 
+              wrapper = (x)=>new ActiveMQTopic(x)
+            Some(dest)
           }
+        case _ => None 
       }
-    }
+    })
 
-    if( rc.length == 1) {
-      rc(0)
-    } else {
-      val c = new ActiveMQQueue()
-      c.setCompositeDestinations(rc)
-      c
-    }
-
+    if ( wrapper==null )
+      null
+    else
+      wrapper(rc)
   }
 }

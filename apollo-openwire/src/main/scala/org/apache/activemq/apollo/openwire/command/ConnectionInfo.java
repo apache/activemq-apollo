@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.command;
 
-import org.apache.activemq.apollo.openwire.support.state.CommandVisitor;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * 
@@ -28,10 +28,10 @@ public class ConnectionInfo extends BaseCommand {
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.CONNECTION_INFO;
 
     protected ConnectionId connectionId;
-    protected String clientId;
-    protected String clientIp;
-    protected String userName;
-    protected String password;
+    protected UTF8Buffer clientId;
+    protected UTF8Buffer clientIp;
+    protected UTF8Buffer userName;
+    protected UTF8Buffer password;
     protected BrokerId[] brokerPath;
     protected boolean brokerMasterConnector;
     protected boolean manageable;
@@ -85,11 +85,11 @@ public class ConnectionInfo extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getClientId() {
+    public UTF8Buffer getClientId() {
         return clientId;
     }
 
-    public void setClientId(String clientId) {
+    public void setClientId(UTF8Buffer clientId) {
         this.clientId = clientId;
     }
 
@@ -102,22 +102,22 @@ public class ConnectionInfo extends BaseCommand {
     /**
      * @openwire:property version=1
      */
-    public String getPassword() {
+    public UTF8Buffer getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(UTF8Buffer password) {
         this.password = password;
     }
 
     /**
      * @openwire:property version=1
      */
-    public String getUserName() {
+    public UTF8Buffer getUserName() {
         return userName;
     }
 
-    public void setUserName(String userName) {
+    public void setUserName(UTF8Buffer userName) {
         this.userName = userName;
     }
 
@@ -132,10 +132,6 @@ public class ConnectionInfo extends BaseCommand {
 
     public void setBrokerPath(BrokerId[] brokerPath) {
         this.brokerPath = brokerPath;
-    }
-
-    public Response visit(CommandVisitor visitor) throws Exception {
-        return visitor.processAddConnection(this);
     }
 
     /**
@@ -233,11 +229,11 @@ public class ConnectionInfo extends BaseCommand {
     /**
      * @openwire:property version=8
      */
-    public String getClientIp() {
+    public UTF8Buffer getClientIp() {
         return clientIp;
     }
 
-    public void setClientIp(String clientIp) {
+    public void setClientIp(UTF8Buffer clientIp) {
         this.clientIp = clientIp;
     }
 }

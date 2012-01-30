@@ -133,7 +133,7 @@ class Apollo extends Main with Action {
   var log_level:String = "NONE"
 
   @argument(name = "args", description = "apollo sub command arguments", multiValued=true)
-  var args:Array[String] = _
+  var args:Array[String] = Array()
 
   def execute(session: CommandSession): AnyRef = {
     

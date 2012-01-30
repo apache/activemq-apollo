@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.dto;
 
 import org.apache.activemq.apollo.util.ClassFinder;
-import org.apache.activemq.apollo.util.JaxbModule$;
+import org.apache.activemq.apollo.util.DtoModule$;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
@@ -90,7 +90,7 @@ public class XmlCodec {
 
     private static JAXBContext createContext() throws JAXBException {
         String packages = "";
-        for ( String p : JaxbModule$.MODULE$.packages()) {
+        for ( String p : DtoModule$.MODULE$.packages()) {
             if( packages.length() !=0 ) {
                 packages += ":";
             }

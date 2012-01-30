@@ -18,7 +18,7 @@ blog_post: true
 title: Apollo 1.0
 author: Hiram Chirino
 author_url: http://fusesource.com
-created_at: 2012-01-24 12:06:40 -0000
+created_at: 2012-02-02 12:06:40 -0000
 --- 
 
 The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
@@ -57,6 +57,9 @@ Noteworthy changes since the last beta include:
 * [APLO-128] - Simplify the leveldb-store's log record format so that every record has a checksum which can be used to quickly validate all read data in case your paranoid about data corruption in your FS
 * [APLO-130] - Allow acquired queue entries to get swapped.  This is especially handy if the entry was already persisted anyways.
 * [APLO-131] - Stores should track "storage schema version number" to detect when the store is incompatible with a new broker version.
+* [APLO-136] - Support dots in a dsub name
+* [APLO-141] - The connection screen displays 'transport: tcp' even though the connection came in over the tls port.
+* [APLO-139] - Simplify the JSON encoding of the @class field
 
 Further information:
 
