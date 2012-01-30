@@ -29,6 +29,7 @@ import java.lang.reflect.Method;
 import java.nio.channels.ReadableByteChannel;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -331,6 +332,8 @@ public final class OpenWireFormat {
         }
     }
 
+    final static ConcurrentHashMap<Integer, DataStreamMarshaller[]> versions = new ConcurrentHashMap<Integer, DataStreamMarshaller[]>();
+    
     /**
      * Allows you to dynamically switch the version of the openwire protocol
      * being used.
@@ -338,19 +341,25 @@ public final class OpenWireFormat {
      * @param version
      */
     public void setVersion(int version) {
-        String mfName = getClass().getPackage().getName()+".v" + version + ".MarshallerFactory";
-        Class mfClass;
-        try {
-            mfClass = Class.forName(mfName, false, getClass().getClassLoader());
-        } catch (ClassNotFoundException e) {
-            throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", could not load " + mfName).initCause(e);
+        // We use the version cache to avoid doing reflection every time the version gets set.
+        DataStreamMarshaller[] marshallers = versions.get(version);
+        if( marshallers ==null ) {
+            String mfName = getClass().getPackage().getName()+".v" + version + ".MarshallerFactory";
+            Class mfClass;
+            try {
+                mfClass = Class.forName(mfName, false, getClass().getClassLoader());
+            } catch (ClassNotFoundException e) {
+                throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", could not load " + mfName).initCause(e);
+            }
+            try {
+                Method method = mfClass.getMethod("createMarshallerMap", new Class[] { OpenWireFormat.class });
+                marshallers = (DataStreamMarshaller[]) method.invoke(null, new Object[] { this });
+            } catch (Throwable e) {
+                throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", " + mfName + " does not properly implement the createMarshallerMap method.").initCause(e);
+            }
+            versions.put(version, marshallers);
         }
-        try {
-            Method method = mfClass.getMethod("createMarshallerMap", new Class[] { OpenWireFormat.class });
-            dataMarshallers = (DataStreamMarshaller[]) method.invoke(null, new Object[] { this });
-        } catch (Throwable e) {
-            throw (IllegalArgumentException) new IllegalArgumentException("Invalid version: " + version + ", " + mfName + " does not properly implement the createMarshallerMap method.").initCause(e);
-        }
+        this.dataMarshallers = marshallers;
         this.version = version;
     }
 
