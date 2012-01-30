@@ -50,7 +50,7 @@ object OpenwireProtocolHandler extends Log {
   val preferred_wireformat_settings = new WireFormatInfo();
   preferred_wireformat_settings.setVersion(OpenWireFormat.DEFAULT_VERSION);
   preferred_wireformat_settings.setStackTraceEnabled(true);
-  preferred_wireformat_settings.setCacheEnabled(true);
+  preferred_wireformat_settings.setCacheEnabled(false);
   preferred_wireformat_settings.setTcpNoDelayEnabled(true);
   preferred_wireformat_settings.setTightEncodingEnabled(true);
   preferred_wireformat_settings.setSizePrefixDisabled(false);
@@ -65,6 +65,7 @@ object OpenwireProtocolHandler extends Log {
  */
 class OpenwireProtocolHandler extends ProtocolHandler {
 
+  var connection_log:Log = OpenwireProtocolHandler
   var minimum_protocol_version = 1
 
   import OpenwireProtocolHandler._
@@ -172,14 +173,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   override def on_transport_failure(error: IOException) = {
     if (!connection.stopped) {
-      error.printStackTrace
       suspend_read("shutdown")
-      debug(error, "Shutting connection down due to: %s", error)
+      connection_log.info(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       connection.stop
     }
   }
 
   override def on_transport_connected():Unit = {
+    connection_log = connection.connector.broker.connection_log
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
 
@@ -197,6 +198,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     reset {
       suspend_read("virtual host lookup")
       this.host = broker.get_default_virtual_host
+      connection_log = this.host.connection_log
       resume_read
       if(host==null) {
         async_die("Could not find default virtual host")
@@ -354,7 +356,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def die[T](msg: String, actual:Command=null):T = {
     if (!dead) {
       dead = true
-      debug("Shutting connection down due to: " + msg)
+
+      connection_log.info("OpenWire connection '%s' error: %s", security_context.remote_address, msg)
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
@@ -642,7 +645,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // We may need to add some headers..
       val delivery = new Delivery
       delivery.message = new OpenwireMessage(message)
-      delivery.size = message.getSize
+      delivery.size = {
+        val rc = message.getEncodedSize
+        if( rc != 0 )
+          rc
+        else
+          message.getSize
+      }
       delivery.uow = uow
 
       if( message.isResponseRequired ) {

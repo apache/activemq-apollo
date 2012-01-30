@@ -89,6 +89,22 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     public abstract org.apache.activemq.apollo.openwire.command.Message copy();
     public abstract void clearBody() throws OpenwireException;
 
+    protected int encodedSize;
+    public int getEncodedSize() {
+        return encodedSize;
+    }
+    public void setEncodedSize(int encodedSize) {
+        this.encodedSize = encodedSize;
+    }
+
+    protected Object cachedEncoding;
+    public Object getCachedEncoding() {
+        return cachedEncoding;
+    }
+    public void setCachedEncoding(Object cachedEncoding) {
+        this.cachedEncoding = cachedEncoding;
+    }
+
     // useful to reduce the memory footprint of a persisted message
     public void clearMarshalledState() {
         properties = null;

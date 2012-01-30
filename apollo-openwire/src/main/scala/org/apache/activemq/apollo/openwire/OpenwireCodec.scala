@@ -23,10 +23,13 @@ import OpenwireConstants._
 import java.nio.ByteBuffer
 import java.nio.channels.{SocketChannel, WritableByteChannel, ReadableByteChannel}
 import java.io.EOFException
-import org.fusesource.hawtbuf.{BufferEditor, DataByteArrayOutputStream, Buffer}
 import org.apache.activemq.apollo.broker.{Sizer, Message}
 import org.apache.activemq.apollo.openwire.codec.OpenWireFormat
 import org.apache.activemq.apollo.openwire.command._
+import org.apache.activemq.apollo.broker.BufferConversions._
+import org.fusesource.hawtbuf.{DataByteArrayInputStream, DataByteArrayOutputStream, AbstractVarIntSupport, Buffer}
+
+case class CachedEncoding(tight:Boolean, version:Int, buffer:Buffer) 
 
 /**
  * <p>
@@ -35,11 +38,64 @@ import org.apache.activemq.apollo.openwire.command._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object OpenwireCodec extends Sizer[Command] {
+
+  final val DB_VERSION = OpenWireFormat.DEFAULT_VERSION
+  final val DB_TIGHT_ENCODING = true
+
   def encode(message: Message):MessageRecord = {
-    throw new UnsupportedOperationException
+    val rc = new MessageRecord
+    rc.protocol = PROTOCOL
+    rc.expiration = message.expiration
+
+    val msg = message.asInstanceOf[OpenwireMessage];
+    rc.buffer = msg.message.getCachedEncoding match {
+      case CachedEncoding(tight, version, buffer) =>
+
+        val boas = new DataByteArrayOutputStream(
+          1 +
+          AbstractVarIntSupport.computeVarIntSize(version)+
+          buffer.length()
+        )
+
+        boas.writeBoolean(tight)
+        boas.writeVarInt(version)
+        boas.write(buffer)
+        boas.toBuffer
+
+      case _ =>
+
+        val db_format = new OpenWireFormat();
+        db_format.setCacheEnabled(false)
+        db_format.setTightEncodingEnabled(DB_TIGHT_ENCODING)
+        db_format.setVersion(DB_VERSION)
+
+        val size = msg.message.getEncodedSize
+        val boas = new DataByteArrayOutputStream(if(size==0) 1024 else size + 20)
+        boas.writeBoolean(DB_TIGHT_ENCODING)
+        boas.writeVarInt(DB_VERSION)
+        db_format.marshal(msg.message, boas);
+        boas.toBuffer
+
+    }
+    rc
   }
+  
   def decode(message: MessageRecord) = {
-    throw new UnsupportedOperationException
+    val buffer = message.buffer.buffer();
+    val bais = new DataByteArrayInputStream(message.buffer)
+    var tight: Boolean = bais.readBoolean()
+    var version: Int = bais.readVarInt()
+    buffer.moveHead(bais.getPos-buffer.offset)
+
+    val db_format = new OpenWireFormat();
+    db_format.setCacheEnabled(false)
+    db_format.setTightEncodingEnabled(tight)
+    db_format.setVersion(version)
+
+    val msg = db_format.unmarshal(bais).asInstanceOf[ActiveMQMessage]
+    msg.setEncodedSize(buffer.length)
+    msg.setCachedEncoding(CachedEncoding(tight, version, buffer))
+    new OpenwireMessage(msg)
   }
 
   def size(value: Command) = {
@@ -63,8 +119,7 @@ class OpenwireCodec extends ProtocolCodec {
   var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
   var write_buffer = ByteBuffer.allocate(0)
 
-  val format = new OpenWireFormat();
-
+  val format = new OpenWireFormat(1);
 
   def full = next_write_buffer.size() >= (write_buffer_size >> 1)
   def is_empty = write_buffer.remaining() == 0
@@ -84,8 +139,21 @@ class OpenwireCodec extends ProtocolCodec {
     } else {
       val was_empty = is_empty
       command match {
-        case frame:Command=>
-          format.marshal(frame, next_write_buffer)
+        case command:ActiveMQMessage=>
+          command.getCachedEncoding match {
+            case CachedEncoding(tight, version, buffer) =>
+              // We might be able to re-use the origin format of the message.
+              if( !format.isCacheEnabled && format.isTightEncodingEnabled==tight && format.getVersion==version ) {
+                next_write_buffer.write(buffer)
+              } else {
+                format.marshal(command, next_write_buffer)
+              }
+            case _ =>
+              format.marshal(command, next_write_buffer)
+          }
+          
+        case command:Command=>
+          format.marshal(command, next_write_buffer)
       }
       if( was_empty ) {
         ProtocolCodec.BufferState.WAS_EMPTY
@@ -199,7 +267,19 @@ class OpenwireCodec extends ProtocolCodec {
 
     read_waiting_on += 4
     next_action = read_header
-    rc.asInstanceOf[Command]
+    var command: Command = rc.asInstanceOf[Command]
+    
+    // If value caching is NOT enabled, then we potentially re-use the encode
+    // value of the message.
+    command match {
+      case message:ActiveMQMessage =>
+        message.setEncodedSize(size)
+        if( !format.isCacheEnabled ) {
+          message.setCachedEncoding(CachedEncoding(format.isTightEncodingEnabled, format.getVersion, buf))
+        }
+      case _ =>
+    }
+    command
   }
 
   def getLastWriteSize = 0
