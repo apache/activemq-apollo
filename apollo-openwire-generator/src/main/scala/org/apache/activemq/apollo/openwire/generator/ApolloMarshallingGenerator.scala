@@ -376,29 +376,29 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
   }
 
   protected def generateTightUnmarshalBodyForProperty(out: PrintWriter, property: JProperty, size: JAnnotationValue): Unit = {
-    var setter: String = property.getSetter.getSimpleName
-    var `type`: String = property.getType.getSimpleName
-    if (`type` == "boolean") {
+    var setter = property.getSetter.getSimpleName
+    var property_type = property.getType.getSimpleName
+    if (property_type == "boolean") {
       out.println("        info." + setter + "(bs.readBoolean());")
-    } else if (`type` == "byte") {
+    } else if (property_type == "byte") {
       out.println("        info." + setter + "(dataIn.readByte());")
-    } else if (`type` == "char") {
+    } else if (property_type == "char") {
       out.println("        info." + setter + "(dataIn.readChar());")
-    } else if (`type` == "short") {
+    } else if (property_type == "short") {
       out.println("        info." + setter + "(dataIn.readShort());")
-    } else if (`type` == "int") {
+    } else if (property_type == "int") {
       out.println("        info." + setter + "(dataIn.readInt());")
-    } else if (`type` == "long") {
+    } else if (property_type == "long") {
       out.println("        info." + setter + "(tightUnmarshalLong(wireFormat, dataIn, bs));")
-    } else if (`type` == "String") {
+    } else if (property_type == "String") {
       out.println("        info." + setter + "(tightUnmarshalString(dataIn, bs));")
-    } else if (`type` == "byte[]") {
+    } else if (property_type == "byte[]") {
       if (size != null) {
         out.println("        info." + setter + "(tightUnmarshalConstByteArray(dataIn, bs, " + size.asInt + "));")
       } else {
         out.println("        info." + setter + "(tightUnmarshalByteArray(dataIn, bs));")
       }
-    } else if (`type` == "Buffer") {
+    } else if (property_type == "Buffer") {
       out.println("        info." + setter + "(tightUnmarshalBuffer(dataIn, bs));")
     } else if (isThrowable(property.getType)) {
       out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")tightUnmarsalThrowable(wireFormat, dataIn, bs));")
@@ -443,29 +443,29 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       var annotation: JAnnotation = property.getAnnotation("openwire:property")
       var size: JAnnotationValue = annotation.getValue("size")
       var propertyType: JClass = property.getType
-      var `type`: String = propertyType.getSimpleName
+      var property_type: String = propertyType.getSimpleName
       var getter: String = "info." + property.getGetter.getSimpleName + "()"
-      if (`type` == "boolean") {
+      if (property_type == "boolean") {
         out.println("        bs.writeBoolean(" + getter + ");")
-      } else if (`type` == "byte") {
+      } else if (property_type == "byte") {
         baseSize += 1
-      } else if (`type` == "char") {
+      } else if (property_type == "char") {
         baseSize += 2
-      } else if (`type` == "short") {
+      } else if (property_type == "short") {
         baseSize += 2
-      } else if (`type` == "int") {
+      } else if (property_type == "int") {
         baseSize += 4
-      } else if (`type` == "long") {
+      } else if (property_type == "long") {
         out.println("        rc += tightMarshalLong1(wireFormat, " + getter + ", bs);")
-      } else if (`type` == "String") {
+      } else if (property_type == "String") {
         out.println("        rc += tightMarshalString1(" + getter + ", bs);")
-      } else if (`type` == "byte[]") {
+      } else if (property_type == "byte[]") {
         if (size == null) {
           out.println("        rc += tightMarshalByteArray1(" + getter + ", bs);")
         } else {
           out.println("        rc += tightMarshalConstByteArray1(" + getter + ", bs, " + size.asInt + ");")
         }
-      } else if (`type` == "Buffer") {
+      } else if (property_type == "Buffer") {
         out.println("        rc += tightMarshalBuffer1(" + getter + ", bs);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
@@ -491,29 +491,29 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       var annotation: JAnnotation = property.getAnnotation("openwire:property")
       var size: JAnnotationValue = annotation.getValue("size")
       var propertyType: JClass = property.getType
-      var `type`: String = propertyType.getSimpleName
+      var property_type: String = propertyType.getSimpleName
       var getter: String = "info." + property.getGetter.getSimpleName + "()"
-      if (`type` == "boolean") {
+      if (property_type == "boolean") {
         out.println("        bs.readBoolean();")
-      } else if (`type` == "byte") {
+      } else if (property_type == "byte") {
         out.println("        dataOut.writeByte(" + getter + ");")
-      } else if (`type` == "char") {
+      } else if (property_type == "char") {
         out.println("        dataOut.writeChar(" + getter + ");")
-      } else if (`type` == "short") {
+      } else if (property_type == "short") {
         out.println("        dataOut.writeShort(" + getter + ");")
-      } else if (`type` == "int") {
+      } else if (property_type == "int") {
         out.println("        dataOut.writeInt(" + getter + ");")
-      } else if (`type` == "long") {
+      } else if (property_type == "long") {
         out.println("        tightMarshalLong2(wireFormat, " + getter + ", dataOut, bs);")
-      } else if (`type` == "String") {
+      } else if (property_type == "String") {
         out.println("        tightMarshalString2(" + getter + ", dataOut, bs);")
-      } else if (`type` == "byte[]") {
+      } else if (property_type == "byte[]") {
         if (size != null) {
           out.println("        tightMarshalConstByteArray2(" + getter + ", dataOut, bs, " + size.asInt + ");")
         } else {
           out.println("        tightMarshalByteArray2(" + getter + ", dataOut, bs);")
         }
-      } else if (`type` == "Buffer") {
+      } else if (property_type == "Buffer") {
         out.println("        tightMarshalBuffer2(" + getter + ", dataOut, bs);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
@@ -538,29 +538,29 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
       var annotation: JAnnotation = property.getAnnotation("openwire:property")
       var size: JAnnotationValue = annotation.getValue("size")
       var propertyType: JClass = property.getType
-      var `type`: String = propertyType.getSimpleName
+      var property_type: String = propertyType.getSimpleName
       var getter: String = "info." + property.getGetter.getSimpleName + "()"
-      if (`type` == "boolean") {
+      if (property_type == "boolean") {
         out.println("        dataOut.writeBoolean(" + getter + ");")
-      } else if (`type` == "byte") {
+      } else if (property_type == "byte") {
         out.println("        dataOut.writeByte(" + getter + ");")
-      } else if (`type` == "char") {
+      } else if (property_type == "char") {
         out.println("        dataOut.writeChar(" + getter + ");")
-      } else if (`type` == "short") {
+      } else if (property_type == "short") {
         out.println("        dataOut.writeShort(" + getter + ");")
-      } else if (`type` == "int") {
+      } else if (property_type == "int") {
         out.println("        dataOut.writeInt(" + getter + ");")
-      } else if (`type` == "long") {
+      } else if (property_type == "long") {
         out.println("        looseMarshalLong(wireFormat, " + getter + ", dataOut);")
-      } else if (`type` == "String") {
+      } else if (property_type == "String") {
         out.println("        looseMarshalString(" + getter + ", dataOut);")
-      } else if (`type` == "byte[]") {
+      } else if (property_type == "byte[]") {
         if (size != null) {
           out.println("        looseMarshalConstByteArray(wireFormat, " + getter + ", dataOut, " + size.asInt + ");")
         } else {
           out.println("        looseMarshalByteArray(wireFormat, " + getter + ", dataOut);")
         }
-      } else if (`type` == "Buffer") {
+      } else if (property_type == "Buffer") {
         out.println("        looseMarshalBuffer(wireFormat, " + getter + ", dataOut);")
       } else if (propertyType.isArrayType) {
         if (size != null) {
@@ -596,28 +596,28 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
 
   protected def generateLooseUnmarshalBodyForProperty(out: PrintWriter, property: JProperty, size: JAnnotationValue): Unit = {
     var setter: String = property.getSetter.getSimpleName
-    var `type`: String = property.getType.getSimpleName
-    if (`type` == "boolean") {
+    var property_type: String = property.getType.getSimpleName
+    if (property_type == "boolean") {
       out.println("        info." + setter + "(dataIn.readBoolean());")
-    } else if (`type` == "byte") {
+    } else if (property_type == "byte") {
       out.println("        info." + setter + "(dataIn.readByte());")
-    } else if (`type` == "char") {
+    } else if (property_type == "char") {
       out.println("        info." + setter + "(dataIn.readChar());")
-    } else if (`type` == "short") {
+    } else if (property_type == "short") {
       out.println("        info." + setter + "(dataIn.readShort());")
-    } else if (`type` == "int") {
+    } else if (property_type == "int") {
       out.println("        info." + setter + "(dataIn.readInt());")
-    } else if (`type` == "long") {
+    } else if (property_type == "long") {
       out.println("        info." + setter + "(looseUnmarshalLong(wireFormat, dataIn));")
-    } else if (`type` == "String") {
+    } else if (property_type == "String") {
       out.println("        info." + setter + "(looseUnmarshalString(dataIn));")
-    } else if (`type` == "byte[]") {
+    } else if (property_type == "byte[]") {
       if (size != null) {
         out.println("        info." + setter + "(looseUnmarshalConstByteArray(dataIn, " + size.asInt + "));")
       } else {
         out.println("        info." + setter + "(looseUnmarshalByteArray(dataIn));")
       }
-    } else if (`type` == "Buffer") {
+    } else if (property_type == "Buffer") {
       out.println("        info." + setter + "(looseUnmarshalBuffer(dataIn));")
     } else if (isThrowable(property.getType)) {
       out.println("        info." + setter + "((" + property.getType.getQualifiedName + ")looseUnmarsalThrowable(wireFormat, dataIn));")
