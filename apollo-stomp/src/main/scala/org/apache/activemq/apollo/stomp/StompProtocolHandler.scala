@@ -37,7 +37,7 @@ import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.dto._
-import org.fusesource.hawtdispatch.transport.{HeartBeatMonitor, SslTransport}
+import org.fusesource.hawtdispatch.transport.{SecureTransport, HeartBeatMonitor, SslTransport}
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -824,9 +824,9 @@ class StompProtocolHandler extends ProtocolHandler {
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
     connection.transport match {
-      case t:SslTransport=>
+      case t:SecureTransport=>
         security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
-      case _ => None
+      case _ =>
     }
 
     security_context.local_address = connection.transport.getLocalAddress

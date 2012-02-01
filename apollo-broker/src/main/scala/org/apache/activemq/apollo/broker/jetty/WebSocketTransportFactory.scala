@@ -39,6 +39,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import org.fusesource.hawtdispatch.transport.ProtocolCodec.BufferState
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import java.io.{EOFException, IOException}
+import java.security.cert.X509Certificate
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -153,8 +154,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       new URI(uri.getScheme + "://" + uri.getHost + ":" + connector.getLocalPort + prefix).toString
     }
 
-    def getConnectAddress = getBoundAddress
-
     def getSocketAddress = new InetSocketAddress(uri.getHost, connector.getLocalPort)
 
     val pending_connects = new ArrayBlockingQueue[WebSocketTransport](100)
@@ -184,7 +183,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
    *
    */
   case class WebSocketTransport(server: WsTransportServer, request: HttpServletRequest, protocol: String) 
-          extends BaseService with WebSocket.OnTextMessage with WebSocket.OnBinaryMessage with Transport with ScatteringByteChannel with GatheringByteChannel {
+          extends BaseService with WebSocket.OnTextMessage with WebSocket.OnBinaryMessage with SecureTransport with ScatteringByteChannel with GatheringByteChannel {
 
     /////////////////////////////////////////////////////////////////////////
     // Transport interface methods.
@@ -195,6 +194,9 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     @BeanProperty
     var transportListener: TransportListener = _
+
+    val certificates = request.getAttribute("javax.servlet.request.X509Certificate").asInstanceOf[Array[X509Certificate]]
+    def getPeerX509Certificates = certificates
 
     var protocolCodec: ProtocolCodec = _
 
@@ -236,21 +238,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     
     def getLocalAddress = new InetSocketAddress(request.getLocalAddr, request.getLocalPort)
     def getRemoteAddress = new InetSocketAddress(request.getRemoteHost, request.getRemotePort)
-    def getTypeId = server.uri.getScheme
 
     def isConnected = connection == null || connection.isOpen
-    def isDisposed = connection == null
-    def isFaultTolerant = false
+    def isClosed = connection == null
 
-    def reconnect(p1: URI) = throw new UnsupportedOperationException()
-
-    def narrow[T](target: Class[T]): T = {
-      if (target.isAssignableFrom(getClass())) {
-        return target.cast(this);
-      }
-      return null;
-    }
-    
     /////////////////////////////////////////////////////////////////////////
     //
     // WebSocket Lifecycle Callbacks...

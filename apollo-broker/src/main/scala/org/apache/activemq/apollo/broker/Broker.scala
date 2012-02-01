@@ -36,6 +36,7 @@ import org.fusesource.hawtdispatch.TaskTracker._
 import java.util.concurrent.TimeUnit
 import security.SecuredResource.BrokerKind
 import reflect.BeanProperty
+import java.net.InetSocketAddress
 
 /**
  * <p>
@@ -615,7 +616,10 @@ class Broker() extends BaseService with SecuredResource {
 
   //useful for testing
   def get_connect_address = {
-    Option(config.client_address).getOrElse(first_accepting_connector.get.transport_server.getConnectAddress)
+    Option(config.client_address).getOrElse {
+      val address= get_socket_address.asInstanceOf[InetSocketAddress]
+      "%s:%d".format(address.getHostName, address.getPort)
+    }
   }
 
   def get_socket_address = {

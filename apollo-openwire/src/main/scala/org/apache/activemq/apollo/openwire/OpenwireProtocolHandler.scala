@@ -40,6 +40,8 @@ import protocol._
 import security.SecurityContext
 import DestinationConverter._
 import Buffer._
+import java.net.InetSocketAddress
+import java.security.cert.X509Certificate
 
 object OpenwireProtocolHandler extends Log {
   def unit:Unit = {}
@@ -417,7 +419,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val brokerInfo = new BrokerInfo();
     brokerInfo.setBrokerId(new BrokerId(utf8(host.config.id)));
     brokerInfo.setBrokerName(utf8(host.config.id));
-    brokerInfo.setBrokerURL(utf8(host.broker.get_connect_address));
+
+
+    brokerInfo.setBrokerURL(utf8("tcp://"+host.broker.get_connect_address));
     connection_session.offer(brokerInfo);
   }
 
@@ -429,6 +433,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val id = info.getConnectionId()
     if (connection_context==null) {
       new ConnectionContext(info).attach
+
+      connection.transport match {
+        case t:SecureTransport=>
+          security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
+        case _ =>
+      }
 
       security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
       security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
