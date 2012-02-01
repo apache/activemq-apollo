@@ -23,8 +23,8 @@ import path._
 import path.PathParser.PathException
 import java.util.concurrent.TimeUnit
 import scala.Array
-import java.util.{Arrays, ArrayList}
-import collection.mutable.{LinkedHashMap, HashMap}
+import java.util.ArrayList
+import collection.mutable.LinkedHashMap
 import collection.{Iterable, JavaConversions}
 import security.SecuredResource.{TopicKind, QueueKind}
 import security.{SecuredResource, SecurityContext}
@@ -900,14 +900,15 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     tracker.callback {
-      // Now that we have restored persistent destinations,
-      // make sure we create any NON-wildcard destinations
-      // explicitly listed in the config.
+      dispatch_queue {
+        // Now that we have restored persistent destinations,
+        // make sure we create any NON-wildcard destinations
+        // explicitly listed in the config.
 
-      create_configure_destinations
-      on_completed.run()
+        create_configure_destinations
+        on_completed.run()
+      }
     }
-
 
   }
   
