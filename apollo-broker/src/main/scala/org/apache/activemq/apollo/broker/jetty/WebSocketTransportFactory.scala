@@ -221,6 +221,12 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       inbound_dispatch_queue.suspend();
       drain_outbound_events.setTargetQueue(dispatchQueue)
       transportListener.onTransportConnected();
+
+      inbound.synchronized {
+        inbound_capacity_remaining = 1024*64
+        inbound.notify();
+      }
+
       on_completed.run()
     }
   
@@ -275,10 +281,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       onMessage(buffer.data, buffer.offset, buffer.length)
     }
 
-    var inbound_capacity_remaining = 1024 * 64;
+    var inbound_capacity_remaining = 0;
     val inbound = ListBuffer[Buffer]()
 
-    var inbound_dispatch_queue = dispatchQueue
+    var inbound_dispatch_queue:DispatchQueue = _
 
     def resumeRead() = {
       inbound_dispatch_queue.resume()
@@ -292,7 +298,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def onMessage(data: Array[Byte], offset: Int, length: Int): Unit = {
       inbound.synchronized {
         // flow control check..
-        while (inbound_capacity_remaining <= 0 && service_state.is_started) {
+        while (inbound_capacity_remaining <= 0 && service_state.is_upward ) {
           inbound.wait();
         }
         inbound_capacity_remaining -= length;
@@ -360,7 +366,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
   
     protected def drain_inbound: Unit = {
-      dispatch_queue.assertExecuting()
+      inbound_dispatch_queue.assertExecuting()
       try {
         //        var initial = protocolCodec.getReadCounter
         //        while (codec.getReadCounter - initial < codec.getReadBufferSize << 2) {

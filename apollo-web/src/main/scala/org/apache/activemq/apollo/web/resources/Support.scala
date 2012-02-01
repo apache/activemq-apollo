@@ -33,6 +33,7 @@ import org.apache.activemq.apollo.util._
 import java.net.{InetSocketAddress, URI}
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.dto.ErrorDTO
+import org.fusesource.hawtdispatch._
 
 object Resource extends Log {
 
@@ -112,7 +113,7 @@ abstract class Resource(parent:Resource=null) {
   }
 
 
-  def authorize[T](authenticator:Authenticator, authorizer:Authorizer, action:String, resource:SecuredResource, block: =>FutureResult[T]):FutureResult[T] = {
+  def authorize[T](authenticator:Authenticator, authorizer:Authorizer, action:String, resource:SecuredResource)(block: =>FutureResult[T]):FutureResult[T] = {
     if ( authenticator != null ) {
       val rc = FutureResult[T]()
       authenticate(authenticator) { security_context =>
@@ -138,36 +139,72 @@ abstract class Resource(parent:Resource=null) {
   }
 
   protected def monitoring[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, "monitor", broker, func)
+    authorize(broker.authenticator, broker.authorizer, "monitor", broker) {
+      broker.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def admining[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, "admin", broker, func)
+    authorize(broker.authenticator, broker.authorizer, "admin", broker) {
+      broker.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def configing[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(broker.authenticator, broker.authorizer, "config", broker, func)
+    authorize(broker.authenticator, broker.authorizer, "config", broker) {
+      broker.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def admining[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(host.authenticator, host.authorizer, "admin", host, func)
+    authorize(host.authenticator, host.authorizer, "admin", host) {
+      host.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
   protected def monitoring[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(host.authenticator, host.authorizer, "monitor", host, func)
+    authorize(host.authenticator, host.authorizer, "monitor", host){
+      host.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def admining[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "admin", dest, func)
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "admin", dest) {
+      dest.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
   protected def monitoring[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest, func)
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest){
+      dest.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def admining[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer,"admin", dest, func)
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer,"admin", dest) {
+      dest.virtual_host.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
   protected def monitoring[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
-    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest, func)
+    authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest) {
+      dest.virtual_host.dispatch_queue.flatFuture {
+        func
+      }
+    }
   }
 
   protected def authenticate[T](authenticator:Authenticator)(func: (SecurityContext)=>Unit): Unit = {

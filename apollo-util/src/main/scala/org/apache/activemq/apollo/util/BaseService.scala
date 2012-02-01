@@ -41,12 +41,14 @@ trait BaseService extends Service with Dispatched {
     def is_created = false
     def is_starting = false
     def is_started = false
+    def is_upward = is_started | is_starting | is_created
 
     def is_starting_or_started = is_starting | is_started
 
     def is_stopping = false
     def is_stopped= false
     def is_failed= false
+    def is_downward = is_stopped | is_stopping | is_failed
   }
 
   protected class CREATED extends State { override def is_created = true  }
