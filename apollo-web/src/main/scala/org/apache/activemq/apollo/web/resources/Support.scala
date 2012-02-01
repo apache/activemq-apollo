@@ -29,7 +29,6 @@ import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import java.io.UnsupportedEncodingException
 import org.apache.activemq.apollo.broker._
 import security.{SecuredResource, Authorizer, SecurityContext, Authenticator}
-import util.continuations._
 import org.apache.activemq.apollo.util._
 import java.net.{InetSocketAddress, URI}
 import java.security.cert.X509Certificate
@@ -249,9 +248,8 @@ abstract class Resource(parent:Resource=null) {
           }
         }
       }
-
-      reset {
-        if( authenticator.authenticate(security_context)==null ) {
+      authenticator.authenticate(security_context) { failure=>
+        if( failure==null ) {
           call_func_with_security
         } else {
           func(null)

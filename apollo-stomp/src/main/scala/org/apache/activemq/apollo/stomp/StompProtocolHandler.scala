@@ -33,8 +33,6 @@ import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import path.PathParser
-import path.PathParser._
-import scala.util.continuations._
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
@@ -55,7 +53,6 @@ object BufferSupport {
   implicit def to_rich_buffer(value:Buffer):RichBuffer = RichBuffer(value)
 }
 
-import BufferSupport._
 
 object StompProtocolHandler extends Log {
 
@@ -78,9 +75,6 @@ object StompProtocolHandler extends Log {
   val WAITING_ON_SHUTDOWN: () => String = () => {
     "shutdown"
   }
-
-  def noop = shift {  k: (Unit=>Unit) => k() }
-  def unit:Unit = {}
 }
 
 /**
@@ -908,53 +902,48 @@ class StompProtocolHandler extends ProtocolHandler {
       codec.direct_buffer_allocator = this.host.direct_buffer_allocator
     }
 
-    reset {
-      suspend_read("virtual host lookup")
-      val host_header = get(headers, HOST)
-      val host = host_header match {
-        case None=>
-          connection.connector.broker.get_default_virtual_host
-        case Some(host)=>
-          connection.connector.broker.get_virtual_host(host)
-      }
-      resume_read
+    suspend_read("virtual host lookup")
+    val host_header = get(headers, HOST)
 
-      if(host==null) {
-        async_die("Invalid virtual host: "+host_header.get)
-        noop
-      } else if(!host.service_state.is_started) {
-        var headers = (MESSAGE_HEADER, encode_header("Virtual host stopped")) :: Nil
-        host.client_redirect.foreach(x=> headers ::= REDIRECT_HEADER->encode_header(x) )
-        async_die(headers, "")
-        noop
-      } else {
-        this.host=host
-        security_context.session_id = Some("%s-%x".format(destination_parser.sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
-        connection_log = host.connection_log
-        if( host.authenticator!=null &&  host.authorizer!=null ) {
-          suspend_read("authenticating and authorizing connect")
-          var auth_failure = host.authenticator.authenticate(security_context)
-          if( auth_failure!=null ) {
-            async_die(auth_failure+". Credentials="+security_context.credential_dump)
-            noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
-            async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
-            noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
-            async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
-            noop // to make the cps compiler plugin happy.
-          } else {
-            resume_read
-            send_connected
-            noop // to make the cps compiler plugin happy.
-          }
+    broker.dispatch_queue {
+      val host = host_header match {
+        case None=> broker.default_virtual_host
+        case Some(host)=> broker.get_virtual_host(host)
+      }
+      dispatchQueue {
+        resume_read
+        if(host==null) {
+          async_die("Invalid virtual host: "+host_header.get)
+        } else if(!host.service_state.is_started) {
+          var headers = (MESSAGE_HEADER, encode_header("Virtual host stopped")) :: Nil
+          host.client_redirect.foreach(x=> headers ::= REDIRECT_HEADER->encode_header(x) )
+          async_die(headers, "")
         } else {
-          send_connected
-          noop // to make the cps compiler plugin happy.
+          this.host=host
+          security_context.session_id = Some("%s-%x".format(destination_parser.sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
+          connection_log = host.connection_log
+          if( host.authenticator!=null &&  host.authorizer!=null ) {
+            suspend_read("authenticating and authorizing connect")
+            host.authenticator.authenticate(security_context) { auth_failure=>
+              dispatchQueue {
+                if( auth_failure!=null ) {
+                  async_die(auth_failure+". Credentials="+security_context.credential_dump)
+                } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
+                  async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
+                } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
+                  async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
+                } else {
+                  resume_read
+                  send_connected
+                }
+              }
+            }
+          } else {
+            send_connected
+          }
         }
       }
     }
-
   }
 
   def get(headers:HeaderMap, names:List[AsciiBuffer]):List[Option[AsciiBuffer]] = {
@@ -1013,17 +1002,19 @@ class StompProtocolHandler extends ProtocolHandler {
 
         // don't process frames until producer is connected...
         connection.transport.suspendRead
-        reset {
+        host.dispatch_queue {
           val rc = host.router.connect(destination, route, security_context)
-          rc match {
-            case Some(failure) =>
-              async_die(failure)
-            case None =>
-              if (!connection.stopped) {
-                resume_read
-                producerRoutes.put(key, route)
-                send_via_route(destination, route, frame, uow)
-              }
+          dispatchQueue {
+            rc match {
+              case Some(failure) =>
+                async_die(failure)
+              case None =>
+                if (!connection.stopped) {
+                  resume_read
+                  producerRoutes.put(key, route)
+                  send_via_route(destination, route, frame, uow)
+                }
+            }
           }
         }
 
@@ -1258,38 +1249,19 @@ class StompProtocolHandler extends ProtocolHandler {
     val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, credit_window, include_seq, from_seq, browser_end);
     consumers += (id -> consumer)
 
-    reset {
+    host.dispatch_queue {
       val rc = host.router.bind(destination, consumer, security_context)
       consumer.release
-      rc match {
-        case Some(reason)=>
-          consumers -= id
-          async_die(reason)
-        case None =>
-          send_receipt(headers)
-          unit
+      dispatchQueue {
+        rc match {
+          case Some(reason)=>
+            consumers -= id
+            async_die(reason)
+          case None =>
+            send_receipt(headers)
+        }
       }
     }
-
-//      reset {
-//        // create a queue and bind the consumer to it.
-//        val x= host.router.get_or_create_queue(binding, security_context)
-//        x match {
-//          case Success(queue) =>
-//            val rc = queue.bind(consumer, security_context)
-//            consumer.release
-//            rc match {
-//              case Failure(reason)=>
-//                consumers -= id
-//                async_die(reason)
-//              case _ =>
-//                send_receipt(headers)
-//            }
-//          case Failure(reason) =>
-//            consumers -= id
-//            async_die(reason)
-//        }
-//      }
   }
 
   def on_stomp_unsubscribe(headers:HeaderMap):Unit = {

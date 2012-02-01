@@ -22,7 +22,6 @@ import org.apache.activemq.apollo.broker.security.SecurityContext
 import collection.mutable.HashMap
 import DestinationConverter._
 import support.advisory.AdvisorySupport
-import scala.util.continuations._
 import org.apache.activemq.apollo.util._
 import java.util.Map.Entry
 import org.apache.activemq.apollo.broker._
@@ -184,13 +183,10 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
         // create the producer route...
         val route = new ProducerRoute
         producerRoutes.put(key, route)
-        reset {
-          val rc = router.connect(dest, route, null)
-          rc match {
-            case Some(failure) =>
-              warn("Could not connect to advisory topic: " + message.getDestination)
-            case None =>
-          }
+        val rc = router.connect(dest, route, null)
+        rc match {
+          case Some(failure) => warn("Could not connect to advisory topic: " + message.getDestination)
+          case None =>
         }
         route
 

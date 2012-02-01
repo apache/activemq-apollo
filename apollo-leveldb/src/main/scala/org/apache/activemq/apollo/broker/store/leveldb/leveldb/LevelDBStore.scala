@@ -26,10 +26,8 @@ import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.ListEventAggregator
 import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
-import scala.util.continuations._
 import java.io._
 import org.apache.activemq.apollo.web.resources.ViewHelper
-import collection.mutable.ListBuffer
 import org.fusesource.hawtbuf.Buffer
 
 /**

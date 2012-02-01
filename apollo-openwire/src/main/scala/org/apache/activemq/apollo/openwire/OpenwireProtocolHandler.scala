@@ -30,7 +30,6 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import scala.util.continuations._
 import org.fusesource.hawtdispatch.transport._
 import codec.OpenWireFormat
 import command._
@@ -196,13 +195,16 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     connection.transport.offer(preferred_wireformat_settings)
 
     resume_read
-    reset {
-      suspend_read("virtual host lookup")
-      this.host = broker.get_default_virtual_host
-      connection_log = this.host.connection_log
-      resume_read
-      if(host==null) {
-        async_die("Could not find default virtual host")
+    suspend_read("virtual host lookup")
+    broker.dispatch_queue {
+      var host = broker.get_default_virtual_host
+      dispatchQueue {
+        this.host = host
+        connection_log = this.host.connection_log
+        resume_read
+        if(host==null) {
+          async_die("Could not find default virtual host")
+        }
       }
     }
   }
@@ -432,28 +434,24 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
       security_context.session_id = Some(OPENWIRE_PARSER.sanitize_destination_part(info.getConnectionId.toString))
 
-      reset {
-        if( host.authenticator!=null &&  host.authorizer!=null ) {
-          suspend_read("authenticating and authorizing connect")
-          val auth_failure = host.authenticator.authenticate(security_context)
-          if( auth_failure!=null ) {
-            async_die(auth_failure+". Credentials="+security_context.credential_dump)
-            noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
-            async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
-            noop // to make the cps compiler plugin happy.
-          } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
-            async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
-            noop // to make the cps compiler plugin happy.
-          } else {
-            resume_read
-            ack(info);
-            noop
+      if( host.authenticator!=null &&  host.authorizer!=null ) {
+        suspend_read("authenticating and authorizing connect")
+        host.authenticator.authenticate(security_context) { auth_failure =>
+          dispatchQueue {
+            if( auth_failure!=null ) {
+              async_die(auth_failure+". Credentials="+security_context.credential_dump)
+            } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
+              async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
+            } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
+              async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
+            } else {
+              resume_read
+              ack(info);
+            }
           }
-        } else {
-          ack(info);
-          noop
         }
+      } else {
+        ack(info);
       }
     } else {
       ack(info);
@@ -493,18 +491,20 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 //    if( info.getDestination.isTemporary ) {
 //      destinations.foreach(_.temp_owner = connection.id)
 //    }
-    reset{
+    host.dispatch_queue {
       val rc = info.getOperationType match {
         case DestinationInfo.ADD_OPERATION_TYPE=>
           host.router.create(destinations, security_context)
         case DestinationInfo.REMOVE_OPERATION_TYPE=>
           host.router.delete(destinations, security_context)
       }
-      rc match {
-        case None =>
-          ack(info)
-        case Some(error)=>
-          ack(info)
+      dispatchQueue {
+        rc match {
+          case None =>
+            ack(info)
+          case Some(error)=>
+            ack(info)
+        }
       }
     }
   }
@@ -619,17 +619,19 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
         // don't process frames until producer is connected...
         connection.transport.suspendRead
-        reset {
+        host.dispatch_queue {
           val rc = host.router.connect(destiantion, route, security_context)
-          rc match {
-            case Some(failure) =>
-              async_die(failure, msg)
-            case None =>
-              if (!connection.stopped) {
-                resume_read
-                producerRoutes.put(key, route)
-                send_via_route(route, msg, uow)
-              }
+          dispatchQueue {
+            rc match {
+              case Some(failure) =>
+                async_die(failure, msg)
+              case None =>
+                if (!connection.stopped) {
+                  resume_read
+                  producerRoutes.put(key, route)
+                  send_via_route(route, msg, uow)
+                }
+            }
           }
         }
 
@@ -750,8 +752,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       all_sessions.remove(info.getSessionId)
     }
   }
-
-  def noop = shift {  k: (Unit=>Unit) => k() }
 
   class ProducerContext(val parent: SessionContext, val info: ProducerInfo) {
     def attach = {
@@ -875,18 +875,18 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         destination = Array(rc)
       }
 
-      reset {
+      host.dispatch_queue {
         val rc = host.router.bind(destination, this, security_context)
-        rc match {
-          case None =>
-            ack(info)
-            noop
-          case Some(reason) =>
-            async_fail(reason, info)
-            noop
+        this.release
+        dispatchQueue {
+          rc match {
+            case None =>
+              ack(info)
+            case Some(reason) =>
+              async_fail(reason, info)
+          }
         }
       }
-      this.release
     }
 
     def dettach = {
@@ -962,13 +962,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           }
         })
         if( info.getDestination.isTemporary ) {
-          reset {
+          dispatch_queue {
             val rc = host.router.delete(destination, security_context)
-            rc match {
-              case Some(error) =>
-                async_die(error)
-              case None =>
-                unit
+            dispatchQueue {
+              rc match {
+                case Some(error) => async_die(error)
+                case None =>
+              }
             }
           }
         }

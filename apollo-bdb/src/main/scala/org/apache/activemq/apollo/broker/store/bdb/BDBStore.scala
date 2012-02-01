@@ -24,10 +24,9 @@ import atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch.ListEventAggregator
-import org.apache.activemq.apollo.dto.{StoreStatusDTO, IntMetricDTO, TimeMetricDTO, StoreDTO}
+import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
-import java.io.{InputStream, OutputStream, File}
-import scala.util.continuations._
+import java.io.{InputStream, OutputStream}
 import org.fusesource.hawtbuf.Buffer
 
 /**
@@ -42,7 +41,6 @@ object BDBStore extends Log {
  */
 class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
 
-  import BDBStore._
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)

@@ -603,11 +603,13 @@ class Broker() extends BaseService with SecuredResource {
     }
   }
 
-  def get_virtual_host(name: AsciiBuffer) = dispatch_queue ! {
+  def get_virtual_host(name: AsciiBuffer) = {
+    dispatch_queue.assertExecuting()
     virtual_hosts_by_hostname.getOrElse(name, null)
   }
 
-  def get_default_virtual_host = dispatch_queue ! {
+  def get_default_virtual_host = {
+    dispatch_queue.assertExecuting()
     default_virtual_host
   }
 

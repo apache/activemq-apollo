@@ -63,8 +63,8 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
    * execute on the global thread pool since JAAS requests could
    * potentially perform a blocking wait (e.g. LDAP request).
    */
-  def authenticate(security_ctx: SecurityContext) = BLOCKABLE_THREAD_POOL ! {
-    _authenticate(security_ctx)
+  def authenticate(security_ctx: SecurityContext)(cb:(String)=>Unit) = BLOCKABLE_THREAD_POOL {
+    cb(_authenticate(security_ctx))
   }
 
   /**

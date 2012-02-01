@@ -1008,49 +1008,44 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   def topic_domain:Domain[_ <: DomainDestination, TopicDestinationDTO] = local_topic_domain
   def dsub_domain:Domain[_ <: DomainDestination, DurableSubscriptionDestinationDTO] = local_dsub_domain
 
-  def bind(destinations: Array[DestinationDTO], consumer: DeliveryConsumer, security: SecurityContext) = {
-    consumer.retain
-    dispatch_queue ! {
-      var rc:Option[String] = None
-      if(rc.isEmpty && !virtual_host.service_state.is_started) {
-        rc = Some("virtual host stopped.")
-      } else if (rc.isEmpty) {
-        try {
-          val actions = destinations.map { destination =>
-            destination match {
-              case destination:TopicDestinationDTO =>
-                val path = destination_parser.decode_path(destination.path)
-                val allowed = topic_domain.can_bind_all(path, destination, consumer, security)
-                def perform() = topic_domain.bind(path, destination, consumer, security)
-                (allowed, perform _)
-              case destination:QueueDestinationDTO =>
-                val path = destination_parser.decode_path(destination.path)
-                val allowed = queue_domain.can_bind_all(path, destination, consumer, security)
-                def perform() = queue_domain.bind(path, destination, consumer, security)
-                (allowed, perform _)
-              case destination:DurableSubscriptionDestinationDTO =>
-                val path = Path(destination.subscription_id())
-                val allowed = dsub_domain.can_bind_all(path, destination, consumer, security)
-                def perform() = dsub_domain.bind(path, destination, consumer, security)
-                (allowed, perform _)
-              case _ => throw new RuntimeException("Unknown domain type: "+destination.getClass)
-            }
+  def bind(destinations: Array[DestinationDTO], consumer: DeliveryConsumer, security: SecurityContext):Option[String] = {
+    dispatch_queue.assertExecuting()
+    if(!virtual_host.service_state.is_started) {
+      return Some("virtual host stopped.")
+    } else {
+      try {
+        val actions = destinations.map { destination =>
+          destination match {
+            case destination:TopicDestinationDTO =>
+              val path = destination_parser.decode_path(destination.path)
+              val allowed = topic_domain.can_bind_all(path, destination, consumer, security)
+              def perform() = topic_domain.bind(path, destination, consumer, security)
+              (allowed, perform _)
+            case destination:QueueDestinationDTO =>
+              val path = destination_parser.decode_path(destination.path)
+              val allowed = queue_domain.can_bind_all(path, destination, consumer, security)
+              def perform() = queue_domain.bind(path, destination, consumer, security)
+              (allowed, perform _)
+            case destination:DurableSubscriptionDestinationDTO =>
+              val path = Path(destination.subscription_id())
+              val allowed = dsub_domain.can_bind_all(path, destination, consumer, security)
+              def perform() = dsub_domain.bind(path, destination, consumer, security)
+              (allowed, perform _)
+            case _ => throw new RuntimeException("Unknown domain type: "+destination.getClass)
           }
-
-          val failures = actions.flatMap(_._1)
-          rc = if( !failures.isEmpty ) {
-            Some(failures.mkString("; "))
-          } else {
-            actions.foreach(_._2())
-            None
-          }
-        } catch {
-          case x:PathException =>
-            rc = Some(x.getMessage)
         }
+
+        val failures = actions.flatMap(_._1)
+        if( !failures.isEmpty ) {
+          return Some(failures.mkString("; "))
+        } else {
+          actions.foreach(_._2())
+          return None
+        }
+      } catch {
+        case x:PathException =>
+          return Some(x.getMessage)
       }
-      consumer.release
-      rc
     }
   }
 
@@ -1072,14 +1067,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
   }
 
-  def connect(destinations: Array[DestinationDTO], producer: BindableDeliveryProducer, security: SecurityContext) = {
+  def connect(destinations: Array[DestinationDTO], producer: BindableDeliveryProducer, security: SecurityContext):Option[String] = {
+    dispatch_queue.assertExecuting()
     producer.retain
-    dispatch_queue ! {
-      var rc:Option[String] = None
-      if(rc.isEmpty && !virtual_host.service_state.is_started) {
-        rc = Some("virtual host stopped.")
-      } else if(rc.isEmpty) {
-
+    try {
+      if(!virtual_host.service_state.is_started) {
+        return Some("virtual host stopped.")
+      } else {
         val actions = destinations.map { destination =>
           destination match {
             case destination:TopicDestinationDTO =>
@@ -1100,19 +1094,19 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
             case _ => throw new RuntimeException("Unknown domain type: "+destination.getClass)
           }
         }
-
+  
         val failures = actions.flatMap(_._1)
-        rc = if( !failures.isEmpty ) {
-          Some(failures.mkString("; "))
+        if( !failures.isEmpty ) {
+          return Some(failures.mkString("; "))
         } else {
           actions.foreach(_._2())
           producer.connected()
           producer.retain()
-          None
+          return None
         }
       }
+    } finally {
       producer.release
-      rc
     }
   }
 
@@ -1134,9 +1128,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
   }
 
-  def create(destinations:Array[DestinationDTO], security: SecurityContext) = dispatch_queue ! {
+  def create(destinations:Array[DestinationDTO], security: SecurityContext):Option[String] = {
+    dispatch_queue.assertExecuting()
     if(!virtual_host.service_state.is_started) {
-      Some("virtual host stopped.")
+      return Some("virtual host stopped.")
     } else {
 
       val actions = destinations.map { destination =>
@@ -1162,17 +1157,18 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       val failures = actions.flatMap(_._1)
       if( !failures.isEmpty ) {
-        Some(failures.mkString("; "))
+        return Some(failures.mkString("; "))
       } else {
         actions.foreach(_._2())
-        None
+        return None
       }
     }
   }
 
-  def delete(destinations:Array[DestinationDTO], security: SecurityContext) = dispatch_queue ! {
+  def delete(destinations:Array[DestinationDTO], security: SecurityContext):Option[String] = {
+    dispatch_queue.assertExecuting()
     if(!virtual_host.service_state.is_started) {
-      Some("virtual host stopped.")
+      return Some("virtual host stopped.")
     } else {
 
       val actions = destinations.map { destination =>
@@ -1198,12 +1194,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       val failures = actions.flatMap(_._1)
       if( !failures.isEmpty ) {
-        Some(failures.mkString("; "))
+        return Some(failures.mkString("; "))
       } else {
         actions.foreach(_._2())
-        None
+        return None
       }
-
     }
   }
 
@@ -1249,7 +1244,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Gets an existing queue.
    */
-  def get_queue(id:Long) = dispatch_queue ! {
+  def get_queue(id:Long) = {
+    dispatch_queue.assertExecuting()
     queues_by_store_id.get(id)
   }
 

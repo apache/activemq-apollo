@@ -22,8 +22,7 @@ import scala.collection.immutable.List
 import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
-import util.continuations._
-import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -32,19 +31,19 @@ trait Router extends Service {
 
   def virtual_host:VirtualHost
 
-  def get_queue(dto:Long):Option[Queue] @suspendable
+  def get_queue(dto:Long):Option[Queue]
 
-  def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext) : Option[String] @suspendable
+  def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext): Option[String]
 
   def unbind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, persistent:Boolean, security:SecurityContext)
 
-  def connect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer, security:SecurityContext): Option[String] @suspendable
+  def connect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer, security:SecurityContext): Option[String]
 
   def disconnect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer)
 
-  def delete(destinations:Array[DestinationDTO], security:SecurityContext): Option[String] @suspendable
+  def delete(destinations:Array[DestinationDTO], security:SecurityContext): Option[String]
 
-  def create(destinations:Array[DestinationDTO], security:SecurityContext): Option[String] @suspendable
+  def create(destinations:Array[DestinationDTO], security:SecurityContext): Option[String]
 
   def apply_update(on_completed:Runnable):Unit
 

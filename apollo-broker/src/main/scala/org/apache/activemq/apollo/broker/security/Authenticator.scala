@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 package org.apache.activemq.apollo.broker.security
-import scala.util.continuations._
 
 /**
  * <p>
@@ -32,7 +31,7 @@ trait Authenticator {
    * @returns null if the SecurityContext was authenticated. Otherwise
    * returns an error message that can be given to a client.
    */
-  def authenticate(ctx:SecurityContext):String @suspendable
+  def authenticate(ctx:SecurityContext)(cb:(String)=>Unit)
 
   /**
    * Extracts the user name of the logged in user.

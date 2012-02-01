@@ -16,10 +16,7 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.fusesource.hawtbuf.Buffer._
-import scala.util.continuations._
 import org.apache.activemq.apollo.util.{ServiceControl, FunSuiteSupport}
-import org.apache.activemq.apollo.dto._
 
 /**
  * <p>
