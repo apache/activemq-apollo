@@ -475,12 +475,12 @@ A `leveldb_store` element may be configured with the following attributes:
 Apache cannot redistribute the BDB library due to the terms of it's
 license, but you can easily get a free copy directly from Oracle. Before
 you can start using the BDB Store you must first download it from Oracle
-at [je-4.1.10.jar](http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar)
+at [je-5.0.34.jar](http://download.oracle.com/maven/com/sleepycat/je/5.0.34/je-5.0.34.jar)
 and then copy it into the `${APOLLO_HOME}/lib` directory.
 
 For those of you with curl installed, you can just run:
 
-    curl http://download.oracle.com/maven/com/sleepycat/je/4.1.10/je-4.1.10.jar > ${APOLLO_HOME}/lib/je-4.1.10.jar
+    curl http://download.oracle.com/maven/com/sleepycat/je/5.0.34/je-5.0.34.jar > ${APOLLO_HOME}/lib/je-5.0.34.jar
 
 Once that is done, you can enable the store by adding a `bdb_store` element
 inside your `virtual_host`.  Example:
