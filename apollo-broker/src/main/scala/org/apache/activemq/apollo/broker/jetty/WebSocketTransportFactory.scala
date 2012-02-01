@@ -370,7 +370,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           }
           var command = protocolCodec.read
           if (command != null) {
-            println(command)
             try {
               transportListener.onTransportCommand(command)
             } catch {
