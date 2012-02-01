@@ -195,6 +195,29 @@ Example which uses a couple of options:
 Note that `&amp;` was used to separate the option values instead of just `&` since the 
 URI being written within an XML file.
 
+##### WebSocket Transports
+
+The WebSocket transport uses the `ws://` URI scheme and the
+secure WebSocket transport uses the `wss://` URI scheme.  Like
+the TCP transport, the use the URI host
+and port to determine to which local interfaces to bind.  For example:
+
+* `ws://0.0.0.0:61623` binds to all IPv4 interfaces on port 61623
+* `ws://[::]:61623` binds to all IPv4 and IPv6 interfaces on port 61623
+* `wss://127.0.0.1:0` binds to the loopback interface on a dynamic port
+
+The WebSocket URI also supports the following query parameters to fine tune the
+settings used on the socket:
+
+* `binary_transfers` : Should data be sent to the client as binary blobs. Currently
+  not all browsers support binary WebSocket data.  Defaults to false.
+  
+Example usage:
+
+{pygmentize:: xml}
+<connector id="ws" bind="ws://0.0.0.0:61623?binary_transfers=true"/>
+{pygmentize}
+
 #### Virtual Hosts
 
 A virtual hosts allows ${project_name} to support multi tenant style
