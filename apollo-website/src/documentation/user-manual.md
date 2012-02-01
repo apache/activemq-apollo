@@ -197,26 +197,47 @@ URI being written within an XML file.
 
 ##### WebSocket Transports
 
-The WebSocket transport uses the `ws://` URI scheme and the
-secure WebSocket transport uses the `wss://` URI scheme.  Like
-the TCP transport, the use the URI host
-and port to determine to which local interfaces to bind.  For example:
+HTML 5 introduced WebSockets, as a standardized way to communicate
+asynchronously with the server from a web page. This is an ideal channel for
+implementing asynchronous messaging in web pages. It can be used to
+encapsulate other protocols like STOMP and it avoids needing to use Comet
+techniques like long polling to deliver data to the Browser. Furthermore,
+since JavaScript easily handles text and JSON formatted data, the STOMP
+protocol is a natural choice for the messaging protocol to be used over
+WebSocket.
+
+The WebSocket transport uses the `ws://` URI scheme and the secure WebSocket
+transport uses the `wss://` URI scheme. Like the TCP transport, this
+transport uses the URI host and port to determine to which local interfaces
+to bind. For example:
 
 * `ws://0.0.0.0:61623` binds to all IPv4 interfaces on port 61623
 * `ws://[::]:61623` binds to all IPv4 and IPv6 interfaces on port 61623
 * `wss://127.0.0.1:0` binds to the loopback interface on a dynamic port
 
-The WebSocket URI also supports the following query parameters to fine tune the
-settings used on the socket:
+The WebSocket URI also supports the following query parameters to fine tune
+the settings used on the socket:
 
 * `binary_transfers` : Should data be sent to the client as binary blobs. Currently
   not all browsers support binary WebSocket data.  Defaults to false.
   
-Example usage:
+Example configuraiton:
 
 {pygmentize:: xml}
-<connector id="ws" bind="ws://0.0.0.0:61623?binary_transfers=true"/>
+<connector id="ws" bind="ws://0.0.0.0:61623?binary_transfers=false"/>
 {pygmentize}
+
+One thing worth noting is that web sockets (just as Ajax) implements the same
+origin policy, so you can access only brokers running on the same host as
+where the web page originated from.
+
+###### WebSocket Clients
+
+You can use one of the following JavaScript libraries to access
+the broker over WebSockets:
+
+* [Stomple](http://github.com/krukow/stomple)
+* [stomp-websocket](http://github.com/jmesnil/stomp-websocket)
 
 #### Virtual Hosts
 

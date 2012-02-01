@@ -53,6 +53,8 @@
 
   <connector id="tcp" bind="tcp://0.0.0.0:61613" connection_limit="2000"/>
   <connector id="tls" bind="tls://0.0.0.0:61614" connection_limit="2000"/>
+  <connector id="ws"  bind="ws://0.0.0.0:61623"  connection_limit="2000"/>
+  <connector id="wss" bind="wss://0.0.0.0:61624" connection_limit="2000"/>
 
   <key_storage file="${apollo.base}/etc/keystore" password="password" key_password="password"/>
 
