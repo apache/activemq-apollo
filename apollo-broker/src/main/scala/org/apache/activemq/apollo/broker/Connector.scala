@@ -200,6 +200,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     transport_server.setTransportServerListener(BrokerAcceptListener)
 
     transport_server match {
+      case transport_server:BrokerAware =>
+        transport_server.set_broker(broker)
       case transport_server:SslTransportServer =>
         transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
         if( broker.key_storage!=null ) {
