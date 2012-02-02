@@ -112,7 +112,7 @@
     <scalamd-version>1.5</scalamd-version>
 
     <servlet-api-version>2.5</servlet-api-version>
-    <jackson-version>1.7.5</jackson-version>
+    <jackson-version>1.9.2</jackson-version>
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.5</jersey-version>
     <snakeyaml-version>1.7</snakeyaml-version>

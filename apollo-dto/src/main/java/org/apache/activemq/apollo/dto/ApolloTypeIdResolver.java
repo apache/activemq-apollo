@@ -64,9 +64,13 @@ public class ApolloTypeIdResolver implements TypeIdResolver {
     }
 
     public String idFromValue(Object value) {
-        String rc = typeToId.get(value.getClass());
+        return idFromValueAndType(value, value.getClass());
+    }
+
+    public String idFromValueAndType(Object value, Class<?> aClass) {
+        String rc = typeToId.get(aClass);
         if(rc==null)
-            throw new IllegalArgumentException("Invalid sub type: "+value.getClass()+", of base type: "+baseType.getRawClass());
+            throw new IllegalArgumentException("Invalid sub type: "+aClass+", of base type: "+baseType.getRawClass());
         return rc;
     }
 
