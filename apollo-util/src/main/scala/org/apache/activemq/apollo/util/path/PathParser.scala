@@ -141,6 +141,7 @@ class PathParser {
       } else {
         rc.append("%%%02x".format(c))
       }
+      pos += 1
     }
     rc.toString
   }
@@ -207,7 +208,7 @@ class PathParser {
       AnyChildPart
     } else if (any_descendant_wildcard!=null && value == any_descendant_wildcard) {
       AnyDescendantPart
-    } else if (wildcard_part_pattern!=null && wildcard_part_pattern.matcher(value).matches() ) {      
+    } else if (wildcard_part_pattern!=null && wildcard_part_pattern.matcher(value).find() ) {
       val regex = regex_map(value, wildcard_part_pattern) { _ match {
         // It's a literal part.
         case Left(x) =>

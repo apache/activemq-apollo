@@ -28,14 +28,6 @@ object Path {
   */
 case class Path(parts: List[Part]) {
 
-  override def toString: String = {
-    return toString(PathParser.DEFAULT)
-  }
-
-  def toString(pp: PathParser): String = {
-    return pp.encode_path(this)
-  }
-
   def +(other:Path) = Path(parts ::: other.parts)
 
 }

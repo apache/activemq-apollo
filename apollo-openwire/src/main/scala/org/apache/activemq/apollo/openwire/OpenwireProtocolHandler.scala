@@ -968,9 +968,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           }
         })
         if( info.getDestination.isTemporary ) {
-          dispatch_queue {
+          host.dispatch_queue {
             val rc = host.router.delete(addresses, security_context)
-            dispatchQueue {
+            dispatch_queue {
               rc match {
                 case Some(error) => async_die(error)
                 case None =>
