@@ -135,12 +135,15 @@ object DestinationAddress {
 sealed trait DestinationAddress {
   def domain:String
   def path:Path
+  def simple:SimpleAddress = SimpleAddress(domain, path)
   val id = DestinationAddress.encode_path(path)
   override def toString: String =  domain+":"+id
 }
 sealed trait ConnectAddress extends DestinationAddress
 sealed trait BindAddress extends DestinationAddress
-case class SimpleAddress(val domain:String, val path:Path) extends ConnectAddress with BindAddress
+case class SimpleAddress(val domain:String, val path:Path) extends ConnectAddress with BindAddress {
+  override def simple = this
+}
 case class SubscriptionAddress(val path:Path, val selector:String, topics:Array[_ <: BindAddress]) extends BindAddress {
   def domain = "dsub"
 }

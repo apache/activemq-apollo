@@ -58,6 +58,21 @@ trait Sink[T] {
     def downstream = Sink.this
   }
 
+  def flatMap[Y](func: Y=>Option[T]):Sink[Y] = new Sink[Y] with SinkFilter[T] {
+    def downstream = Sink.this
+    def offer(value:Y) = {
+      if( full ) {
+        false
+      } else {
+        val opt = func(value)
+        if( opt.isDefined ) {
+          downstream.offer(opt.get)
+        }
+        true
+      }
+    }
+  }
+
 }
 
 trait SinkFilter[T] {

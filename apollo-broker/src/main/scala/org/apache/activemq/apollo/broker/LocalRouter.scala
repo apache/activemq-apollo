@@ -24,11 +24,11 @@ import path.PathParser.PathException
 import java.util.concurrent.TimeUnit
 import scala.Array
 import java.util.ArrayList
-import collection.mutable.LinkedHashMap
 import collection.{Iterable, JavaConversions}
 import security.SecuredResource.{TopicKind, QueueKind}
 import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
+import scala.collection.mutable.{HashSet, HashMap, LinkedHashMap}
 
 object DestinationMetricsSupport {
 
@@ -149,12 +149,15 @@ object LocalRouter extends Log {
     }
   }
 
-  class ConsumerContext(val bind_address:BindAddress, val consumer:DeliveryConsumer, val security:SecurityContext) {
-    override def hashCode: Int = consumer.hashCode
+  class ConsumerContext[D <: DomainDestination](val consumer:DeliveryConsumer) {
+    val bind_addresses = HashSet[BindAddress]()
+    val matched_destinations = HashSet[D]()
+    var security:SecurityContext = _
 
+    override def hashCode: Int = consumer.hashCode
     override def equals(obj: Any): Boolean = {
       obj match {
-        case x:ConsumerContext=> x.consumer == consumer
+        case x:ConsumerContext[_] => x.consumer == consumer
         case _ => false
       }
     }
@@ -228,7 +231,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     var destination_by_path = new PathMap[D]()
     // Can store consumers on wild cards paths
 
-    val consumers_by_path = new PathMap[ConsumerContext]()
+    val consumers = HashMap[DeliveryConsumer, ConsumerContext[D]]()
+    val consumers_by_path = new PathMap[(ConsumerContext[D], BindAddress)]()
     val producers_by_path = new PathMap[ProducerContext]()
 
     def destinations:Iterable[D] = JavaConversions.collectionAsScalaIterable(destination_by_path.get(ALL))
@@ -263,9 +267,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
       // binds any matching wild card subs and producers...
       import JavaConversions._
-      consumers_by_path.get( path ).foreach { x=>
-        if( authorizer.can(x.security, bind_action(x.consumer), dest) ) {
-          dest.bind(x.bind_address, x.consumer)
+      consumers_by_path.get( path ).foreach { case (consumer_context, bind_address)=>
+        if( authorizer.can(consumer_context.security, bind_action(consumer_context.consumer), dest) ) {
+          consumer_context.matched_destinations += dest
+          dest.bind(bind_address, consumer_context.consumer)
         }
       }
       producers_by_path.get( path ).foreach { x=>
@@ -352,28 +357,63 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def bind(bind_address:BindAddress, consumer:DeliveryConsumer, security:SecurityContext):Unit = {
-      var matches = get_destination_matches(bind_address.path)
-      matches.foreach { dest=>
-        if( authorizer.can(security, bind_action(consumer), dest) ) {
-          dest.bind(bind_address, consumer)
-          for( l <- router_listeners) {
-            l.on_bind(dest, consumer, security)
+
+      val context = consumers.getOrElseUpdate(consumer, new ConsumerContext[D](consumer))
+      context.security = security
+      if( context.bind_addresses.add(bind_address) ) {
+
+        consumers_by_path.put(bind_address.path, (context, bind_address))
+        consumer.retain
+
+        // Get the list of new destination matches..
+        var matches = get_destination_matches(bind_address.path).toSet
+        matches --= context.matched_destinations
+        context.matched_destinations ++= matches
+
+        matches.foreach { dest=>
+          if( authorizer.can(security, bind_action(consumer), dest) ) {
+            dest.bind(bind_address, consumer)
+            for( l <- router_listeners) {
+              l.on_bind(dest, consumer, security)
+            }
           }
         }
+
       }
-      consumer.retain
-      consumers_by_path.put(bind_address.path, new ConsumerContext(bind_address, consumer, security))
+
     }
 
     def unbind(bind_address:BindAddress, consumer:DeliveryConsumer, persistent:Boolean, security: SecurityContext) = {
-      if( consumers_by_path.remove(bind_address.path, new ConsumerContext(bind_address, consumer, null) ) ) {
-        get_destination_matches(bind_address.path).foreach{ dest=>
-          dest.unbind(consumer, persistent)
-          for( l <- router_listeners) {
-            l.on_unbind(dest, consumer, persistent)
+      consumers.get(consumer) match {
+        case None => // odd..
+        case Some(context) =>
+          if( context.bind_addresses.remove(bind_address) ) {
+
+            // What did we match?
+            var matches = context.matched_destinations.toSet
+
+            // rebuild the set of what we still match..
+            context.matched_destinations.clear
+            context.bind_addresses.foreach { address =>
+              context.matched_destinations ++= get_destination_matches(address.path)
+            }
+
+            // Take the diff to find out what we don't match anymore..
+            matches --= context.matched_destinations
+
+            matches.foreach{ dest=>
+              dest.unbind(consumer, persistent)
+              for( l <- router_listeners) {
+                l.on_unbind(dest, consumer, persistent)
+              }
+            }
+
+            consumer.release
+            consumers_by_path.remove(bind_address.path, (context, bind_address))
+            if(context.bind_addresses.isEmpty) {
+              consumers.remove(consumer);
+            }
           }
-        }
-        consumer.release
       }
     }
 

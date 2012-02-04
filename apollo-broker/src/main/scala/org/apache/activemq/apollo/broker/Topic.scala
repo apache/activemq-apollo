@@ -107,7 +107,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
 
   case class ProxyConsumerSession(proxy:ProxyDeliveryConsumer, session:DeliverySession) extends DeliverySession with SessionSinkFilter[Delivery] {
 
-    override def toString = proxy.consumer.toString
+    override def toString = proxy.consumer.toString + " (via "+address+")"
 
     def downstream = session
 
