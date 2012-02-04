@@ -134,7 +134,7 @@ public final class TypeConversionSupport {
         });
         CONVERSION_MAP.put(new ConversionKey(String.class, ActiveMQDestination.class), new Converter() {
             public Object convert(Object value) {
-                return ActiveMQDestination.createDestination((String)value, ActiveMQDestination.QUEUE_TYPE);
+                return ActiveMQDestination.createDestination((String)value);
             }
         });
     }

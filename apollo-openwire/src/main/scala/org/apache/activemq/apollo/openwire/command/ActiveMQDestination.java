@@ -55,8 +55,7 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
 
   // static helper methods for working with destinations
   // -------------------------------------------------------------------------
-  public static ActiveMQDestination createDestination(String name, byte defaultType) {
-
+  public static ActiveMQDestination createDestination(String name) {
       if (name.startsWith(QUEUE_QUALIFIED_PREFIX)) {
           return new ActiveMQQueue(name.substring(QUEUE_QUALIFIED_PREFIX.length()));
       } else if (name.startsWith(TOPIC_QUALIFIED_PREFIX)) {
@@ -65,19 +64,8 @@ abstract public class ActiveMQDestination implements DataStructure, Comparable {
           return new ActiveMQTempQueue(name.substring(TEMP_QUEUE_QUALIFED_PREFIX.length()));
       } else if (name.startsWith(TEMP_TOPIC_QUALIFED_PREFIX)) {
           return new ActiveMQTempTopic(name.substring(TEMP_TOPIC_QUALIFED_PREFIX.length()));
-      }
-
-      switch (defaultType) {
-      case QUEUE_TYPE:
-          return new ActiveMQQueue(name);
-      case TOPIC_TYPE:
-          return new ActiveMQTopic(name);
-      case TEMP_QUEUE_TYPE:
-          return new ActiveMQTempQueue(name);
-      case TEMP_TOPIC_TYPE:
-          return new ActiveMQTempTopic(name);
-      default:
-          throw new IllegalArgumentException("Invalid default destination type: " + defaultType);
+      } else {
+          return null;
       }
   }
 

@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.util.path
 
 import java.util.regex.Pattern
+import java.lang.String
 
 /**
   * Holds the delimiters used to parse paths.
@@ -37,11 +38,12 @@ object RootPart extends Part {
 object AnyChildPart extends Part
 object AnyDescendantPart extends Part
 
-case class RegexChildPart(regex:Pattern, original:String) extends Part
+case class RegexChildPart(regex:Pattern) extends Part
 
 case class LiteralPart(value: String) extends Part {
   override def matches(p: Part) = p match {
     case LiteralPart(v) => v == value
     case _ => true
   }
+  override def toString = value
 }

@@ -168,7 +168,7 @@ class Delivery {
   /**
    * Where the delivery is originating from.
    */
-  var sender:DestinationDTO = _
+  var sender:DestinationAddress = _
 
   /**
    * Total size of the delivery.  Used for resource allocation tracking

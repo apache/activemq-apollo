@@ -18,11 +18,132 @@ package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util._
+import path._
 import scala.collection.immutable.List
-import org.apache.activemq.apollo.dto._
 import security.SecurityContext
 import store.StoreUOW
 import java.util.concurrent.atomic.AtomicReference
+import collection.mutable.ListBuffer
+import java.util.regex.Pattern
+import java.lang.String
+
+object DestinationAddress {
+  
+  def encode_path(path:Path) = {
+    val rc = new StringBuilder
+    var first = true
+    for (p <- path.parts) {
+      if ( !first ) {
+        rc.append(".")
+      }
+      first = false
+      p match {
+        case RootPart =>
+        case AnyChildPart => rc.append("*")
+        case AnyDescendantPart => rc.append("**")
+        case p:RegexChildPart => rc.append("*"+escape(p.regex.pattern()))
+        case p:LiteralPart => rc.append(escape(p.value))
+      }
+    }
+    rc.toString
+  }
+
+  val DOT_PATTERN = Pattern.compile("\\.");
+
+  def decode_path(value:String) = {
+    val rc = ListBuffer[Part]()
+    for (p <- DOT_PATTERN.split(value)) {
+      rc += (if( p startsWith "*" ) {
+        if( p.length()==1 ) {
+          AnyChildPart
+        } else if ( p=="**" ) {
+          AnyDescendantPart
+        } else {
+          val regex_text = unescape(p.substring(1))
+          RegexChildPart(Pattern.compile(regex_text))
+        }
+      } else {
+        LiteralPart(unescape(p))
+      })
+    }
+    new Path(rc.toList)
+  }
+
+  
+  def escape(value:String) = {
+    val rc = new StringBuffer(value.length())
+    def unicode_encode(c:Char) = {
+      rc.append("\\u%04x".format(c.toInt))
+    }
+    var i=0;
+    while( i < value.length() ) {
+      val c = value.charAt(i);
+      if ( c== '\\' ) {
+        rc.append("\\\\")
+      }  else if( c == '\n' ) {
+        rc.append("\\\n")
+      }  else if( c == '\r' ) {
+        rc.append("\\\r")
+      }  else if( c == '\t' ) {
+        rc.append("\\\t")
+      }  else if( c == '\b' ) {
+        rc.append("\\\b")
+      }  else if( c == '*' ) {
+        rc.append("\\w")
+      }  else if( c == '.' ) {
+        rc.append("\\d")
+      } else if  ( c < '!' || c > '~' ) {
+        unicode_encode(c)
+      }
+      rc.append(c)
+      i+=1
+    }
+    rc.toString
+  }
+  
+  def unescape(value:String) = {
+    val rc = new StringBuffer(value.length())
+    var i=0
+    while( i < value.length() ) {
+      val c = value.charAt(i);
+      if( c == '\\') {
+        i+=1
+        val c2 = value.charAt(i);
+        rc.append(c2 match {
+          case '\\' => '\\'
+          case 'n' => '\n'
+          case 'r' => '\r'
+          case 't' => '\t'
+          case 'b' => '\b'
+          case 'w' => '*'
+          case 'd' => '.'
+          case 'u' => 
+            i+=1
+            val rc = Integer.parseInt(value.substring(i, i+4), 16).toChar
+            i+=4
+            rc
+        })
+      } else {
+        rc.append(c)
+      }      
+      i+=1
+    }
+    rc.toString
+  }
+
+}
+sealed trait DestinationAddress {
+  def domain:String
+  def path:Path
+  val id = DestinationAddress.encode_path(path)
+  override def toString: String =  domain+":"+id
+}
+sealed trait ConnectAddress extends DestinationAddress
+sealed trait BindAddress extends DestinationAddress
+case class SimpleAddress(val domain:String, val path:Path) extends ConnectAddress with BindAddress
+case class SubscriptionAddress(val path:Path, val selector:String, topics:Array[_ <: BindAddress]) extends BindAddress {
+  def domain = "dsub"
+}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -33,17 +154,17 @@ trait Router extends Service {
 
   def get_queue(dto:Long):Option[Queue]
 
-  def bind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, security:SecurityContext): Option[String]
+  def bind(destinations:Array[_ <: BindAddress], consumer:DeliveryConsumer, security:SecurityContext): Option[String]
 
-  def unbind(destinations:Array[DestinationDTO], consumer:DeliveryConsumer, persistent:Boolean, security:SecurityContext)
+  def unbind(destinations:Array[_ <: BindAddress], consumer:DeliveryConsumer, persistent:Boolean, security:SecurityContext)
 
-  def connect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer, security:SecurityContext): Option[String]
+  def connect(destinations:Array[_ <: ConnectAddress], producer:BindableDeliveryProducer, security:SecurityContext): Option[String]
 
-  def disconnect(destinations:Array[DestinationDTO], producer:BindableDeliveryProducer)
+  def disconnect(destinations:Array[_ <: ConnectAddress], producer:BindableDeliveryProducer)
 
-  def delete(destinations:Array[DestinationDTO], security:SecurityContext): Option[String]
+  def delete(destinations:Array[_ <: DestinationAddress], security:SecurityContext): Option[String]
 
-  def create(destinations:Array[DestinationDTO], security:SecurityContext): Option[String]
+  def create(destinations:Array[_ <: DestinationAddress], security:SecurityContext): Option[String]
 
   def apply_update(on_completed:Runnable):Unit
 

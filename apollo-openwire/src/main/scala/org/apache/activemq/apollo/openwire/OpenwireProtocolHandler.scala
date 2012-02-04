@@ -36,6 +36,7 @@ import command._
 import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
 import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
 import org.apache.activemq.apollo.broker._
+import path.Path
 import protocol._
 import security.SecurityContext
 import DestinationConverter._
@@ -89,8 +90,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def broker = connection.connector.broker
 
-  var producerRoutes = new LRUCache[List[DestinationDTO], DeliveryProducerRoute](10) {
-    override def onCacheEviction(eldest: Entry[List[DestinationDTO], DeliveryProducerRoute]) = {
+  var producerRoutes = new LRUCache[List[ConnectAddress], DeliveryProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[List[ConnectAddress], DeliveryProducerRoute]) = {
       host.router.disconnect(eldest.getKey.toArray, eldest.getValue)
     }
   }
@@ -442,7 +443,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
       security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
-      security_context.session_id = Some(OPENWIRE_PARSER.sanitize_destination_part(info.getConnectionId.toString))
+      security_context.session_id = Some(info.getConnectionId.toString)
 
       if( host.authenticator!=null &&  host.authorizer!=null ) {
         suspend_read("authenticating and authorizing connect")
@@ -802,7 +803,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     override def toString = "openwire consumer id:"+info.getConsumerId+", remote address: "+security_context.remote_address
 
     var selector_expression:BooleanExpression = _
-    var destination:Array[DestinationDTO] = _
+    var addresses:Array[_ <: BindAddress] = _
 
     val consumer_sink = sink_manager.open()
     val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
@@ -842,7 +843,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def attach = {
 
       if( info.getDestination == null ) fail("destination was not set")
-      destination = to_destination_dto(info.getDestination, OpenwireProtocolHandler.this)
+      addresses = to_destination_dto(info.getDestination, OpenwireProtocolHandler.this)
 
       // if they are temp dests.. attach our owner id so that we don't
       // get rejected.
@@ -872,21 +873,16 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           subscription_id += parent.parent.info.getClientId + ":"
         }
         subscription_id += info.getSubscriptionName
-
-        val rc = new DurableSubscriptionDestinationDTO(subscription_id)
-        rc.selector = Option(info.getSelector).map(_.toString).getOrElse(null)
-
-        destination.foreach { _ match {
-          case x:TopicDestinationDTO=>
-            rc.topics.add(new TopicDestinationDTO(x.path))
+        val selector = Option(info.getSelector).map(_.toString).getOrElse(null)
+        addresses.foreach { _ match {
+          case SimpleAddress("topic", _) =>
           case _ => die("A durable subscription can only be used on a topic destination")
-          }
-        }
-        destination = Array(rc)
+        }}
+        addresses = Array(SubscriptionAddress(Path(subscription_id), selector, addresses))
       }
 
       host.dispatch_queue {
-        val rc = host.router.bind(destination, this, security_context)
+        val rc = host.router.bind(addresses, this, security_context)
         this.release
         dispatchQueue {
           rc match {
@@ -900,7 +896,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
 
     def dettach = {
-      host.router.unbind(destination, this, false , security_context)
+      host.router.unbind(addresses, this, false , security_context)
       parent.consumers.remove(info.getConsumerId)
       all_consumers.remove(info.getConsumerId)
     }
@@ -973,7 +969,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         })
         if( info.getDestination.isTemporary ) {
           dispatch_queue {
-            val rc = host.router.delete(destination, security_context)
+            val rc = host.router.delete(addresses, security_context)
             dispatchQueue {
               rc match {
                 case Some(error) => async_die(error)
@@ -1106,7 +1102,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           }
 
           if( !found ) {
-            trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, destination.mkString(",")))
+            trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
           } else {
             consumer_acks = not_acked
             acked.foreach{case (id, delivery)=>

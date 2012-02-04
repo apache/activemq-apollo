@@ -144,7 +144,7 @@ class PathMapNode[Value](val parent: PathMapNode[Value]) extends PathNode[Value]
           node.appendMatchingWildcards(answer, path, i)
           node = new AnyChildPathNode[Value](node)
           i += 1;
-        case RegexChildPart(r, _) =>
+        case RegexChildPart(r) =>
           node.appendMatchingWildcards(answer, path, i)
           node = new RegexChildPathNode[Value](node, r)
           i += 1;
@@ -208,7 +208,7 @@ class PathMapNode[Value](val parent: PathMapNode[Value]) extends PathNode[Value]
           node.appendMatchingWildcards(answer, path, i)
           i += 1
           node = new AnyChildPathNode[Value](node)
-        case RegexChildPart(r, _) =>
+        case RegexChildPart(r) =>
           node.appendMatchingWildcards(answer, path, i)
           i += 1
           node = new RegexChildPathNode[Value](node, r)

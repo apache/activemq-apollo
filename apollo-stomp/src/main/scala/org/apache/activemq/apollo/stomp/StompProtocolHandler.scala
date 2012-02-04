@@ -32,12 +32,12 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import path.PathParser
 import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.dto._
 import org.fusesource.hawtdispatch.transport.{SecureTransport, HeartBeatMonitor, SslTransport}
+import path.{LiteralPart, Path, PathParser}
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -137,7 +137,7 @@ class StompProtocolHandler extends ProtocolHandler {
   class StompConsumer (
 
     val subscription_id:Option[AsciiBuffer],
-    val destination:Array[DestinationDTO],
+    val addresses:Array[_ <: BindAddress],
     ack_mode:AsciiBuffer,
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
@@ -305,7 +305,7 @@ class StompProtocolHandler extends ProtocolHandler {
         }
 
         if( !found ) {
-          trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, destination.mkString(",")))
+          trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
         } else {
           consumer_acks = not_acked
           acked.foreach{case (id, delivery)=>
@@ -542,8 +542,8 @@ class StompProtocolHandler extends ProtocolHandler {
   var closed = false
   var consumers = Map[AsciiBuffer, StompConsumer]()
 
-  var producerRoutes = new LRUCache[List[DestinationDTO], DeliveryProducerRoute](10) {
-    override def onCacheEviction(eldest: Entry[List[DestinationDTO], DeliveryProducerRoute]) = {
+  var producerRoutes = new LRUCache[List[ConnectAddress], DeliveryProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[List[ConnectAddress], DeliveryProducerRoute]) = {
       host.router.disconnect(eldest.getKey.toArray, eldest.getValue)
     }
   }
@@ -565,27 +565,22 @@ class StompProtocolHandler extends ProtocolHandler {
   var protocol_filters = List[ProtocolFilter]()
 
   var destination_parser = Stomp.destination_parser
-  var temp_destination_map = HashMap[DestinationDTO, DestinationDTO]()
+  var temp_destination_map = HashMap[SimpleAddress, SimpleAddress]()
 
   var codec:StompCodec = _
 
   def session_id = security_context.session_id
 
-  implicit def toDestinationDTO(value:AsciiBuffer):Array[DestinationDTO] = {
+  def decode_addresses(value:AsciiBuffer):Array[SimpleAddress] = {
     val rc = destination_parser.decode_multi_destination(value.toString)
     if( rc==null ) {
       throw new ProtocolException("Invalid stomp destination name: "+value);
     }
     rc.map { dest =>
-      if( dest.temp() ) {
+      if( dest.domain.startsWith("temp-") ) {
         temp_destination_map.getOrElseUpdate(dest, {
-          import scala.collection.JavaConversions._
-          val real_path= ("temp" :: broker.id :: session_id.get :: dest.path.toList).toArray
-          dest match {
-            case dest:QueueDestinationDTO => new QueueDestinationDTO( real_path ).temp(true)
-            case dest:TopicDestinationDTO => new TopicDestinationDTO( real_path ).temp(true)
-            case _ => throw new ProtocolException("Invalid stomp destination");
-          }
+          val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id.get) :: dest.path.parts
+          SimpleAddress(dest.domain.stripPrefix("temp-"), Path(parts))
         })
       } else {
         dest
@@ -713,7 +708,7 @@ class StompProtocolHandler extends ProtocolHandler {
       producerRoutes.clear
       consumers.foreach {
         case (_,consumer)=>
-          host.router.unbind(consumer.destination, consumer, false , security_context)
+          host.router.unbind(consumer.addresses, consumer, false , security_context)
       }
       consumers = Map()
       security_context.logout( e => {
@@ -920,7 +915,7 @@ class StompProtocolHandler extends ProtocolHandler {
           async_die(headers, "")
         } else {
           this.host=host
-          security_context.session_id = Some("%s-%x".format(destination_parser.sanitize_destination_part(this.host.config.id), this.host.session_counter.incrementAndGet))
+          security_context.session_id = Some("%s-%x".format(this.host.config.id, this.host.session_counter.incrementAndGet))
           connection_log = host.connection_log
           if( host.authenticator!=null &&  host.authorizer!=null ) {
             suspend_read("authenticating and authorizing connect")
@@ -984,8 +979,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
 
-    val destination: Array[DestinationDTO] = get(frame.headers, DESTINATION).get
-    val key = destination.toList
+    val addresses = decode_addresses(get(frame.headers, DESTINATION).get)
+    val key = addresses.toList
     producerRoutes.get(key) match {
       case null =>
         // create the producer route...
@@ -1003,7 +998,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // don't process frames until producer is connected...
         connection.transport.suspendRead
         host.dispatch_queue {
-          val rc = host.router.connect(destination, route, security_context)
+          val rc = host.router.connect(addresses, route, security_context)
           dispatchQueue {
             rc match {
               case Some(failure) =>
@@ -1012,7 +1007,7 @@ class StompProtocolHandler extends ProtocolHandler {
                 if (!connection.stopped) {
                   resume_read
                   producerRoutes.put(key, route)
-                  send_via_route(destination, route, frame, uow)
+                  send_via_route(addresses, route, frame, uow)
                 }
             }
           }
@@ -1020,56 +1015,57 @@ class StompProtocolHandler extends ProtocolHandler {
 
       case route =>
         // we can re-use the existing producer route
-        send_via_route(destination, route, frame, uow)
+        send_via_route(addresses, route, frame, uow)
 
     }
   }
 
   var message_id_counter = 0;
 
-  def encode_destination(value: Array[DestinationDTO]): String = {
-    if (value == null) {
-      null
-    } else {
-      val rc = new StringBuilder
-      value.foreach { dest =>
-        if (rc.length != 0 ) {
-          assert( destination_parser.destination_separator!=null )
-          rc.append(destination_parser.destination_separator)
-        }
-        import collection.JavaConversions._
-        dest match {
-          case d:QueueDestinationDTO =>
-            rc.append(destination_parser.queue_prefix)
-            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
-          case d:DurableSubscriptionDestinationDTO =>
-            rc.append(destination_parser.dsub_prefix)
-            rc.append(destination_parser.unsanitize_destination_part(d.subscription_id))
-          case d:TopicDestinationDTO =>
-            rc.append(destination_parser.topic_prefix)
-            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
-          case _ =>
-            throw new Exception("Uknown destination type: "+dest.getClass);
-        }
-      }
-      rc.toString
-    }
+  def encode_address(value: Array[_ <: DestinationAddress]): String = {
+    destination_parser.encode_destination(value)
+//    if (value == null) {
+//      null
+//    } else {
+//      val rc = new StringBuilder
+//      value.foreach { dest =>
+//        if (rc.length != 0 ) {
+//          assert( destination_parser.destination_separator!=null )
+//          rc.append(destination_parser.destination_separator)
+//        }
+//        import collection.JavaConversions._
+//        dest match {
+//          case d:QueueDestinationDTO =>
+//            rc.append(destination_parser.queue_prefix)
+//            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+//          case d:DurableSubscriptionDestinationDTO =>
+//            rc.append(destination_parser.dsub_prefix)
+//            rc.append(destination_parser.unsanitize_destination_part(d.subscription_id))
+//          case d:TopicDestinationDTO =>
+//            rc.append(destination_parser.topic_prefix)
+//            rc.append(destination_parser.encode_path_iter(dest.path.toIterable, false))
+//          case _ =>
+//            throw new Exception("Uknown destination type: "+dest.getClass);
+//        }
+//      }
+//      rc.toString
+//    }
   }
 
-  def updated_headers(destination: Array[DestinationDTO], headers:HeaderMap) = {
+  def updated_headers(addresses: Array[SimpleAddress], headers:HeaderMap) = {
     var rc:HeaderMap=Nil
 
     // Do we need to re-write the destination names?
-    if( destination.find(_.temp()).isDefined ) {
-      rc ::= (DESTINATION -> encode_header(encode_destination(destination)))
+    if( addresses.find(_.id.startsWith("temp.")).isDefined ) {
+      rc ::= (DESTINATION -> encode_header(encode_address(addresses)))
     }
     get(headers, REPLY_TO).foreach { value=>
       // we may need to translate local temp destination names to broker destination names
       if( value.indexOf(TEMP_QUEUE)>=0 || value.indexOf(TEMP_TOPIC)>=0 ) {
         try {
-          val dests: Array[DestinationDTO] = value
-          if (dests.find(_.temp()).isDefined) {
-            rc ::= (REPLY_TO -> encode_header(encode_destination(dests)))
+          val dests = decode_addresses(value)
+          if (dests.find(_.id.startsWith("temp.")).isDefined) {
+            rc ::= (REPLY_TO -> encode_header(encode_address(dests)))
           }
         } catch {
           case _=> // the translation is a best effort thing.
@@ -1113,7 +1109,7 @@ class StompProtocolHandler extends ProtocolHandler {
     rc
   }
 
-  def send_via_route(destination: Array[DestinationDTO], route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
+  def send_via_route(addresses: Array[SimpleAddress], route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
     var storeBatch:StoreUOW=null
     // User might be asking for ack that we have processed the message..
     val receipt = frame.header(RECEIPT_REQUESTED)
@@ -1121,7 +1117,7 @@ class StompProtocolHandler extends ProtocolHandler {
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
-      var message = updated_headers(destination, frame.headers) match {
+      var message = updated_headers(addresses, frame.headers) match {
         case Nil=>
           StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content))
         case updated_headers =>
@@ -1161,7 +1157,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def on_stomp_subscribe(headers:HeaderMap):Unit = {
     val dest = get(headers, DESTINATION).getOrElse(die("destination not set."))
-    var destination:Array[DestinationDTO] = dest
+    var addresses:Array[_ <: BindAddress] = decode_addresses(dest)
 
     val subscription_id = get(headers, ID)
     var id:AsciiBuffer = subscription_id.getOrElse {
@@ -1184,11 +1180,10 @@ class StompProtocolHandler extends ProtocolHandler {
     val from_seq_opt = get(headers, FROM_SEQ)
     
     
-    def is_multi_destination = if( destination.length > 1 ) {
+    def is_multi_destination = if( addresses.length > 1 ) {
       true
     } else {
-      val path = destination_parser.decode_path(destination(0).path)
-      PathParser.containsWildCards(path)
+      PathParser.containsWildCards(addresses(0).path)
     }
     if( from_seq_opt.isDefined && is_multi_destination ) {
       die("The from-seq header is only supported when you subscribe to one destination");
@@ -1227,30 +1222,26 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     if( persistent ) {
-      
-      val dsubs = ListBuffer[DurableSubscriptionDestinationDTO]()
-      val topics = ListBuffer[TopicDestinationDTO]()
-      destination.foreach { _ match {
-        case x:DurableSubscriptionDestinationDTO=> dsubs += x
-        case x:TopicDestinationDTO=> topics += x
-        case _ => die("A persistent subscription can only be used on a topic destination")
-      } }
-
-      if( !topics.isEmpty ) {
-        val dsub = new DurableSubscriptionDestinationDTO(destination_parser.sanitize_destination_part(decode_header(id)))
-        dsub.selector = if (selector == null) null else selector._1
-        topics.foreach( dsub.topics.add(_) )
-        dsubs += dsub
+      val dsubs = ListBuffer[BindAddress]()
+      val topics = ListBuffer[BindAddress]()
+      addresses.foreach { address =>
+        address.domain match {
+          case "dsub" => dsubs += address
+          case "topic" => topics += address
+          case _ => die("A persistent subscription can only be used on a topic destination")
+        }
       }
-      destination = dsubs.toArray
+      val s = if (selector == null) null else selector._1
+      dsubs += SubscriptionAddress(destination_parser.decode_path(decode_header(id)), s, topics.toArray)
+      addresses = dsubs.toArray
     }
 
     val from_seq = from_seq_opt.map(_.toString.toLong).getOrElse(0L)
-    val consumer = new StompConsumer(subscription_id, destination, ack_mode, selector, browser, exclusive, credit_window, include_seq, from_seq, browser_end);
+    val consumer = new StompConsumer(subscription_id, addresses, ack_mode, selector, browser, exclusive, credit_window, include_seq, from_seq, browser_end);
     consumers += (id -> consumer)
 
     host.dispatch_queue {
-      val rc = host.router.bind(destination, consumer, security_context)
+      val rc = host.router.bind(addresses, consumer, security_context)
       consumer.release
       dispatchQueue {
         rc match {
@@ -1290,7 +1281,7 @@ class StompProtocolHandler extends ProtocolHandler {
         // consumer gets disposed after all producer stop sending to it...
         consumer.setDisposer(^{ send_receipt(headers) })
         consumers -= id
-        host.router.unbind(consumer.destination, consumer, persistent, security_context)
+        host.router.unbind(consumer.addresses, consumer, persistent, security_context)
     }
   }
 

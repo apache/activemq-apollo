@@ -220,7 +220,7 @@ class DiskBenchmark extends Action {
         out.println(report)
       }
     } catch {
-      case x:Helper.Failure=> error(x.getMessage)
+      case x:Helper.Failure=> sys.error(x.getMessage)
       case e: Throwable =>
         if (verbose) {
           out.println("ERROR:")

@@ -44,12 +44,12 @@ public class DurableSubscriptionDestinationDTO extends DestinationDTO {
     }
 
     public DurableSubscriptionDestinationDTO(String subscription_id) {
-        super(new String[]{subscription_id});
+        super(subscription_id);
     }
 
     @JsonIgnore
     public String subscription_id() {
-        return path.get(0);
+        return name;
     }
 
     /**
@@ -91,10 +91,6 @@ public class DurableSubscriptionDestinationDTO extends DestinationDTO {
 
     @Override
     public String toString() {
-        return "DurableSubscriptionDestinationDTO{" +
-                "id='" + subscription_id() + '\'' +
-                ", selector='" + selector + '\'' +
-                ", topics=" + topics +
-                '}';
+        return "dsub:"+name;
     }
 }

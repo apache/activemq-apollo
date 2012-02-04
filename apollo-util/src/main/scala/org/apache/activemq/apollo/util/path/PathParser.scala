@@ -22,6 +22,7 @@ import collection.JavaConversions._
 import org.apache.activemq.apollo.util.path.PathParser.PartFilter
 import collection.mutable.ListBuffer
 import org.fusesource.hawtbuf.{Buffer, DataByteArrayOutputStream, AsciiBuffer}
+import java.lang.String
 
 /**
   * Holds the delimiters used to parse paths.
@@ -127,28 +128,24 @@ class PathParser {
     this
   }
 
-  def sanitize_destination_part(value:String, wildcards:Boolean=false) = {
-    val rc = new StringBuffer(value.length())
-    var pos = new Buffer(value.getBytes("UTF-8"))
-    while( pos.length > 0 ) {
-      val c = pos.get(0).toChar
-      val cs = c.toString
-      if((wildcards && (
-              cs == any_descendant_wildcard ||
-              cs == any_child_wildcard ||
-              cs == regex_wildcard_start ||
-              cs == regex_wildcard_end
-          ))|| part_pattern.matcher(cs).matches() ) {
+  def url_encode(value:String, allowed:Pattern) = {
+    // UTF-8 Encode..
+    var ascii = new Buffer(value.getBytes("UTF-8")).ascii().toString
+    val matcher = allowed.matcher(ascii);
+    var pos = 0;
+    val rc = new StringBuffer(ascii.length())
+    while( pos < ascii.length() ) {
+      val c = ascii.charAt(pos)
+      if( matcher.find(pos) ) {
         rc.append(c)
       } else {
-        rc.append("%%%02x".format(pos.get(0)))
+        rc.append("%%%02x".format(c))
       }
-      pos.moveHead(1)
     }
     rc.toString
   }
 
-  def unsanitize_destination_part(value:String):String = {
+  def url_decode(value:String):String = {
     val rc = new DataByteArrayOutputStream
     var pos = value
     while( pos.length() > 0 ) {
@@ -163,29 +160,23 @@ class PathParser {
     }
     rc.toBuffer.utf8().toString
   }
-  
-  
-  def decode_path(subject: java.util.Collection[String]): Path = decode_path(subject.toIterable)
 
-  def decode_path(subject: Iterable[String]): Path = {
-    return new Path(subject.toList.map(decode_part(_)))
-  }
 
-  def parts(subject: String, sanitize:Boolean=false): Array[String] = {
+  def parts(subject: String): Array[String] = {
     val rc = if(path_separator!=null) {
       subject.split(Pattern.quote(path_separator))
     } else {
       Array(subject)
     }
-    if (sanitize) {
-      rc.map(sanitize_destination_part(_, true))
-    } else {
-      rc
-    }
+    rc
   }
 
-  def decode_path(subject: String, sanitize:Boolean=false): Path = {
-    return decode_path(parts(subject, sanitize))
+  def decode_path(parts: Iterable[String]): Path = {
+    return new Path(parts.toList.map(decode_part(_)))
+  }
+
+  def decode_path(subject: String): Path = {
+    return decode_path(parts(subject))
   }
 
   def regex_map[T](text:String, pattern: Pattern)(func: Either[CharSequence, Matcher] => T) = {
@@ -201,42 +192,57 @@ class PathParser {
     rc.toList
   }
 
+  lazy val wildcard_part_pattern = if (regex_wildcard_start!=null && regex_wildcard_end!=null) {
+    var p = Pattern.quote(regex_wildcard_start)+"(.*?)"+Pattern.quote(regex_wildcard_end)
+    if(any_child_wildcard!=null) {
+      p += "|" + Pattern.quote(any_child_wildcard)
+    }
+    p.r.pattern
+  } else {
+    null
+  }
+  
   private def decode_part(value: String): Part = {
     if (any_child_wildcard!=null && value == any_child_wildcard) {
-      return AnyChildPart
+      AnyChildPart
     } else if (any_descendant_wildcard!=null && value == any_descendant_wildcard) {
-      return AnyDescendantPart
-    } else {
-      if (part_pattern == null || part_pattern.matcher(value.toString).matches) {
-        return LiteralPart(value)
-      } else {
-
-        val pattern = (
-            (Pattern.quote(regex_wildcard_start)+"(.*?)"+Pattern.quote(regex_wildcard_end)) +
-            "|" +
-            Pattern.quote(any_child_wildcard)
-          ).r.pattern
-
-        val regex = regex_map(value, pattern) { _ match {
-          case Left(x) =>
-            if (x=="") {
-              ""
-            } else {
-              if( part_pattern.matcher(x).matches ) {
-                Pattern.quote(x.toString)
-              } else {
+      AnyDescendantPart
+    } else if (wildcard_part_pattern!=null && wildcard_part_pattern.matcher(value).matches() ) {      
+      val regex = regex_map(value, wildcard_part_pattern) { _ match {
+        // It's a literal part.
+        case Left(x) =>
+          if (x=="") {
+            ""
+          } else {
+            if( part_pattern!=null ) {
+              if (!part_pattern.matcher(x).matches) {
                 throw new PathParser.PathException(String.format("Invalid destination: '%s', it does not match regex: %s", value, part_pattern))
+              } else {
+                Pattern.quote(url_decode(x.toString))
               }
-            }
-          case Right(wildcard) =>
-            if ( wildcard.group() == any_child_wildcard ) {
-              ".*?"
             } else {
-              wildcard.group(1)
+              Pattern.quote(x.toString)
             }
-        } }.mkString("")
-
-        return RegexChildPart(("^"+regex+"$").r.pattern, value)
+          }
+        // It was a regex part..
+        case Right(wildcard) =>
+          if ( wildcard.group() == any_child_wildcard ) {
+            ".*?"
+          } else {
+            wildcard.group(1)
+          }
+      } }.mkString("")
+      var regex_string: String = "^" + regex + "$"
+      RegexChildPart(regex_string.r.pattern)      
+    } else {
+      if (part_pattern != null ) {
+        if ( !part_pattern.matcher(value.toString).matches) {
+          throw new PathParser.PathException(String.format("Invalid destination: '%s', it does not match regex: %s", value, part_pattern))
+        } else {
+          LiteralPart(url_decode(value))
+        }
+      } else {
+        LiteralPart(value)
       }
     }
   }
@@ -245,34 +251,30 @@ class PathParser {
     * Converts the path back to the string representation.
     * @return
     */
-  def encode_path(path: Path, unsanitize_destinations:Boolean=false): String = encode_path_iter(path_parts(path))
+  def encode_path(path: Path): String = encode_path_iter(path_parts(path))
 
-  def path_parts(path: Path, unsanitize_destinations:Boolean=false):Array[String] = {
+  def path_parts(path: Path):Array[String] = {
     (path.parts.map( _ match {
       case RootPart => ""
       case AnyChildPart => any_child_wildcard
       case AnyDescendantPart => any_descendant_wildcard
-      case RegexChildPart(_, original) => original
+      case RegexChildPart(regex) => regex_wildcard_start + regex.pattern() + regex_wildcard_end
       case LiteralPart(value) =>
-        if(unsanitize_destinations) {
-          unsanitize_destination_part(value)
+        if( part_pattern !=null ) {
+          url_encode(value, part_pattern)
         } else {
           value
         }
     })).toArray
   }
 
-  def encode_path_iter(parts: Iterable[String], unsanitize_destinations:Boolean=false): String = {
-    var buffer: StringBuffer = new StringBuffer
+  def encode_path_iter(parts: Iterable[String]): String = {
+    val buffer: StringBuffer = new StringBuffer
     for (p <- parts) {
       if ( buffer.length() != 0) {
         buffer.append(path_separator)
       }
-      if(unsanitize_destinations) {
-        buffer.append(unsanitize_destination_part(p))
-      } else {
-        buffer.append(p)
-      }
+      buffer.append(p)
     }
     return buffer.toString
   }
@@ -285,7 +287,7 @@ class PathParser {
           last = new LitteralPathFilter(last, p)
         case AnyChildPart =>
           last = new PathParser.AnyChildPathFilter(last)
-        case RegexChildPart(r, _) =>
+        case RegexChildPart(r) =>
           last = new PathParser.RegexChildPathFilter(r, last)
         case AnyDescendantPart =>
           last = new PathParser.AnyDecendentPathFilter(last)

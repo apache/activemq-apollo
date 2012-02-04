@@ -37,41 +37,20 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 abstract public class DestinationDTO {
 
-    @XmlElement(name = "path")
-    public List<String> path = new ArrayList<String>();
-
-    public boolean temp;
+    @XmlAttribute(name = "name")
+    public String name;
 
     public DestinationDTO() {
     }
-
-    public DestinationDTO(List<String> path) {
-        this.path = path;
+    public DestinationDTO(String name) {
+        this.name = name;
     }
 
-    public DestinationDTO(String path[]) {
-        this(Arrays.asList(path));
-    }
-
-    public String name(String separator) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : path) {
-            if (sb.length() != 0) {
-                sb.append(separator);
-            }
-            sb.append(p);
-        }
-        return sb.toString();
-    }
-
-    public boolean temp() {
-        return temp;
-    }
-
-    public DestinationDTO temp(boolean temp) {
-        this.temp = temp;
-        return this;
-    }
+    /**
+     * @deprecated 
+     */
+    @XmlElement(name = "path")
+    public List<String> path = new ArrayList<String>();
 
     @Override
     public boolean equals(Object o) {
@@ -80,23 +59,21 @@ abstract public class DestinationDTO {
 
         DestinationDTO that = (DestinationDTO) o;
 
-        if (temp != that.temp) return false;
-        if (!path.equals(that.path)) return false;
+        if (!name.equals(that.name)) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = path.hashCode();
-        result = 31 * result + (temp ? 1 : 0);
+        int result = name.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
         return "DestinationDTO{" +
-                "path=" + path +
+                "name=" + name +
                 '}';
     }
 

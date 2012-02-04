@@ -32,17 +32,12 @@ public class TopicDestinationDTO extends DestinationDTO {
     public TopicDestinationDTO() {
     }
 
-    public TopicDestinationDTO(List<String> name) {
-        super(name);
-    }
-    public TopicDestinationDTO(String name[]) {
+    public TopicDestinationDTO(String name) {
         super(name);
     }
 
     @Override
     public String toString() {
-        return "TopicDestinationDTO{" +
-                "path=" + path +
-                '}';
+        return "topic:"+name;
     }
 }

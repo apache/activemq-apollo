@@ -33,7 +33,7 @@ import security.SecuredResource
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var config_updater: ()=>TopicDTO, val id:String, val path:Path) extends DomainDestination with SecuredResource {
+class Topic(val router:LocalRouter, val address:DestinationAddress, var config_updater: ()=>TopicDTO) extends DomainDestination with SecuredResource {
 
   val topic_metrics = new DestMetricsDTO
 
@@ -138,7 +138,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       val copy = value.copy();
       copy.uow = value.uow
       copy.ack = value.ack
-      copy.sender = destination_dto
+      copy.sender = address
       downstream.offer(copy)
     }
   }
@@ -170,7 +170,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
 
   import OptionSupport._
 
-  override def toString = destination_dto.toString
+  override def toString = address.toString
 
   def virtual_host: VirtualHost = router.virtual_host
   def now = virtual_host.broker.now
@@ -307,7 +307,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
         if( auto_delete_after!=0 ) {
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
             if( previously_idle_at == idled_at ) {
-              router.local_topic_domain.remove_destination(path, this)
+              router.local_topic_domain.remove_destination(address.path, this)
               DestinationMetricsSupport.add_destination_metrics(router.virtual_host.dead_topic_metrics, topic_metrics)
             }
           }
@@ -318,19 +318,18 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     }
   }
 
-  def bind (destination: DestinationDTO, consumer:DeliveryConsumer) = {
+  def bind(address: BindAddress, consumer:DeliveryConsumer) = {
 
-    val target = destination match {
-      case null=>
+    val target = address.domain match {
+      case "queue"=>
         // this is the mirrored queue case..
         consumer
-      case destination:TopicDestinationDTO=>
-        var target = consumer
+      case "topic"=>
         slow_consumer_policy match {
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(new TempQueueBinding(consumer, path, destination_dto))
+            val queue = router._create_queue(new TempQueueBinding(consumer, address))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
             consumer_queues += consumer->queue
@@ -418,7 +417,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     check_idle
   }
 
-  def bind_durable_subscription(destination: DurableSubscriptionDestinationDTO, queue:Queue)  = {
+  def bind_durable_subscription(address: SubscriptionAddress, queue:Queue)  = {
     if( !durable_subscriptions.contains(queue) ) {
       durable_subscriptions += queue
       val list = List(queue)
@@ -427,14 +426,14 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
       })
       consumer_queues.foreach{case (consumer, q)=>
         if( q==queue ) {
-          bind(destination, consumer)
+          bind(address, consumer)
         }
       }
     }
     check_idle
   }
 
-  def unbind_durable_subscription(destination: DurableSubscriptionDestinationDTO, queue:Queue)  = {
+  def unbind_durable_subscription(queue:Queue)  = {
     if( durable_subscriptions.contains(queue) ) {
       durable_subscriptions -= queue
       val list = List(queue)
@@ -450,7 +449,7 @@ class Topic(val router:LocalRouter, val destination_dto:TopicDestinationDTO, var
     check_idle
   }
 
-  def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
+  def connect (address:ConnectAddress, producer:BindableDeliveryProducer) = {
     val link = new LinkDTO()
     producer.connection match {
       case Some(connection) =>

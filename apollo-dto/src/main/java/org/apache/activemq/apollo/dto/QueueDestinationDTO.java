@@ -32,10 +32,7 @@ public class QueueDestinationDTO extends DestinationDTO {
     public QueueDestinationDTO() {
     }
 
-    public QueueDestinationDTO(List<String> name) {
-        super(name);
-    }
-    public QueueDestinationDTO(String[] name) {
+    public QueueDestinationDTO(String name) {
         super(name);
     }
 
@@ -58,9 +55,7 @@ public class QueueDestinationDTO extends DestinationDTO {
 
     @Override
     public String toString() {
-        return "QueueDestinationDTO{" +
-                "path=" + path +
-                '}';
+        return "queue:"+name;
     }
 
 }

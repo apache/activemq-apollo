@@ -72,14 +72,14 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
     override def dispatch_queue = router.virtual_host.dispatch_queue
   }
 
-  var producerRoutes = new LRUCache[List[DestinationDTO], ProducerRoute](10) {
-    override def onCacheEviction(eldest: Entry[List[DestinationDTO], ProducerRoute]) = {
+  var producerRoutes = new LRUCache[List[ConnectAddress], ProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[List[ConnectAddress], ProducerRoute]) = {
       router.disconnect(eldest.getKey.toArray, eldest.getValue)
     }
   }
 
   def on_create(dest: DomainDestination, security: SecurityContext) = {
-    val ow_destination = to_activemq_destination(Array(dest.destination_dto))
+    val ow_destination = to_activemq_destination(Array(dest.address))
     if (ow_destination!=null && !AdvisorySupport.isAdvisoryTopic(ow_destination)) {
       destination_advisories.getOrElseUpdate(ow_destination, {
         var info = new DestinationInfo(null, DestinationInfo.ADD_OPERATION_TYPE, ow_destination)
@@ -92,7 +92,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
   }
 
   def on_destroy(dest: DomainDestination, security: SecurityContext) = {
-    val destination = to_activemq_destination(Array(dest.destination_dto))
+    val destination = to_activemq_destination(Array(dest.address))
     if (destination!=null && !AdvisorySupport.isAdvisoryTopic(destination)) {
       for (info <- destination_advisories.remove(destination)) {
         var info = new DestinationInfo(null, DestinationInfo.REMOVE_OPERATION_TYPE, destination)
@@ -103,7 +103,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
   }
 
   def on_bind(dest: DomainDestination, consumer: DeliveryConsumer, security: SecurityContext) = {
-    val destination = to_activemq_destination(Array(dest.destination_dto))
+    val destination = to_activemq_destination(Array(dest.address))
     if (destination!=null && AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
       // replay the destination advisories..
       val producer = new ProducerRoute {
@@ -175,7 +175,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def send(delivery:Delivery): Unit = {
     val message = delivery.message.asInstanceOf[OpenwireMessage].message
-    val dest: Array[DestinationDTO] = to_destination_dto(message.getDestination,null)
+    val dest = to_destination_dto(message.getDestination,null)
     val key = dest.toList
 
     val route = producerRoutes.get(key) match {

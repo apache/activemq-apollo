@@ -60,8 +60,6 @@ import Queue._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
-  def id = binding.id
-
   override def toString = binding.toString
 
   def virtual_host = router.virtual_host
@@ -81,7 +79,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   override val dispatch_queue: DispatchQueue = createQueue(id);
 
-  def destination_dto: DestinationDTO = binding.binding_dto
+  def address = binding.address
 
   debug("created queue: " + id)
 
@@ -293,7 +291,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     rc.id = this.id
     rc.state = this.service_state.toString
     rc.state_since = this.service_state.since
-    rc.binding = this.binding.binding_dto
+    rc.binding = this.binding.dto
     rc.config = this.config
     rc.metrics = this.get_queue_metrics
     rc.metrics.current_time = now
@@ -489,7 +487,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def on_queue_flushed = {
     if(stop_listener_waiting_for_flush!=null) {
-      destination_dto match {
+      address match {
         case d:DurableSubscriptionDestinationDTO =>
           DestinationMetricsSupport.add_destination_metrics(virtual_host.dead_dsub_metrics, get_queue_metrics)
         case t:TopicDestinationDTO =>
@@ -558,7 +556,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         val entry = tail_entry
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queue_delivery = delivery.copy
-        queue_delivery.sender = destination_dto
+        queue_delivery.sender = address
         queue_delivery.seq = entry.seq
         entry.init(queue_delivery)
         
@@ -1009,20 +1007,20 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
   def disconnected() = throw new RuntimeException("unsupported")
 
-  def bind(destination:DestinationDTO, consumer: DeliveryConsumer) = {
+  def bind(bind_address:BindAddress, consumer: DeliveryConsumer) = {
     bind(consumer::Nil)
   }
   def unbind(consumer: DeliveryConsumer, persistent:Boolean):Unit = {
     unbind(consumer::Nil)
   }
 
-  def connect (destination:DestinationDTO, producer:BindableDeliveryProducer) = {
+  def connect (connect_address:ConnectAddress, producer:BindableDeliveryProducer) = {
     import OptionSupport._
     if( config.mirrored.getOrElse(false) ) {
       // this is a mirrored queue.. actually have the produce bind to the topic, instead of the
-      val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
-      val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
-      topic.connect(destination, producer)
+      val topic_address = new SimpleAddress("topic", binding.address.path)
+      val topic = router.local_topic_domain.get_or_create_destination(topic_address, null).success
+      topic.connect(topic_address, producer)
     } else {
       dispatch_queue {
         producers += producer
@@ -1036,8 +1034,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   def disconnect (producer:BindableDeliveryProducer) = {
     import OptionSupport._
     if( config.mirrored.getOrElse(false) ) {
-      val topic_dto = new TopicDestinationDTO(binding.binding_dto.path)
-      val topic = router.local_topic_domain.get_or_create_destination(binding.destination, topic_dto, null).success
+      val topic_address = new SimpleAddress("topic", binding.address.path)
+      val topic = router.local_topic_domain.get_or_create_destination(topic_address, null).success
       topic.disconnect(producer)
     } else {
       dispatch_queue {

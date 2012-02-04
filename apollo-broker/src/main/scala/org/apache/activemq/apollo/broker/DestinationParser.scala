@@ -18,10 +18,8 @@ package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.util.path.PathParser
 import scala.collection.mutable.ListBuffer
-import collection.JavaConversions._
 import java.lang.StringBuilder
 import java.util.regex.Pattern
-import org.apache.activemq.apollo.dto._
 import scala.Array
 
 /**
@@ -35,7 +33,6 @@ class DestinationParser extends PathParser {
   var temp_queue_prefix = "temp-queue:"
   var temp_topic_prefix = "temp-topic:"
   var destination_separator = ","
-  var sanitize_destinations = false
 
   def copy(other:DestinationParser) = {
     super.copy(other)
@@ -48,49 +45,46 @@ class DestinationParser extends PathParser {
     this
   }
 
-  def encode_destination(value: Array[DestinationDTO]): String = {
-    if (value == null) {
+  def encode_destination(addresses: Array[_ <: DestinationAddress]): String = {
+    if (addresses == null) {
       null
     } else {
       val rc = new StringBuilder
-      value.foreach { dest =>
+      addresses.foreach { address =>
         if (rc.length() != 0 ) {
           assert( destination_separator!=null )
           rc.append(destination_separator)
         }
-        dest match {
-          case d:QueueDestinationDTO =>
-            if ( d.temp() ) {
-              if( temp_queue_prefix!=null ) {
-                rc.append(temp_queue_prefix)
-              }
-            } else {
-              if( queue_prefix!=null ) {
-                rc.append(queue_prefix)
-              }
-            }
-            rc.append(encode_path_iter(dest.path.toIterable, sanitize_destinations))
-          case d:DurableSubscriptionDestinationDTO =>
-            if( dsub_prefix!=null ) {
-              rc.append(dsub_prefix)
-            }
-            rc.append(unsanitize_destination_part(d.subscription_id))
-          case d:TopicDestinationDTO =>
-            if ( d.temp() ) {
-              if( temp_topic_prefix!=null ) {
-                rc.append(temp_topic_prefix)
-              }
-            } else {
-              if( topic_prefix!=null ) {
-                rc.append(topic_prefix)
-              }
-            }
-            rc.append(encode_path_iter(dest.path.toIterable, sanitize_destinations))
-          case _ =>
-            throw new Exception("Uknown destination type: "+dest.getClass);
-        }
-
+        rc.append(encode_destination(address))
       }
+      rc.toString
+    }
+  }
+
+  def encode_destination(address: DestinationAddress): String = {
+    if (address == null) {
+      null
+    } else {
+      val rc = new StringBuilder
+      address.domain match {
+        case "temp-queue" => if( temp_queue_prefix!=null ) {
+          rc.append(temp_queue_prefix)
+        }
+        case "queue" => if( queue_prefix!=null ) {
+          rc.append(queue_prefix)
+        }
+        case "temp-topic" => if( temp_topic_prefix!=null ) {
+          rc.append(temp_topic_prefix)
+        }
+        case "topic" => if( topic_prefix!=null ) {
+          rc.append(topic_prefix)
+        }
+        case "dsub" => if( dsub_prefix!=null ) {
+          rc.append(dsub_prefix)
+        }
+        case _ => throw sys.error("Uknown domain: "+address.domain);
+      }
+      rc.append(encode_path(address.path))
       rc.toString
     }
   }
@@ -102,14 +96,14 @@ class DestinationParser extends PathParser {
    * @param compositeSeparator
    * @return
    */
-  def decode_multi_destination(value: String, unqualified:(String)=>DestinationDTO=null): Array[DestinationDTO] = {
+  def decode_multi_destination(value: String, unqualified:(String)=>SimpleAddress=null): Array[SimpleAddress] = {
     if (value == null) {
       return null;
     }
 
     if (destination_separator!=null && value.contains(destination_separator)) {
       var rc = value.split(Pattern.quote(destination_separator));
-      var dl = ListBuffer[DestinationDTO]()
+      var dl = ListBuffer[SimpleAddress]()
       for (buffer <- rc) {
         val d = decode_single_destination(buffer, unqualified)
         if (d == null) {
@@ -135,22 +129,22 @@ class DestinationParser extends PathParser {
    * @param compositeSeparator
    * @return
    */
-  def decode_single_destination(value: String, unqualified: (String) => DestinationDTO): DestinationDTO = {
+  def decode_single_destination(value: String, unqualified: (String) => SimpleAddress): SimpleAddress = {
     if (queue_prefix != null && value.startsWith(queue_prefix)) {
       var name = value.substring(queue_prefix.length)
-      return new QueueDestinationDTO(parts(name, sanitize_destinations))
+      return new SimpleAddress("queue", decode_path(name))
     } else if (topic_prefix != null && value.startsWith(topic_prefix)) {
       var name = value.substring(topic_prefix.length)
-      return new TopicDestinationDTO(parts(name, sanitize_destinations))
+      return new SimpleAddress("topic", decode_path(name))
     } else if (dsub_prefix != null && value.startsWith(dsub_prefix)) {
-      var name = sanitize_destination_part(value.substring(dsub_prefix.length))
-      return new DurableSubscriptionDestinationDTO(name).direct();
+      var name = value.substring(dsub_prefix.length)
+      return new SimpleAddress("dsub", decode_path(name))
     } else if (temp_topic_prefix != null && value.startsWith(temp_topic_prefix)) {
       var name = value.substring(temp_topic_prefix.length)
-      return new TopicDestinationDTO(parts(name, sanitize_destinations)).temp(true)
+      return new SimpleAddress("temp-topic", decode_path(name))
     } else if (temp_queue_prefix != null && value.startsWith(temp_queue_prefix)) {
       var name = value.substring(temp_queue_prefix.length)
-      return new QueueDestinationDTO(parts(name, sanitize_destinations)).temp(true)
+      return new SimpleAddress("temp-queue", decode_path(name))
     } else if (unqualified != null) {
       return unqualified(value)
     } else {
