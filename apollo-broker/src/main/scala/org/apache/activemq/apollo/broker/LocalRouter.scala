@@ -575,31 +575,58 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       assert_executing
       val address = queue.address.asInstanceOf[SubscriptionAddress]
       add_destination(address.path, queue)
+      bind_topics(queue, address, address.topics)
+    }
 
-      import collection.JavaConversions._
-      address.topics.foreach { topic =>
+    def rebind(queue:Queue, binding:DurableSubscriptionQueueBinding) = {
 
-        val wildcard = PathParser.containsWildCards(topic.path)
-        var matches = local_topic_domain.get_destination_matches(topic.path)
+      // Ok figure out what was added or removed.
+      val prev:Set[BindAddress] = queue.address.asInstanceOf[SubscriptionAddress].topics.toSet
+      val next:Set[BindAddress] = binding.address.topics.toSet
+      val existing = prev.intersect(next)
+      val added = next -- existing
+      val removed = prev -- next
 
-        // We may need to create the topic...
-        if( !wildcard && matches.isEmpty ) {
-          local_topic_domain.create_destination(topic, null)
-          matches = local_topic_domain.get_destination_matches(topic.path)
-        }
-        matches.foreach( _.bind_durable_subscription(address, queue) )
+      if(!added.isEmpty) {
+        bind_topics(queue, binding.address, added)
+      }
+      if(!removed.isEmpty) {
+        unbind_topics(queue, removed)
+      }
+
+      // Make sure the update is visible in the queue's thread context..
+      queue.binding = binding
+      queue.dispatch_queue {
+        queue.binding = binding
       }
     }
 
     def unbind(queue:Queue) = {
       assert_executing
       val address = queue.address.asInstanceOf[SubscriptionAddress]
-
-      address.topics.foreach { topic =>
-        var matches = local_topic_domain.get_destination_matches(topic.path)
-        matches.foreach( _.unbind_durable_subscription(queue) )
-      }
+      unbind_topics(queue, address.topics)
       remove_destination(address.path, queue)
+    }
+
+    def unbind_topics(queue: Queue, topics: Traversable[_ <: BindAddress]) {
+      topics.foreach { topic =>
+        var matches = local_topic_domain.get_destination_matches(topic.path)
+        matches.foreach(_.unbind_durable_subscription(queue))
+      }
+    }
+
+    def bind_topics(queue: Queue, address: SubscriptionAddress, topics: Traversable[_ <: BindAddress]) {
+      topics.foreach { topic =>
+        val wildcard = PathParser.containsWildCards(topic.path)
+        var matches = local_topic_domain.get_destination_matches(topic.path)
+
+        // We may need to create the topic...
+        if (!wildcard && matches.isEmpty) {
+          local_topic_domain.create_destination(topic, null)
+          matches = local_topic_domain.get_destination_matches(topic.path)
+        }
+        matches.foreach(_.bind_durable_subscription(address, queue))
+      }
     }
 
     def destroy_destination(address: DestinationAddress, security: SecurityContext): Unit = {
@@ -666,14 +693,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
               }
 
               // and then rebind the queue in the router.
-              unbind(queue)
-              queue.binding = binding
-              bind(queue)
+              rebind(queue, binding)
 
-              // Make sure the update is visible in the queue's thread context..
-              queue.dispatch_queue {
-                queue.binding = binding
-              }
             }
           case _ =>
         }

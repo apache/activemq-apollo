@@ -19,14 +19,14 @@ package org.apache.activemq.apollo.stomp
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
-import FileSupport._
-import org.apache.activemq.apollo.dto.KeyStorageDTO
 import java.net.InetSocketAddress
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.{LocalRouter, KeyStorage, Broker, BrokerFactory}
-import org.fusesource.hawtbuf.Buffer._
 import java.util.concurrent.TimeUnit._
+import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.dto.{QueueStatusDTO, TopicStatusDTO, KeyStorageDTO}
+import java.util.concurrent.atomic.AtomicLong
+import FileSupport._
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -88,6 +88,75 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     c
   }
 
+  val receipt_counter = new AtomicLong()
+
+  def sync_send(dest:String, body:Any, c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    c.write(
+      "SEND\n" +
+      "destination:"+dest+"\n" +
+      "receipt:"+rid+"\n" +
+      "\n" +
+      body)
+    wait_for_receipt(""+rid, c)
+  }
+
+  def async_send(dest:String, body:Any, c: StompClient = client) = {
+    c.write(
+      "SEND\n" +
+      "destination:"+dest+"\n" +
+      "\n" +
+      body)
+  }
+
+  def subscribe(id:String, dest:String, mode:String="auto", persistent:Boolean=false, c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    c.write(
+      "SUBSCRIBE\n" +
+      "destination:"+dest+"\n" +
+      "id:"+id+"\n" +
+      (if(persistent) "persistent:true\n" else "")+
+      "ack:"+mode+"\n"+
+      "receipt:"+rid+"\n" +
+      "\n")
+    wait_for_receipt(""+rid, c)
+  }
+
+  def unsubscribe(id:String, c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    client.write(
+      "UNSUBSCRIBE\n" +
+      "id:"+id+"\n" +
+      "receipt:"+rid+"\n" +
+      "\n")
+    wait_for_receipt(""+rid, c)
+  }
+
+  def assert_received(body:Any, sub:String=null, c: StompClient=client)={
+    val frame = c.receive()
+    frame should startWith("MESSAGE\n")
+    if(sub!=null) {
+      frame should include ("subscription:"+sub+"\n")
+    }
+    body match {
+      case null =>
+      case body:scala.util.matching.Regex => frame should endWith regex(body)
+      case body => frame should endWith("\n\n"+body)
+    }
+    // return a func that can ack the message.
+    ()=> {
+      val sub_regex = """(?s).*\nsubscription:([^\n]+)\n.*""".r
+      val msgid_regex = """(?s).*\nmessage-id:([^\n]+)\n.*""".r
+      val sub_regex(sub) = frame
+      val msgid_regex(msgid) = frame
+      c.write(
+        "ACK\n" +
+        "subscription:"+sub+"\n" +
+        "message-id:"+msgid+"\n" +
+        "\n")
+    }
+  }
+
   def wait_for_receipt(id:String, c: StompClient = client): Unit = {
     val frame = c.receive()
     frame should startWith("RECEIPT\n")
@@ -95,7 +164,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   }
 
   def queue_exists(name:String):Boolean = {
-    val host = broker.virtual_hosts.get(ascii("default")).get
+    val host = broker.default_virtual_host
     host.dispatch_queue.future {
       val router = host.router.asInstanceOf[LocalRouter]
       router.local_queue_domain.destination_by_id.get(name).isDefined
@@ -103,14 +172,191 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
   }
 
   def topic_exists(name:String):Boolean = {
-    val host = broker.virtual_hosts.get(ascii("default")).get
+    val host = broker.default_virtual_host
     host.dispatch_queue.future {
       val router = host.router.asInstanceOf[LocalRouter]
       router.local_topic_domain.destination_by_id.get(name).isDefined
     }.await()
   }
 
+  def topic_status(name:String):TopicStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_topic_domain.destination_by_id.get(name).get.status
+    }
+  }
+
+  def queue_status(name:String):QueueStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_queue_domain.destination_by_id.get(name).get.status(false)
+    }
+  }
+
+  def dsub_status(name:String):QueueStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_dsub_domain.destination_by_id.get(name).get.status(false)
+    }
+  }
+
 }
+
+/**
+ * These test cases check to make sure the broker stats are consistent with what
+ * would be expected.
+ */
+class StompMetricsTest extends StompTestSupport {
+
+  test("Topic Stats") {
+    connect("1.1")
+
+    sync_send("/topic/stats", 1)
+    val stat1 = topic_status("stats")
+    stat1.producers.size() should be(1)
+    stat1.consumers.size() should be(0)
+    stat1.dsubs.size() should be(0)
+    stat1.metrics.enqueue_item_counter should be(1)
+    stat1.metrics.dequeue_item_counter should be(0)
+    stat1.metrics.queue_items should be(0)
+
+    subscribe("0", "/topic/stats");
+    async_send("/topic/stats", 2)
+    async_send("/topic/stats", 3)
+    assert_received(2)
+    assert_received(3)
+
+    val stat2 = topic_status("stats")
+    stat2.producers.size() should be(1)
+    stat2.consumers.size() should be(1)
+    stat2.dsubs.size() should be(0)
+    stat2.metrics.enqueue_item_counter should be(3)
+    stat2.metrics.dequeue_item_counter should be(2)
+    stat2.metrics.queue_items should be(0)
+    client.close()
+
+    within(1, SECONDS) {
+      val stat3 = topic_status("stats")
+      stat3.producers.size() should be(0)
+      stat3.consumers.size() should be(0)
+      stat3.dsubs.size() should be(0)
+      stat3.metrics.enqueue_item_counter should be(3)
+      stat3.metrics.dequeue_item_counter should be(2)
+      stat3.metrics.queue_items should be(0)
+    }
+  }
+
+  test("Topic slow_consumer_policy='queue' Stats") {
+    connect("1.1")
+
+    sync_send("/topic/queued.stats", 1)
+    val stat1 = topic_status("queued.stats")
+    stat1.producers.size() should be(1)
+    stat1.consumers.size() should be(0)
+    stat1.dsubs.size() should be(0)
+    stat1.metrics.enqueue_item_counter should be(1)
+    stat1.metrics.dequeue_item_counter should be(0)
+    stat1.metrics.queue_items should be(0)
+
+    subscribe("0", "/topic/queued.stats", "client");
+    async_send("/topic/queued.stats", 2)
+    async_send("/topic/queued.stats", 3)
+    val ack2 = assert_received(2)
+    val ack3 = assert_received(3)
+
+    // not acked yet.
+    val stat2 = topic_status("queued.stats")
+    stat2.producers.size() should be(1)
+    stat2.consumers.size() should be(1)
+    stat2.dsubs.size() should be(0)
+    stat2.metrics.enqueue_item_counter should be(3)
+    stat2.metrics.dequeue_item_counter should be(0)
+    stat2.metrics.queue_items should be(2)
+
+    // Ack now..
+    ack2() ; ack3()
+
+    within(1, SECONDS) {
+      val stat3 = topic_status("queued.stats")
+      stat3.producers.size() should be(1)
+      stat3.consumers.size() should be(1)
+      stat3.dsubs.size() should be(0)
+      stat3.metrics.enqueue_item_counter should be(3)
+      stat3.metrics.dequeue_item_counter should be(2)
+      stat3.metrics.queue_items should be(0)
+    }
+
+    unsubscribe("0")
+    client.close()
+    within(1, SECONDS) {
+      val stat4 = topic_status("queued.stats")
+      stat4.producers.size() should be(0)
+      stat4.consumers.size() should be(0)
+      stat4.dsubs.size() should be(0)
+      stat4.metrics.enqueue_item_counter should be(3)
+      stat4.metrics.dequeue_item_counter should be(2)
+      stat4.metrics.queue_items should be(0)
+    }
+  }
+
+  test("Topic Durable Sub Stats.") {
+    connect("1.1")
+
+    sync_send("/topic/dsubed.stats", 1)
+    val stat1 = topic_status("dsubed.stats")
+    stat1.producers.size() should be(1)
+    stat1.consumers.size() should be(0)
+    stat1.dsubs.size() should be(0)
+    stat1.metrics.enqueue_item_counter should be(1)
+    stat1.metrics.dequeue_item_counter should be(0)
+    stat1.metrics.queue_items should be(0)
+    
+    subscribe("dsub1", "/topic/dsubed.stats", "client", true);
+    async_send("/topic/dsubed.stats", 2)
+    async_send("/topic/dsubed.stats", 3)
+    val ack2 = assert_received(2)
+    val ack3 = assert_received(3)
+
+    // not acked yet.
+    val stat2 = topic_status("dsubed.stats")
+    stat2.producers.size() should be(1)
+    stat2.consumers.size() should be(1)
+    stat2.dsubs.size() should be(1)
+    stat2.metrics.enqueue_item_counter should be(3)
+    stat2.metrics.dequeue_item_counter should be(0)
+    stat2.metrics.queue_items should be(2)
+
+    // Ack SOME now..
+    ack2();
+
+    within(1, SECONDS) {
+      val stat3 = topic_status("dsubed.stats")
+      stat3.producers.size() should be(1)
+      stat3.consumers.size() should be(1)
+      stat3.dsubs.size() should be(1)
+      stat3.metrics.enqueue_item_counter should be(3)
+      stat3.metrics.dequeue_item_counter should be(1)
+      stat3.metrics.queue_items should be(1)
+    }
+
+    unsubscribe("dsub1")
+    client.close()
+    within(1, SECONDS) {
+      val stat4 = topic_status("dsubed.stats")
+      stat4.producers.size() should be(0)
+      stat4.consumers.size() should be(1)
+      stat4.dsubs.size() should be(1)
+      stat4.metrics.enqueue_item_counter should be(3)
+      stat4.metrics.dequeue_item_counter should be(1)
+      stat4.metrics.queue_items should be(1)
+    }
+  }
+
+}
+
 
 class Stomp10ConnectTest extends StompTestSupport {
 
@@ -248,7 +494,6 @@ class Stomp11HeartBeatTest extends StompTestSupport {
   }
 
 }
-
 class StompDestinationTest extends StompTestSupport {
 
   // This is the test case for https://issues.apache.org/jira/browse/APLO-88

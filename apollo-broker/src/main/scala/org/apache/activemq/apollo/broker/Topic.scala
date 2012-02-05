@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.util._
-import path.Path
 import scala.collection.immutable.List
 import org.apache.activemq.apollo.dto._
 import java.util.concurrent.TimeUnit
@@ -300,7 +299,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   }
 
   def check_idle {
-    if (producers.isEmpty && consumers.isEmpty && durable_subscriptions.isEmpty) {
+    if (producers.isEmpty && consumers.isEmpty) {
       if (idled_at==0) {
         val previously_idle_at = now
         idled_at = previously_idle_at
@@ -321,8 +320,8 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   def bind(address: BindAddress, consumer:DeliveryConsumer) = {
 
     val target = address.domain match {
-      case "queue"=>
-        // this is the mirrored queue case..
+      case "queue" | "dsub"=>
+        // durable sub or mirrored queue case.
         consumer
       case "topic"=>
         slow_consumer_policy match {
@@ -360,6 +359,10 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             }
           case x:QueueDomainQueueBinding =>
             link.kind = "queue"
+            link.id = queue.id
+            link.label = queue.id
+          case x:DurableSubscriptionQueueBinding =>
+            link.kind = "dsub"
             link.id = queue.id
             link.label = queue.id
         }
@@ -420,31 +423,15 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   def bind_durable_subscription(address: SubscriptionAddress, queue:Queue)  = {
     if( !durable_subscriptions.contains(queue) ) {
       durable_subscriptions += queue
-      val list = List(queue)
-      producers.keys.foreach({ r=>
-        r.bind(list)
-      })
-      consumer_queues.foreach{case (consumer, q)=>
-        if( q==queue ) {
-          bind(address, consumer)
-        }
-      }
+      bind(address, queue)
     }
     check_idle
   }
 
   def unbind_durable_subscription(queue:Queue)  = {
     if( durable_subscriptions.contains(queue) ) {
+      unbind(queue, false)
       durable_subscriptions -= queue
-      val list = List(queue)
-      producers.keys.foreach({ r=>
-        r.unbind(list)
-      })
-      consumer_queues.foreach{case (consumer, q)=>
-        if( q==queue ) {
-          unbind(consumer, false)
-        }
-      }
     }
     check_idle
   }
@@ -462,7 +449,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
     producers.put(producer, link)
     topic_metrics.producer_counter += 1
-    producer.bind(producer_tracker::consumers.values.toList ::: durable_subscriptions.toList)
+    producer.bind(producer_tracker::consumers.values.toList )
     check_idle
   }
 
