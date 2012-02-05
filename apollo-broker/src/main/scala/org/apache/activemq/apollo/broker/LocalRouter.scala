@@ -1015,21 +1015,20 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def unbind(addresses: Array[_ <: BindAddress], consumer: DeliveryConsumer, persistent:Boolean, security: SecurityContext) = {
+    dispatch_queue.assertExecuting()
     consumer.retain
-    dispatch_queue {
-      addresses.foreach { address=>
-        address.domain match {
-          case "topic" =>
-            topic_domain.unbind(address, consumer, persistent, security)
-          case "queue" =>
-            queue_domain.unbind(address, consumer, persistent, security)
-          case "dsub" =>
-            dsub_domain.unbind(address, consumer, persistent, security)
-          case _ => sys.error("Unknown domain: "+address.domain)
-        }
+    addresses.foreach { address=>
+      address.domain match {
+        case "topic" =>
+          topic_domain.unbind(address, consumer, persistent, security)
+        case "queue" =>
+          queue_domain.unbind(address, consumer, persistent, security)
+        case "dsub" =>
+          dsub_domain.unbind(address, consumer, persistent, security)
+        case _ => sys.error("Unknown domain: "+address.domain)
       }
-      consumer.release
     }
+    consumer.release
   }
 
   def connect(addresses: Array[_ <: ConnectAddress], producer: BindableDeliveryProducer, security: SecurityContext):Option[String] = {
@@ -1073,21 +1072,20 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def disconnect(addresses:Array[_ <: ConnectAddress], producer:BindableDeliveryProducer) = {
-    dispatch_queue {
-      addresses.foreach { address=>
-        address.domain match {
-          case "topic" =>
-            topic_domain.disconnect(address, producer)
-          case "queue" =>
-            queue_domain.disconnect(address, producer)
-          case "dsub" =>
-            dsub_domain.disconnect(address, producer)
-          case _ => sys.error("Unknown domain: "+address.domain)
-        }
+    dispatch_queue.assertExecuting()
+    addresses.foreach { address=>
+      address.domain match {
+        case "topic" =>
+          topic_domain.disconnect(address, producer)
+        case "queue" =>
+          queue_domain.disconnect(address, producer)
+        case "dsub" =>
+          dsub_domain.disconnect(address, producer)
+        case _ => sys.error("Unknown domain: "+address.domain)
       }
-      producer.disconnected()
-      producer.release()
     }
+    producer.disconnected()
+    producer.release()
   }
 
   def create(addresses:Array[_ <: DestinationAddress], security: SecurityContext):Option[String] = {
@@ -1158,15 +1156,11 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
   }
 
-
-  def get_or_create_destination(adress: DestinationAddress, security: SecurityContext) = dispatch_queue ! {
-    _get_or_create_destination(adress, security)
-  }
-
   /**
    * Returns the previously created queue if it already existed.
    */
-  def _get_or_create_destination(address: DestinationAddress, security:SecurityContext): Result[DomainDestination, String] = {
+  def get_or_create_destination(address: DestinationAddress, security:SecurityContext): Result[DomainDestination, String] = {
+    dispatch_queue.assertExecuting()
     address.domain match {
       case "queue" => queue_domain.get_or_create_destination(address, security)
       case "topic" => topic_domain.get_or_create_destination(address, security)

@@ -220,8 +220,11 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       heart_beat_monitor.stop
 
       import collection.JavaConversions._
-      producerRoutes.foreach{
-        case (dests, route) => host.router.disconnect(dests.toArray, route)
+      producerRoutes.foreach{ case (dests, route) =>
+        val addresses = dests.toArray
+        host.dispatch_queue {
+          host.router.disconnect(addresses, route)
+        }
       }
       producerRoutes.clear
 
@@ -896,7 +899,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
 
     def dettach = {
-      host.router.unbind(addresses, this, false , security_context)
+      host.dispatch_queue {
+        host.router.unbind(addresses, this, false , security_context)
+      }
       parent.consumers.remove(info.getConsumerId)
       all_consumers.remove(info.getConsumerId)
     }

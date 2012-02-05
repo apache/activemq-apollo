@@ -702,13 +702,18 @@ class StompProtocolHandler extends ProtocolHandler {
       dead = true;
 
       import collection.JavaConversions._
-      producerRoutes.foreach{
-        case(dests,route)=> host.router.disconnect(dests.toArray, route)
+      producerRoutes.foreach{ case(dests,route)=>
+        val addresses = dests.toArray
+        host.dispatch_queue {
+          host.router.disconnect(addresses, route)
+        }
       }
       producerRoutes.clear
-      consumers.foreach {
-        case (_,consumer)=>
-          host.router.unbind(consumer.addresses, consumer, false , security_context)
+      consumers.foreach { case (_,consumer)=>
+        val addresses = consumer.addresses
+        host.dispatch_queue {
+          host.router.unbind(addresses, consumer, false , security_context)
+        }
       }
       consumers = Map()
       security_context.logout( e => {
@@ -1281,7 +1286,9 @@ class StompProtocolHandler extends ProtocolHandler {
         // consumer gets disposed after all producer stop sending to it...
         consumer.setDisposer(^{ send_receipt(headers) })
         consumers -= id
-        host.router.unbind(consumer.addresses, consumer, persistent, security_context)
+        host.dispatch_queue {
+          host.router.unbind(consumer.addresses, consumer, persistent, security_context)
+        }
     }
   }
 

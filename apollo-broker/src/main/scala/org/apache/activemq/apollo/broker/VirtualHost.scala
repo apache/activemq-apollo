@@ -84,7 +84,7 @@ object VirtualHost extends Log {
 class VirtualHost(val broker: Broker, val id:String) extends BaseService with SecuredResource {
   import VirtualHost._
   
-  override val dispatch_queue:DispatchQueue = createQueue("virtual-host") // getGlobalQueue(DispatchPriority.HIGH).createQueue("virtual-host")
+  override val dispatch_queue:DispatchQueue = createQueue("virtual-host")
 
   var config:VirtualHostDTO = _
   val router:Router = new LocalRouter(this)
