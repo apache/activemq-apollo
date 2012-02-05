@@ -35,5 +35,6 @@ class QueueEntryRecord {
   var size = 0
   var expiration = 0L
   var redeliveries:Short = 0
+  var sender:Buffer = _
 
 }

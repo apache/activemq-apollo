@@ -90,6 +90,7 @@ object PBSupport {
       pb.setExpiration(v.expiration)
     if(v.redeliveries!=0)
       pb.setRedeliveries(v.redeliveries)
+    pb.setSender(v.sender)
     pb
   }
 
@@ -102,6 +103,7 @@ object PBSupport {
     rc.size = pb.getSize
     rc.expiration = pb.getExpiration
     rc.redeliveries = pb.getRedeliveries.toShort
+    rc.sender = pb.getSender
     rc
   }
 

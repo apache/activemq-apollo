@@ -141,6 +141,12 @@ sealed trait DestinationAddress {
 }
 sealed trait ConnectAddress extends DestinationAddress
 sealed trait BindAddress extends DestinationAddress
+object SimpleAddress {
+  def apply(value:String):SimpleAddress= {
+    val p = value.indexOf(":")
+    SimpleAddress(value.substring(0, p), DestinationAddress.decode_path(value.substring(p+1)))
+  }
+}
 case class SimpleAddress(val domain:String, val path:Path) extends ConnectAddress with BindAddress {
   override def simple = this
 }

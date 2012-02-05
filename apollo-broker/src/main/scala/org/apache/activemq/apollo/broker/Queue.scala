@@ -31,6 +31,7 @@ import java.lang.UnsupportedOperationException
 import security.SecuredResource._
 import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
+import org.fusesource.hawtbuf.UTF8Buffer
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -556,7 +557,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         val entry = tail_entry
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queue_delivery = delivery.copy
-        queue_delivery.sender = address
         queue_delivery.seq = entry.seq
         entry.init(queue_delivery)
         
@@ -1131,7 +1131,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    state = new Swapped(qer.message_key, qer.message_locator, qer.size, qer.expiration, qer.redeliveries, null)
+    val sender = if ( qer.sender==null ) {
+      null
+    } else {
+      SimpleAddress(qer.sender.utf8().toString)
+    }
+    state = new Swapped(qer.message_key, qer.message_locator, qer.size, qer.expiration, qer.redeliveries, null, sender)
     this
   }
 
@@ -1191,8 +1196,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     qer.entry_seq = seq
     qer.message_key = state.message_key
     qer.message_locator = state.message_locator
+    qer.message_locator = state.message_locator
     qer.size = state.size
     qer.expiration = expiration
+    if( state.sender!=null ) {
+      qer.sender = new UTF8Buffer(state.sender.toString)
+    }
     qer
   }
 
@@ -1296,6 +1305,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     def message_key = -1L
 
     def message_locator: AtomicReference[Object] = null
+
+    def sender: DestinationAddress = null
 
     /**
      * Attempts to dispatch the current entry to the subscriptions position at the entry.
@@ -1438,6 +1449,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def message_key = delivery.storeKey
     override def message_locator = delivery.storeLocator
     override def redelivery_count = delivery.redeliveries
+    override def sender = delivery.sender
 
     override def redelivered = delivery.redeliveries = ((delivery.redeliveries+1).min(Short.MaxValue)).toShort
 
@@ -1523,7 +1535,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           queue.swap_out_item_counter += 1
         }
 
-        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer)
+        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext
         }
@@ -1581,6 +1593,18 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       var heldBack = ListBuffer[Subscription]()
       var advancing = ListBuffer[Subscription]()
 
+      // avoid doing the copy if its' not needed.
+      var _browser_copy:Delivery = null
+      def browser_copy = {
+        if( _browser_copy==null ) {
+          _browser_copy = delivery.copy
+          if( _browser_copy.sender==null ) {
+            _browser_copy.sender = queue.address
+          }
+        }
+        _browser_copy
+      }
+
       var acquiringSub: Subscription = null
       parked.foreach{ sub=>
 
@@ -1589,7 +1613,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             // advance: not interested.
             advancing += sub
           } else {
-            if (sub.offer(delivery)) {
+            if (sub.offer(browser_copy)) {
               // advance: accepted...
               advancing += sub
             } else {
@@ -1627,6 +1651,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
                   val acquiredQueueEntry = sub.acquire(entry)
                   val acquiredDelivery = delivery.copy
+                  if( acquiredDelivery.sender==null ) {
+                    acquiredDelivery.sender = queue.address
+                  }
+
                   acquiredDelivery.ack = (consumed, uow)=> {
                     if( uow!=null ) {
                       uow.retain()
@@ -1676,7 +1704,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription, override  val sender:DestinationAddress) extends EntryState {
 
     queue.individual_swapped_items += 1
 
