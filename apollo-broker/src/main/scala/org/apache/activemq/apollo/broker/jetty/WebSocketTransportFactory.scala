@@ -189,8 +189,13 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     // Transport interface methods.
     /////////////////////////////////////////////////////////////////////////
     
-    @BeanProperty
     var dispatchQueue = createQueue()
+
+    def getDispatchQueue: DispatchQueue = dispatchQueue
+    def setDispatchQueue(queue: DispatchQueue) {
+      dispatchQueue = queue
+      drain_outbound_events.setTargetQueue(queue);
+    }
 
     @BeanProperty
     var transportListener: TransportListener = _

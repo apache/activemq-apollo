@@ -35,7 +35,19 @@ object Connection extends Log
 abstract class Connection() extends BaseService with Dispatched {
   import Connection._
 
-  val dispatch_queue = createQueue()
+  private var _dispatch_queue = createQueue()
+  def dispatch_queue = _dispatch_queue
+
+  def set_dispatch_queue(next_queue:DispatchQueue)(on_complete: =>Unit) {
+    _dispatch_queue {
+      if(transport!=null) {
+        transport.setDispatchQueue(next_queue)
+      }
+      _dispatch_queue = next_queue
+      on_complete
+    }
+  }
+
   var stopped = true
   var transport:Transport = null
   var transport_sink:TransportSink = null
