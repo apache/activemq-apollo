@@ -36,4 +36,23 @@ public class DetectDTO extends ProtocolDTO {
     @XmlAttribute(name="timeout")
     public Long timeout;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        DetectDTO detectDTO = (DetectDTO) o;
+
+        if (timeout != null ? !timeout.equals(detectDTO.timeout) : detectDTO.timeout != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (timeout != null ? timeout.hashCode() : 0);
+        return result;
+    }
 }

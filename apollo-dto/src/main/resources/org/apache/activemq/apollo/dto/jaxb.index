@@ -29,6 +29,7 @@ CustomServiceDTO
 DataPageDTO
 DestMetricsDTO
 DestinationDTO
+DetectDTO
 DurableSubscriptionDTO
 DurableSubscriptionDestinationDTO
 EntryStatusDTO
