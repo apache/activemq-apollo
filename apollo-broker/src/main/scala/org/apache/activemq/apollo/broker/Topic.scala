@@ -388,6 +388,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       copy.sender = address
 
       val producer = new  DeliveryProducerRoute(router) {
+        refiller = NOOP
         val dispatch_queue = createQueue()
         override protected def on_connected = {
           copy.ack = (d,x) => consumer.dispatch_queue {
