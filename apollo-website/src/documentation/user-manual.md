@@ -153,6 +153,25 @@ use the following configuration:
 </connector>
 {pygmentize}
 
+If your using the `any` protocol then actual protocol being used will be
+detected by examining the client's initial request. You can use the
+`detect` element within a `connector` element to configure the protocol
+detection settings.  The `detect` element supports the following 
+attributes:
+
+* `timeout` : maximum amount of time (in milliseconds) that protocol
+  detection is allowed to take.  Defaults to 5000 milliseconds.  If a 
+  client does not send an initial request before the timeout expires,
+  the connection is closed.
+
+Example of how to set the protocol detection timeout to 30 seconds:
+
+{pygmentize:: xml}
+<connector id="tcp" bind="tcp://0.0.0.0:61613">
+  <detect timeout="30000"/>
+</connector>
+{pygmentize}
+
 ##### TCP Transports
 
 The TCP transport uses the `tcp://` URI scheme.  It uses the URI host
@@ -1004,11 +1023,13 @@ following configuration attributes:
   will be set to the number of times the message has been redeliverd.  Not set 
   by default.
 * `max_header_length` : The maximum allowed length of a STOMP header. Defaults 
-  to 10240 (10k).
+  to `10k`.
 * `max_headers` : The maximum number of allowed headers in a frame.  Defaults 
   to 1000.
 * `max_data_length` : The maximum size of the body portion of a STOMP frame.  
-  Defaults to 104857600 (100 megs).
+  Defaults to `100M`.
+* `die_delay` : The amount of time to delay in milliseconds after an `ERROR` 
+  message is sent to the client and the socket is closed.
 
 The stomp configuration element can also be used to control how the destination 
 headers are parsed and interpreted.  The supported attributes are:
