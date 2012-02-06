@@ -498,14 +498,25 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 }
 class StompDestinationTest extends StompTestSupport {
 
-  test("Topic remembers retained messages sent before before subscription is established") {
+  test("retain:set makes a topic remeber the message") {
     connect("1.1")
-    sync_send("/topic/retained-example", 1, "retain:true\n")
-    sync_send("/topic/retained-example", 2, "retain:true\n")
+    async_send("/topic/retained-example", 1)
+    async_send("/topic/retained-example", 2, "retain:set\n")
+    sync_send("/topic/retained-example", 3)
     subscribe("0", "/topic/retained-example")
     assert_received(2)
-    sync_send("/topic/retained-example", 3, "retain:true\n")
-    assert_received(3)
+    async_send("/topic/retained-example", 4)
+    assert_received(4)
+  }
+
+  test("retain:remove makes a topic forget the message") {
+    connect("1.1")
+    async_send("/topic/retained-example2", 1)
+    async_send("/topic/retained-example2", 2, "retain:set\n")
+    async_send("/topic/retained-example2", 3, "retain:remove\n")
+    subscribe("0", "/topic/retained-example2")
+    async_send("/topic/retained-example2", 4)
+    assert_received(4)
   }
 
   // This is the test case for https://issues.apache.org/jira/browse/APLO-88

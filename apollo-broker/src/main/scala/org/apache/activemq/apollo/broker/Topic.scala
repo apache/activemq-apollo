@@ -91,9 +91,14 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       enqueue_item_counter += 1
       enqueue_size_counter += value.size
       enqueue_ts = now
-      if( value.retain ) {
-        // TODO: perhaps persist this message reference
-        retained_message = value;
+      value.retain match {
+        case RetainSet =>
+          // TODO: perhaps persist so that we can recall what was
+          // retained across broker restarts.
+          retained_message = value;
+        case RetainRemove =>
+          retained_message = null;
+        case _ =>
       }
       true
     }

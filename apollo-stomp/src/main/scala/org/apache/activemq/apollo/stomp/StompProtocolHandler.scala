@@ -1131,7 +1131,13 @@ class StompProtocolHandler extends ProtocolHandler {
       delivery.message = message
       delivery.size = message.frame.size
       delivery.uow = uow
-      delivery.retain = get(frame.headers, RETAIN).map( _ == TRUE).getOrElse(false)
+      get(frame.headers, RETAIN).foreach { retain =>
+        delivery.retain = retain match {
+          case SET => RetainSet
+          case REMOVE => RetainRemove
+          case _ => RetainIgnore
+        }
+      }
 
       if( receipt!=null ) {
         delivery.ack = { (consumed, uow) =>

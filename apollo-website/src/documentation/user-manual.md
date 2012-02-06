@@ -1137,7 +1137,7 @@ Example STOMP frame sending to a queue:
 
 ### Topic Retained Messages
 
-If a message sent to a Topic has the `retain:true` header, then
+If a message sent to a Topic has the `retain:set` header, then
 the message will be 'remembered' by the topic so that if a new
 subscription arrives, the last retained message is sent 
 to the subscription.  For example if you want a topic 
@@ -1150,6 +1150,9 @@ that looks like:
 
     112.12
     ^@
+
+You can also send a new message with the `retain:remove` header
+to have the topic forget about the last retained message.
 
 Note: retained messages are not retained between broker restarts.
 

@@ -163,6 +163,12 @@ object Expired extends DeliveryResult
  */
 object Poisoned extends DeliveryResult
 
+
+sealed trait RetainAction
+object RetainSet extends RetainAction
+object RetainRemove extends RetainAction
+object RetainIgnore extends RetainAction
+
 class Delivery {
 
   /**
@@ -215,7 +221,7 @@ class Delivery {
   /**
    * Should this message get retained as the last image of a topic?
    */
-  var retain = false
+  var retain:RetainAction = RetainIgnore
 
 
   def copy() = (new Delivery).set(this)

@@ -373,6 +373,8 @@ object Stomp {
   val TYPE = ascii("type")
   val PERSISTENT = ascii("persistent")
   val RETAIN = ascii("retain")
+  val SET = ascii("set")
+  val REMOVE = ascii("remove")
 
   val MESSAGE_ID = ascii("message-id")
   val PRORITY = ascii("priority")
