@@ -258,6 +258,9 @@ the broker over WebSockets:
 * [Stomple](http://github.com/krukow/stomple)
 * [stomp-websocket](http://github.com/jmesnil/stomp-websocket)
 
+The Apollo distribution include a simple WebSocket based chat example
+in the `examples/js-websocket` directory.
+
 #### Virtual Hosts
 
 A virtual hosts allows ${project_name} to support multi tenant style
