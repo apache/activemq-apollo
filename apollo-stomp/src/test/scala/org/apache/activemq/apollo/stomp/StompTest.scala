@@ -90,21 +90,23 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
 
   val receipt_counter = new AtomicLong()
 
-  def sync_send(dest:String, body:Any, c: StompClient = client) = {
+  def sync_send(dest:String, body:Any, headers:String="", c:StompClient = client) = {
     val rid = receipt_counter.incrementAndGet()
     c.write(
       "SEND\n" +
       "destination:"+dest+"\n" +
       "receipt:"+rid+"\n" +
+      headers+
       "\n" +
       body)
     wait_for_receipt(""+rid, c)
   }
 
-  def async_send(dest:String, body:Any, c: StompClient = client) = {
+  def async_send(dest:String, body:Any, headers:String="", c: StompClient = client) = {
     c.write(
       "SEND\n" +
       "destination:"+dest+"\n" +
+      headers+
       "\n" +
       body)
   }
@@ -495,6 +497,16 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 }
 class StompDestinationTest extends StompTestSupport {
+
+  test("Topic remembers retained messages sent before before subscription is established") {
+    connect("1.1")
+    sync_send("/topic/retained-example", 1, "retain:true\n")
+    sync_send("/topic/retained-example", 2, "retain:true\n")
+    subscribe("0", "/topic/retained-example")
+    assert_received(2)
+    sync_send("/topic/retained-example", 3, "retain:true\n")
+    assert_received(3)
+  }
 
   // This is the test case for https://issues.apache.org/jira/browse/APLO-88
   test("ACK then socket close with/without DISCONNECT, should still ACK") {

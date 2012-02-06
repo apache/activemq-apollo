@@ -1135,6 +1135,23 @@ Example STOMP frame sending to a queue:
     hello queue a
     ^@
 
+### Topic Retained Messages
+
+If a message sent to a Topic has the `retain:true` header, then
+the message will be 'remembered' by the topic so that if a new
+subscription arrives, the last retained message is sent 
+to the subscription.  For example if you want a topic 
+to remember the last price published you can send a message 
+that looks like:
+
+    SEND
+    destination:/topic/stock/IBM
+    retain:true
+
+    112.12
+    ^@
+
+Note: retained messages are not retained between broker restarts.
 
 ### Reliable Messaging
 

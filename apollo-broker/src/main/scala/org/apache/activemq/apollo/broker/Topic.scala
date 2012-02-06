@@ -39,6 +39,9 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   val resource_kind =SecuredResource.TopicKind
   var proxy_sessions = new HashSet[DeliverySession]()
 
+  @transient
+  var retained_message: Delivery = _
+
   implicit def from_link(from:LinkDTO):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
   implicit def from_session(from:DeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
 
@@ -83,10 +86,15 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     var enqueue_item_counter = 0L
     var refiller:Runnable = null
 
+
     def offer(value: Delivery) = {
       enqueue_item_counter += 1
       enqueue_size_counter += value.size
       enqueue_ts = now
+      if( value.retain ) {
+        // TODO: perhaps persist this message reference
+        retained_message = value;
+      }
       true
     }
 
@@ -374,6 +382,24 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
         }
     }
 
+    val r = retained_message
+    if (r != null) {
+      val copy = r.copy()
+      copy.sender = address
+
+      val producer = new  DeliveryProducerRoute(router) {
+        val dispatch_queue = createQueue()
+        override protected def on_connected = {
+          copy.ack = (d,x) => consumer.dispatch_queue {
+            unbind(consumer :: Nil)
+          }
+          offer(copy) // producer supports 1 message overflow.
+        }
+      }
+      producer.bind(consumer :: Nil)
+      producer.connected()
+    }
+    
     val proxy = ProxyDeliveryConsumer(target, link, consumer)
     consumers.put(consumer, proxy)
     topic_metrics.consumer_counter += 1

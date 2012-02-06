@@ -212,6 +212,12 @@ class Delivery {
    */
   var ack:(DeliveryResult, StoreUOW)=>Unit = null
 
+  /**
+   * Should this message get retained as the last image of a topic?
+   */
+  var retain = false
+
+
   def copy() = (new Delivery).set(this)
 
   def set(other:Delivery) = {
@@ -222,6 +228,7 @@ class Delivery {
     storeKey = other.storeKey
     storeLocator = other.storeLocator
     redeliveries = other.redeliveries
+    retain = other.retain
     this
   }
 
