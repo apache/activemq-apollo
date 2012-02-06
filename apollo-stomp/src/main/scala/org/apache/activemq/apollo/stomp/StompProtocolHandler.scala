@@ -391,7 +391,22 @@ class StompProtocolHandler extends ProtocolHandler {
     val consumer_sink = sink_manager.open()
     val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
       ack_handler.track(delivery)
-      var frame = delivery.message.asInstanceOf[StompFrameMessage].frame
+
+      val message = delivery.message
+      var frame = if( message.protocol eq StompProtocol ) {
+        message.asInstanceOf[StompFrameMessage].frame
+      } else {
+        val (body, content_type) =  protocol_convert match{
+          case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.protocol.id()+";conv=body")
+          case _ => (message.encoded, "protocol/"+message.protocol.id())
+        }
+        message_id_counter += 1
+        var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil
+        headers ::= (CONTENT_TYPE -> ascii(content_type))
+        headers ::= (CONTENT_LENGTH -> ascii(body.length().toString))
+        StompFrame(MESSAGE, headers, BufferContent(body))
+      }
+
       if( subscription_id != None ) {
         frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
       }
@@ -428,14 +443,12 @@ class StompProtocolHandler extends ProtocolHandler {
 
     def is_persistent = false
 
-    def match_protocol(delivery:Delivery)= delivery.message.protocol eq StompProtocol
     def match_selector(delivery:Delivery)= selector._2.matches(delivery.message)
     def match_from_seq(delivery:Delivery)= delivery.seq >= from_seq
     def match_from_tail(delivery:Delivery)= delivery.seq >= starting_seq
 
     val matchers = {
       var l = ListBuffer[(Delivery)=>Boolean]()
-      l += match_protocol
       if( from_seq > 0 ) {
         l += match_from_seq
       }
@@ -560,6 +573,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var protocol_filters = List[ProtocolFilter]()
 
   var destination_parser = Stomp.destination_parser
+  var protocol_convert = "full"
   var temp_destination_map = HashMap[SimpleAddress, SimpleAddress]()
 
   var codec:StompCodec = _

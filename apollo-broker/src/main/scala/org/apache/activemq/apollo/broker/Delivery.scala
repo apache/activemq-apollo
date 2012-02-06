@@ -18,12 +18,12 @@ package org.apache.activemq.apollo.broker
 
 import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import protocol.Protocol
 import org.apache.activemq.apollo.filter.Filterable
 import org.apache.activemq.apollo.broker.store.StoreUOW
 import org.apache.activemq.apollo.util.Log
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.dto.DestinationDTO
+import org.apache.activemq.apollo.broker.protocol.{ProtocolFactory, Protocol}
 
 object DeliveryProducer extends Log
 
@@ -116,6 +116,8 @@ trait Message extends Filterable with Retained {
    */
   def protocol:Protocol
 
+  def encoded:Buffer = protocol.encode(this).buffer
+  
 }
 
 /**
