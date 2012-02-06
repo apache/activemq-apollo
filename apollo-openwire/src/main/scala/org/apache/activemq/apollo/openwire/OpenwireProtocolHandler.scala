@@ -61,6 +61,8 @@ object OpenwireProtocolHandler extends Log {
   preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(10 * 1000 * 1000);
   preferred_wireformat_settings.setCacheSize(1024);
   preferred_wireformat_settings.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
+
+  val WAITING_ON_CLIENT_REQUEST = ()=> "client request"
 }
 
 /**
@@ -109,7 +111,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   var heart_beat_monitor = new HeartBeatMonitor
 
-  var waiting_on: String = "client request"
+  var waiting_on = WAITING_ON_CLIENT_REQUEST
   var current_command: Object = _
 
   var codec:OpenwireCodec = _
@@ -122,7 +124,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     rc.protocol_version = ""+(if (wire_format == null) 0 else wire_format.getVersion)
     rc.user = login.map(_.toString).getOrElse(null)
     rc.subscription_count = all_consumers.size
-    rc.waiting_on = waiting_on
+    rc.waiting_on = waiting_on()
     rc
   }
 
@@ -154,14 +156,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def suspend_read(reason: String) = {
-    waiting_on = reason
+  def suspend_read(reason: => String) = {
+    waiting_on = reason _
     connection.transport.suspendRead
     heart_beat_monitor.suspendRead
   }
 
   def resume_read() = {
-    waiting_on = "client request"
+    waiting_on = WAITING_ON_CLIENT_REQUEST
     connection.transport.resumeRead
     heart_beat_monitor.resumeRead
   }

@@ -68,12 +68,7 @@ object StompProtocolHandler extends Log {
   val DEFAULT_INBOUND_HEARTBEAT = 10*1000L
   var inbound_heartbeat = DEFAULT_INBOUND_HEARTBEAT
 
-  val WAITING_ON_CLIENT_REQUEST: () => String = () => {
-    "client request"
-  }
-  val WAITING_ON_SHUTDOWN: () => String = () => {
-    "shutdown"
-  }
+  val WAITING_ON_CLIENT_REQUEST = ()=> "client request"
 }
 
 /**
@@ -83,6 +78,7 @@ class StompProtocolHandler extends ProtocolHandler {
   import StompProtocolHandler._
 
   var connection_log:Log = StompProtocolHandler
+
   def protocol = "stomp"
   def broker = connection.connector.broker
 
@@ -558,7 +554,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var heart_beat_monitor = new HeartBeatMonitor
   val security_context = new SecurityContext
-  var waiting_on: ()=>String = WAITING_ON_CLIENT_REQUEST
+  var waiting_on = WAITING_ON_CLIENT_REQUEST
   var config:StompDTO = _
 
   var protocol_filters = List[ProtocolFilter]()
@@ -669,7 +665,7 @@ class StompProtocolHandler extends ProtocolHandler {
   private def die[T](headers:HeaderMap, body:String):T = {
     if( !dead ) {
       dead = true
-      waiting_on = WAITING_ON_SHUTDOWN
+      waiting_on = ()=>"shutdown"
       connection.transport.resumeRead
 
       if( body.isEmpty ) {
