@@ -16,27 +16,24 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.apache.activemq.apollo.util.DtoModule;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * <p>
- * </p>
+ * Allow you to customize protocol detection handling.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class Module implements DtoModule {
-    public String dto_package() {
-        return "org.apache.activemq.apollo.dto";
-    }
-    public Class<?>[] extension_classes() {
-        return new Class<?>[]{
-                AcceptingConnectorDTO.class,
-                TopicDestinationDTO.class,
-                DurableSubscriptionDestinationDTO.class,
-                QueueDestinationDTO.class,
-                NullStoreDTO.class,
-                SimpleStoreStatusDTO.class,
-                DetectDTO.class
-        };
-    }
+@XmlRootElement(name="detect")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class DetectDTO extends ProtocolDTO {
+
+    /**
+     * The protocol detection timeout in milliseconds.  Defaults to 5000 if not set.
+     */
+    @XmlAttribute(name="timeout")
+    public Long timeout;
+
 }

@@ -101,6 +101,9 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="regex_wildcard_end")
     public String regex_wildcard_end;
 
+    @XmlAttribute(name="die_delay")
+    public Long die_delay;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

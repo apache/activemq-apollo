@@ -16,17 +16,18 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import org.apache.activemq.apollo.broker.{Message, ProtocolException}
-import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
+import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.fusesource.hawtdispatch.transport.{ProtocolCodec}
+import org.fusesource.hawtdispatch.transport.ProtocolCodec
 import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io.IOException
 import java.lang.String
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
-import org.fusesource.hawtdispatch.transport.ProtocolCodec.BufferState
+import org.apache.activemq.apollo.util.OptionSupport
+import org.apache.activemq.apollo.broker.{Message, ProtocolException}
+import org.apache.activemq.apollo.dto.{DetectDTO, AcceptingConnectorDTO}
 
 /**
  * <p>
@@ -156,6 +157,8 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   def session_id = None
 
+  var config:DetectDTO = _
+
   override def on_transport_command(command: AnyRef) = {
 
     if (!command.isInstanceOf[ProtocolDetected]) {
@@ -182,9 +185,19 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   override def on_transport_connected = {
     connection.transport.resumeRead
+    import OptionSupport._
+    import collection.JavaConversions._
     
+    val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
+    config = connector_config.protocols.flatMap{ _ match {
+      case x:DetectDTO => Some(x)
+      case _ => None
+    }}.headOption.getOrElse(new DetectDTO)
+    
+    val timeout = config.timeout.getOrElse(5000L)
+  
     // Make sure client connects eventually...
-    connection.dispatch_queue.after(5, TimeUnit.SECONDS) {
+    connection.dispatch_queue.after(timeout, TimeUnit.MILLISECONDS) {
       assert_discriminated
     }
   }

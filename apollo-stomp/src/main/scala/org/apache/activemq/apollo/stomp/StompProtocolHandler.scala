@@ -59,7 +59,6 @@ object StompProtocolHandler extends Log {
   // How long we hold a failed connection open so that the remote end
   // can get the resulting error message.
   val DEFAULT_DIE_DELAY = 5*1000L
-  var die_delay = DEFAULT_DIE_DELAY
 
     // How often we can send heartbeats of the connection is idle.
   val DEFAULT_OUTBOUND_HEARTBEAT = 100L
@@ -588,7 +587,10 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-
+  def die_delay = {
+    import OptionSupport._
+    config.die_delay.getOrElse(DEFAULT_DIE_DELAY)
+  }
 
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
