@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker.store.bdb
 
 import java.util.Comparator
-import java.nio.ByteBuffer
 import com.sleepycat.je._
 import java.io.Serializable
 import org.apache.activemq.apollo.broker.store._
@@ -170,6 +169,16 @@ object HelperTrait {
         if (cursor.getSearchKeyRange(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS && func(key, data) ) {
           while (cursor.getNext(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS && func(key, data)) {
           }
+        }
+      }
+    }
+
+    def cursor_prefixed(tx:Transaction, prefix:Buffer)(func: (DatabaseEntry,DatabaseEntry) => Boolean): Unit = {
+      cursor_from(tx, prefix) { (key, value) =>
+        if( key.startsWith(prefix) ) {
+          func(key, value)
+        } else {
+          false
         }
       }
     }

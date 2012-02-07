@@ -163,9 +163,15 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
   }
 
 
-  def get(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
+  def get_map_entry(key: Buffer)(callback: (Option[Buffer]) => Unit) = {
     read_executor {
       callback(client.get(key))
+    }
+  }
+
+  def get_prefixed_map_entries(prefix:Buffer)(callback: Seq[(Buffer, Buffer)]=>Unit) = {
+    read_executor {
+      callback(client.get_prefixed_map_entries(prefix))
     }
   }
 

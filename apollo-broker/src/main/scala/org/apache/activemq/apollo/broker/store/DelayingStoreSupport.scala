@@ -480,10 +480,6 @@ trait DelayingStoreSupport extends Store with BaseService {
       return
     }
     
-    
-    var fasap = 0
-    var fdelayed = 0
-    
     // Some UOWs may have been canceled.
     val uows = flush_source.getData.flatMap { uow=>
       if( uow.canceled ) {
@@ -491,11 +487,6 @@ trait DelayingStoreSupport extends Store with BaseService {
       } else {
         uow.state = UowFlushing
         assert( uow.have_locators )
-        if( uow.flush_asap ) {
-          fasap += 1
-        } else {
-          fdelayed +=1
-        }
         // It will not be possible to cancel the UOW anymore..
         uow.actions.foreach { case (_, action) =>
           action.enqueues.foreach { queue_entry=>

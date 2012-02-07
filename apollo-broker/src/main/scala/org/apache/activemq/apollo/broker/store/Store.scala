@@ -147,7 +147,12 @@ trait Store extends ServiceTrait {
   /**
    * Gets a value of a previously stored map entry.
    */
-  def get(key:Buffer)(callback:(Option[Buffer])=>Unit )
+  def get_map_entry(key:Buffer)(callback:(Option[Buffer])=>Unit )
+
+  /**
+   * Gets a value of a previously stored map entry.
+   */
+  def get_prefixed_map_entries(prefix:Buffer)(callback: Seq[(Buffer, Buffer)]=>Unit)
 
   /**
    * Loads the queue information for a given queue key.

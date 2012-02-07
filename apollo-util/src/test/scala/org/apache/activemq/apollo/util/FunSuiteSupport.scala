@@ -23,8 +23,8 @@ import java.io.File
 import java.lang.String
 import collection.immutable.Map
 import org.scalatest._
-import FileSupport._
 import java.util.concurrent.TimeUnit
+import FileSupport._
 
 /**
  * @version $Revision : 1.1 $
@@ -47,16 +47,12 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
   /**
    * Returns the base directory of the current project
    */
-  def basedir = {
-    new File(_basedir).getCanonicalFile
-  }
+  def basedir = new File(_basedir).getCanonicalFile
 
   /**
    * Returns ${basedir}/target/test-data
    */
-  def test_data_dir = {
-    new File(new File(_basedir, "target"), "test-data")
-  }
+  def test_data_dir = basedir / "target"/ "test-data"
 
   override protected def beforeAll(map: Map[String, Any]): Unit = {
     _basedir = map.get("basedir") match {
@@ -66,6 +62,8 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
         System.getProperty("basedir", _basedir)
     }
     System.setProperty("basedir", _basedir)
+    System.setProperty("testdatadir", test_data_dir.getCanonicalPath)
+    test_data_dir.recursive_delete
     super.beforeAll(map)
   }
 

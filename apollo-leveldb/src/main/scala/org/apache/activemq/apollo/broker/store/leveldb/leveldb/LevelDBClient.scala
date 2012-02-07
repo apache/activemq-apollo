@@ -39,6 +39,7 @@ import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
 import org.apache.activemq.apollo.broker.store.PBSupport
 import java.util.concurrent.atomic.AtomicReference
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer, AbstractVarIntSupport}
+import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait.encode_key
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -981,6 +982,17 @@ class LevelDBClient(store: LevelDBStore) {
       index.get(encode_key(map_prefix, key)).map(new Buffer(_))
     }
   }
+  
+  def get_prefixed_map_entries(prefix:Buffer):Seq[(Buffer, Buffer)] = {
+    val rc = ListBuffer[(Buffer, Buffer)]()
+    retry_using_index {
+      index.cursor_prefixed(encode_key(map_prefix, prefix)) { (key, value) =>
+        rc += new Buffer(key)->new Buffer(value)
+        true
+      }
+    }
+    rc
+  }  
 
   def get_last_queue_key:Long = {
     retry_using_index {

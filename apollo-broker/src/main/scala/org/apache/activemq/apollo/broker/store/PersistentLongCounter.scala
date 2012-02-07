@@ -50,7 +50,7 @@ case class PersistentLongCounter(name:String, increment:Long=1000) {
 
   def init(store:Store)(on_complete: =>Unit):Unit = {
     connect(store)
-    store.get(key) { value =>
+    store.get_map_entry(key) { value =>
       val c = value.map(decode(_)).getOrElse(0L)
       counter.set(c)
       limit.set(c+increment)

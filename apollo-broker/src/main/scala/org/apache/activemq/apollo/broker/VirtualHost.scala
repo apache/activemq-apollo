@@ -26,6 +26,7 @@ import security._
 import security.SecuredResource.VirtualHostKind
 import store._
 import java.lang.{Throwable, String}
+import java.util.concurrent.ConcurrentHashMap
 
 trait VirtualHostFactory {
   def create(broker:Broker, dto:VirtualHostDTO):VirtualHost
@@ -110,6 +111,31 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
 
   var direct_buffer_allocator:DirectBufferAllocator = null
 
+  private val _plugin_state = new ConcurrentHashMap[Class[_],  Any]()
+  
+  /** 
+   * Plugins can associate state data with the virtual host instance
+   * using this method.  The factory will be used to create the state
+   * if it does not yet exist.
+   */
+  def plugin_state[T](factory: =>T, clazz:Class[T]):T = {
+    var state = _plugin_state.get(clazz).asInstanceOf[T]
+    if( state == null ) {
+      state = factory
+      if( state != null ) {
+        _plugin_state.put(clazz, state)
+      }
+    }
+    state
+  }
+
+  /**
+   * Used to clear out previously set plugin state.  
+   */
+  def clear_plugin_state[T](clazz:Class[T]):T = {
+    _plugin_state.remove(clazz).asInstanceOf[T]
+  }  
+  
   def resource_kind = VirtualHostKind
 
   @volatile

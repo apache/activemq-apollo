@@ -27,6 +27,7 @@ import java.io.{InputStream, OutputStream}
 import com.sleepycat.je._
 import org.fusesource.hawtbuf.Buffer
 import FileSupport._
+import org.apache.activemq.apollo.broker.store.bdb.HelperTrait.to_database_entry
 
 object BDBClient extends Log {
   final val STORE_SCHEMA_PREFIX = "bdb_store:"
@@ -554,6 +555,18 @@ class BDBClient(store: BDBStore) {
       import ctx._
       map_db.get(tx, to_database_entry(key)).map(x=> to_buffer(x))
     }
+  }
+
+  def get_prefixed_map_entries(prefix:Buffer):Seq[(Buffer, Buffer)] = {
+    val rc = ListBuffer[(Buffer, Buffer)]()
+    with_ctx() { ctx=>
+      import ctx._
+      map_db.cursor_prefixed(tx, prefix) { (key, value) =>
+        rc += to_buffer(key) -> to_buffer(value)
+        true
+      }
+    }
+    rc
   }
 
   def getLastQueueKey:Long = {
