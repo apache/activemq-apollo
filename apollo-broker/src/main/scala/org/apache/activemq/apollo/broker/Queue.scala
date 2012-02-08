@@ -282,7 +282,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     rc.producer_counter = this.producer_counter
     rc.consumer_counter = this.consumer_counter
 
-    rc.producer_count = this.producers.size
+    rc.producer_count = this.inbound_sessions.size
     rc.consumer_count = this.all_subscriptions.size
     rc
   }
@@ -396,7 +396,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   }
 
   def check_idle {
-    if (producers.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
+    if (inbound_sessions.isEmpty && all_subscriptions.isEmpty && queue_items==0 ) {
       if (idled_at==0 && auto_delete_after!=0) {
         idled_at = now
         val idled_at_start = idled_at
@@ -928,6 +928,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
 
     dispatch_queue {
       inbound_sessions += this
+      producer_counter += 1
       change_producer_capacity( session_max )
     }
 
@@ -957,6 +958,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
       }
     }
   }
+
   def connect(p: DeliveryProducer) = new QueueDeliverySession(p)
 
   /////////////////////////////////////////////////////////////////////
@@ -1024,7 +1026,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     } else {
       dispatch_queue {
         producers += producer
-        producer_counter += 1
         check_idle
       }
       producer.bind(this::Nil)
