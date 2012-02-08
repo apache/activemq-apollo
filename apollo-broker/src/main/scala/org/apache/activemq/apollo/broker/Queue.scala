@@ -1774,6 +1774,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         delivery.storeKey = messageRecord.key
         delivery.storeLocator = messageRecord.locator
         delivery.redeliveries = redelivery_count
+        delivery.sender = sender
 
         space += delivery
 
