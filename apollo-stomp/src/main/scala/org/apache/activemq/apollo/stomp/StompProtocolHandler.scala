@@ -490,9 +490,6 @@ class StompProtocolHandler extends ProtocolHandler {
             // Then send the end of browse message.
             val headers:HeaderMap = List(DESTINATION->EMPTY, MESSAGE_ID->EMPTY, BROWSER->END)
             var frame = StompFrame(MESSAGE, headers, BufferContent(EMPTY_BUFFER))
-            if( subscription_id != None ) {
-              frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
-            }
 
             val delivery = new Delivery()
             delivery.message = StompFrameMessage(frame)
@@ -502,8 +499,13 @@ class StompProtocolHandler extends ProtocolHandler {
               // session is full so use an overflow sink so to hold the message,
               // and then trigger closing the session once it empties out.
               val sink = new OverflowSink(downstream)
+              var disposed = false
               sink.refiller = ^{
-                dispose
+                // refiller could get triggered multiple times. only care about the first one.
+                if( !disposed ) {
+                  disposed = true
+                  dispose
+                }
               }
               sink.offer(delivery)
             } else {

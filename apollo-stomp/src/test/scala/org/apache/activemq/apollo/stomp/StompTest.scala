@@ -111,7 +111,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
       body)
   }
 
-  def subscribe(id:String, dest:String, mode:String="auto", persistent:Boolean=false, c: StompClient = client) = {
+  def subscribe(id:String, dest:String, mode:String="auto", persistent:Boolean=false, headers:String="", c: StompClient = client) = {
     val rid = receipt_counter.incrementAndGet()
     c.write(
       "SUBSCRIBE\n" +
@@ -120,6 +120,7 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
       (if(persistent) "persistent:true\n" else "")+
       "ack:"+mode+"\n"+
       "receipt:"+rid+"\n" +
+      headers+
       "\n")
     wait_for_receipt(""+rid, c)
   }
@@ -497,6 +498,23 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 }
 class StompDestinationTest extends StompTestSupport {
+
+  test("Browsing queues does not cause AssertionError.  Reported in APLO-156") {
+    connect("1.1")
+    subscribe("0", "/queue/TOOL.DEFAULT")
+    async_send("/queue/TOOL.DEFAULT", "1")
+    async_send("/queue/TOOL.DEFAULT", "2")
+    assert_received("1", "0")
+    assert_received("2", "0")
+    subscribe("1", "/queue/TOOL.DEFAULT", "auto", false, "browser:true\n")
+    val frame = client.receive()
+    frame should startWith(
+      "MESSAGE\n" +
+      "subscription:1\n" +
+      "destination:\n" +
+      "message-id:\n" +
+      "browser:end")
+  }
 
   test("retain:set makes a topic remeber the message") {
     connect("1.1")
