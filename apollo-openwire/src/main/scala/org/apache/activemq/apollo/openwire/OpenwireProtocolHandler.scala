@@ -119,11 +119,16 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def session_id = security_context.session_id
 
+  var messages_sent = 0L
+  var messages_received = 0L
+
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
     rc.protocol_version = ""+(if (wire_format == null) 0 else wire_format.getVersion)
     rc.user = login.map(_.toString).getOrElse(null)
     rc.subscription_count = all_consumers.size
+    rc.messages_sent = messages_sent
+    rc.messages_received = messages_received
     rc.waiting_on = waiting_on()
     rc
   }
@@ -602,6 +607,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   ///////////////////////////////////////////////////////////////////
 
   def on_message(msg: ActiveMQMessage) = {
+    messages_received += 1
     val producer = all_producers.get(msg.getProducerId).getOrElse(die("Producer associated with the message has not been registered."))
 
     if (msg.getOriginalDestination() == null) {
@@ -823,6 +829,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         dispatch.setDestination(msg.getDestination)
         dispatch.setMessage(msg)
       }
+      messages_sent += 1
       dispatch
     }, Delivery)
 

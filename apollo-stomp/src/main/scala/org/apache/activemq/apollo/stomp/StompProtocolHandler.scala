@@ -418,6 +418,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( include_seq.isDefined ) {
         frame = frame.append_headers((include_seq.get, ascii(delivery.seq.toString))::Nil)
       }
+      messages_sent += 1
       frame
     }, Delivery)
 
@@ -645,12 +646,17 @@ class StompProtocolHandler extends ProtocolHandler {
 
   }
 
+  var messages_sent = 0L
+  var messages_received = 0L
+
   override def create_connection_status = {
     var rc = new StompConnectionStatusDTO
     rc.protocol_version = if( protocol_version == null ) null else protocol_version.toString
     rc.user = security_context.user
     rc.subscription_count = consumers.size
     rc.waiting_on = waiting_on()
+    rc.messages_sent = messages_sent
+    rc.messages_received = messages_received
     rc
   }
 
@@ -976,6 +982,7 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def on_stomp_send(frame:StompFrame) = {
+    messages_received += 1
 
     get(frame.headers, DESTINATION) match {
       case None=>
@@ -997,7 +1004,6 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
-
     val addresses = decode_addresses(get(frame.headers, DESTINATION).get)
     val key = addresses.toList
     producerRoutes.get(key) match {

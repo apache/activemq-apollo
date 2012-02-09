@@ -61,6 +61,18 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
 	public long write_counter;
 
     /**
+     * The number of messages that have been sent to the connection.
+     */
+	@XmlAttribute(name="messages_sent")
+	public long messages_sent;
+
+    /**
+     * The number of messages that have been received from the connection.
+     */
+	@XmlAttribute(name="messages_received")
+	public long messages_received;
+
+    /**
      * The connector that created the connection.
      */
 	@XmlAttribute
