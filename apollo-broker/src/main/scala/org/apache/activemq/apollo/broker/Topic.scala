@@ -35,6 +35,8 @@ import security.SecuredResource
 class Topic(val router:LocalRouter, val address:DestinationAddress, var config_updater: ()=>TopicDTO) extends DomainDestination with SecuredResource {
 
   val topic_metrics = new DestMetricsDTO
+  topic_metrics.enqueue_ts = now
+  topic_metrics.dequeue_ts = now
 
   val resource_kind =SecuredResource.TopicKind
   var proxy_sessions = new HashSet[DeliverySession]()

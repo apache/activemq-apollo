@@ -214,6 +214,15 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
  */
 class StompMetricsTest extends StompTestSupport {
 
+  test("New Topic Stats") {
+    connect("1.1")
+    subscribe("0", "/topic/newstats");
+    val stats = topic_status("newstats")
+    var now = System.currentTimeMillis()
+    (now-stats.metrics.enqueue_ts) should ( be < 10*1000L)
+    (now-stats.metrics.dequeue_ts) should ( be < 10*1000L)
+  }
+
   test("Topic Stats") {
     connect("1.1")
 
