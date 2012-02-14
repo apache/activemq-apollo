@@ -103,6 +103,8 @@ case class RecordLog(directory: File, logSuffix:String) {
 
   class LogAppender(file:File, position:Long) extends LogReader(file, position) {
 
+    val info = new LogInfo(file, position, 0)
+
     override def open = new RandomAccessFile(file, "rw")
 
     override def dispose() = {
@@ -139,7 +141,7 @@ case class RecordLog(directory: File, logSuffix:String) {
     /**
      * returns the offset position of the data record.
      */
-    def append(id:Byte, data: Buffer): Long = this.synchronized {
+    def append(id:Byte, data: Buffer) = this.synchronized {
       val record_position = append_position
       val data_length = data.length
       val total_length = LOG_HEADER_SIZE + data_length
@@ -180,7 +182,7 @@ case class RecordLog(directory: File, logSuffix:String) {
         write_buffer.write(data.data, data.offset, data_length)
         append_offset += total_length
       }
-      record_position
+      (record_position,info)
     }
 
     def flush = this.synchronized {
@@ -378,7 +380,7 @@ case class RecordLog(directory: File, logSuffix:String) {
         log_infos += position -> new LogInfo(current_appender.file, current_appender.position, current_appender.append_offset)
       }
       current_appender = create_log_appender(position)
-      log_infos += position -> new LogInfo(current_appender.file, position, 0)
+      log_infos += position -> current_appender.info
     }
   }
 

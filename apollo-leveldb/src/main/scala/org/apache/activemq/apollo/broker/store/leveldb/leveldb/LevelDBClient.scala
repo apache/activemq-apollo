@@ -697,8 +697,8 @@ class LevelDBClient(store: LevelDBStore) {
     callback.run
   }
 
-  def log_ref_decrement(pos: Long) = this.synchronized {
-    log.log_info(pos) match {
+  def log_ref_decrement(pos: Long, log_info:LogInfo=null) = this.synchronized {
+    Option(log_info).orElse(log.log_info(pos)) match {
       case Some(log_info)=>
         log_refs.get(log_info.position).foreach { counter =>
           val count = counter.decrementAndGet()
@@ -711,8 +711,8 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
-  def log_ref_increment(pos: Long) = this.synchronized {
-    log.log_info(pos) match {
+  def log_ref_increment(pos: Long, log_info:LogInfo=null) = this.synchronized {
+    Option(log_info).orElse(log.log_info(pos)) match {
       case Some(log_info)=>
         val count = log_refs.getOrElseUpdate(log_info.position, new LongCounter()).incrementAndGet()
       case None =>
@@ -766,12 +766,14 @@ class LevelDBClient(store: LevelDBStore) {
             uow.actions.foreach { case (msg, action) =>
               val message_record = action.message_record
               var locator:(Long, Int) = null
+              var log_info:LogInfo = null
 
               if (message_record != null) {
                 val message_data = PBSupport.encode_message_record(message_record)
                 val len = message_data.length
-                val pos = appender.append(LOG_ADD_MESSAGE, message_data)
-                locator = (pos, len)
+                val p = appender.append(LOG_ADD_MESSAGE, message_data)
+                locator = (p._1, len)
+                log_info = p._2
                 message_record.locator.set(locator);
               }
 
@@ -784,7 +786,7 @@ class LevelDBClient(store: LevelDBStore) {
                 val key = encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq)
                 appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
                 batch.delete(key)
-                log_ref_decrement(pos)
+                log_ref_decrement(pos, log_info)
               }
 
               var locator_buffer:Buffer = null
@@ -805,7 +807,7 @@ class LevelDBClient(store: LevelDBStore) {
                 batch.put(encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq), encoded)
                 
                 // Increment it.
-                log_ref_increment(pos)
+                log_ref_increment(pos, log_info)
                 
               }
             }
@@ -1197,7 +1199,7 @@ class LevelDBClient(store: LevelDBStore) {
 
             case record:MessagePB.Buffer =>
               val message_data = record.toFramedBuffer
-              val pos = appender.append(LOG_ADD_MESSAGE, message_data)
+              val (pos, _) = appender.append(LOG_ADD_MESSAGE, message_data)
               index.put(encode_key(tmp_prefix, record.getMessageKey), encode_locator(pos, message_data.length))
               true
 
