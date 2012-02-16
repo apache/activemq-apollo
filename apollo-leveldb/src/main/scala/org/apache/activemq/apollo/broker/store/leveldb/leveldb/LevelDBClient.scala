@@ -352,9 +352,38 @@ class LevelDBClient(store: LevelDBStore) {
         // Update the index /w what was stored on the logs..
         var pos = last_index_snapshot_pos;
 
+        var last_reported_at = System.currentTimeMillis();
+        var showing_progress = false
+        var last_reported_pos = 0L
+
+        def remaining(eta:Double) = {
+          if(eta > 60*60) {
+            "%.2f hrs".format(eta/(60*60))
+          } else if(eta > 60) {
+            "%.2f mins".format(eta/60)
+          } else {
+            "%.0f secs".format(eta)
+          }
+        }
+
         var replay_operations = 0
         val log_replay_duration = time {
           while (pos < log.appender_limit) {
+
+            val now = System.currentTimeMillis();
+            if( now > last_reported_at+1000 ) {
+              val at = pos-last_index_snapshot_pos
+              val total = log.appender_limit-last_index_snapshot_pos
+              val rate = (pos-last_reported_pos)*1000.0 / (now - last_reported_at)
+              val eta = (total-at)/rate
+
+              System.out.print("Replaying recovery log: %f%% done (%,d/%,d bytes) @ %,.2f kb/s, %s remaining.     \r".format(
+                at*100.0/total, at, total, rate/1024, remaining(eta)))
+              showing_progress = true;
+              last_reported_at = now
+              last_reported_pos = pos
+            }
+
             log.read(pos).map {
               case (kind, data, next_pos) =>
                 kind match {
@@ -416,7 +445,10 @@ class LevelDBClient(store: LevelDBStore) {
             snapshot_index
           }
         }
-        info("Took %.2f second(s) to recover %d operations in the log file.", (log_replay_duration/TimeUnit.SECONDS.toNanos(1).toFloat), replay_operations)
+
+        if(showing_progress) {
+          System.out.println("Replaying recovery log: done. %d operations recovered in %s".format(replay_operations, log_replay_duration.toDouble/TimeUnit.SECONDS.toNanos(1)));
+        }
 
       } catch {
         case e:Throwable =>
