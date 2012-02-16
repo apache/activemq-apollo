@@ -663,7 +663,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     def create_destination(address:DestinationAddress, security:SecurityContext):Result[Queue,String] = {
       can_create_destination(address, security).map(Failure(_)).getOrElse {
         val dsub = _create_queue(DurableSubscriptionQueueBinding(address.asInstanceOf[SubscriptionAddress]))
-        add_destination(address.path, dsub)
         for( l <- router_listeners) {
           l.on_create(dsub, security)
         }
