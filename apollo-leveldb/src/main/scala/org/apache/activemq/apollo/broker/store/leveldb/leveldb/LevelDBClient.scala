@@ -1007,7 +1007,7 @@ class LevelDBClient(store: LevelDBStore) {
     // TODO:
     // Perhaps we should snapshot_index if the current snapshot is old.
     //
-
+    import collection.JavaConversions._
     last_index_snapshot_pos
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 

@@ -270,6 +270,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         rc.log_append_pos = client.log.appender_limit
         rc.index_snapshot_pos = client.last_index_snapshot_pos
         rc.log_stats = {
+          import collection.JavaConversions._
           var row_layout = "%-20s | %-10s | %-10s\n"
           row_layout.format("Log File", "Msg Refs", "File Size")+
           client.log.log_infos.map{case (id,info)=> id -> client.log_refs.get(id).map(_.get)}.toSeq.flatMap { case (id, refs)=>
