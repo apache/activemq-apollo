@@ -1311,9 +1311,25 @@ class StompProtocolHandler extends ProtocolHandler {
 
     consumers.get(id) match {
       case None=>
-        die("The subscription '%s' not found.".format(id))
+        if( persistent ) {
+          // We just want to delete a durable sub but client has not connected
+          // to it yet in this session
+          host.dispatch_queue {
+            var addresses = Array[DestinationAddress](SubscriptionAddress(destination_parser.decode_path(decode_header(id)), null, Array[BindAddress]()))
+            host.router.delete(addresses, security_context) match {
+              case Some(error)=>
+                dispatchQueue {
+                  async_die(error)
+                }
+              case None =>
+                send_receipt(headers)
+            }
+          }
+        } else {
+          die("The subscription '%s' not found.".format(id))
+        }
+        
       case Some(consumer)=>
-
         // consumer gets disposed after all producer stop sending to it...
         consumer.setDisposer(^{ send_receipt(headers) })
         consumers -= id

@@ -125,12 +125,13 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     wait_for_receipt(""+rid, c)
   }
 
-  def unsubscribe(id:String, c: StompClient = client) = {
+  def unsubscribe(id:String, headers:String="", c: StompClient=client) = {
     val rid = receipt_counter.incrementAndGet()
     client.write(
       "UNSUBSCRIBE\n" +
       "id:"+id+"\n" +
       "receipt:"+rid+"\n" +
+      headers+
       "\n")
     wait_for_receipt(""+rid, c)
   }
@@ -1182,6 +1183,31 @@ class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
 
   override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
+  test("You connection then unsubscribe form existing durable sub (APLO-157)") {
+    connect("1.1")
+    subscribe("APLO-157", "/topic/APLO-157", "auto", true)
+    client.close()
+
+    // Make sure the durable sub exists.
+    connect("1.1")
+    sync_send("/topic/APLO-157", "1")
+    subscribe("APLO-157", "/topic/APLO-157", "client", true)
+    assert_received("1")
+    client.close()
+
+    // Delete the durable sub..
+    connect("1.1")
+    unsubscribe("APLO-157", "persistent:true\n")
+    client.close()
+
+    // Make sure the durable sub does not exists.
+    connect("1.1")
+    subscribe("APLO-157", "/topic/APLO-157", "client", true)
+    async_send("/topic/APLO-157", "2")
+    assert_received("2")
+    unsubscribe("APLO-157", "persistent:true\n")
+
+  }
 
   test("Can create dsubs with dots in them") {
     connect("1.1")
