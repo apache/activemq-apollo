@@ -196,7 +196,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     sink_manager = new SinkMux[Command]( connection.transport_sink.map {x=>
       x.setCommandId(next_command_id)
-      debug("sending openwire command: %s", x.toString())
+      debug("sending openwire command: %s", x)
       x
     })
     connection_session = new OverflowSink(sink_manager.open());
@@ -398,7 +398,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val initial_delay = preferred_wireformat_settings.getMaxInactivityDurationInitalDelay().min(info.getMaxInactivityDurationInitalDelay())
 
     if (inactive_time > 0) {
-      heart_beat_monitor.setReadInterval((inactive_time.min(5000)*1.5).toLong)
+      heart_beat_monitor.setReadInterval(inactive_time)
 
       heart_beat_monitor.setOnDead(^{
         async_die("Stale connection.  Missed heartbeat.")
@@ -618,6 +618,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   }
 
   case class OpenwireDeliveryProducerRoute(addresses:Array[SimpleAddress]) extends DeliveryProducerRoute(host.router) {
+
+    override def send_buffer_size =  codec.write_buffer_size
+
     override def connection = Some(OpenwireProtocolHandler.this.connection)
     override def dispatch_queue = queue
     refiller = ^ {
