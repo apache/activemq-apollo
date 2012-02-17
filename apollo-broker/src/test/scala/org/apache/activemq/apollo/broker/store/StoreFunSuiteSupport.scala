@@ -111,12 +111,12 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
   def populate(queue_key:Long, messages:List[String], first_seq:Long=1) = {
     var batch = store.create_uow
-    var msg_keys = ListBuffer[(Long, AtomicReference[Object])]()
+    var msg_keys = ListBuffer[(Long, AtomicReference[Object], Long)]()
     var next_seq = first_seq
 
     messages.foreach { message=>
       val msgKey = add_message(batch, message)
-      msg_keys += msgKey
+      msg_keys +=( (msgKey._1, msgKey._2, next_seq) )
       batch.enqueue(entry(queue_key, next_seq, msgKey))
       next_seq += 1
     }
@@ -215,8 +215,8 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
 
     val rc:Seq[QueueEntryRecord] = sync_cb( cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb) )
-    expect(msg_keys.toSeq.map(_._1)) {
-      rc.map( _.message_key )
+    expect(msg_keys.toSeq.map(_._3)) {
+      rc.map( _.entry_seq )
     }
   }
 
