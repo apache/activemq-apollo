@@ -38,7 +38,7 @@ class ConnectionFailureWithValidCredentials extends SecurityTest {
 
   test("Connect with valid id password but can't connect") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_not_connect", "can_not_connect")
 
     intercept[JMSException] {
@@ -51,7 +51,7 @@ class CoonectionFailsWhenNoCredentialsGiven extends SecurityTest {
 
   test("Connect with no id password") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection()
 
     intercept[JMSException] {
@@ -63,7 +63,7 @@ class CoonectionFailsWhenNoCredentialsGiven extends SecurityTest {
 class ConnectionFailsWhenCredentialsAreInvlaid extends SecurityTest {
 
   test("Connect with invalid id password") {
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("foo", "bar")
 
     intercept[JMSException] {
@@ -73,12 +73,9 @@ class ConnectionFailsWhenCredentialsAreInvlaid extends SecurityTest {
 }
 
 class ConnectionSucceedsWithValidCredentials extends SecurityTest {
-
-  override def connection_uri = super.connection_uri + "&jms.alwaysSyncSend=true"
-  
   test("Connect with valid id password that can connect") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory("?jms.alwaysSyncSend=true")
     val connection = factory.createConnection("can_only_connect", "can_only_connect")
 
     try {
@@ -92,7 +89,7 @@ class ConnectionSucceedsWithValidCredentials extends SecurityTest {
 
 class SendFailsWhenNotAuthorized extends SecurityTest {
   test("Send not authorized") {
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_only_connect", "can_only_connect")
 
     try {
@@ -114,7 +111,7 @@ class SendFailsWhenNotAuthorizedToCreateQueues extends SecurityTest {
 
   test("Send authorized but not create") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_send_queue", "can_send_queue")
 
     try {
@@ -136,7 +133,7 @@ class ConsumeFailsWhenNotAuthroizedToCreateQueue extends SecurityTest {
 
   test("Consume authorized but not create") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_consume_queue", "can_consume_queue")
 
     try {
@@ -156,7 +153,7 @@ class ConsumeFailsWhenNotAuthroizedToCreateQueue extends SecurityTest {
 
 class SendSucceedsWhenCreateQueueAthorized extends SecurityTest {
   test("Send and create authorized") {
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_send_create_queue", "can_send_create_queue")
 
     try {
@@ -177,7 +174,7 @@ class SendSucceedsWhenCreateQueueAthorized extends SecurityTest {
 
   test("Can send and once created") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_send_queue", "can_send_queue")
 
     try {
@@ -201,7 +198,7 @@ class SubscribeFailsForConnectionOnlyAuthorization extends SecurityTest {
 
   test("Consume not authorized") {
 
-    val factory = create_connection_factory
+    val factory = create_connection_factory()
     val connection = factory.createConnection("can_only_connect", "can_only_connect")
 
     try {

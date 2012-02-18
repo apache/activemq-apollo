@@ -35,7 +35,6 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
   val broker_config_uri = "xml:classpath:apollo-openwire.xml"
   val transport_scheme = "tcp"
   val transport_host = "localhost"
-  val uri_options = ""//"?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000"
 
   override protected def beforeAll() {
     info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
@@ -59,14 +58,14 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
   }
 
 //  def connection_uri = transportScheme + "://localhost:%d?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000".format(port)
-  def connection_uri = (transport_scheme + "://" + transport_host + ":%d" + uri_options).format(port)
-  def create_connection_factory = new ActiveMQConnectionFactory(connection_uri)
-  def create_connection: Connection = create_connection_factory.createConnection
+  def connection_uri(uri_options:String="") = (transport_scheme + "://" + transport_host + ":%d" + uri_options).format(port)
+  def create_connection_factory(uri_options:String="") = new ActiveMQConnectionFactory(connection_uri(uri_options))
+  def create_connection(uri_options:String=""): Connection = create_connection_factory(uri_options).createConnection
   def queue(value:String) = new ActiveMQQueue(value);
   def topic(value:String) = new ActiveMQTopic(value);
 
-  def connect(start:Boolean=true) = {
-    val connection = create_connection
+  def connect(uri_options:String="", start:Boolean=true) = {
+    val connection = create_connection(uri_options)
     connections ::= connection
     if(default_connection==null) {
       default_connection = connection

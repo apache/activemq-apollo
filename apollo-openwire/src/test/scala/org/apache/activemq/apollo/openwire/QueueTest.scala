@@ -20,6 +20,29 @@ import javax.jms.{Message, TextMessage, Session}
 
 class QueueTest extends OpenwireTestSupport {
 
+  test("Queue Message Cached") {
+
+    connect("?wireFormat.cacheEnabled=false&wireFormat.tightEncodingEnabled=false")
+
+    val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val producer = session.createProducer(queue("example"))
+    def put(id:Int) {
+      producer.send(session.createTextMessage("message:"+id))
+    }
+
+    List(1,2,3).foreach(put _)
+
+    val consumer = session.createConsumer(queue("example"))
+
+    def get(id:Int) {
+      val m = consumer.receive().asInstanceOf[TextMessage]
+      m.getJMSDestination should equal(queue("example"))
+      m.getText should equal ("message:"+id)
+    }
+
+    List(1,2,3).foreach(get _)
+  }
+
   test("Queue order preserved") {
 
     connect()

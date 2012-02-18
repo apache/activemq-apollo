@@ -24,7 +24,7 @@ class DurableSubscriberTest extends OpenwireTestSupport {
   test("Topic /w Durable sub retains messages.") {
 
     def create_durable_sub() {
-      val connection = connect(false)
+      val connection = connect("", false)
       connection.setClientID("test")
       connection.start()
       val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
@@ -38,7 +38,7 @@ class DurableSubscriberTest extends OpenwireTestSupport {
 
     create_durable_sub()
 
-    connect(false)
+    connect("", false)
     default_connection.setClientID("test")
     default_connection.start()
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)

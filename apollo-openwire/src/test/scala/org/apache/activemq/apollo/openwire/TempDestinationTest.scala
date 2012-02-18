@@ -31,7 +31,7 @@ class TempDestinationTest extends OpenwireTestSupport {
   def test_temp_destination(func:(Session)=>Destination) = {
     connect()
 
-    val connection2 = connect(true)
+    val connection2 = connect("", true)
     val session2 = connection2.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
