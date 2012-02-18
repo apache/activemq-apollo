@@ -98,11 +98,11 @@ public abstract class Message extends BaseCommand implements MarshallAware {
         this.encodedSize = encodedSize;
     }
 
-    protected Object cachedEncoding;
-    public Object getCachedEncoding() {
+    protected CachedEncodingTrait cachedEncoding;
+    public CachedEncodingTrait getCachedEncoding() {
         return cachedEncoding;
     }
-    public void setCachedEncoding(Object cachedEncoding) {
+    public void setCachedEncoding(CachedEncodingTrait cachedEncoding) {
         this.cachedEncoding = cachedEncoding;
     }
 

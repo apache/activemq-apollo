@@ -29,7 +29,7 @@ import org.apache.activemq.apollo.openwire.command._
 import org.apache.activemq.apollo.broker.BufferConversions._
 import org.fusesource.hawtbuf.{DataByteArrayInputStream, DataByteArrayOutputStream, AbstractVarIntSupport, Buffer}
 
-case class CachedEncoding(tight:Boolean, version:Int, buffer:Buffer) 
+case class CachedEncoding(tight:Boolean, version:Int, buffer:Buffer) extends CachedEncodingTrait
 
 /**
  * <p>

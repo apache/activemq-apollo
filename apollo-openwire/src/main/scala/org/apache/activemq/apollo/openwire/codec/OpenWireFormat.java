@@ -16,9 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.codec;
 
-import org.apache.activemq.apollo.openwire.command.CommandTypes;
-import org.apache.activemq.apollo.openwire.command.DataStructure;
-import org.apache.activemq.apollo.openwire.command.WireFormatInfo;
+import org.apache.activemq.apollo.openwire.command.*;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.BufferEditor;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
@@ -490,6 +488,16 @@ public final class OpenWireFormat {
     public void looseMarshalNestedObject(DataStructure o, DataByteArrayOutputStream dataOut) throws IOException {
         dataOut.writeBoolean(o != null);
         if (o != null) {
+            if( o instanceof Message ) {
+                if( !isTightEncodingEnabled() && !isCacheEnabled() ) {
+                    CachedEncodingTrait encoding = ((Message) o).getCachedEncoding();
+                    if( encoding !=null && !encoding.tight() && encoding.version()==getVersion()) {
+                        Buffer buffer = encoding.buffer();
+                        dataOut.write(buffer.data, buffer.offset + 4, buffer.length() - 4);
+                        return;
+                    }
+                }
+            }
             byte type = o.getDataStructureType();
             dataOut.writeByte(type);
             DataStreamMarshaller dsm = (DataStreamMarshaller) dataMarshallers[type & 0xFF];
