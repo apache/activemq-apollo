@@ -47,7 +47,7 @@ object ClassFinder extends Log {
             classes += loader.loadClass(name)
           } catch {
             case e:Throwable =>
-              debug("Could not load class %s using class loader: %s", name, loader)
+              debug(e, "Could not load class %s using class loader: %s", name, loader)
           }
         }
       }
@@ -67,7 +67,7 @@ object ClassFinder extends Log {
           Some(moduleField.get(null).asInstanceOf[T])
         } catch {
           case e2: Throwable =>
-            debug("Could not create an instance of '%s' using classloader %s", clazz.getName, clazz.getClassLoader)
+            debug(e, "Could not create an instance of '%s' using classloader %s", clazz.getName, clazz.getClassLoader)
             None
         }
     }
