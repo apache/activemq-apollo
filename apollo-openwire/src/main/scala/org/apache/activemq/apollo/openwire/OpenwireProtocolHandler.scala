@@ -50,17 +50,16 @@ object OpenwireProtocolHandler extends Log {
   val DEFAULT_DIE_DELAY = 5 * 1000L
   var die_delay = DEFAULT_DIE_DELAY
 
-  val preferred_wireformat_settings = new WireFormatInfo();
-  preferred_wireformat_settings.setVersion(OpenWireFormat.DEFAULT_VERSION);
-  preferred_wireformat_settings.setStackTraceEnabled(true);
-  preferred_wireformat_settings.setCacheEnabled(false);
-  preferred_wireformat_settings.setTcpNoDelayEnabled(true);
-  preferred_wireformat_settings.setTightEncodingEnabled(true);
-  preferred_wireformat_settings.setSizePrefixDisabled(false);
-  preferred_wireformat_settings.setMaxInactivityDuration(30 * 1000 * 1000);
-  preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(10 * 1000 * 1000);
-  preferred_wireformat_settings.setCacheSize(1024);
-  preferred_wireformat_settings.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
+  val DEFAULT_WIREFORMAT_SETTINGS = new WireFormatInfo();
+  DEFAULT_WIREFORMAT_SETTINGS.setVersion(OpenWireFormat.DEFAULT_VERSION);
+  DEFAULT_WIREFORMAT_SETTINGS.setStackTraceEnabled(true);
+  DEFAULT_WIREFORMAT_SETTINGS.setCacheEnabled(true);
+  DEFAULT_WIREFORMAT_SETTINGS.setTightEncodingEnabled(true);
+  DEFAULT_WIREFORMAT_SETTINGS.setSizePrefixDisabled(false);
+  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDuration(30 * 1000 * 1000);
+  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDurationInitalDelay(10 * 1000 * 1000);
+  DEFAULT_WIREFORMAT_SETTINGS.setCacheSize(1024);
+  DEFAULT_WIREFORMAT_SETTINGS.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
 
   val WAITING_ON_CLIENT_REQUEST = ()=> "client request"
 }
@@ -121,6 +120,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   var messages_sent = 0L
   var messages_received = 0L
+  val preferred_wireformat_settings = new WireFormatInfo();
 
   override def create_connection_status = {
     var rc = new OpenwireConnectionStatusDTO
@@ -142,24 +142,20 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     config = connector_config.protocols.find( _.isInstanceOf[OpenwireDTO]).map(_.asInstanceOf[OpenwireDTO]).getOrElse(new OpenwireDTO)
 
 //    protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
-//
 
-    //    config.max_data_length.foreach( codec.max_data_length = _ )
-//    config.max_header_length.foreach( codec.max_header_length = _ )
-//    config.max_headers.foreach( codec.max_headers = _ )
-
-    if( config.destination_separator!=null ||
-        config.path_separator!= null ||
-        config.any_child_wildcard != null ||
-        config.any_descendant_wildcard!= null ) {
-
-//      destination_parser = new DestinationParser().copy(Stomp.destination_parser)
-//      if( config.destination_separator!=null ) { destination_parser.destination_separator = config.destination_separator }
-//      if( config.path_separator!=null ) { destination_parser.path_separator = config.path_separator }
-//      if( config.any_child_wildcard!=null ) { destination_parser.any_child_wildcard = config.any_child_wildcard }
-//      if( config.any_descendant_wildcard!=null ) { destination_parser.any_descendant_wildcard = config.any_descendant_wildcard }
-    }
+    import OptionSupport._
+    preferred_wireformat_settings.setSizePrefixDisabled(false)
+    preferred_wireformat_settings.setCacheEnabled(config.cache_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
+    preferred_wireformat_settings.setVersion(config.version.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getVersion))
+    preferred_wireformat_settings.setStackTraceEnabled(config.stack_trace_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isStackTraceEnabled))
+    preferred_wireformat_settings.setCacheEnabled(config.cache_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
+    preferred_wireformat_settings.setTightEncodingEnabled(config.tight_encoding_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isTightEncodingEnabled))
+    preferred_wireformat_settings.setMaxInactivityDuration(config.max_inactivity_duration.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDuration))
+    preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(config.max_inactivity_duration_initial_delay.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDurationInitalDelay))
+    preferred_wireformat_settings.setCacheSize(config.cache_size.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getCacheSize))
+    preferred_wireformat_settings.setMaxFrameSize(config.max_frame_size.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxFrameSize))
   }
+
 
   def suspend_read(reason: => String) = {
     waiting_on = reason _

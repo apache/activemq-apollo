@@ -21,7 +21,7 @@ import org.apache.activemq.apollo.dto.ProtocolDTO;
 import javax.xml.bind.annotation.*;
 
 /**
- * Allow you to customize the openwire protocol implementation.
+ * AllowS you to customize the openwire protocol implementation.
  */
 @XmlRootElement(name="openwire")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -30,46 +30,67 @@ public class OpenwireDTO extends ProtocolDTO {
     @XmlAttribute(name="max_data_length")
     public String max_data_length;
 
-    @XmlAttribute(name="destination_separator")
-    public String destination_separator;
-
-    @XmlAttribute(name="path_separator")
-    public String path_separator;
-
-    @XmlAttribute(name="any_child_wildcard")
-    public String any_child_wildcard;
-
-    @XmlAttribute(name="any_descendant_wildcard")
-    public String any_descendant_wildcard;
+    public Integer version;
+    @XmlAttribute(name="stack_trace_enabled")
+    public Boolean stack_trace_enabled;
+    @XmlAttribute(name="cache_enabled")
+    public Boolean cache_enabled;
+    @XmlAttribute(name="cache_size")
+    public Integer cache_size;
+    @XmlAttribute(name="tight_encoding_enabled")
+    public Boolean tight_encoding_enabled;
+    @XmlAttribute(name="size_prefix_disabled")
+    public Boolean size_prefix_disabled;
+    @XmlAttribute(name="max_inactivity_duration")
+    public Long max_inactivity_duration;
+    @XmlAttribute(name="max_inactivity_duration_initial_delay")
+    public Long max_inactivity_duration_initial_delay;
+    @XmlAttribute(name="max_frame_size")
+    public Long max_frame_size;
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof OpenwireDTO)) return false;
+        if (!super.equals(o)) return false;
 
-        OpenwireDTO openwireDTO = (OpenwireDTO) o;
+        OpenwireDTO that = (OpenwireDTO) o;
 
-        if (any_child_wildcard != null ? !any_child_wildcard.equals(openwireDTO.any_child_wildcard) : openwireDTO.any_child_wildcard != null)
+        if (cache_enabled != null ? !cache_enabled.equals(that.cache_enabled) : that.cache_enabled != null)
             return false;
-        if (any_descendant_wildcard != null ? !any_descendant_wildcard.equals(openwireDTO.any_descendant_wildcard) : openwireDTO.any_descendant_wildcard != null)
+        if (cache_size != null ? !cache_size.equals(that.cache_size) : that.cache_size != null) return false;
+        if (max_data_length != null ? !max_data_length.equals(that.max_data_length) : that.max_data_length != null)
             return false;
-        if (destination_separator != null ? !destination_separator.equals(openwireDTO.destination_separator) : openwireDTO.destination_separator != null)
+        if (max_frame_size != null ? !max_frame_size.equals(that.max_frame_size) : that.max_frame_size != null)
             return false;
-        if (max_data_length != null ? !max_data_length.equals(openwireDTO.max_data_length) : openwireDTO.max_data_length != null)
+        if (max_inactivity_duration != null ? !max_inactivity_duration.equals(that.max_inactivity_duration) : that.max_inactivity_duration != null)
             return false;
-        if (path_separator != null ? !path_separator.equals(openwireDTO.path_separator) : openwireDTO.path_separator != null)
+        if (max_inactivity_duration_initial_delay != null ? !max_inactivity_duration_initial_delay.equals(that.max_inactivity_duration_initial_delay) : that.max_inactivity_duration_initial_delay != null)
             return false;
+        if (size_prefix_disabled != null ? !size_prefix_disabled.equals(that.size_prefix_disabled) : that.size_prefix_disabled != null)
+            return false;
+        if (stack_trace_enabled != null ? !stack_trace_enabled.equals(that.stack_trace_enabled) : that.stack_trace_enabled != null)
+            return false;
+        if (tight_encoding_enabled != null ? !tight_encoding_enabled.equals(that.tight_encoding_enabled) : that.tight_encoding_enabled != null)
+            return false;
+        if (version != null ? !version.equals(that.version) : that.version != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = (max_data_length != null ? max_data_length.hashCode() : 0);
-        result = 31 * result + (destination_separator != null ? destination_separator.hashCode() : 0);
-        result = 31 * result + (path_separator != null ? path_separator.hashCode() : 0);
-        result = 31 * result + (any_child_wildcard != null ? any_child_wildcard.hashCode() : 0);
-        result = 31 * result + (any_descendant_wildcard != null ? any_descendant_wildcard.hashCode() : 0);
+        int result = super.hashCode();
+        result = 31 * result + (max_data_length != null ? max_data_length.hashCode() : 0);
+        result = 31 * result + (version != null ? version.hashCode() : 0);
+        result = 31 * result + (stack_trace_enabled != null ? stack_trace_enabled.hashCode() : 0);
+        result = 31 * result + (cache_enabled != null ? cache_enabled.hashCode() : 0);
+        result = 31 * result + (cache_size != null ? cache_size.hashCode() : 0);
+        result = 31 * result + (tight_encoding_enabled != null ? tight_encoding_enabled.hashCode() : 0);
+        result = 31 * result + (size_prefix_disabled != null ? size_prefix_disabled.hashCode() : 0);
+        result = 31 * result + (max_inactivity_duration != null ? max_inactivity_duration.hashCode() : 0);
+        result = 31 * result + (max_inactivity_duration_initial_delay != null ? max_inactivity_duration_initial_delay.hashCode() : 0);
+        result = 31 * result + (max_frame_size != null ? max_frame_size.hashCode() : 0);
         return result;
     }
 }
