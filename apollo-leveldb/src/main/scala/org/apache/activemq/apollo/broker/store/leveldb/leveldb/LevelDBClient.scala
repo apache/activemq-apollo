@@ -66,10 +66,12 @@ object LevelDBClient extends Log {
   final val LOG_ADD_QUEUE           = 1.toByte
   final val LOG_REMOVE_QUEUE        = 2.toByte
   final val LOG_ADD_MESSAGE         = 3.toByte
-  final val LOG_REMOVE_MESSAGE      = 4.toByte
   final val LOG_ADD_QUEUE_ENTRY     = 5.toByte
   final val LOG_REMOVE_QUEUE_ENTRY  = 6.toByte
   final val LOG_MAP_ENTRY           = 7.toByte
+
+  final val LOG_ADD_MESSAGE_SNAPPY  = (LOG_ADD_MESSAGE+100).toByte
+  final val LOG_MAP_ENTRY_SNAPPY    = (LOG_MAP_ENTRY+100).toByte
 
   final val LOG_SUFFIX  = ".log"
   final val INDEX_SUFFIX  = ".index"
@@ -198,6 +200,7 @@ class LevelDBClient(store: LevelDBStore) {
 
   var log:RecordLog = _
 
+  var snappy_compress_logs = false
   var index:RichDB = _
   var index_options:Options = _
 
@@ -256,6 +259,10 @@ class LevelDBClient(store: LevelDBStore) {
       case _ => CompressionType.SNAPPY
     }) )
 
+    if( Option(config.log_compression).map(_.toLowerCase).getOrElse("snappy") == "snappy" && Snappy!=null ) {
+      snappy_compress_logs = true
+    }
+    
     index_options.cacheSize(Option(config.index_cache_size).map(MemoryPropertyEditor.parse(_).toLong).getOrElse(1024*1024*256L))
     index_options.logger(new Logger() {
       def log(msg: String) = trace(msg.stripSuffix("\n"))
@@ -412,7 +419,7 @@ class LevelDBClient(store: LevelDBStore) {
                     val record = QueuePB.FACTORY.parseUnframed(data)
                     index.put(encode_key(queue_prefix, record.getKey), data)
 
-                  case LOG_REMOVE_QUEUE =>
+                  case LOG_REMOVE_QUEUE=>
                     replay_operations+=1
                     val ro = new ReadOptions
                     ro.fillCache(false)
@@ -430,7 +437,7 @@ class LevelDBClient(store: LevelDBStore) {
                       true
                     }
 
-                  case LOG_MAP_ENTRY =>
+                  case LOG_MAP_ENTRY | LOG_MAP_ENTRY_SNAPPY =>
                     replay_operations+=1
                     val entry = MapEntryPB.FACTORY.parseUnframed(data)
                     if (entry.getValue == null) {
@@ -724,7 +731,7 @@ class LevelDBClient(store: LevelDBStore) {
   def add_queue(record: QueueRecord, callback:Runnable) = {
     retry_using_index {
       log.appender { appender =>
-        val value:Buffer = PBSupport.encode_queue_record(record)
+        val value:Buffer = PBSupport.to_pb(record).freeze().toUnframedBuffer
         appender.append(LOG_ADD_QUEUE, value)
         index.put(encode_key(queue_prefix, record.key), value)
       }
@@ -795,7 +802,9 @@ class LevelDBClient(store: LevelDBStore) {
                 entry.setValue(value)
                 batch.put(encode_key(map_prefix, key), value.toByteArray)
               }
-              appender.append(LOG_MAP_ENTRY, entry.freeze().toUnframedByteArray)
+              var log_data = entry.freeze().toUnframedBuffer
+              
+              appender.append(LOG_MAP_ENTRY, log_data)
             }
 
             uow.actions.foreach { case (msg, action) =>
@@ -804,10 +813,25 @@ class LevelDBClient(store: LevelDBStore) {
               var log_info:LogInfo = null
 
               if (message_record != null) {
-                val message_data = PBSupport.encode_message_record(message_record)
-                val len = message_data.length
-                val p = appender.append(LOG_ADD_MESSAGE, message_data)
-                locator = (p._1, len)
+                
+                val pb = new MessagePB.Bean
+                pb.setProtocol(message_record.protocol)
+                pb.setSize(message_record.size)
+                pb.setValue(message_record.buffer)
+                var message_data = pb.freeze().toUnframedBuffer
+
+                val p = if( snappy_compress_logs ) {
+                  val compressed = Snappy.compress(message_data)
+                  if( compressed.length < message_data.length ) {
+                    message_data = compressed
+                    appender.append(LOG_ADD_MESSAGE_SNAPPY, message_data)
+                  } else {
+                    appender.append(LOG_ADD_MESSAGE, message_data)
+                  }
+                } else {
+                  appender.append(LOG_ADD_MESSAGE, message_data)
+                }
+                locator = (p._1, message_data.length)
                 log_info = p._2
                 message_record.locator.set(locator);
               }
@@ -819,6 +843,7 @@ class LevelDBClient(store: LevelDBStore) {
                 assert(locator!=null)
                 val (pos, len) = locator
                 val key = encode_key(queue_entry_prefix, entry.queue_key, entry.entry_seq)
+
                 appender.append(LOG_REMOVE_QUEUE_ENTRY, key)
                 batch.delete(key)
                 log_ref_decrement(pos, log_info)
@@ -890,8 +915,13 @@ class LevelDBClient(store: LevelDBStore) {
           val (_, locator, callback) = x
           val record = metric_load_from_index_counter.time {
             val (pos, len ) = locator.get().asInstanceOf[(Long, Int)]
-            log.read(pos, len).map { data =>
-              val rc = PBSupport.decode_message_record(data)
+            log.read(pos, len).map { case (kind, data) =>
+
+              val msg_data = kind match {
+                case LOG_ADD_MESSAGE => data
+                case LOG_ADD_MESSAGE_SNAPPY => Snappy.uncompress(data)
+              }
+              val rc = PBSupport.from_pb(MessagePB.FACTORY.parseUnframed(msg_data))
               rc.locator = locator
               assert( rc.protocol!=null )
               rc
@@ -919,9 +949,14 @@ class LevelDBClient(store: LevelDBStore) {
           val (_, locator, callback) = x
           val record:Option[MessageRecord] = metric_load_from_index_counter.time {
             val (pos, len ) = locator.get().asInstanceOf[(Long, Int)]
-            log.read(pos, len).map { x =>
-              val rc:MessageRecord = PBSupport.decode_message_record(x)
+            log.read(pos, len).map { case (kind, data) =>
+              val msg_data = kind match {
+                case LOG_ADD_MESSAGE => data
+                case LOG_ADD_MESSAGE_SNAPPY => Snappy.uncompress(data)
+              }
+              val rc = PBSupport.from_pb(MessagePB.FACTORY.parseUnframed(msg_data))
               rc.locator = locator
+              assert( rc.protocol!=null )
               rc
             }
           }
@@ -951,7 +986,7 @@ class LevelDBClient(store: LevelDBStore) {
       ro.fillCache(false)
       ro.verifyChecksums(verify_checksums)
       index.get(encode_key(queue_prefix, queue_key), ro).map{ x=>
-        PBSupport.decode_queue_record(x)
+        PBSupport.from_pb(QueuePB.FACTORY.parseUnframed(x))
       }
     }
   }
@@ -1182,9 +1217,12 @@ class LevelDBClient(store: LevelDBStore) {
           index.cursor_prefixed(Array(tmp_prefix)) { (key, value) =>
             val (_, pos) = decode_long_key(key)
             val len = decode_vlong(value).toInt
-            log.read(pos, len).foreach { value =>
-              // Set the message key to be the position in the log.
-              val record = MessagePB.FACTORY.parseUnframed(value).copy
+            log.read(pos, len).foreach { case (kind, data) =>
+              val msg_data = kind match {
+                case LOG_ADD_MESSAGE => data
+                case LOG_ADD_MESSAGE_SNAPPY => Snappy.uncompress(data)
+              }
+              val record = MessagePB.FACTORY.parseUnframed(msg_data).copy()
               record.setMessageKey(pos)
               manager.store_message(record)
             }
@@ -1253,8 +1291,18 @@ class LevelDBClient(store: LevelDBStore) {
           while(manager.getNext match {
 
             case record:MessagePB.Buffer =>
-              val message_data = record.toUnframedBuffer
-              val (pos, _) = appender.append(LOG_ADD_MESSAGE, message_data)
+              var message_data = record.toUnframedBuffer
+              val (pos, _) = if( snappy_compress_logs ) {
+                val compressed = Snappy.compress(message_data)
+                if( compressed.length < message_data.length ) {
+                  message_data = compressed
+                  appender.append(LOG_ADD_MESSAGE_SNAPPY, message_data)
+                } else {
+                  appender.append(LOG_ADD_MESSAGE, message_data)
+                }
+              } else {
+                appender.append(LOG_ADD_MESSAGE, message_data)
+              }
               index.put(encode_key(tmp_prefix, record.getMessageKey), encode_locator(pos, message_data.length))
               true
 

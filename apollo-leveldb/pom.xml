@@ -68,6 +68,19 @@
       <version>${leveldbjni-version}</version>
     </dependency>
 
+    <!-- For Optional Snappy Compression -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.0.3</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.iq80.snappy</groupId>
+      <artifactId>snappy</artifactId>
+      <version>0.2</version>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Since we implement a jade template to display the LevelDB status -->
     <dependency>

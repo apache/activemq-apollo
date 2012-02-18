@@ -227,9 +227,12 @@ case class RecordLog(directory: File, logSuffix:String) {
       
       check_read_flush(offset+LOG_HEADER_SIZE+length)
       
-      if(verify_checksums) {
+      val record = new Buffer(LOG_HEADER_SIZE+length)
+      if( channel.read(record.toByteBuffer, offset) != record.length ) {
+        throw new IOException("short record at position: "+record_position+" in file: "+file+", offset: "+offset)
+      }
 
-        val record = new Buffer(LOG_HEADER_SIZE+length)
+      if(verify_checksums) {
 
         def record_is_not_changing = {
           using(open) { fd =>
@@ -242,10 +245,6 @@ case class RecordLog(directory: File, logSuffix:String) {
           }
         }
 
-        if( channel.read(record.toByteBuffer, offset) != record.length ) {
-          assert( record_is_not_changing )
-          throw new IOException("short record at position: "+record_position+" in file: "+file+", offset: "+offset)
-        }
 
         val is = new DataByteArrayInputStream(record)
         val prefix = is.readByte()
@@ -254,7 +253,7 @@ case class RecordLog(directory: File, logSuffix:String) {
           throw new IOException("invalid record at position: "+record_position+" in file: "+file+", offset: "+offset)
         }
 
-        val id = is.readByte()
+        val kind = is.readByte()
         val expectedChecksum = is.readInt()
         val expectedLength = is.readInt()
         val data = is.readBuffer(length)
@@ -267,13 +266,11 @@ case class RecordLog(directory: File, logSuffix:String) {
           }
         }
 
-        data
+        (kind, data)
       } else {
-        val data = new Buffer(length)
-        if( channel.read(data.toByteBuffer, offset+LOG_HEADER_SIZE) != data.length ) {
-          throw new IOException("short record at position: "+record_position+" in file: "+file+", offset: "+offset)
-        }
-        data
+        val kind = record.get(1)
+        record.moveHead(LOG_HEADER_SIZE)
+        (kind, record)
       }
     }
 

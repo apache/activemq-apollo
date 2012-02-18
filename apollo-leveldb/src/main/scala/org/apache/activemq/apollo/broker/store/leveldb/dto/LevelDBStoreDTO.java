@@ -70,6 +70,9 @@ public class LevelDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="index_compression")
     public String index_compression;
 
+    @XmlAttribute(name="log_compression")
+    public String log_compression;
+
     @XmlAttribute(name="index_factory")
     public String index_factory;
 
