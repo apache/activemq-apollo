@@ -51,8 +51,10 @@ package object leveldb  {
               case _ => name
             }
             attempt = Thread.currentThread().getContextClassLoader().loadClass(name).newInstance().asInstanceOf[SnappyTrait];
+            attempt.compress("test")
         } catch {
           case _ =>
+            attempt = null
         }
       }
     }
