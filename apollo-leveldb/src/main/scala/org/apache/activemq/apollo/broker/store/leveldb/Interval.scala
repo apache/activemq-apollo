@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.store.leveldb
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.leveldb
 
 import java.util.ArrayList
 import java.util.Iterator
@@ -23,21 +24,24 @@ import java.util.NoSuchElementException
 import org.apache.activemq.apollo.util.TreeMap
 
 object Interval {
-  def apply[N](start:N)(implicit numeric: scala.math.Numeric[N]):Interval[N] = {
+  def apply[N](start: N)(implicit numeric: scala.math.Numeric[N]): Interval[N] = {
     import numeric._
-    Interval(start, start+one)
+    Interval(start, start + one)
   }
 }
 
 case class Interval[N](start: N, limit: N)(implicit numeric: scala.math.Numeric[N]) {
+
   import numeric._
 
   def size = limit - start
+
   def end = limit - one
 
-  def start(value: N):Interval[N] = Interval(value, limit)
-  def limit(value: N):Interval[N] = Interval(start, value)
-  
+  def start(value: N): Interval[N] = Interval(value, limit)
+
+  def limit(value: N): Interval[N] = Interval(start, value)
+
   override def toString = {
     if (start == end) {
       start.toString
@@ -57,8 +61,10 @@ case class Interval[N](start: N, limit: N)(implicit numeric: scala.math.Numeric[
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.lang.Iterable[Interval[N]] {
+
   import numeric._
   import collection.JavaConversions._
+
   private final val ranges = new TreeMap[N, Interval[N]]
 
   def copy = {
@@ -68,11 +74,13 @@ case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.
     }
     rc
   }
-  def add(r:N):Unit = add(Interval(r))
-  def add(r:Interval[N]): Unit = {
+
+  def add(r: N): Unit = add(Interval(r))
+
+  def add(r: Interval[N]): Unit = {
     var start = r.start
     var limit = r.limit
-    
+
     var entry = ranges.floorEntry(limit)
     while (entry != null) {
       var curr = entry
@@ -95,17 +103,18 @@ case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.
     ranges.put(start, Interval(start, limit))
   }
 
-  def remove(r:N):Unit = remove(Interval(r))
-  def remove(r:Interval[N]): Unit = {
-    val start = r.start 
+  def remove(r: N): Unit = remove(Interval(r))
+
+  def remove(r: Interval[N]): Unit = {
+    val start = r.start
     var limit = r.limit
     var entry = ranges.lowerEntry(limit)
     while (entry != null) {
-      
+
       var curr = entry
       var range = curr.getValue
       entry = entry.previous
-      
+
       if (range.limit <= start) {
         entry = null
       } else {
@@ -155,7 +164,7 @@ case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.
   }
 
   override def toString = {
-    "[ " + ranges.values().mkString(", ")+" ]"
+    "[ " + ranges.values().mkString(", ") + " ]"
   }
 
   def iterator: Iterator[Interval[N]] = {
@@ -183,7 +192,7 @@ case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.
       private var _next: Interval[N] = null
 
       def hasNext: Boolean = {
-        while (next==null && last.limit < mask.limit && iter.hasNext) {
+        while (next == null && last.limit < mask.limit && iter.hasNext) {
           var r = iter.next
           if (r.limit >= last.limit) {
             if (r.start < last.limit) {
@@ -215,7 +224,7 @@ case class IntervalSet[N](implicit numeric: scala.math.Numeric[N]) extends java.
     }
   }
 
-  private final class ValueIterator(val ranges:Iterator[Interval[N]]) extends java.util.Iterator[N] {
+  private final class ValueIterator(val ranges: Iterator[Interval[N]]) extends java.util.Iterator[N] {
 
     private var range: Interval[N] = null
     private var _next: Option[N] = None

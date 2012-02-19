@@ -1,4 +1,4 @@
-package org.apache.activemq.apollo.broker.store.leveldb.leveldb
+package org.apache.activemq.apollo.broker.store.leveldb
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,20 +16,18 @@ package org.apache.activemq.apollo.broker.store.leveldb.leveldb
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import dto.LevelDBStoreDTO
 import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
-import org.apache.activemq.apollo.broker.store.leveldb.LevelDBStore
-import org.apache.activemq.apollo.broker.store.leveldb.dto.LevelDBStoreDTO
-import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class PureJavaLevelDBStoreTest extends StoreFunSuiteSupport {
+class LevelDBStoreTest extends StoreFunSuiteSupport {
 
-  def create_store(flushDelay:Long):Store = {
+  def create_store(flushDelay: Long): Store = {
     new LevelDBStore({
       val rc = new LevelDBStoreDTO
-      rc.index_factory = "org.iq80.leveldb.impl.Iq80DBFactory"
       rc.directory = data_directory
       rc.flush_delay = flushDelay
       rc

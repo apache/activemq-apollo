@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.store.leveldb
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.leveldb
 
 import dto.{LevelDBStoreDTO, LevelDBStoreStatusDTO}
 import collection.Seq
@@ -40,31 +41,32 @@ object LevelDBStore extends Log {
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
+class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
 
   var next_queue_key = new AtomicLong(1)
   var next_msg_key = new AtomicLong(1)
 
-  var write_executor:ExecutorService = _
-  var read_executor:ExecutorService = _
+  var write_executor: ExecutorService = _
+  var read_executor: ExecutorService = _
 
-  var client:LevelDBClient = _
+  var client: LevelDBClient = _
+
   def create_client = new LevelDBClient(this)
 
 
   def store_kind = "leveldb"
 
-  override def toString = store_kind+" store at "+config.directory
+  override def toString = store_kind + " store at " + config.directory
 
   override protected def locator_based = true
 
   def flush_delay = config.flush_delay.getOrElse(500)
-  
+
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
-  protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
+  protected def store(uows: Seq[DelayableUOW])(callback: => Unit) = {
     write_executor {
-      client.store(uows, ^{
+      client.store(uows, ^ {
         dispatch_queue {
           callback
         }
@@ -98,16 +100,16 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
           poll_gc
           on_completed.run
         } catch {
-          case e:Throwable =>
+          case e: Throwable =>
             e.printStackTrace()
-            LevelDBStore.error(e, "Store client startup failure: "+e)
+            LevelDBStore.error(e, "Store client startup failure: " + e)
         }
       }
     }
     catch {
-      case e:Throwable =>
+      case e: Throwable =>
         e.printStackTrace()
-        LevelDBStore.error(e, "Store startup failure: "+e)
+        LevelDBStore.error(e, "Store startup failure: " + e)
     }
   }
 
@@ -131,15 +133,15 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
     ss.is_starting || ss.is_started
   }
 
-  def poll_gc:Unit = dispatch_queue.after(10, TimeUnit.SECONDS) {
-    if( keep_polling ) {
+  def poll_gc: Unit = dispatch_queue.after(10, TimeUnit.SECONDS) {
+    if (keep_polling) {
       gc {
         poll_gc
       }
     }
   }
 
-  def gc(onComplete: =>Unit) = write_executor {
+  def gc(onComplete: => Unit) = write_executor {
     client.gc
     onComplete
   }
@@ -153,7 +155,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
   /**
    * Deletes all stored data from the store.
    */
-  def purge(callback: =>Unit) = {
+  def purge(callback: => Unit) = {
     write_executor {
       client.purge()
       next_queue_key.set(1)
@@ -169,7 +171,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  def get_prefixed_map_entries(prefix:Buffer)(callback: Seq[(Buffer, Buffer)]=>Unit) = {
+  def get_prefixed_map_entries(prefix: Buffer)(callback: Seq[(Buffer, Buffer)] => Unit) = {
     read_executor {
       callback(client.get_prefixed_map_entries(prefix))
     }
@@ -178,7 +180,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
   /**
    * Ges the last queue key identifier stored.
    */
-  def get_last_queue_key(callback:(Option[Long])=>Unit):Unit = {
+  def get_last_queue_key(callback: (Option[Long]) => Unit): Unit = {
     write_executor {
       callback(Some(client.get_last_queue_key))
     }
@@ -186,81 +188,91 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
 
   def add_queue(record: QueueRecord)(callback: (Boolean) => Unit) = {
     write_executor {
-     client.add_queue(record, ^{ callback(true) })
+      client.add_queue(record, ^ {
+        callback(true)
+      })
     }
   }
 
   def remove_queue(queueKey: Long)(callback: (Boolean) => Unit) = {
     write_executor {
-      client.remove_queue(queueKey,^{ callback(true) })
+      client.remove_queue(queueKey, ^ {
+        callback(true)
+      })
     }
   }
 
   def get_queue(queueKey: Long)(callback: (Option[QueueRecord]) => Unit) = {
     write_executor {
-      callback( client.get_queue(queueKey) )
+      callback(client.get_queue(queueKey))
     }
   }
 
   def list_queues(callback: (Seq[Long]) => Unit) = {
     write_executor {
-      callback( client.list_queues )
+      callback(client.list_queues)
     }
   }
 
-  val load_source = createSource(new ListEventAggregator[(Long, AtomicReference[Object], (Option[MessageRecord])=>Unit)](), dispatch_queue)
-  load_source.setEventHandler(^{drain_loads});
+  val load_source = createSource(new ListEventAggregator[(Long, AtomicReference[Object], (Option[MessageRecord]) => Unit)](), dispatch_queue)
+  load_source.setEventHandler(^ {
+    drain_loads
+  });
   load_source.resume
 
 
-  def load_message(messageKey: Long, locator:AtomicReference[Object])(callback: (Option[MessageRecord]) => Unit) = {
-    message_load_latency_counter.start { end=>
-      load_source.merge((messageKey, locator, { (result)=>
-        end()
-        callback(result)
-      }))
+  def load_message(messageKey: Long, locator: AtomicReference[Object])(callback: (Option[MessageRecord]) => Unit) = {
+    message_load_latency_counter.start {
+      end =>
+        load_source.merge((messageKey, locator, {
+          (result) =>
+            end()
+            callback(result)
+        }))
     }
   }
 
   def drain_loads = {
     var data = load_source.getData
     message_load_batch_size_counter += data.size
-    read_executor ^{
+    read_executor ^ {
       client.loadMessages(data)
     }
   }
 
   def list_queue_entry_ranges(queueKey: Long, limit: Int)(callback: (Seq[QueueEntryRange]) => Unit) = {
-    write_executor ^{
-      callback( client.listQueueEntryGroups(queueKey, limit) )
+    write_executor ^ {
+      callback(client.listQueueEntryGroups(queueKey, limit))
     }
   }
 
   def list_queue_entries(queueKey: Long, firstSeq: Long, lastSeq: Long)(callback: (Seq[QueueEntryRecord]) => Unit) = {
-    write_executor ^{
-      callback( client.getQueueEntries(queueKey, firstSeq, lastSeq) )
+    write_executor ^ {
+      callback(client.getQueueEntries(queueKey, firstSeq, lastSeq))
     }
   }
 
-  def poll_stats:Unit = {
+  def poll_stats: Unit = {
     def displayStats = {
-      if( service_state.is_started ) {
+      if (service_state.is_started) {
 
         flush_latency = flush_latency_counter(true)
         message_load_latency = message_load_latency_counter(true)
-//        client.metric_journal_append = client.metric_journal_append_counter(true)
-//        client.metric_index_update = client.metric_index_update_counter(true)
+        //        client.metric_journal_append = client.metric_journal_append_counter(true)
+        //        client.metric_index_update = client.metric_index_update_counter(true)
         close_latency = close_latency_counter(true)
-        message_load_batch_size =  message_load_batch_size_counter(true)
+        message_load_batch_size = message_load_batch_size_counter(true)
 
         poll_stats
       }
     }
 
-    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^{ displayStats })
+    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^ {
+      displayStats
+    })
   }
 
-  def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
+  def get_store_status(callback: (StoreStatusDTO) => Unit) = dispatch_queue {
     val rc = new LevelDBStoreStatusDTO
     fill_store_status(rc)
     rc.message_load_batch_size = message_load_batch_size
@@ -272,21 +284,24 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
         rc.log_stats = {
           import collection.JavaConversions._
           var row_layout = "%-20s | %-10s | %-10s\n"
-          row_layout.format("Log File", "Msg Refs", "File Size")+
-          client.log.log_infos.map{case (id,info)=> id -> client.log_refs.get(id).map(_.get)}.toSeq.flatMap { case (id, refs)=>
-            try {
-              val file = LevelDBClient.create_sequence_file(client.directory, id, LevelDBClient.LOG_SUFFIX)
-              val size = file.length()
-              Some(row_layout.format(
-                file.getName,
-                refs.getOrElse(0L).toString,
-                ViewHelper.memory(size)
-              ))
-            } catch {
-              case e:Throwable =>
-                None
-            }
-          }.mkString("")
+          row_layout.format("Log File", "Msg Refs", "File Size") +
+            client.log.log_infos.map {
+              case (id, info) => id -> client.log_refs.get(id).map(_.get)
+            }.toSeq.flatMap {
+              case (id, refs) =>
+                try {
+                  val file = LevelDBClient.create_sequence_file(client.directory, id, LevelDBClient.LOG_SUFFIX)
+                  val size = file.length()
+                  Some(row_layout.format(
+                    file.getName,
+                    refs.getOrElse(0L).toString,
+                    ViewHelper.memory(size)
+                  ))
+                } catch {
+                  case e: Throwable =>
+                    None
+                }
+            }.mkString("")
         }
       }
       callback(rc)
@@ -297,7 +312,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
    * Exports the contents of the store to the provided streams.  Each stream should contain
    * a list of framed protobuf objects with the corresponding object types.
    */
-  def export_data(os:OutputStream, cb:(Option[String])=>Unit) = write_executor {
+  def export_data(os: OutputStream, cb: (Option[String]) => Unit) = write_executor {
     cb(client.export_data(os))
   }
 
@@ -305,7 +320,7 @@ class LevelDBStore(val config:LevelDBStoreDTO) extends DelayingStoreSupport {
    * Imports a previously exported set of streams.  This deletes any previous data
    * in the store.
    */
-  def import_data(is:InputStream, cb:(Option[String])=>Unit) = write_executor {
+  def import_data(is: InputStream, cb: (Option[String]) => Unit) = write_executor {
     cb(client.import_data(is))
   }
 

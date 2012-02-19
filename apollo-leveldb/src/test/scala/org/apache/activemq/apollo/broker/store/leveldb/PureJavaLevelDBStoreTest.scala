@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.store.leveldb
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,34 +16,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.leveldb
 
-import dto.LevelDBStoreDTO
-import org.apache.activemq.apollo.broker.store.StoreFactory
-import org.apache.activemq.apollo.dto.StoreDTO
-import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.broker.store.leveldb.LevelDBStore
+import org.apache.activemq.apollo.broker.store.leveldb.dto.LevelDBStoreDTO
+import org.apache.activemq.apollo.util.FileSupport._
 
 /**
- * <p>
- * Hook to use a HawtDBStore when a HawtDBStoreDTO is
- * used in a broker configuration.
- * </p>
- * <p>
- * This class is discovered using the following resource file:
- * <code>META-INF/services/org.apache.activemq.apollo/stores</code>
- * </p>
- * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LevelDBStoreFactory extends StoreFactory {
-  def create(config: StoreDTO) =  config match {
-    case config:LevelDBStoreDTO =>
-      if( config.getClass == classOf[LevelDBStoreDTO] ) {
-        new LevelDBStore(config)
-      } else {
-        null
-      }
-    case _ => null
+class PureJavaLevelDBStoreTest extends StoreFunSuiteSupport {
+
+  def create_store(flushDelay: Long): Store = {
+    new LevelDBStore({
+      val rc = new LevelDBStoreDTO
+      rc.index_factory = "org.iq80.leveldb.impl.Iq80DBFactory"
+      rc.directory = data_directory
+      rc.flush_delay = flushDelay
+      rc
+    })
   }
 
 }

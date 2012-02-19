@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.store.leveldb
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.store.leveldb
 
 import org.fusesource.hawtbuf._
 import org.iq80.leveldb._
@@ -22,26 +23,27 @@ import java.io.DataOutput
 
 object HelperTrait {
 
-  def encode_locator(pos:Long, len:Int):Array[Byte] = {
+  def encode_locator(pos: Long, len: Int): Array[Byte] = {
     val out = new DataByteArrayOutputStream(
-      AbstractVarIntSupport.computeVarLongSize(pos)+
-      AbstractVarIntSupport.computeVarIntSize(len)
+      AbstractVarIntSupport.computeVarLongSize(pos) +
+        AbstractVarIntSupport.computeVarIntSize(len)
     )
     out.writeVarLong(pos)
     out.writeVarInt(len)
     out.getData
   }
 
-  def decode_locator(bytes:Array[Byte]):(Long,  Int) = {
-    val in = new DataByteArrayInputStream(bytes)
-    (in.readVarLong(), in.readVarInt())
-  }
-  def decode_locator(bytes:Buffer):(Long,  Int) = {
+  def decode_locator(bytes: Array[Byte]): (Long, Int) = {
     val in = new DataByteArrayInputStream(bytes)
     (in.readVarLong(), in.readVarInt())
   }
 
-  def encode_vlong(a1:Long):Array[Byte] = {
+  def decode_locator(bytes: Buffer): (Long, Int) = {
+    val in = new DataByteArrayInputStream(bytes)
+    (in.readVarLong(), in.readVarInt())
+  }
+
+  def encode_vlong(a1: Long): Array[Byte] = {
     val out = new DataByteArrayOutputStream(
       AbstractVarIntSupport.computeVarLongSize(a1)
     )
@@ -49,31 +51,31 @@ object HelperTrait {
     out.getData
   }
 
-  def decode_vlong(bytes:Array[Byte]):Long = {
+  def decode_vlong(bytes: Array[Byte]): Long = {
     val in = new DataByteArrayInputStream(bytes)
     in.readVarLong()
   }
 
-  def encode_key(a1:Byte, a2:Long):Array[Byte] = {
+  def encode_key(a1: Byte, a2: Long): Array[Byte] = {
     val out = new DataByteArrayOutputStream(9)
     out.writeByte(a1.toInt)
     out.writeLong(a2)
     out.getData
   }
 
-  def encode_key(a1:Byte, a2:Buffer):Array[Byte] = {
-    val out = new DataByteArrayOutputStream(1+a2.length)
+  def encode_key(a1: Byte, a2: Buffer): Array[Byte] = {
+    val out = new DataByteArrayOutputStream(1 + a2.length)
     out.writeByte(a1.toInt)
     a2.writeTo(out.asInstanceOf[DataOutput])
     out.getData
   }
 
-  def decode_long_key(bytes:Array[Byte]):(Byte, Long) = {
+  def decode_long_key(bytes: Array[Byte]): (Byte, Long) = {
     val in = new DataByteArrayInputStream(bytes)
     (in.readByte(), in.readLong())
   }
 
-  def encode_key(a1:Byte, a2:Long, a3:Long):Array[Byte] = {
+  def encode_key(a1: Byte, a2: Long, a3: Long): Array[Byte] = {
     val out = new DataByteArrayOutputStream(17)
     out.writeByte(a1)
     out.writeLong(a2)
@@ -81,19 +83,19 @@ object HelperTrait {
     out.getData
   }
 
-  def decode_long_long_key(bytes:Array[Byte]):(Byte,Long,Long) = {
+  def decode_long_long_key(bytes: Array[Byte]): (Byte, Long, Long) = {
     val in = new DataByteArrayInputStream(bytes)
     (in.readByte(), in.readLong(), in.readLong())
   }
 
-  def encode(a1:Byte, a2:Int):Array[Byte] = {
+  def encode(a1: Byte, a2: Int): Array[Byte] = {
     val out = new DataByteArrayOutputStream(5)
     out.writeByte(a1)
     out.writeInt(a2)
     out.getData
   }
 
-  def decode_int_key(bytes:Array[Byte]):(Byte,Int) = {
+  def decode_int_key(bytes: Array[Byte]): (Byte, Int) = {
     val in = new DataByteArrayInputStream(bytes)
     (in.readByte(), in.readInt())
   }
@@ -101,30 +103,30 @@ object HelperTrait {
   final class RichDB(val db: DB) {
 
     val is_pure_java_version = db.getClass.getName == "org.iq80.leveldb.impl.DbImpl"
-    
-    def getProperty(name:String) = db.getProperty(name)
 
-    def getApproximateSizes(ranges:Range*) = db.getApproximateSizes(ranges:_*)
+    def getProperty(name: String) = db.getProperty(name)
 
-    def get(key:Array[Byte], ro:ReadOptions=new ReadOptions):Option[Array[Byte]] = {
+    def getApproximateSizes(ranges: Range*) = db.getApproximateSizes(ranges: _*)
+
+    def get(key: Array[Byte], ro: ReadOptions = new ReadOptions): Option[Array[Byte]] = {
       Option(db.get(key, ro))
     }
 
-    def close:Unit = db.close()
+    def close: Unit = db.close()
 
-    def delete(key:Array[Byte], wo:WriteOptions=new WriteOptions):Unit = {
+    def delete(key: Array[Byte], wo: WriteOptions = new WriteOptions): Unit = {
       db.delete(key, wo)
     }
 
-    def put(key:Array[Byte], value:Array[Byte], wo:WriteOptions=new WriteOptions):Unit = {
+    def put(key: Array[Byte], value: Array[Byte], wo: WriteOptions = new WriteOptions): Unit = {
       db.put(key, value, wo)
     }
 
-    def write[T](wo:WriteOptions=new WriteOptions)(func: WriteBatch=>T):T = {
+    def write[T](wo: WriteOptions = new WriteOptions)(func: WriteBatch => T): T = {
       val updates = db.createWriteBatch()
       try {
 
-        val rc=Some(func(updates))
+        val rc = Some(func(updates))
         db.write(updates, wo)
         return rc.get
       } finally {
@@ -132,7 +134,7 @@ object HelperTrait {
       }
     }
 
-    def snapshot[T](func: Snapshot=>T):T = {
+    def snapshot[T](func: Snapshot => T): T = {
       val snapshot = db.getSnapshot
       try {
         func(snapshot)
@@ -141,11 +143,11 @@ object HelperTrait {
       }
     }
 
-    def cursor_keys(ro:ReadOptions=new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
+    def cursor_keys(ro: ReadOptions = new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
       val iterator = db.iterator(ro)
       iterator.seekToFirst();
       try {
-        while( iterator.hasNext && func(iterator.peekNext.getKey) ) {
+        while (iterator.hasNext && func(iterator.peekNext.getKey)) {
           iterator.next()
         }
       } finally {
@@ -153,14 +155,14 @@ object HelperTrait {
       }
     }
 
-    def cursor_keys_prefixed(prefix:Array[Byte], ro:ReadOptions=new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
+    def cursor_keys_prefixed(prefix: Array[Byte], ro: ReadOptions = new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
       val iterator = db.iterator(ro)
       iterator.seek(prefix);
       try {
-        def check(key:Array[Byte]) = {
+        def check(key: Array[Byte]) = {
           key.startsWith(prefix) && func(key)
         }
-        while( iterator.hasNext && check(iterator.peekNext.getKey) ) {
+        while (iterator.hasNext && check(iterator.peekNext.getKey)) {
           iterator.next()
         }
       } finally {
@@ -168,14 +170,14 @@ object HelperTrait {
       }
     }
 
-    def cursor_prefixed(prefix:Array[Byte], ro:ReadOptions=new ReadOptions)(func: (Array[Byte],Array[Byte]) => Boolean): Unit = {
+    def cursor_prefixed(prefix: Array[Byte], ro: ReadOptions = new ReadOptions)(func: (Array[Byte], Array[Byte]) => Boolean): Unit = {
       val iterator = db.iterator(ro)
       iterator.seek(prefix);
       try {
-        def check(key:Array[Byte]) = {
+        def check(key: Array[Byte]) = {
           key.startsWith(prefix) && func(key, iterator.peekNext.getValue)
         }
-        while( iterator.hasNext && check(iterator.peekNext.getKey) ) {
+        while (iterator.hasNext && check(iterator.peekNext.getKey)) {
           iterator.next()
         }
       } finally {
@@ -183,22 +185,22 @@ object HelperTrait {
       }
     }
 
-    def compare(a1:Array[Byte], a2:Array[Byte]):Int = {
+    def compare(a1: Array[Byte], a2: Array[Byte]): Int = {
       new Buffer(a1).compareTo(new Buffer(a2))
     }
 
-    def cursor_range_keys(start_included:Array[Byte], end_excluded:Array[Byte], ro:ReadOptions=new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
+    def cursor_range_keys(start_included: Array[Byte], end_excluded: Array[Byte], ro: ReadOptions = new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
       val iterator = db.iterator(ro)
       iterator.seek(start_included);
       try {
-        def check(key:Array[Byte]) = {
-          if ( compare(key,end_excluded) < 0) {
+        def check(key: Array[Byte]) = {
+          if (compare(key, end_excluded) < 0) {
             func(key)
           } else {
             false
           }
         }
-        while( iterator.hasNext && check(iterator.peekNext.getKey) ) {
+        while (iterator.hasNext && check(iterator.peekNext.getKey)) {
           iterator.next()
         }
       } finally {
@@ -206,14 +208,14 @@ object HelperTrait {
       }
     }
 
-    def cursor_range(start_included:Array[Byte], end_excluded:Array[Byte], ro:ReadOptions=new ReadOptions)(func: (Array[Byte],Array[Byte]) => Boolean): Unit = {
+    def cursor_range(start_included: Array[Byte], end_excluded: Array[Byte], ro: ReadOptions = new ReadOptions)(func: (Array[Byte], Array[Byte]) => Boolean): Unit = {
       val iterator = db.iterator(ro)
       iterator.seek(start_included);
       try {
-        def check(key:Array[Byte]) = {
-          (compare(key,end_excluded) < 0) && func(key, iterator.peekNext.getValue)
+        def check(key: Array[Byte]) = {
+          (compare(key, end_excluded) < 0) && func(key, iterator.peekNext.getValue)
         }
-        while( iterator.hasNext && check(iterator.peekNext.getKey) ) {
+        while (iterator.hasNext && check(iterator.peekNext.getKey)) {
           iterator.next()
         }
       } finally {
@@ -221,35 +223,36 @@ object HelperTrait {
       }
     }
 
-    def last_key(prefix:Array[Byte], ro:ReadOptions=new ReadOptions): Option[Array[Byte]] = {
+    def last_key(prefix: Array[Byte], ro: ReadOptions = new ReadOptions): Option[Array[Byte]] = {
       val last = new Buffer(prefix).deepCopy().data
-      if ( last.length > 0 ) {
-        val pos = last.length-1
-        last(pos) = (last(pos)+1).toByte
+      if (last.length > 0) {
+        val pos = last.length - 1
+        last(pos) = (last(pos) + 1).toByte
       }
 
-      if(is_pure_java_version) {
+      if (is_pure_java_version) {
         // The pure java version of LevelDB does not support backward iteration.
-        var rc:Option[Array[Byte]] = None
-        cursor_range_keys(prefix, last) { key=>
-          rc = Some(key)
-          true
+        var rc: Option[Array[Byte]] = None
+        cursor_range_keys(prefix, last) {
+          key =>
+            rc = Some(key)
+            true
         }
         rc
       } else {
         val iterator = db.iterator(ro)
         try {
-        
+
           iterator.seek(last);
-          if ( iterator.hasPrev ) {
+          if (iterator.hasPrev) {
             iterator.prev()
           } else {
             iterator.seekToLast()
           }
 
-          if ( iterator.hasNext ) {
+          if (iterator.hasNext) {
             val key = iterator.peekNext.getKey
-            if(key.startsWith(prefix)) {
+            if (key.startsWith(prefix)) {
               Some(key)
             } else {
               None
