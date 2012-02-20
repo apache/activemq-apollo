@@ -358,7 +358,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       link.acquired_size = sub.acquired_size
       link.acquired_count = sub.acquired_count
       link.waiting_on = if( sub.full ) {
-        "ack"
+        "consumer"
       } else if( sub.pos.is_tail ) {
         "producer"
       } else if( !sub.pos.is_loaded ) {
