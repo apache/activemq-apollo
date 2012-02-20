@@ -16,10 +16,60 @@
  */
 package org.apache.activemq.apollo.openwire
 
-import javax.jms.{Message, TextMessage, Session}
+import javax.jms.{DeliveryMode, Message, TextMessage, Session}
+
+
+class BDBQueueTest extends OpenwireTestSupport {
+
+  override def broker_config_uri = "xml:classpath:apollo-openwire-bdb.xml"
+
+  test("Queue Prefetch and Client Ack") {
+
+    connect("?jms.useAsyncSend=true")
+
+    val session = default_connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
+    val producer = session.createProducer(queue("prefetch"))
+    producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT)
+    def put(id:Int) {
+      val msg = session.createBytesMessage()
+      msg.writeBytes(new Array[Byte](1024*4))
+      producer.send(msg)
+    }
+
+    for(i <- 1 to 1000) {
+      put(i)
+    }
+
+    val consumer = session.createConsumer(queue("prefetch"))
+    def get(id:Int) {
+      val m = consumer.receive()
+      expect(true, "Did not get message: "+id)(m!=null)
+    }
+    for(i <- 1 to 1000) {
+      get(i)
+    }
+    default_connection.close()
+    default_connection = null
+
+    // All those messages should get redelivered since they were not previously
+    // acked.
+    connect()
+    val session2 = default_connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
+    val consumer2 = session2.createConsumer(queue("prefetch"))
+    def get2(id:Int) {
+      val m = consumer2.receive()
+      expect(true, "Did not get message: "+id)(m!=null)
+    }
+    for(i <- 1 to 1000) {
+      get2(i)
+    }
+
+
+  }
+}
 
 class QueueTest extends OpenwireTestSupport {
-
+  
   test("Queue Message Cached") {
 
     connect("?wireFormat.cacheEnabled=false&wireFormat.tightEncodingEnabled=false")

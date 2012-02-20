@@ -32,7 +32,7 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
   var broker: Broker = null
   var port = 0
 
-  val broker_config_uri = "xml:classpath:apollo-openwire.xml"
+  def broker_config_uri = "xml:classpath:apollo-openwire.xml"
   val transport_scheme = "tcp"
   val transport_host = "localhost"
 

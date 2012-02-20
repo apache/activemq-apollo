@@ -19,7 +19,7 @@
 
   <authentication domain="OpenwireSecurityTest"/>
 
-  <virtual_host id="default" purge_on_startup="true">
+  <virtual_host id="default">
     <host_name>localhost</host_name>
 
     <acl>
@@ -57,8 +57,8 @@
     </queue>
   </virtual_host>
 
-  <connector id="tcp" protocol="openwire" bind="tcp://0.0.0.0:0">
-    <stomp add_user_header="JMSXUserID"/>
+  <web_admin bind="http://0.0.0.0:0"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:0">
   </connector>
 
 </broker>
