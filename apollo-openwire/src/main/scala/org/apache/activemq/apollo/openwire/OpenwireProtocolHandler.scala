@@ -615,7 +615,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   case class OpenwireDeliveryProducerRoute(addresses:Array[SimpleAddress]) extends DeliveryProducerRoute(host.router) {
 
-    override def send_buffer_size =  codec.write_buffer_size
+    override def send_buffer_size =  codec.getReadBufferSize
 
     override def connection = Some(OpenwireProtocolHandler.this.connection)
     override def dispatch_queue = queue
@@ -917,7 +917,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     override def connection = Some(OpenwireProtocolHandler.this.connection)
 
     def is_persistent = false
-    override def receive_buffer_size = codec.write_buffer_size
+    override def receive_buffer_size = codec.getWriteBufferSize*4
 
     def matches(delivery:Delivery) = {
       if( delivery.message.protocol eq OpenwireProtocol ) {
