@@ -306,7 +306,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         e.count = cur.count
         e.size = cur.size
         e.consumer_count = cur.parked.size
-        e.is_prefetched = cur.is_prefetched
+        e.is_prefetched = cur.prefetched
         e.state = cur.label
 
         rc.entries.add(e)
@@ -636,7 +636,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
     var total_items = 0L
     var total_size = 0L
     while (cur != null) {
-      if (cur.is_loaded || cur.hasSubs || cur.is_prefetched || cur.is_swapped_range ) {
+      if (cur.is_loaded || cur.hasSubs || cur.prefetched || cur.is_swapped_range ) {
         info("  => " + cur)
       }
 
@@ -1109,8 +1109,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
   // The current state of the entry: Head | Tail | Loaded | Swapped | SwappedRange
   var state:EntryState = new Tail
-
-  def is_prefetched = prefetched
 
   def <(value:QueueEntry) = this.seq < value.seq
   def <=(value:QueueEntry) = this.seq <= value.seq
@@ -2209,7 +2207,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       pos // start prefetching from the current position.
     }
 
-    var remaining = queue.tune_consumer_buffer - acquired_size;
+    var remaining = queue.tune_consumer_buffer;
     while( remaining>0 && cursor!=null ) {
       val next = cursor.getNext
       // Browsers prefetch all messages..
