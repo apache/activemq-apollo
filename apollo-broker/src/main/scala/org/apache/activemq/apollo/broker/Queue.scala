@@ -184,9 +184,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var swapping_out_size = 0
 
   val producer_swapped_in = new MemorySpace
-  // To allow overflow to drain into the queue even when there are no producers.
-  producer_swapped_in.size_max = 1024
-
   val consumer_swapped_in = new MemorySpace
 
   var swap_out_item_counter = 0L
@@ -220,26 +217,31 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var loaded_size = 0
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
-  def configure(c:QueueDTO) = {
-    config = c
-    tune_persistent = virtual_host.store !=null && config.persistent.getOrElse(true)
-    tune_swap = tune_persistent && config.swap.getOrElse(true)
-    tune_swap_range_size = config.swap_range_size.getOrElse(10000)
-    tune_consumer_buffer = Option(config.consumer_buffer).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(256*1024)
-    tune_fast_delivery_rate = Option(config.fast_delivery_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(1024*1024)
-    tune_catchup_enqueue_rate = Option(config.catchup_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
-    tune_max_enqueue_rate = Option(config.max_enqueue_rate).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(-1)
+  def configure(update:QueueDTO) = {
+    def mem_size(value:String, default:Int) = Option(value).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(default)
 
-    tune_quota = Option(config.quota).map(MemoryPropertyEditor.parse(_)).getOrElse(-1)
+    producer_swapped_in.size_max += mem_size(update.tail_buffer, 1024*64) - Option(config).map{ config=>
+      mem_size(config.tail_buffer, 1024*64)
+    }.getOrElse(0)
 
-    auto_delete_after = config.auto_delete_after.getOrElse(30)
+    tune_persistent = virtual_host.store !=null && update.persistent.getOrElse(true)
+    tune_swap = tune_persistent && update.swap.getOrElse(true)
+    tune_swap_range_size = update.swap_range_size.getOrElse(10000)
+    tune_consumer_buffer = mem_size(update.consumer_buffer, 256*1024)
+    tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,1024*1024)
+    tune_catchup_enqueue_rate = mem_size(update.catchup_enqueue_rate,-1)
+    tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,-1)
+    tune_quota = mem_size(update.quota,-1)
+    auto_delete_after = update.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured queues,
       // non destination queues, or mirrored queues.
-      if( config.mirrored.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(config) ) {
+      if( update.mirrored.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(update) ) {
         auto_delete_after = 0
       }
     }
+
+    config = update
   }
   configure(config)
 

@@ -313,6 +313,9 @@ A `queue` element may be configured with the following attributes:
   [Mirrored Queues](Mirrored_Queues) documentation for more 
   details.  Defaults to false.
 
+* `tail_buffer` : The amount of memory buffer space allocated for holding
+freshly enqueued message.  Defaults to 64k.
+
 * `consumer_buffer` : The amount of memory buffer space allocated to each
 subscription for receiving messages.  Defaults to 256k.
 

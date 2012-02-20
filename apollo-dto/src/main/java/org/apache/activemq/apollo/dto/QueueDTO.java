@@ -51,6 +51,13 @@ public class QueueDTO extends StringIdDTO {
     public Boolean mirrored;
 
     /**
+     *  The amount of memory buffer space to use for swapping messages
+     *  out.
+     */
+    @XmlAttribute(name="tail_buffer")
+    public String tail_buffer;
+
+    /**
      *  The amount of memory buffer space to use per consumer.
      */
     @XmlAttribute(name="consumer_buffer")
