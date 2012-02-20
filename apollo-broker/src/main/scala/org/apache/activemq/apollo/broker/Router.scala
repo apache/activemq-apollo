@@ -274,6 +274,7 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
   def full = overflow!=null
 
   def offer(delivery:Delivery) = {
+    dispatch_queue.assertExecuting()
     if( full ) {
       false
     } else {

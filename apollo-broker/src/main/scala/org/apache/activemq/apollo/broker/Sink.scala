@@ -16,12 +16,10 @@
  */
 package org.apache.activemq.apollo.broker
 
-import _root_.org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch._
 import java.util.LinkedList
 import org.fusesource.hawtdispatch.transport.Transport
 import collection.mutable.HashSet
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * <p>
@@ -266,10 +264,9 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
   }
 
   def credit(byte_credits:Int, delivery_credits:Int) = {
-    val was_full = full
     this.byte_credits += byte_credits
     this.delivery_credits += delivery_credits
-    if( was_full && !full ) {
+    if( !full ) {
       refiller.run()
     }
   }
@@ -413,9 +410,8 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   private var rejection_handler: (T)=>Unit = _
   
   private def add_credits(value:Int) = {
-    val was_full = _full
     credits += value;
-    if( was_full && !_full ) {
+    if( value > 0 && !_full ) {
       refiller.run
     }
   }
@@ -524,7 +520,6 @@ class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] 
     // When a message is delivered to the consumer, we release
     // used capacity in the outbound queue, and can drain the inbound
     // queue
-    val wasBlocking = full
     size -= amount
     if( !is_empty ) {
       drain
