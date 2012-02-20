@@ -60,7 +60,7 @@ import Queue._
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var config:QueueDTO) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
+class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
   override def toString = binding.toString
 
   def virtual_host = router.virtual_host
@@ -217,6 +217,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
   var loaded_size = 0
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
+  var config:QueueDTO = _
+
   def configure(update:QueueDTO) = {
     def mem_size(value:String, default:Int) = Option(value).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(default)
 
@@ -240,11 +242,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding, var
         auto_delete_after = 0
       }
     }
-
     config = update
+    this
   }
-  configure(config)
-
 
   def get_queue_metrics:DestMetricsDTO = {
     dispatch_queue.assertExecuting()

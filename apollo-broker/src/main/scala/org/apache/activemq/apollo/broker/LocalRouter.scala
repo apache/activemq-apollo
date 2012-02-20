@@ -1225,7 +1225,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     val config = binding.config(virtual_host)
 
-    val queue = new Queue(this, qid, binding, config)
+    val queue = new Queue(this, qid, binding).configure(config)
     if( queue.tune_persistent && id == -1) {
       val record = QueueRecord(queue.store_id, binding.binding_kind, binding.binding_data)
       virtual_host.store.add_queue(record) { rc => Unit }
