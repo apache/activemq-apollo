@@ -31,10 +31,7 @@ object PBSupport {
     val pb = new MessagePB.Bean
     pb.setMessageKey(v.key)
     pb.setProtocol(v.protocol)
-    pb.setSize(v.size)
     pb.setValue(v.buffer)
-    if(v.expiration!=0)
-      pb.setExpiration(v.expiration)
     pb
   }
 
@@ -42,9 +39,7 @@ object PBSupport {
     val rc = new MessageRecord
     rc.key = pb.getMessageKey
     rc.protocol = pb.getProtocol
-    rc.size = pb.getSize
     rc.buffer = pb.getValue
-    rc.expiration = pb.getExpiration
     rc
   }
 

@@ -45,7 +45,6 @@ object OpenwireCodec extends Sizer[Command] {
   def encode(message: Message):MessageRecord = {
     val rc = new MessageRecord
     rc.protocol = PROTOCOL
-    rc.expiration = message.expiration
 
     val msg = message.asInstanceOf[OpenwireMessage];
     rc.buffer = msg.message.getCachedEncoding match {

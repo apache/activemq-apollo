@@ -64,6 +64,16 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
 
   protected def get_next_msg_key = next_msg_key.getAndIncrement
 
+
+  override def on_store_requested(mr: MessageRecord) = {
+    if( client.snappy_compress_logs && mr.compressed==null ) {
+      val compressed = Snappy.compress(mr.buffer)
+      if (compressed.length < mr.buffer.length) {
+        mr.compressed = compressed
+      }
+    }
+  }
+
   protected def store(uows: Seq[DelayableUOW])(callback: => Unit) = {
     write_executor {
       client.store(uows, ^ {

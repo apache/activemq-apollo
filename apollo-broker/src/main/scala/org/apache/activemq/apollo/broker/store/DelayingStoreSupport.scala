@@ -214,6 +214,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       val action = new MessageAction
       action.msg = record.key
       action.message_record = record
+      on_store_requested(record)
       this.synchronized {
         actions += record.key -> action
         pending_stores.put(action.message_record.key, action)
@@ -300,6 +301,8 @@ trait DelayingStoreSupport extends Store with BaseService {
     rc.total = m.total
     rc
   }
+
+  def on_store_requested(mr:MessageRecord) = {}
 
   var metric_canceled_message_counter:Long = 0
   var metric_canceled_enqueue_counter:Long = 0

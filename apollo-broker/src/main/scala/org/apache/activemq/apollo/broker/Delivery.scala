@@ -242,7 +242,6 @@ class Delivery {
 
   def createMessageRecord() = {
     val record = message.protocol.encode(message)
-    record.size = size
     record.locator = storeLocator
     record
   }

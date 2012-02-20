@@ -99,9 +99,11 @@ case class RecordLog(directory: File, logSuffix: String) {
     file.delete()
   }
 
-  def checksum(data: Buffer): Int = {
+  def checksum(data: Buffer*): Int = {
     val checksum = new CRC32
-    checksum.update(data.data, data.offset, data.length)
+    data.foreach { data =>
+      checksum.update(data.data, data.offset, data.length)
+    }
     (checksum.getValue & 0xFFFFFFFF).toInt
   }
 
@@ -145,47 +147,51 @@ case class RecordLog(directory: File, logSuffix: String) {
     /**
      * returns the offset position of the data record.
      */
-    def append(id: Byte, data: Buffer) = this.synchronized {
+    def append(id: Byte, data: Buffer*) = this.synchronized {
       val record_position = append_position
-      val data_length = data.length
+      var data_length = 0
+      data.foreach(data_length += _.length)
       val total_length = LOG_HEADER_SIZE + data_length
 
       if (write_buffer.position() + total_length > BUFFER_SIZE) {
         flush
       }
 
-      val cs: Int = checksum(data)
+      val cs: Int = checksum(data:_*)
       //      trace("Writing at: "+record_position+" len: "+data_length+" with checksum: "+cs)
 
-      if (false && total_length > BYPASS_BUFFER_SIZE) {
-
-        // Write the header and flush..
+//      if (false && total_length > BYPASS_BUFFER_SIZE) {
+//
+//        // Write the header and flush..
+//        write_buffer.writeByte(LOG_HEADER_PREFIX)
+//        write_buffer.writeByte(id)
+//        write_buffer.writeInt(cs)
+//        write_buffer.writeInt(data_length)
+//
+//        append_offset += LOG_HEADER_SIZE
+//        flush
+//
+//        // Directly write the data to the channel since it's large.
+//        val buffer = data.toByteBuffer
+//        val pos = append_offset + LOG_HEADER_SIZE
+//        flushed_offset.addAndGet(buffer.remaining)
+//        channel.write(buffer, pos)
+//        if (buffer.hasRemaining) {
+//          throw new IOException("Short write")
+//        }
+//        append_offset += data_length
+//
+//      } else {
         write_buffer.writeByte(LOG_HEADER_PREFIX)
         write_buffer.writeByte(id)
         write_buffer.writeInt(cs)
         write_buffer.writeInt(data_length)
-
-        append_offset += LOG_HEADER_SIZE
-        flush
-
-        // Directly write the data to the channel since it's large.
-        val buffer = data.toByteBuffer
-        val pos = append_offset + LOG_HEADER_SIZE
-        flushed_offset.addAndGet(buffer.remaining)
-        channel.write(buffer, pos)
-        if (buffer.hasRemaining) {
-          throw new IOException("Short write")
+        data.foreach { data=>
+          write_buffer.write(data.data, data.offset, data.length)
         }
-        append_offset += data_length
 
-      } else {
-        write_buffer.writeByte(LOG_HEADER_PREFIX)
-        write_buffer.writeByte(id)
-        write_buffer.writeInt(cs)
-        write_buffer.writeInt(data_length)
-        write_buffer.write(data.data, data.offset, data_length)
         append_offset += total_length
-      }
+//      }
       (record_position, info)
     }
 
@@ -231,12 +237,12 @@ case class RecordLog(directory: File, logSuffix: String) {
 
       check_read_flush(offset + LOG_HEADER_SIZE + length)
 
-      val record = new Buffer(LOG_HEADER_SIZE + length)
-      if (channel.read(record.toByteBuffer, offset) != record.length) {
-        throw new IOException("short record at position: " + record_position + " in file: " + file + ", offset: " + offset)
-      }
-
       if (verify_checksums) {
+
+        val record = new Buffer(LOG_HEADER_SIZE + length)
+        if (channel.read(record.toByteBuffer, offset) != record.length) {
+          throw new IOException("short record at position: " + record_position + " in file: " + file + ", offset: " + offset)
+        }
 
         def record_is_not_changing = {
           using(open) {
@@ -271,11 +277,13 @@ case class RecordLog(directory: File, logSuffix: String) {
           }
         }
 
-        (kind, data)
+        data
       } else {
-        val kind = record.get(1)
-        record.moveHead(LOG_HEADER_SIZE)
-        (kind, record)
+        val record = new Buffer(length)
+        if (channel.read(record.toByteBuffer, offset+LOG_HEADER_SIZE) != record.length) {
+          throw new IOException("short record at position: " + record_position + " in file: " + file + ", offset: " + offset)
+        }
+        record
       }
     }
 

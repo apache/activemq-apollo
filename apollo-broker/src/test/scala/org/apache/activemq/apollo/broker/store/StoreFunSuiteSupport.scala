@@ -93,7 +93,6 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     var message = new MessageRecord
     message.protocol = ascii("test-protocol")
     message.buffer = ascii(content).buffer
-    message.size = message.buffer.length
     message.locator = new AtomicReference[Object]()
     val key = batch.store(message)
     (key, message.locator)

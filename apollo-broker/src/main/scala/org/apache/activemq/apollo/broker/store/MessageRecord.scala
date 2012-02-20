@@ -28,10 +28,9 @@ class MessageRecord {
 
   var key = -1L
   var protocol: AsciiBuffer = _
-  var size = 0
   var buffer: Buffer = _
+  var compressed: Buffer = _
   var direct_buffer: DirectBuffer = _
-  var expiration = 0L
   var locator:AtomicReference[Object] = _
 
 }
