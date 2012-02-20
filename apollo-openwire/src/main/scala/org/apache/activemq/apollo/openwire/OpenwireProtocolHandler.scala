@@ -1072,12 +1072,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         }
       }
 
-      def perform_ack(messageAck: MessageAck, uow:StoreUOW=null) = {
+      def perform_ack(messageAck: MessageAck, uow:StoreUOW=null):Unit = {
         queue.assertExecuting()
 
-        val msgid = messageAck.getLastMessageId
         val consumed = messageAck.getAckType match {
-          case MessageAck.DELIVERED_ACK_TYPE => Consumed
+          case MessageAck.DELIVERED_ACK_TYPE =>
+            // DELIVERED_ACK_TYPE are just used to send flow control credits
+            // to the broker.. return since we won't be consuming the message.
+            return
           case MessageAck.INDIVIDUAL_ACK_TYPE => Consumed
           case MessageAck.STANDARD_ACK_TYPE => Consumed
           case MessageAck.POSION_ACK_TYPE => Poisoned
@@ -1085,11 +1087,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           case MessageAck.UNMATCHED_ACK_TYPE => Consumed
         }
 
+        val msgid = messageAck.getLastMessageId
         if( messageAck.getAckType == MessageAck.INDIVIDUAL_ACK_TYPE) {
           consumer_acks = consumer_acks.filterNot{ case (id, delivery)=>
             if( id == msgid) {
               if( delivery.ack!=null ) {
-                delivery.ack(consumed, uow)
+                delivery.ack(Consumed, uow)
               }
               true
             } else {
