@@ -118,18 +118,20 @@ case class BrokerResource() extends Resource {
 
   @Produces(Array("text/html"))
   @GET @Path("signout")
-  def signout_html():Unit = {
+  def signout_html():String = {
     signout()
     result(strip_resolve("../.."))
+    ""
   }
 
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
   @GET @Path("signout")
-  def signout():Unit =  {
+  def signout():String =  {
     val session = http_request.getSession(false)
     if( session !=null ) {
       session.invalidate();
     }
+    ""
   }
 
   @Path("config")
