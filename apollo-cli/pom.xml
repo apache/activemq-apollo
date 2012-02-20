@@ -167,6 +167,12 @@
       <version>1.1-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>jsp-api</artifactId>
+      <version>2.1</version>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
