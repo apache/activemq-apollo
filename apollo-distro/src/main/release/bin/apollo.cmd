@@ -52,7 +52,7 @@ set CLASSPATH=%APOLLO_HOME%\lib\apollo-boot.jar
 set BOOTDIRS=%APOLLO_HOME%\lib
 if NOT "x%APOLLO_BASE%" == "x" set BOOTDIRS=%APOLLO_BASE%\lib:%BOOTDIRS%
 
-if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G
+if "%JVM_FLAGS%" == "" set JVM_FLAGS=-server -Xmx1G -XX:-UseBiasedLocking
 
 if "%APOLLO_ASSERTIONS%"=="false" goto noAPOLLO_ASSERTIONS
   set JVM_FLAGS=-ea %JVM_FLAGS%
