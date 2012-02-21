@@ -710,6 +710,9 @@ an authorization check:
 * `id_regex`: A regular expression to be applied against the id of the
   resource.
 
+* `connector`: The id of the connector the user must be connected on for the
+  rule to match. You can use `*` to match all connectors. Defaults to `*`.
+
 If no access rules match an authorization check then access is denied. 
 
 ##### Ordering

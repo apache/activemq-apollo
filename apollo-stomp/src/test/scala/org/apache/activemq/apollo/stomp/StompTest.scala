@@ -59,8 +59,11 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     clients = Nil
   }
 
-  def connect_request(version:String, c: StompClient, headers:String="") = {
-    c.open("localhost", port)
+  def connect_request(version:String, c: StompClient, headers:String="", connector:String=null) = {
+    val p = Option(connector).map{ id =>
+      broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(port)
+    }.getOrElse(port)
+    c.open("localhost", p)
     version match {
       case "1.0"=>
         c.write(
@@ -80,8 +83,8 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     c.receive()
   }
 
-  def connect(version:String, c: StompClient = client, headers:String="") = {
-    val frame = connect_request(version, c, headers)
+  def connect(version:String, c: StompClient = client, headers:String="", connector:String=null) = {
+    val frame = connect_request(version, c, headers, connector)
     frame should startWith("CONNECTED\n")
     frame should include regex("""session:.+?\n""")
     frame should include("version:"+version+"\n")
@@ -1902,6 +1905,20 @@ class StompSecurityTest extends StompTestSupport {
       "login:can_only_connect\n" +
       "passcode:can_only_connect\n")
 
+  }
+
+  test("Connector restricted user on the right connector") {
+    connect("1.1", client,
+      "login:connector_restricted\n" +
+      "passcode:connector_restricted\n", "tcp2")
+  }
+
+  test("Connector restricted user on the wrong connector") {
+    val frame = connect_request("1.1", client,
+      "login:connector_restricted\n" +
+      "passcode:connector_restricted\n", "tcp")
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to connect to connector 'tcp'.")
   }
 
   test("Send not authorized") {

@@ -856,6 +856,7 @@ class StompProtocolHandler extends ProtocolHandler {
     security_context.remote_address = connection.transport.getRemoteAddress
     security_context.user = get(headers, LOGIN).map(decode_header _).getOrElse(null)
     security_context.password = get(headers, PASSCODE).map(decode_header _).getOrElse(null)
+    security_context.connector_id = connection.connector.id
 
     val accept_versions = get(headers, ACCEPT_VERSION).getOrElse(V1_0).split(COMMA).map(_.ascii)
     protocol_version = SUPPORTED_PROTOCOL_VERSIONS.find( v=> accept_versions.contains(v) ) match {

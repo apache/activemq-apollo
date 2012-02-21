@@ -36,6 +36,7 @@ class SecurityContext {
   var password:String = _
   var sso_token:String = _
   var certificates:Array[X509Certificate] = _
+  var connector_id:String = _
   var local_address:SocketAddress = _
   var remote_address:SocketAddress = _
   var login_context:LoginContext = _

@@ -196,13 +196,23 @@ object Authorizer {
       case principal_kind => Some(principal_kind.split("\\s").map(_.trim()).toSet)
     }
 
+    def connector_match(func:(SecurityContext)=>Boolean):(SecurityContext)=>Boolean = {
+      Option(rule.connector).getOrElse("*") match {
+        case "*" => func
+        case connector_id =>
+          (ctx:SecurityContext) => {
+            ctx.connector_id==connector_id && func(ctx)
+          }
+      }
+    }
+    
     def parse_principals(value:String): Option[(SecurityContext)=>Boolean] = {
       Option(value).map(_.trim() match {
         case "*" =>
-          ((ctx:SecurityContext) => { true })
+          connector_match((ctx:SecurityContext) => { true })
         case "+" =>
           // user has to have at least one of the principle kinds
-          ((ctx:SecurityContext) => {
+          connector_match((ctx:SecurityContext) => {
             principal_kinds match {
               case Some(principal_kinds)=>
                 ctx.principals.find(p=> principal_kinds.contains(p.getClass.getName) ).isDefined
@@ -216,7 +226,7 @@ object Authorizer {
           } else {
             Set(principal)
           }
-          ((ctx:SecurityContext) => {
+          connector_match((ctx:SecurityContext) => {
             principal_kinds match {
               case Some(principal_kinds)=>
                 ctx.principals.find{ p=>

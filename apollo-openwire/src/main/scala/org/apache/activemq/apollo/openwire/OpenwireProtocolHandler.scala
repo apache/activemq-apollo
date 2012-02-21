@@ -194,6 +194,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     connection_log = connection.connector.broker.connection_log
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
+    security_context.connector_id = connection.connector.id
 
     sink_manager = new SinkMux[Command]( connection.transport_sink.map {x=>
       x.setCommandId(next_command_id)

@@ -87,6 +87,13 @@ public class AccessRuleDTO {
     public String id;
 
     /**
+     * The id of the connector the user must be connected on for the
+     * rule to match. You can use `*` to match all connectors. Defaults to `*`.
+     */
+    @XmlAttribute
+    public String connector;
+
+    /**
      * A regular expression used to match the id of the resource.
      */
     @XmlAttribute(name = "id_regex")
@@ -114,6 +121,8 @@ public class AccessRuleDTO {
             return false;
         if (separator != null ? !separator.equals(that.separator) : that.separator != null)
             return false;
+        if (connector != null ? !connector.equals(that.connector) : that.connector != null)
+            return false;
 
         return true;
     }
@@ -128,6 +137,7 @@ public class AccessRuleDTO {
         result = 31 * result + (kind != null ? kind.hashCode() : 0);
         result = 31 * result + (id != null ? id.hashCode() : 0);
         result = 31 * result + (id_regex != null ? id_regex.hashCode() : 0);
+        result = 31 * result + (connector != null ? connector.hashCode() : 0);
         return result;
     }
 
@@ -150,6 +160,7 @@ public class AccessRuleDTO {
             attr("kind",kind)+
             attr("id",kind)+
             attr("id_regex",id_regex)+
+            attr("connector",connector)+
             "/>";
     }
 }
