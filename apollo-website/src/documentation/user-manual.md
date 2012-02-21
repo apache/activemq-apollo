@@ -491,6 +491,8 @@ A `leveldb_store` element may be configured with the following attributes:
    The value defaults to 268435456 (256 MB).
 * `index_compression` : The type of compression to apply to the index blocks.  
    Can be `snappy` or `none`. The value defaults to `snappy`.
+* `log_compression` : The type of compression to apply to the log records.  
+   Can be `snappy` or `none`. The value defaults to `snappy`.
 
 ###### BDB Store
 
