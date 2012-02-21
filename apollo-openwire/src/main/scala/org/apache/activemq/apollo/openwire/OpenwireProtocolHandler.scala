@@ -133,6 +133,10 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     rc
   }
 
+  def buffer_size = {
+    MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
+  }
+
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
     import collection.JavaConversions._
@@ -145,15 +149,16 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     import OptionSupport._
     preferred_wireformat_settings.setSizePrefixDisabled(false)
-    preferred_wireformat_settings.setCacheEnabled(config.cache_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
+    preferred_wireformat_settings.setCacheEnabled(config.cache.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
     preferred_wireformat_settings.setVersion(config.version.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getVersion))
-    preferred_wireformat_settings.setStackTraceEnabled(config.stack_trace_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isStackTraceEnabled))
-    preferred_wireformat_settings.setCacheEnabled(config.cache_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
-    preferred_wireformat_settings.setTightEncodingEnabled(config.tight_encoding_enabled.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isTightEncodingEnabled))
+    preferred_wireformat_settings.setStackTraceEnabled(config.stack_trace.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isStackTraceEnabled))
+    preferred_wireformat_settings.setCacheEnabled(config.cache.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
+    preferred_wireformat_settings.setTightEncodingEnabled(config.tight_encoding.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isTightEncodingEnabled))
     preferred_wireformat_settings.setMaxInactivityDuration(config.max_inactivity_duration.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDuration))
     preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(config.max_inactivity_duration_initial_delay.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDurationInitalDelay))
     preferred_wireformat_settings.setCacheSize(config.cache_size.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getCacheSize))
     preferred_wireformat_settings.setMaxFrameSize(config.max_frame_size.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxFrameSize))
+    preferred_wireformat_settings.setTcpNoDelayEnabled(config.tcp_no_delay.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isTcpNoDelayEnabled))
   }
 
 
@@ -615,7 +620,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   case class OpenwireDeliveryProducerRoute(addresses:Array[SimpleAddress]) extends DeliveryProducerRoute(host.router) {
 
-    override def send_buffer_size =  codec.getReadBufferSize
+    override def send_buffer_size = buffer_size
 
     override def connection = Some(OpenwireProtocolHandler.this.connection)
     override def dispatch_queue = queue
@@ -917,7 +922,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     override def connection = Some(OpenwireProtocolHandler.this.connection)
 
     def is_persistent = false
-    override def receive_buffer_size = codec.getWriteBufferSize*4
+    override def receive_buffer_size = buffer_size
 
     def matches(delivery:Delivery) = {
       if( delivery.message.protocol eq OpenwireProtocol ) {
@@ -935,7 +940,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, buffer_size)
       var closed = false
 
       def consumer = ConsumerContext.this
