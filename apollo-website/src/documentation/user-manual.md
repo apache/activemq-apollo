@@ -314,10 +314,7 @@ A `queue` element may be configured with the following attributes:
   details.  Defaults to false.
 
 * `tail_buffer` : The amount of memory buffer space allocated for holding
-freshly enqueued message.  Defaults to 64k.
-
-* `consumer_buffer` : The amount of memory buffer space allocated to each
-subscription for receiving messages.  Defaults to 256k.
+freshly enqueued message.  Defaults to `640k`.
 
 * `persistent` : If set to false, then the queue will not persistently
 store it's message.  Defaults to true.
@@ -343,7 +340,7 @@ memory.  Defaults to true.
 * `fast_delivery_rate`: The message delivery rate (in bytes/sec) at which             
   the queue considers the consumers fast enough to start slowing down enqueue
   rate to match the consumption rate if the consumers are at the 
-  tail of the queue.           
+  tail of the queue.  Defaults to `1M`           
   
 * `catchup_enqueue_rate`:  If set, and the the current delivery
    rate is exceeding the configured value of `fast_delivery_rate` and 
@@ -1017,6 +1014,8 @@ in the `apollo.xml` configuration file to change the default settings used
 in the STOMP protocol implementation.  The `stomp` element supports the 
 following configuration attributes:
 
+* `buffer_size` : How much each producer or subscription will buffer between
+   the client and the broker. Defaults to `640k`.
 * `add_user_header` :  Name of the header which will be added to every received 
   message received.  The value of the header will be set to the id of user that 
   sent the message.  Not set by default.

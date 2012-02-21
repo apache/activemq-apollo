@@ -440,7 +440,7 @@ class StompProtocolHandler extends ProtocolHandler {
     def dispatch_queue = StompProtocolHandler.this.dispatchQueue
 
     override def connection = Some(StompProtocolHandler.this.connection)
-    override def receive_buffer_size = codec.write_buffer_size
+    override val receive_buffer_size = buffer_size
 
     def is_persistent = false
 
@@ -476,7 +476,7 @@ class StompProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, receive_buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, buffer_size)
 
       override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
 
@@ -603,6 +603,10 @@ class StompProtocolHandler extends ProtocolHandler {
   def die_delay = {
     import OptionSupport._
     config.die_delay.getOrElse(DEFAULT_DIE_DELAY)
+  }
+
+  def buffer_size = {
+    MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
   }
 
   override def set_connection(connection: BrokerConnection) = {
@@ -1007,7 +1011,7 @@ class StompProtocolHandler extends ProtocolHandler {
     val addresses = decode_addresses(dest)
     val key = addresses.toList
 
-    override def send_buffer_size = codec.read_buffer_size
+    override def send_buffer_size = buffer_size
 
     override def connection = Some(StompProtocolHandler.this.connection)
 
@@ -1230,15 +1234,15 @@ class StompProtocolHandler extends ProtocolHandler {
       case Some(value) =>
         value.toString.split(",").toList match {
           case x :: Nil =>
-            (codec.write_buffer_size, x.toInt, true)
+            (buffer_size, x.toInt, true)
           case x :: y :: Nil =>
             (y.toInt, x.toInt, true)
           case x :: y :: z :: _ =>
             (y.toInt, x.toInt, z.toBoolean)
-          case _ => (codec.write_buffer_size, 1, true)
+          case _ => (buffer_size, 1, true)
         }
       case None =>
-        (codec.write_buffer_size, 1, true)
+        (buffer_size, 1, true)
     }
 
     val selector = get(headers, SELECTOR) match {

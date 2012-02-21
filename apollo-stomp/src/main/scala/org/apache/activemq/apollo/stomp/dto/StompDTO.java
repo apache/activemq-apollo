@@ -104,14 +104,21 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="die_delay")
     public Long die_delay;
 
+    @XmlAttribute(name="buffer_size")
+    public String buffer_size;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof StompDTO)) return false;
         if (!super.equals(o)) return false;
 
         StompDTO stompDTO = (StompDTO) o;
 
+        if (add_redeliveries_header != null ? !add_redeliveries_header.equals(stompDTO.add_redeliveries_header) : stompDTO.add_redeliveries_header != null)
+            return false;
+        if (add_timestamp_header != null ? !add_timestamp_header.equals(stompDTO.add_timestamp_header) : stompDTO.add_timestamp_header != null)
+            return false;
         if (add_user_header != null ? !add_user_header.equals(stompDTO.add_user_header) : stompDTO.add_user_header != null)
             return false;
         if (add_user_headers != null ? !add_user_headers.equals(stompDTO.add_user_headers) : stompDTO.add_user_headers != null)
@@ -120,8 +127,11 @@ public class StompDTO extends ProtocolDTO {
             return false;
         if (any_descendant_wildcard != null ? !any_descendant_wildcard.equals(stompDTO.any_descendant_wildcard) : stompDTO.any_descendant_wildcard != null)
             return false;
+        if (buffer_size != null ? !buffer_size.equals(stompDTO.buffer_size) : stompDTO.buffer_size != null)
+            return false;
         if (destination_separator != null ? !destination_separator.equals(stompDTO.destination_separator) : stompDTO.destination_separator != null)
             return false;
+        if (die_delay != null ? !die_delay.equals(stompDTO.die_delay) : stompDTO.die_delay != null) return false;
         if (max_data_length != null ? !max_data_length.equals(stompDTO.max_data_length) : stompDTO.max_data_length != null)
             return false;
         if (max_header_length != null ? !max_header_length.equals(stompDTO.max_header_length) : stompDTO.max_header_length != null)
@@ -138,6 +148,10 @@ public class StompDTO extends ProtocolDTO {
             return false;
         if (regex_wildcard_start != null ? !regex_wildcard_start.equals(stompDTO.regex_wildcard_start) : stompDTO.regex_wildcard_start != null)
             return false;
+        if (temp_queue_prefix != null ? !temp_queue_prefix.equals(stompDTO.temp_queue_prefix) : stompDTO.temp_queue_prefix != null)
+            return false;
+        if (temp_topic_prefix != null ? !temp_topic_prefix.equals(stompDTO.temp_topic_prefix) : stompDTO.temp_topic_prefix != null)
+            return false;
         if (topic_prefix != null ? !topic_prefix.equals(stompDTO.topic_prefix) : stompDTO.topic_prefix != null)
             return false;
 
@@ -149,18 +163,24 @@ public class StompDTO extends ProtocolDTO {
         int result = super.hashCode();
         result = 31 * result + (add_user_header != null ? add_user_header.hashCode() : 0);
         result = 31 * result + (add_user_headers != null ? add_user_headers.hashCode() : 0);
+        result = 31 * result + (add_timestamp_header != null ? add_timestamp_header.hashCode() : 0);
+        result = 31 * result + (add_redeliveries_header != null ? add_redeliveries_header.hashCode() : 0);
         result = 31 * result + (max_header_length != null ? max_header_length.hashCode() : 0);
         result = 31 * result + (max_headers != null ? max_headers.hashCode() : 0);
         result = 31 * result + (max_data_length != null ? max_data_length.hashCode() : 0);
         result = 31 * result + (protocol_filters != null ? protocol_filters.hashCode() : 0);
         result = 31 * result + (queue_prefix != null ? queue_prefix.hashCode() : 0);
         result = 31 * result + (topic_prefix != null ? topic_prefix.hashCode() : 0);
+        result = 31 * result + (temp_queue_prefix != null ? temp_queue_prefix.hashCode() : 0);
+        result = 31 * result + (temp_topic_prefix != null ? temp_topic_prefix.hashCode() : 0);
         result = 31 * result + (destination_separator != null ? destination_separator.hashCode() : 0);
         result = 31 * result + (path_separator != null ? path_separator.hashCode() : 0);
         result = 31 * result + (any_child_wildcard != null ? any_child_wildcard.hashCode() : 0);
         result = 31 * result + (any_descendant_wildcard != null ? any_descendant_wildcard.hashCode() : 0);
         result = 31 * result + (regex_wildcard_start != null ? regex_wildcard_start.hashCode() : 0);
         result = 31 * result + (regex_wildcard_end != null ? regex_wildcard_end.hashCode() : 0);
+        result = 31 * result + (die_delay != null ? die_delay.hashCode() : 0);
+        result = 31 * result + (buffer_size != null ? buffer_size.hashCode() : 0);
         return result;
     }
 }

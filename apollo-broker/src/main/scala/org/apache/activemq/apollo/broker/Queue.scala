@@ -132,11 +132,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var tune_swap_range_size = 0
 
   /**
-   *  The amount of memory buffer space to use per subscription.
-   */
-  var tune_consumer_buffer = 0
-
-  /**
    *  The max memory to allow this queue to grow to.
    */
   var tune_quota = -1L
@@ -220,20 +215,20 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var config:QueueDTO = _
 
   def configure(update:QueueDTO) = {
-    def mem_size(value:String, default:Int) = Option(value).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(default)
+    def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
 
-    producer_swapped_in.size_max += mem_size(update.tail_buffer, 1024*64) - Option(config).map{ config=>
-      mem_size(config.tail_buffer, 1024*64)
+    producer_swapped_in.size_max += mem_size(update.tail_buffer, "640k") - Option(config).map{ config=>
+      mem_size(config.tail_buffer, "640k")
     }.getOrElse(0)
 
     tune_persistent = virtual_host.store !=null && update.persistent.getOrElse(true)
     tune_swap = tune_persistent && update.swap.getOrElse(true)
     tune_swap_range_size = update.swap_range_size.getOrElse(10000)
-    tune_consumer_buffer = mem_size(update.consumer_buffer, 256*1024)
-    tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,1024*1024)
-    tune_catchup_enqueue_rate = mem_size(update.catchup_enqueue_rate,-1)
-    tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,-1)
-    tune_quota = mem_size(update.quota,-1)
+    tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,"1M")
+    tune_catchup_enqueue_rate = mem_size(update.catchup_enqueue_rate,"-1")
+    tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,"-1")
+    tune_quota = mem_size(update.quota,"-1")
+
     auto_delete_after = update.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured queues,
@@ -374,21 +369,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def update(on_completed:Runnable) = dispatch_queue {
 
     val prev_persistent = tune_persistent
-    val prev_consumer_size = tune_consumer_buffer
 
     configure(binding.config(virtual_host))
-
-    val consumer_buffer_change = tune_consumer_buffer-prev_consumer_size
-    if( consumer_buffer_change!=0 ) {
-      // for each
-      all_subscriptions.values.foreach { sub =>
-        // open session
-        if( sub.session!=null ) {
-          // change the queue capacity, by the change in consumer buffer change.
-          change_consumer_capacity(consumer_buffer_change)
-        }
-      }
-    }
 
     restore_from_store {
       check_idle
@@ -2028,6 +2010,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   def browser = consumer.browser
   def exclusive = consumer.exclusive
 
+  val consumer_buffer = consumer.receive_buffer_size
+  
   // This opens up the consumer
   def open() = {
     consumer.retain
@@ -2049,10 +2033,10 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       }
     }
     pos ::= this
-
+    
     queue.all_subscriptions += consumer -> this
     queue.consumer_counter += 1
-    queue.change_consumer_capacity( queue.tune_consumer_buffer )
+    queue.change_consumer_capacity( consumer_buffer )
 
     if( exclusive ) {
       queue.exclusive_subscriptions.append(this)
@@ -2092,7 +2076,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       // The following action gets executed once all acquired messages
       // ared acked or nacked.
       pending_close_action = ()=> {
-        queue.change_consumer_capacity( - queue.tune_consumer_buffer )
+        queue.change_consumer_capacity( - consumer_buffer )
 
         if( exclusive ) {
           // rewind all the subs to the start of the queue.
@@ -2209,7 +2193,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       pos // start prefetching from the current position.
     }
 
-    var remaining = queue.tune_consumer_buffer;
+    var remaining = consumer_buffer;
     while( remaining>0 && cursor!=null ) {
       val next = cursor.getNext
       // Browsers prefetch all messages..

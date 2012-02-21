@@ -58,12 +58,6 @@ public class QueueDTO extends StringIdDTO {
     public String tail_buffer;
 
     /**
-     *  The amount of memory buffer space to use per consumer.
-     */
-    @XmlAttribute(name="consumer_buffer")
-    public String consumer_buffer;
-
-    /**
      * Should this queue persistently store it's entries?
      */
     @XmlAttribute(name="persistent")
@@ -141,8 +135,6 @@ public class QueueDTO extends StringIdDTO {
             return false;
         if (catchup_enqueue_rate != null ? !catchup_enqueue_rate.equals(queueDTO.catchup_enqueue_rate) : queueDTO.catchup_enqueue_rate != null)
             return false;
-        if (consumer_buffer != null ? !consumer_buffer.equals(queueDTO.consumer_buffer) : queueDTO.consumer_buffer != null)
-            return false;
         if (max_enqueue_rate != null ? !max_enqueue_rate.equals(queueDTO.max_enqueue_rate) : queueDTO.max_enqueue_rate != null)
             return false;
         if (other != null ? !other.equals(queueDTO.other) : queueDTO.other != null) return false;
@@ -161,7 +153,6 @@ public class QueueDTO extends StringIdDTO {
         int result = super.hashCode();
         result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
         result = 31 * result + (mirrored != null ? mirrored.hashCode() : 0);
-        result = 31 * result + (consumer_buffer != null ? consumer_buffer.hashCode() : 0);
         result = 31 * result + (persistent != null ? persistent.hashCode() : 0);
         result = 31 * result + (swap != null ? swap.hashCode() : 0);
         result = 31 * result + (swap_range_size != null ? swap_range_size.hashCode() : 0);

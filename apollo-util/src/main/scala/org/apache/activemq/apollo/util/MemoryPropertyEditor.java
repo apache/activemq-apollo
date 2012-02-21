@@ -25,21 +25,21 @@ import java.util.regex.Pattern;
  */
 public class MemoryPropertyEditor extends PropertyEditorSupport {
 
-    private static final Pattern BYTE_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*b?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BYTE_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*b?\\s*$", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern KIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*k(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*m(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern GIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*g(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*t(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*p(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern EIB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*e(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern KIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*k(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*m(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern GIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*g(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*t(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*p(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern EIB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*e(ib)?\\s*$", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern KB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*kb?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*mb?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern GB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*gb?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*tb?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*pb?\\s*$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern EB_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*eb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern KB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*kb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*mb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern GB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*gb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*tb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*pb?\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern EB_PATTERN = Pattern.compile("^\\s*(-?\\d+)\\s*eb?\\s*$", Pattern.CASE_INSENSITIVE);
 
     public void setAsText(String text) throws IllegalArgumentException {
 
