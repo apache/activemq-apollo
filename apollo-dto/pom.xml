@@ -113,7 +113,6 @@
                   <classpath refid="maven.compile.classpath" />
                   <include name="**/package-info.java" />
                   <include name="**/*DTO.java" />
-                  <exclude name="apollo-openwire/**" />
                   <exclude name="**/.git/**" />
                   <exclude name="**/.svn/**" />
                 </schemagen>
