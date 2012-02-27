@@ -342,18 +342,7 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
       // overflow sinks can always accept more values.
       val f1 = overflow.full
       overflow.offer(event)
-      if( !f1 && overflow.full ) {
-        // once we fill, we stop the credit adder sources
-        // this should stop them from sending us more messages.
-        sessions.foreach(_.credit_adder.suspend)
-      }
     }
-  }
-
-  overflow.refiller = ^{
-    consumer_queue.assertExecuting()
-    // overflow is not full anymore.. lets release those credits so we can get more messages.
-    sessions.foreach(_.credit_adder.resume)
   }
 
   def open(producer_queue:DispatchQueue, credits:Int=SessionSinkMux.default_session_max_credits):SessionSink[T] = {
