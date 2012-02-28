@@ -45,9 +45,11 @@ The ${project_name} community is here to help you
     This mailing list is end users to ask general questions about
     ${project_name}
     
-    * [Subscribe](mailto:user-subscribe@activemq.apache.org)
-    * [Unsubscribe](mailto:user-unsubscribe@activemq.apache.org)
-    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-user/) 
+    * [Subscribe](mailto:users-subscribe@activemq.apache.org)
+    * [Unsubscribe](mailto:users-unsubscribe@activemq.apache.org)
+    * [Apache Archive](http://mail-archives.apache.org/mod_mbox/activemq-users/) 
+    * [MarkMail Archive](http://activemq.markmail.org/search/list:org.apache.activemq.users)
+    * [Nabble Forum](http://activemq.2283324.n4.nabble.com/ActiveMQ-User-f2341805.html)
     
     ### ${project_name} Developer List
     
@@ -56,7 +58,9 @@ The ${project_name} community is here to help you
     
     * [Subscribe](mailto:dev-subscribe@activemq.apache.org)
     * [Unsubscribe](mailto:dev-unsubscribe@activemq.apache.org) 
-    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-dev/) 
+    * [Apache Archive](http://mail-archives.apache.org/mod_mbox/activemq-dev/) 
+    * [MarkMail Archive](http://activemq.markmail.org/search/list:org.apache.activemq.dev)
+    * [Nabble Forum](http://activemq.2283324.n4.nabble.com/ActiveMQ-Dev-f2368404.html)
 
     ### ${project_name} Commits List
     
@@ -65,7 +69,8 @@ The ${project_name} community is here to help you
     
     * [Subscribe](mailto:commits-subscribe@activemq.apache.org)
     * [Unsubscribe](mailto:commits-unsubscribe@activemq.apache.org)
-    * [Archive](http://mail-archives.apache.org/mod_mbox/activemq-commits/) 
+    * [Apache Archive](http://mail-archives.apache.org/mod_mbox/activemq-commits/) 
+    * [MarkMail Archive](http://activemq.markmail.org/search/list:org.apache.activemq.commits)
     
 .left
   h1 IRC
