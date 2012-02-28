@@ -116,7 +116,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
   var refiller:Runnable = NOOP
 
-  var overflow = collection.mutable.Queue[T]()
+  val overflow = new LinkedList[T]()
 
   def overflowed = !overflow.isEmpty
 
@@ -128,10 +128,10 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
   protected def drain:Unit = {
     while( overflowed ) {
-      if( !downstream.offer(overflow.front) ) {
+      if( !downstream.offer(overflow.peekFirst()) ) {
         return
       } else {
-        onDelivered(overflow.dequeue)
+        onDelivered(overflow.removeFirst())
       }
     }
     // request a refill once the overflow is empty...
@@ -144,7 +144,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
    */
   def offer(value:T) = {
     if( overflowed || !downstream.offer(value)) {
-      overflow.enqueue(value)
+      overflow.addLast(value)
     } else {
       onDelivered(value)
     }
