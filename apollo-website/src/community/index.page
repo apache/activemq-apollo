@@ -25,11 +25,11 @@ The ${project_name} community is here to help you
 --- name:content pipeline:jade
 
 .left
-  h1 Blog
+  h1 Issue Tracker
 .right
   :markdown
-    Keep up to date on the latest and greatest releases by following the
-    [${project_name} Blog](../blog/index.html)
+    If you have a problem you can [get help](support.html) or try surfing
+    our [Issue Tracker](${project_issue_url})
 
 .left
   h1 Mailing Lists
@@ -81,10 +81,9 @@ The ${project_name} community is here to help you
     the **irc.codehaus.org** server.
 
 .left
-  h1 Support
+  h1 Blog
 .right
   :markdown
-    If you have a problem you can [get help](support.html) or try surfing
-    our [Issue Tracker](${project_issue_url})
-
+    Keep up to date on the latest and greatest releases by following the
+    [${project_name} Blog](../blog/index.html)
 
