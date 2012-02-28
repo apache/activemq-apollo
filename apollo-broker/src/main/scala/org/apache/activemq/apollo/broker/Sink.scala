@@ -348,9 +348,6 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
   def open(producer_queue:DispatchQueue, credits:Int=SessionSinkMux.default_session_max_credits):SessionSink[T] = {
     val session = new Session[T](producer_queue, 0, this)
     consumer_queue <<| ^{
-      if( overflow.full ) {
-        session.credit_adder.suspend
-      }
       session.credit_adder.merge(credits);
       sessions += session
     }
