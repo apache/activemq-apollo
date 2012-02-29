@@ -230,7 +230,7 @@ class LevelDBClient(store: LevelDBStore) {
 
   def start() = {
     import OptionSupport._
-
+    directory.mkdirs()
 
     val factory_names = Option(config.index_factory).getOrElse("org.fusesource.leveldbjni.JniDBFactory, org.iq80.leveldb.impl.Iq80DBFactory")
     factory = factory_names.split("""(,|\s)+""").map(_.trim()).flatMap {
