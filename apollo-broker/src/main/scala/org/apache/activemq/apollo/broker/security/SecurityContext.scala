@@ -59,7 +59,7 @@ class SecurityContext {
     var rc = List[String]()
     if(_principals!=null) {
       for(principal<-_principals) {
-        rc ::= principal.getClass.getName+":"+principal.getName
+        rc ::= principal.getClass.getName+"("+principal.getName+")"
       }
     }
     "["+rc.mkString(", ")+"]"

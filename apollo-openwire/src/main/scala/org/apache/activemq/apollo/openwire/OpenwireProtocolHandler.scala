@@ -455,11 +455,11 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         host.authenticator.authenticate(security_context) { auth_failure =>
           dispatchQueue {
             if( auth_failure!=null ) {
-              async_die(auth_failure+". Credentials="+security_context.credential_dump)
+              async_die("%s. Credentials=%s".format(auth_failure, security_context.credential_dump))
             } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
-              async_die("Not authorized to connect to connector '%s'. Principals=".format(connection.connector.id, security_context.principal_dump))
+              async_die("Not authorized to connect to connector '%s'. Principals=%s".format(connection.connector.id, security_context.principal_dump))
             } else if( !host.authorizer.can(security_context, "connect", this.host) ) {
-              async_die("Not authorized to connect to virtual host '%s'. Principals=".format(this.host.id, security_context.principal_dump))
+              async_die("Not authorized to connect to virtual host '%s'. Principals=%s".format(this.host.id, security_context.principal_dump))
             } else {
               resume_read
               ack(info);
