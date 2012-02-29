@@ -31,6 +31,10 @@ new features like:
  * [APLO-145] - Support WebSockets
  * [APLO-152] - Support an option to have topics retain the last message sent to it
 
+This version introduces a change to the LevelDB store's file format so make sure you follow
+the [Migration Guide](${website_base_url}/versions/1.1/website/documentation/migration-guide.html)
+if your upgradig from 1.0.
+
 For further information see:
 
 * [Download](${website_base_url}/download.html)

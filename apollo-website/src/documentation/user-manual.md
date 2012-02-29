@@ -435,10 +435,13 @@ implementations currently supported are:
 
 * [LevelDB Store](#LevelDB_Store) : is a file based message store implemented using the 
   [Google's LevelDB](http://en.wikipedia.org/wiki/LevelDB) library to maintain indexes into 
-  log files holding the messages.
+  log files holding the messages.  This the default implementation used.  It uses a JNI
+  driver on Linux and OS X, but falls back to a pure Java version on other 
+  platforms (but this is tested less).
 * [BDB Store](#BDB_Store) : is a file based message store implemented using the 
   [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
-  This is the most stable implementation.
+  This implemenation should work equally well on all platforms since it's a pure
+  java implementation.
 
 ###### LevelDB Store
 
