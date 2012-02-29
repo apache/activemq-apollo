@@ -190,7 +190,7 @@ object Authorizer {
         })
     }
 
-    val principal_kinds = Option(rule.principal_kind).map(_.trim().toLowerCase).getOrElse(null) match {
+    val principal_kinds = Option(rule.principal_kind).map(_.trim()).getOrElse(null) match {
       case null => Some(default_principal_kinds)
       case "*" => None
       case principal_kind => Some(principal_kind.split("\\s").map(_.trim()).toSet)
