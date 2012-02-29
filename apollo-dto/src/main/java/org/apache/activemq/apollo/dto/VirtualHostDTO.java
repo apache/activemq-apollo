@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.codehaus.jackson.annotate.JsonTypeName;
 import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
@@ -32,6 +33,7 @@ import javax.xml.bind.annotation.*;
 @JsonTypeIdResolver(ApolloTypeIdResolver.class)
 @XmlRootElement(name = "virtual_host")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class VirtualHostDTO extends ServiceDTO {
 
     @XmlElement(name="host_name", required=true)

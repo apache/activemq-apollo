@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
 
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType (name = "store_type")
 @JsonTypeIdResolver(ApolloTypeIdResolver.class)
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class StoreDTO {
 
     /**

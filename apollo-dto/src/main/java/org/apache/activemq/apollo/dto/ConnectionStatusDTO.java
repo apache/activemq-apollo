@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.dto;
 
 
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonTypeInfo;
 import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
 
@@ -34,6 +35,7 @@ import javax.xml.bind.annotation.*;
 @XmlType(name = "connection_status_type")
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
 @JsonTypeIdResolver(ApolloTypeIdResolver.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ConnectionStatusDTO extends ServiceStatusDTO {
 
     /**

@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.stomp.dto;
 
 import org.apache.activemq.apollo.dto.ConnectionStatusDTO;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -31,6 +32,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="stomp_connection_status")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StompConnectionStatusDTO extends ConnectionStatusDTO {
 
 }

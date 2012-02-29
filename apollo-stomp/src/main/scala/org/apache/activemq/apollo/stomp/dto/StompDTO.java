@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.stomp.dto;
 
 import org.apache.activemq.apollo.dto.AddUserHeaderDTO;
 import org.apache.activemq.apollo.dto.ProtocolDTO;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.List;
  */
 @XmlRootElement(name="stomp")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StompDTO extends ProtocolDTO {
 
     @XmlAttribute(name="add_user_header")

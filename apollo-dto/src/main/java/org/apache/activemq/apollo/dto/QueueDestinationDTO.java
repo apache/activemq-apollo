@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.*;
 import java.util.List;
 
@@ -27,6 +29,7 @@ import java.util.List;
  */
 @XmlRootElement(name = "queue_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class QueueDestinationDTO extends DestinationDTO {
 
     public QueueDestinationDTO() {

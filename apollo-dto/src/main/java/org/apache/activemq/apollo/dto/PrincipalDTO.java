@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.*;
 
 /**
@@ -26,6 +28,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name="principal")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PrincipalDTO {
 
     @XmlAttribute

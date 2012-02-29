@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.broker.store.leveldb.dto;
 
 import org.apache.activemq.apollo.dto.StoreDTO;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,6 +30,7 @@ import java.io.File;
  */
 @XmlRootElement(name="leveldb_store")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LevelDBStoreDTO extends StoreDTO {
 
     @XmlAttribute

@@ -17,6 +17,8 @@
 
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -39,6 +41,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="dest_metrics")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DestMetricsDTO {
     /**
      * The current time on the broker machine.  In milliseconds since the epoch.

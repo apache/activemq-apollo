@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import javax.xml.bind.annotation.*;
@@ -30,6 +31,7 @@ import java.util.List;
  */
 @XmlRootElement(name="virtual_host_status")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class VirtualHostStatusDTO extends ServiceStatusDTO {
 
     /**

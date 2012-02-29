@@ -48,11 +48,13 @@ public class ApolloTypeIdResolver implements TypeIdResolver {
                 if(jsonAnnoation!=null && jsonAnnoation.value()!=null) {
                     typeToId.put(c, jsonAnnoation.value());
                     idToType.put(jsonAnnoation.value(), TypeFactory.specialize(baseType,  c));
+                    idToType.put(c.getName(), TypeFactory.specialize(baseType,  c));
                 } else {
                     XmlRootElement xmlAnnoation = c.getAnnotation(XmlRootElement.class);
                     if(xmlAnnoation!=null && xmlAnnoation.name()!=null) {
                         typeToId.put(c, xmlAnnoation.name());
                         idToType.put(xmlAnnoation.name(), TypeFactory.specialize(baseType,  c));
+                        idToType.put(c.getName(), TypeFactory.specialize(baseType,  c));
                     }
                 }
             }

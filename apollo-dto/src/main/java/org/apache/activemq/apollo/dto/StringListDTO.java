@@ -18,6 +18,8 @@ package org.apache.activemq.apollo.dto;
 
 
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -30,6 +32,7 @@ import java.util.List;
  */
 @XmlRootElement(name="sl")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StringListDTO {
 
     /**

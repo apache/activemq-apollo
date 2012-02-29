@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -28,7 +30,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement(name="null_store")
 @XmlAccessorType(XmlAccessType.FIELD)
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NullStoreDTO extends StoreDTO {
     @Override
     public boolean equals(Object o) {

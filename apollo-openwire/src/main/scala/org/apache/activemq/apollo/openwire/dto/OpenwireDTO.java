@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.openwire.dto;
 
 import org.apache.activemq.apollo.dto.ProtocolDTO;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 
@@ -25,6 +26,7 @@ import javax.xml.bind.annotation.*;
  */
 @XmlRootElement(name="openwire")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OpenwireDTO extends ProtocolDTO {
 
     public Integer version;

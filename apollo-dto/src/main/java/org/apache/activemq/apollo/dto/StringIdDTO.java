@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import javax.xml.bind.annotation.*;
@@ -26,6 +27,7 @@ import java.util.List;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 abstract public class StringIdDTO {
 
     /**

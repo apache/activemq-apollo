@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.dto;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
@@ -29,6 +30,7 @@ import java.io.IOException;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class JsonCodec {
     final public static ObjectMapper mapper = new ObjectMapper();
     static {

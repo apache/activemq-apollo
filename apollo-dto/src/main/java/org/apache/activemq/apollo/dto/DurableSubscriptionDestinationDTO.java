@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.dto;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
  */
 @XmlRootElement(name = "dsub_destination")
 @XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DurableSubscriptionDestinationDTO extends DestinationDTO {
 
     @XmlAttribute
