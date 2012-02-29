@@ -130,9 +130,9 @@ class Apollo extends Main with Action {
   }
 
   @option(name = "--log", description="The logging level use.")
-  var log_level:String = "NONE"
+  var log_level:String = "WARN"
 
-  @argument(name = "args", description = "apollo sub command arguments", multiValued=true)
+  @argument(name = "args", description = "apollo sub command arguments", multiValued=true, valueToShowInHelp="")
   var args:Array[String] = Array()
 
   def execute(session: CommandSession): AnyRef = {
