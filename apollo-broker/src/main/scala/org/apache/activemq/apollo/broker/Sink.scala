@@ -126,6 +126,26 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
   downstream.refiller = ^{ drain }
 
+  def removeFirst = {
+    if( !overflow.isEmpty ) {
+      var rc = overflow.removeFirst()
+      onDelivered(rc)
+      Some(rc)
+    } else {
+      None
+    }
+  }
+
+  def removeLast = {
+    if( !overflow.isEmpty ) {
+      var rc = overflow.removeLast()
+      onDelivered(rc)
+      Some(rc)
+    } else {
+      None
+    }
+  }
+
   protected def drain:Unit = {
     while( overflowed ) {
       if( !downstream.offer(overflow.peekFirst()) ) {
