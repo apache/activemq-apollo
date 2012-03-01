@@ -36,7 +36,8 @@ public class Module implements DtoModule {
                 QueueDestinationDTO.class,
                 NullStoreDTO.class,
                 SimpleStoreStatusDTO.class,
-                DetectDTO.class
+                DetectDTO.class,
+                UdpDTO.class
         };
     }
 }

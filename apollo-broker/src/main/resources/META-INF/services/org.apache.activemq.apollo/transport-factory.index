@@ -18,3 +18,4 @@ org.apache.activemq.apollo.broker.transport.VMTransportFactory
 org.apache.activemq.apollo.broker.transport.TcpTransportFactory
 org.apache.activemq.apollo.broker.transport.SslTransportFactory
 org.apache.activemq.apollo.broker.jetty.WebSocketTransportFactory
+org.apache.activemq.apollo.broker.transport.UdpTransportFactory

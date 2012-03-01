@@ -15,3 +15,5 @@
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.broker.protocol.AnyProtocolFactory
+org.apache.activemq.apollo.broker.protocol.UdpProtocolFactory
+org.apache.activemq.apollo.broker.protocol.RawProtocolFactory

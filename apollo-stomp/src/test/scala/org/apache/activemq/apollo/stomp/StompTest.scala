@@ -19,7 +19,6 @@ package org.apache.activemq.apollo.stomp
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import java.net.InetSocketAddress
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.{LocalRouter, KeyStorage, Broker, BrokerFactory}
 import java.util.concurrent.TimeUnit._
@@ -27,6 +26,9 @@ import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.dto.{QueueStatusDTO, TopicStatusDTO, KeyStorageDTO}
 import java.util.concurrent.atomic.AtomicLong
 import FileSupport._
+import java.net.{DatagramSocket, InetSocketAddress}
+import java.nio.channels.DatagramChannel
+import org.fusesource.hawtbuf.AsciiBuffer
 
 class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
   var broker: Broker = null
@@ -59,10 +61,12 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     clients = Nil
   }
 
+  def connector_port(connector:String):Option[Int] = Option(connector).map { id =>
+    broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(port)
+  }
+  
   def connect_request(version:String, c: StompClient, headers:String="", connector:String=null) = {
-    val p = Option(connector).map{ id =>
-      broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(port)
-    }.getOrElse(port)
+    val p = connector_port(connector).getOrElse(port)
     c.open("localhost", p)
     version match {
       case "1.0"=>
@@ -2374,5 +2378,21 @@ class StompTempDestinationTest extends StompTestSupport {
     frame should startWith("MESSAGE\n")
     frame should include("reply-to:sms:8139993334444\n")
   }
+}
 
+class StompUdpInteropTest extends StompTestSupport {
+
+  test("UDP to STOMP interop") {
+    
+    connect("1.1")
+    subscribe("0", "/topic/udp")
+
+    val udp_port:Int = connector_port("udp").get
+    val channel = DatagramChannel.open();
+
+    val target = new InetSocketAddress("127.0.0.1", udp_port)
+    channel.send(new AsciiBuffer("Hello").toByteBuffer, target)
+
+    assert_received("Hello")
+  }
 }
