@@ -462,7 +462,7 @@ class Broker() extends BaseService with SecuredResource {
     }
 
 
-    val connector_config_by_id = HashMap[String, ConnectorTypeDTO]()
+    val connector_config_by_id = LinkedHashMap[String, ConnectorTypeDTO]()
     config.connectors.foreach{ value =>
       connector_config_by_id += value.id -> value
     }
