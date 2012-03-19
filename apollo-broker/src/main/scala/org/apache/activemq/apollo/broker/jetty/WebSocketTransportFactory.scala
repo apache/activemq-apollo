@@ -25,7 +25,6 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector
 import javax.net.ssl.SSLContext
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector
 import org.eclipse.jetty.util.thread.ExecutorThreadPool
-import org.eclipse.jetty.servlet.{ServletHolder, ServletContextHandler}
 import javax.servlet.http.HttpServletRequest
 import org.eclipse.jetty.websocket.{WebSocket, WebSocketServlet}
 import org.eclipse.jetty.server.{Connector, Server}
@@ -40,6 +39,8 @@ import org.fusesource.hawtdispatch.transport.ProtocolCodec.BufferState
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import java.io.{EOFException, IOException}
 import java.security.cert.X509Certificate
+import org.apache.activemq.apollo.broker.web.AllowAnyOriginFilter
+import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder, ServletHolder, ServletContextHandler}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -67,6 +68,8 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     var transportServerListener: TransportServerListener = _
     @BeanProperty
     var binary_transfers = false
+    @BeanProperty
+    var cors_origin:String = null
 
     var broker: Broker = _
 
@@ -123,6 +126,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
         var context = new ServletContextHandler(ServletContextHandler.NO_SECURITY)
         context.setContextPath(prefix)
+        if( cors_origin!=null && !cors_origin.trim().isEmpty ) {
+          val origins = cors_origin.split(",").map(_.trim()).toSet
+          context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", FilterMapping.DEFAULT)
+        }
         context.addServlet(new ServletHolder(this), "/")
 
         server = new Server

@@ -247,8 +247,17 @@ Example configuraiton:
 {pygmentize}
 
 One thing worth noting is that web sockets (just as Ajax) implements the same
-origin policy, so you can access only brokers running on the same host as
+origin policy, so by default you can access only brokers running on the same host as
 where the web page originated from.
+
+If you want to allow cross origin resource sharing (CORS) of the WebSocket connector,
+by different hosts then your should add `cors_origin` query parameter to the bind URI with 
+a common seperated list of domains that are allowed to access the WebSocket
+connector.  Use `*` to allow access from any domain.  Example:
+
+{pygmentize:: xml}
+<connector id="ws" bind="ws://0.0.0.0:61623?cors_origin=*"/>
+{pygmentize}
 
 ###### WebSocket Clients
 
@@ -862,6 +871,20 @@ For example:
 A `web_admin` element may be configured with the following attributes:
 
 * `bind` : The address and port to bind the web interface on in URL syntax.
+
+If you want to allow cross origin resource sharing (CORS) of the web admin APIs,
+then your should add `cors_origin` query parameter to the bind URI with 
+a common seperated list of domains that are allowed to access the web 
+admin APIs.  Use `*` to allow access from any domain.  Example:
+
+{pygmentize:: xml}
+<broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
+  ...
+  <web_admin bind="http://0.0.0.0:61680?cors_origin=*"/>
+  <web_admin bind="https://0.0.0.0:61681?cors_origin=www.foo.com,bar.com"/>
+  ...
+</broker>
+{pygmentize}
 
 ## Managing Brokers
 
