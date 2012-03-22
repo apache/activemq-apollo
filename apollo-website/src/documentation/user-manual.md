@@ -586,7 +586,15 @@ The attributes that you can configure on the `key_storage` element are:
 * `key_algorithm` : The key management algorithm, defaults to `SunX509`.
 
 The SSL/TLS transport is an extension of the TCP transport and as such it supports
-all the same URI options which the TCP transport supports.
+all the same URI options which the TCP transport supports plus the following:
+
+* `client_auth` : can be set to one of the following: `want`, `need` or
+   `none`.   Defaults to `want`.  If set to `need`, then the SSL connection
+   will not be accepted if the client does not provide a certificate that
+   is trusted by the key store.  If set to `none`, then we will not request
+   the client to send his certificates.  If set to `want`, then we will
+   request the client send his certficates but allow the connection to 
+   continue even if the does not have any tusted certs.
 
 #### Authentication
 
