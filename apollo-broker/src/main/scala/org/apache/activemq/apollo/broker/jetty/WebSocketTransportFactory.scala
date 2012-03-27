@@ -159,9 +159,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       }
     }
 
-    def start(on_completed: Task):Unit = this.start(on_completed.asInstanceOf[Runnable])
-    def stop(on_completed: Task):Unit = this.stop(on_completed.asInstanceOf[Runnable])
-
     def getBoundAddress = {
       val prefix = "/" + uri.getPath.stripPrefix("/")
       new URI(uri.getScheme + "://" + uri.getHost + ":" + connector.getLocalPort + prefix).toString
@@ -262,9 +259,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       }
       on_completed.run()
     }
-
-    def start(on_completed: Task):Unit = this.start(on_completed.asInstanceOf[Runnable])
-    def stop(on_completed: Task):Unit = this.stop(on_completed.asInstanceOf[Runnable])
 
     def getLocalAddress = new InetSocketAddress(request.getLocalAddr, request.getLocalPort)
     def getRemoteAddress = new InetSocketAddress(request.getRemoteHost, request.getRemotePort)
