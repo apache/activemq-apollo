@@ -204,7 +204,7 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   def assert_discriminated = {
     if( connection.service_state.is_started && !discriminated ) {
-      connection.stop
+      connection.stop(NOOP)
     }
   }
 

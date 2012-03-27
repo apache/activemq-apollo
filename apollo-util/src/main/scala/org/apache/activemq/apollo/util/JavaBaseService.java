@@ -17,6 +17,7 @@
 package org.apache.activemq.apollo.util;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.fusesource.hawtdispatch.Task;
 
 import java.util.LinkedList;
 
@@ -39,16 +40,16 @@ public abstract class JavaBaseService implements Service {
     }
 
     static class CallbackSupport extends State {
-        LinkedList<Runnable> callbacks = new LinkedList<Runnable>();
+        LinkedList<Task> callbacks = new LinkedList<Task>();
 
-        void add(Runnable r) {
+        void add(Task r) {
             if (r != null) {
                 callbacks.add(r);
             }
         }
 
         void done() {
-            for (Runnable callback : callbacks) {
+            for (Task callback : callbacks) {
                 callback.run();
             }
         }
@@ -70,23 +71,15 @@ public abstract class JavaBaseService implements Service {
 
     protected State _serviceState = CREATED;
 
-    final public void start() {
-        start(null);
-    }
-
-    final public void stop() {
-        stop(null);
-    }
-
-    final public void start(final Runnable onCompleted) {
-        getDispatchQueue().execute(new Runnable() {
+    final public void start(final Task onCompleted) {
+        getDispatchQueue().execute(new Task() {
             public void run() {
                 if (_serviceState == CREATED ||
                         _serviceState == STOPPED) {
                     final STARTING state = new STARTING();
                     state.add(onCompleted);
                     _serviceState = state;
-                    _start(new Runnable() {
+                    _start(new Task() {
                         public void run() {
                             _serviceState = STARTED;
                             state.done();
@@ -108,14 +101,14 @@ public abstract class JavaBaseService implements Service {
         });
     }
 
-    final public void stop(final Runnable onCompleted) {
-        getDispatchQueue().execute(new Runnable() {
+    final public void stop(final Task onCompleted) {
+        getDispatchQueue().execute(new Task() {
             public void run() {
                 if (_serviceState == STARTED) {
                     final STOPPING state = new STOPPING();
                     state.add(onCompleted);
                     _serviceState = state;
-                    _stop(new Runnable() {
+                    _stop(new Task() {
                         public void run() {
                             _serviceState = STOPPED;
                             state.done();
@@ -151,8 +144,8 @@ public abstract class JavaBaseService implements Service {
 
     abstract protected DispatchQueue getDispatchQueue();
 
-    abstract protected void _start(Runnable onCompleted);
+    abstract protected void _start(Task onCompleted);
 
-    abstract protected void _stop(Runnable onCompleted);
+    abstract protected void _stop(Task onCompleted);
 
 }

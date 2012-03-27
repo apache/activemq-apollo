@@ -186,7 +186,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     if (!connection.stopped) {
       suspend_read("shutdown")
       connection_log.info(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
-      connection.stop
+      connection.stop(NOOP)
     }
   }
 
@@ -275,7 +275,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           case info:ConnectionInfo=> on_connection_info(info)
           case info:RemoveInfo=> on_remove_info(info)
           case info:KeepAliveInfo=> ack(info)
-          case info:ShutdownInfo=> ack(info); connection.stop
+          case info:ShutdownInfo=> ack(info); connection.stop(NOOP)
           case info:FlushCommand=> ack(info)
           case info:DestinationInfo=> on_destination_info(info)
 
@@ -372,7 +372,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
-        connection.stop()
+        connection.stop(NOOP)
       }
       fail(msg, actual)
     }

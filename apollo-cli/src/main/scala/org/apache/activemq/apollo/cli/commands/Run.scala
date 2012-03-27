@@ -115,7 +115,7 @@ class Run extends Action {
       }
 
       broker.tmp = tmp
-      broker.start()
+      broker.start(NOOP)
 
       val broker_config_monitor = new FileMonitor(conf,broker.dispatch_queue {
         broker.console_log.info("Reloading configuration file '%s'.".format(conf))
@@ -137,9 +137,9 @@ class Run extends Action {
         null
       }
       
-      if(jul_config_monitor!=null) jul_config_monitor.start
-      log4j_config_monitor.start
-      broker_config_monitor.start
+      if(jul_config_monitor!=null) jul_config_monitor.start(NOOP)
+      log4j_config_monitor.start(NOOP)
+      broker_config_monitor.start(NOOP)
 
       Runtime.getRuntime.addShutdownHook(new Thread(){
         override def run: Unit = {

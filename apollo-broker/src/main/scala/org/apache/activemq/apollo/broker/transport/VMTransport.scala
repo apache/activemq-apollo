@@ -16,18 +16,19 @@
  */
 package org.apache.activemq.apollo.broker.transport
 
-import _root_.java.io.IOException
-import _root_.java.net.URI
-import _root_.java.util.concurrent.atomic.AtomicBoolean
-import _root_.java.util.concurrent.atomic.AtomicInteger
+import java.io.IOException
+import java.net.URI
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
-import _root_.org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.broker._
 
-import _root_.scala.collection.JavaConversions._
+import scala.collection.JavaConversions._
 import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.util._
 import java.lang.String
 import org.apache.activemq.apollo.dto.AcceptingConnectorDTO
+import org.fusesource.hawtdispatch._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -79,7 +80,7 @@ class VMTransportFactory extends Logging with TransportFactory.Provider {
 
     def stopBroker() = {
       try {
-        this.broker.stop();
+        this.broker.stop(NOOP);
         unbind(this);
       } catch {
         case e: Exception =>

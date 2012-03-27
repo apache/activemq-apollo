@@ -84,7 +84,7 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  protected def _start(on_completed: Runnable) = {
+  protected def _start(on_completed: Task) = {
     try {
       client = create_client
       write_executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
@@ -123,7 +123,7 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  protected def _stop(on_completed: Runnable) = {
+  protected def _stop(on_completed: Task) = {
     new Thread() {
       override def run = {
         write_executor.shutdown

@@ -86,7 +86,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     var enqueue_ts = 0L
     var enqueue_size_counter = 0L
     var enqueue_item_counter = 0L
-    var refiller:Runnable = null
+    var refiller:Task = null
 
 
     def offer(value: Delivery) = {
@@ -294,7 +294,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   }
 
 
-  def update(on_completed:Runnable) = {
+  def update(on_completed:Task) = {
     refresh_config
     on_completed.run
   }

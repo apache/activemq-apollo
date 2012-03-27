@@ -48,8 +48,8 @@ trait Sink[T] {
    * Sets a refiller on the sink.  The refiller is executed
    * when the sink is interested in receiving more deliveries.
    */
-  def refiller:Runnable
-  def refiller_=(value:Runnable)
+  def refiller:Task
+  def refiller_=(value:Task)
 
   def map[Y](func: Y=>T ):Sink[Y] = new SinkMapper[Y,T] {
     def passing(value: Y) = func(value)
@@ -75,8 +75,8 @@ trait Sink[T] {
 
 trait SinkFilter[T] {
   def downstream:Sink[T]
-  def refiller:Runnable = downstream.refiller
-  def refiller_=(value:Runnable) { downstream.refiller=value }
+  def refiller:Task = downstream.refiller
+  def refiller_=(value:Task) { downstream.refiller=value }
   def full: Boolean = downstream.full
 }
 
@@ -100,7 +100,7 @@ trait SinkMapper[T,X] extends Sink[T] with SinkFilter[X] {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class TransportSink(val transport:Transport) extends Sink[AnyRef] {
-  var refiller:Runnable = NOOP
+  var refiller:Task = NOOP
   def full:Boolean = transport.full
   def offer(value:AnyRef) =  transport.offer(value)
 }
@@ -114,7 +114,7 @@ class TransportSink(val transport:Transport) extends Sink[AnyRef] {
  */
 class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
 
-  var refiller:Runnable = NOOP
+  var refiller:Task = NOOP
 
   val overflow = new LinkedList[T]()
 
@@ -186,7 +186,7 @@ class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
  */
 class MutableSink[T] extends Sink[T] {
 
-  var refiller:Runnable = NOOP
+  var refiller:Task = NOOP
   private var _downstream:Option[Sink[T]] = None
 
   def downstream_=(value: Option[Sink[T]]) {
@@ -227,7 +227,7 @@ class SinkMux[T](val downstream:Sink[T]) {
   class ManagedSink extends Sink[T] {
 
     var rejection_handler:(T)=>Unit = _
-    var refiller:Runnable = NOOP
+    var refiller:Task = NOOP
 
     def full = downstream.full && rejection_handler==null
 
@@ -394,7 +394,7 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
  */
 class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionSinkMux[T]) extends SessionSink[T] {
 
-  var refiller:Runnable = NOOP
+  var refiller:Task = NOOP
 
   private def sizer = mux.sizer
   private def downstream = mux.source
@@ -495,12 +495,12 @@ trait Sizer[T] {
  */
 class QueueSink[T](val sizer:Sizer[T], var maxSize:Int=1024*32) extends Sink[T] {
 
-  var refiller:Runnable = NOOP
+  var refiller:Task = NOOP
 
   var buffer = new LinkedList[T]()
   private var size = 0
 
-  var drainer: Runnable = null
+  var drainer: Task = null
 
   def full = size >= maxSize
   def poll = buffer.poll

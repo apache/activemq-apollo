@@ -185,7 +185,7 @@ class UdpProtocolHandler extends ProtocolHandler {
     } catch {
       case x =>
         warn(x)
-        connection.stop()
+        connection.stop(NOOP)
         new DefaultUdpDecoder
     }
     buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
@@ -199,7 +199,7 @@ class UdpProtocolHandler extends ProtocolHandler {
         connection.transport.resumeRead()
         if(host==null) {
           warn("Could not find default virtual host")
-          connection.stop()
+          connection.stop(NOOP)
         }
       }
     }

@@ -44,7 +44,7 @@ trait Connector extends BaseService with SecuredResource {
   def config:ConnectorTypeDTO
   def accepted:LongCounter
   def connected:LongCounter
-  def update(config: ConnectorTypeDTO, on_complete:Runnable):Unit
+  def update(config: ConnectorTypeDTO, on_complete:Task):Unit
   def socket_address:SocketAddress
   def status:ServiceStatusDTO
   def resource_kind = SecuredResource.ConnectorKind
@@ -153,7 +153,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
       broker.connections.put(connection.id, connection)
       try {
-        connection.start()
+        connection.start(NOOP)
       } catch {
         case e1: Exception => {
           onAcceptError(e1)
@@ -174,7 +174,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   /**
    */
-  def update(config: ConnectorTypeDTO, on_completed:Runnable) = dispatch_queue {
+  def update(config: ConnectorTypeDTO, on_completed:Task) = dispatch_queue {
     if ( !service_state.is_started || this.config == config ) {
       this.config = config.asInstanceOf[AcceptingConnectorDTO]
       on_completed.run
@@ -189,7 +189,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   }
 
 
-  override def _start(on_completed:Runnable) = {
+  override def _start(on_completed:Task) = {
     assert(config!=null, "Connector must be configured before it is started.")
 
     accepted.set(0)
@@ -220,7 +220,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   }
 
 
-  override def _stop(on_completed:Runnable): Unit = {
+  override def _stop(on_completed:Task): Unit = {
     transport_server.stop(^{
       broker.console_log.info("Stopped connector at: "+config.bind)
       transport_server = null

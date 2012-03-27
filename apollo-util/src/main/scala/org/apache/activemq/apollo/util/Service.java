@@ -17,6 +17,8 @@
 package org.apache.activemq.apollo.util;
 
 
+import org.fusesource.hawtdispatch.Task;
+
 /**
  * The core lifecyle interface for ActiveMQ components.
  *
@@ -25,29 +27,17 @@ package org.apache.activemq.apollo.util;
 public interface Service {
 
     /**
-     * Starts the service.  No guarantee is given that the service has fully started
-     * by the time this method returns.
-     */
-    void start() throws Exception;
-
-    /**
      * Starts the service.  Executes the onComplete runnable once the service has fully started up.
      *
      * @param onComplete my be set to null if not interested in a callback.
      */
-    void start(Runnable onComplete) throws Exception;
-
-    /**
-     * Stops the service.  No guarantee is given that the service has fully stopped
-     * by the time this method returns.
-     */
-    void stop() throws Exception;
+    void start(Task onComplete) throws Exception;
 
     /**
      * Stops the service.  Executes the onComplete runnable once the service has fully stopped.
      *
      * @param onComplete my be set to null if not interested in a callback.
      */
-    void stop(Runnable onComplete) throws Exception;
+    void stop(Task onComplete) throws Exception;
 
 }

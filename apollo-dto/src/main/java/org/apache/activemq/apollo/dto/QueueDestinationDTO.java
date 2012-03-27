@@ -40,23 +40,6 @@ public class QueueDestinationDTO extends DestinationDTO {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        QueueDestinationDTO that = (QueueDestinationDTO) o;
-
-        if (path != null ? !path.equals(that.path) : that.path != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return path != null ? path.hashCode() : 0;
-    }
-
-    @Override
     public String toString() {
         return "queue:"+name;
     }

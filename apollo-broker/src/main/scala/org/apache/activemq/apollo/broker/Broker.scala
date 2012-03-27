@@ -276,7 +276,7 @@ class Broker() extends BaseService with SecuredResource {
   /**
    * Validates and then applies the configuration.
    */
-  def update(config: BrokerDTO, on_completed:Runnable) = dispatch_queue {
+  def update(config: BrokerDTO, on_completed:Task) = dispatch_queue {
     dispatch_queue.assertExecuting()
     this.config = config
 
@@ -287,7 +287,7 @@ class Broker() extends BaseService with SecuredResource {
     tracker.callback(on_completed)
   }
 
-  override def _start(on_completed:Runnable) = {
+  override def _start(on_completed:Task) = {
 
     // create the runtime objects from the config
     init_logs
@@ -304,7 +304,7 @@ class Broker() extends BaseService with SecuredResource {
 
   }
 
-  def _stop(on_completed:Runnable): Unit = {
+  def _stop(on_completed:Task): Unit = {
     val tracker = new LoggingTracker("broker shutdown", console_log, SERVICE_TIMEOUT)
 
     // Stop the services...

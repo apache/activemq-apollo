@@ -52,7 +52,7 @@ abstract class Connection() extends BaseService with Dispatched {
   var transport:Transport = null
   var transport_sink:TransportSink = null
 
-  override protected def _start(on_completed:Runnable) = {
+  override protected def _start(on_completed:Task) = {
     stopped = false
     transport_sink = new TransportSink(transport)
     transport.setDispatchQueue(dispatch_queue);
@@ -66,7 +66,7 @@ abstract class Connection() extends BaseService with Dispatched {
     transport.start(on_completed)
   }
 
-  override protected def _stop(on_completed:Runnable) = {
+  override protected def _stop(on_completed:Task) = {
     stopped = true
     transport.stop(on_completed)
   }
@@ -112,12 +112,12 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
   
   override def toString = "id: "+id.toString
 
-  protected override  def _start(on_completed:Runnable) = {
+  protected override  def _start(on_completed:Task) = {
     protocol_handler.set_connection(this);
     super._start(on_completed)
   }
 
-  protected override def _stop(on_completed:Runnable) = {
+  protected override def _stop(on_completed:Task) = {
     connector.stopped(this)
     super._stop(on_completed)
   }

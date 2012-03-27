@@ -38,12 +38,12 @@ class FileMonitor(file:File, change_listener: =>Unit) extends BaseService {
   var last_modified = 0L
   var state_ver = 0
 
-  protected def _stop(on_completed: Runnable) = {
+  protected def _stop(on_completed: Task) = {
     state_ver+=1
     on_completed.run()
   }
 
-  protected def _start(on_completed: Runnable) = {
+  protected def _start(on_completed: Task) = {
     last_data = file.read_bytes
     last_modified = file.lastModified()
     state_ver+=1

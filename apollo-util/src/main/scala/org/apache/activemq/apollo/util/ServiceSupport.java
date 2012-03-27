@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.fusesource.hawtdispatch.internal.util.RunnableCountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,9 @@ public abstract class ServiceSupport implements Service {
 
     public static void dispose(Service service) {
         try {
-            service.stop();
+            RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
+            service.stop(latch);
+            latch.await();
         } catch (Exception e) {
             LOG.debug("Could not stop service: " + service + ". Reason: " + e, e);
         }

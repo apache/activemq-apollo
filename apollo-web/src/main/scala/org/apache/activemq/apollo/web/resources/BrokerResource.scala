@@ -687,7 +687,7 @@ case class BrokerResource() extends Resource {
   def post_connector_stop(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
-        connector.stop
+        connector.stop(NOOP)
       }
     }
     result(strip_resolve(".."))
@@ -697,7 +697,7 @@ case class BrokerResource() extends Resource {
   def post_connector_start(@PathParam("id") id : String):Unit = unwrap_future_result {
     with_connector(id) { connector =>
       admining(connector.broker) {
-        connector.start
+        connector.start(NOOP)
       }
     }
     result(strip_resolve(".."))
@@ -762,7 +762,7 @@ case class BrokerResource() extends Resource {
   def connection_delete(@PathParam("id") id : Long):Unit = unwrap_future_result {
     with_connection(id){ connection=>
       admining(connection.connector.broker) {
-        connection.stop
+        connection.stop(NOOP)
       }
     }
   }

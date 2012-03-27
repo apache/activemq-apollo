@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.broker.web
 
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.Broker
+import org.fusesource.hawtdispatch.Task
 
 /**
  * <p>
@@ -26,7 +27,7 @@ import org.apache.activemq.apollo.broker.Broker
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait WebServer extends Service {
-  def update(on_complete:Runnable):Unit
+  def update(on_complete:Task):Unit
 }
 
 trait WebServerFactory {

@@ -146,7 +146,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   /**
    * Validates and then applies the configuration.
    */
-  def update(config: VirtualHostDTO, on_completed:Runnable) = dispatch_queue {
+  def update(config: VirtualHostDTO, on_completed:Task) = dispatch_queue {
     if ( !service_state.is_started ) {
       this.config = config
       on_completed.run
@@ -194,7 +194,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
     }
   }
 
-  override protected def _start(on_completed:Runnable):Unit = {
+  override protected def _start(on_completed:Task):Unit = {
     apply_update
 
     if ( Option(config.heap_bypass).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(0) > 0 ) {
@@ -257,7 +257,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   }
 
 
-  override protected def _stop(on_completed:Runnable):Unit = {
+  override protected def _stop(on_completed:Task):Unit = {
 
     val tracker = new LoggingTracker("virtual host shutdown", console_log)
     tracker.stop(router);

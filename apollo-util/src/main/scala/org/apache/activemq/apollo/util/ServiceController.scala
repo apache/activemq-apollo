@@ -17,7 +17,6 @@
 
 package org.apache.activemq.apollo.util
 
-import collection.mutable.ListBuffer
 
 /*
   Simple trait to cut down on the code necessary to manage BaseService instances
@@ -55,5 +54,12 @@ object ServiceControl {
     controlService(false, service, action)
   }
 
+  def start(service: Service) = {
+    controlService(true, service, "Starting "+service)
+  }
+
+  def stop(service: Service) = {
+    controlService(false, service, "Stopping "+service)
+  }
 
 }

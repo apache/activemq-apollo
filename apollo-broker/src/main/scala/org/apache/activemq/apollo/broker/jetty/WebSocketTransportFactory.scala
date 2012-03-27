@@ -80,7 +80,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     def dispatch_queue = dispatchQueue
 
-    protected def _start(on_completed: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
+    def start(on_completed: Runnable):Unit = super.start(new TaskWrapper(on_completed))
+    def stop(on_completed: Runnable):Unit = super.stop(new TaskWrapper(on_completed))
+
+    protected def _start(on_completed: Task) = Broker.BLOCKABLE_THREAD_POOL {
       this.synchronized {
 
         IntrospectionSupport.setProperties(this, URISupport.parseParamters(uri));
@@ -142,7 +145,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       }
     }
 
-    def _stop(on_complete: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
+    def _stop(on_complete: Task) = Broker.BLOCKABLE_THREAD_POOL {
       this.synchronized {
         if (server != null) {
           try {
@@ -231,7 +234,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     def dispatch_queue = dispatchQueue
 
-    protected def _start(on_completed: Runnable) = {
+    def start(on_completed: Runnable):Unit = super.start(new TaskWrapper(on_completed))
+    def stop(on_completed: Runnable):Unit = super.stop(new TaskWrapper(on_completed))
+
+    protected def _start(on_completed: Task) = {
       inbound_dispatch_queue = dispatchQueue.createQueue(null);
       inbound_dispatch_queue.suspend();
       drain_outbound_events.setTargetQueue(dispatchQueue)
@@ -245,7 +251,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       on_completed.run()
     }
   
-    protected def _stop(on_completed: Runnable) = {
+    protected def _stop(on_completed: Task) = {
       inbound_dispatch_queue.resume()
       outbound_executor {
         // Wakes up any blocked reader thread..

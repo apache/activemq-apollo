@@ -703,7 +703,7 @@ class StompProtocolHandler extends ProtocolHandler {
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
-        connection.stop()
+        connection.stop(NOOP)
       }
     }
     throw new Break()
@@ -804,12 +804,12 @@ class StompProtocolHandler extends ProtocolHandler {
                 on_transport_disconnected
                 if( delay ) {
                   queue.after(die_delay, TimeUnit.MILLISECONDS) {
-                    connection.stop()
+                    connection.stop(NOOP)
                   }
                 } else {
                   // no point in delaying the connection shutdown
                   // if the client does not want a receipt..
-                  connection.stop()
+                  connection.stop(NOOP)
                 }
 
               case _ =>

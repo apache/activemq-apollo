@@ -16,16 +16,16 @@
  */
 package org.apache.activemq.apollo.util;
 
-import java.util.Iterator;
-import java.util.List;
-
+import org.fusesource.hawtdispatch.internal.util.RunnableCountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * A helper class used to stop a bunch of services, catching and logging any
  * exceptions and then throwing the first exception when everything is stoped.
- * 
+ *
  * @version $Revision: 1.1 $
  */
 public class ServiceStopper {
@@ -37,7 +37,9 @@ public class ServiceStopper {
     public void stop(Service service) {
         try {
             if (service != null) {
-                service.stop();
+                RunnableCountDownLatch latch = new RunnableCountDownLatch(1);
+                service.stop(latch);
+                latch.await();
             }
         } catch (Exception e) {
             onException(service, e);
@@ -59,10 +61,18 @@ public class ServiceStopper {
     /**
      * Stops a list of services
      */
-    public void stopServices(List services) {
-        for (Iterator iter = services.iterator(); iter.hasNext();) {
-            Service service = (Service)iter.next();
-            stop(service);
+    public void stopServices(List<Service> services) throws Exception {
+        RunnableCountDownLatch latch = new RunnableCountDownLatch(services.size());
+        for (int i = 0; i < services.size(); i++) {
+            Service service =  services.get(i);
+            try {
+                service.stop(latch);
+            } catch (Exception e) {
+                onException(service, e);
+            }
+        }
+        if( firstException==null ) {
+            latch.await();
         }
     }
 

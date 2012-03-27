@@ -175,7 +175,7 @@ trait Router extends Service {
 
   def create(destinations:Array[_ <: DestinationAddress], security:SecurityContext): Option[String]
 
-  def apply_update(on_completed:Runnable):Unit
+  def apply_update(on_completed:Task):Unit
 
   def remove_temp_destinations(active_connections:scala.collection.Set[String]):Unit
 }
@@ -269,7 +269,7 @@ abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with Bi
   var pendingAck: (DeliveryResult, StoreUOW)=>Unit = null
   var overflow:Delivery=null
   var overflowSessions = List[DeliverySession]()
-  var refiller:Runnable=null
+  var refiller:Task=null
 
   def full = overflow!=null
 

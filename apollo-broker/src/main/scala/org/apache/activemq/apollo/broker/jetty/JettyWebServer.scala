@@ -139,7 +139,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
   val dispatch_queue = createQueue()
   var web_admins = List[WebAdminDTO]()
 
-  protected def _start(on_completed: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
+  protected def _start(on_completed: Task) = Broker.BLOCKABLE_THREAD_POOL {
     this.synchronized {
       import OptionSupport._
       import FileSupport._
@@ -260,7 +260,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
     }
   }
 
-  protected def _stop(on_completed: Runnable) = Broker.BLOCKABLE_THREAD_POOL {
+  protected def _stop(on_completed: Task) = Broker.BLOCKABLE_THREAD_POOL {
     this.synchronized {
       if( server!=null ) {
         server.stop
@@ -270,7 +270,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
     }
   }
 
-  def update(on_complete: Runnable) = dispatch_queue {
+  def update(on_complete: Task) = dispatch_queue {
     import collection.JavaConversions._
     val new_list = broker.config.web_admins.toList
     if( new_list != web_admins ) {

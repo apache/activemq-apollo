@@ -129,7 +129,7 @@ trait DomainDestination extends SecuredResource {
   def connect (connect_address:ConnectAddress, producer:BindableDeliveryProducer):Unit
   def disconnect (producer:BindableDeliveryProducer):Unit
 
-  def update(on_completed:Runnable):Unit
+  def update(on_completed:Task):Unit
 
 }
 
@@ -843,7 +843,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
   }
 
-  protected def _start(on_completed: Runnable) = {
+  protected def _start(on_completed: Task) = {
     val tracker = new LoggingTracker("router startup", virtual_host.console_log)
     if( virtual_host.store!=null ) {
       val task = tracker.task("list_queues")
@@ -924,10 +924,10 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
   }
 
-  protected def _stop(on_completed: Runnable) = {
+  protected def _stop(on_completed: Task) = {
 //    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
     queues_by_store_id.valuesIterator.foreach { queue=>
-      queue.stop
+      queue.stop(NOOP)
 //      tracker.stop(queue)
     }
 //    tracker.callback(on_completed)
@@ -1231,7 +1231,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       virtual_host.store.add_queue(record) { rc => Unit }
     }
 
-    queue.start
+    queue.start(NOOP)
 //    queues_by_binding.put(binding, queue)
     queues_by_store_id.put(qid, queue)
 
@@ -1294,7 +1294,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     })
   }
 
-  def apply_update(on_completed:Runnable) = {
+  def apply_update(on_completed:Task) = {
     val tracker = new LoggingTracker("domain update", virtual_host.broker.console_log)
     local_topic_domain.apply_update(tracker)
     local_queue_domain.apply_update(tracker)

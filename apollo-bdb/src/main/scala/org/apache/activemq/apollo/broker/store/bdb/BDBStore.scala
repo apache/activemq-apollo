@@ -65,7 +65,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  protected def _start(on_completed: Runnable) = {
+  protected def _start(on_completed: Task) = {
     write_executor = Executors.newFixedThreadPool(1, new ThreadFactory(){
       def newThread(r: Runnable) = {
         val rc = new Thread(r, "bdb store io write")
@@ -90,7 +90,7 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
     }
   }
 
-  protected def _stop(on_completed: Runnable) = {
+  protected def _stop(on_completed: Task) = {
     new Thread() {
       override def run = {
         write_executor.shutdown

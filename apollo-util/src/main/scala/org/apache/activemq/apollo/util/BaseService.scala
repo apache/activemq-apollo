@@ -58,9 +58,6 @@ trait BaseService extends Service with Dispatched {
   protected class STOPPING extends State { override def is_stopping = true  }
   protected class STOPPED extends State { override def is_stopped = true  }
 
-  final def start() = start(null)
-  final def stop() = stop(null)
-
   @volatile
   protected var _service_state:State = new CREATED
 
@@ -70,10 +67,10 @@ trait BaseService extends Service with Dispatched {
   protected var _serviceFailure:Exception = null
   def serviceFailure = _serviceFailure
 
-  private val pending_actions = ListBuffer[Runnable]()
+  private val pending_actions = ListBuffer[Task]()
 
-  final def start(on_completed:Runnable) = {
-    def start_task:Runnable = ^{
+  final def start(on_completed:Task):Unit = {
+    def start_task:Task = ^{
       def done = {
         pending_actions.foreach(dispatch_queue.execute _)
         pending_actions.clear()
@@ -119,8 +116,8 @@ trait BaseService extends Service with Dispatched {
     start_task >>: dispatch_queue
   }
 
-  final def stop(on_completed:Runnable) = {
-    def stop_task:Runnable = ^{
+  final def stop(on_completed:Task):Unit = {
+    def stop_task:Task = ^{
       def done = {
         val tmp = pending_actions.toArray
         pending_actions.clear
@@ -162,7 +159,7 @@ trait BaseService extends Service with Dispatched {
     stop_task >>: dispatch_queue
   }
 
-  protected def _start(on_completed:Runnable)
-  protected def _stop(on_completed:Runnable)
+  protected def _start(on_completed:Task)
+  protected def _stop(on_completed:Task)
 
 }

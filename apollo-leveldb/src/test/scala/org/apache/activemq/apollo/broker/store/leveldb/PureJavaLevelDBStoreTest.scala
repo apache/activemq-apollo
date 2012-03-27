@@ -18,9 +18,7 @@ package org.apache.activemq.apollo.broker.store.leveldb
  */
 
 import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
-import org.apache.activemq.apollo.broker.store.leveldb.LevelDBStore
 import org.apache.activemq.apollo.broker.store.leveldb.dto.LevelDBStoreDTO
-import org.apache.activemq.apollo.util.FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

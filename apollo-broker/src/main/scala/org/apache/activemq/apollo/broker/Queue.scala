@@ -366,7 +366,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
-  def update(on_completed:Runnable) = dispatch_queue {
+  def update(on_completed:Task) = dispatch_queue {
 
     val prev_persistent = tune_persistent
 
@@ -425,7 +425,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  protected def _start(on_completed: Runnable) = {
+  protected def _start(on_completed: Task) = {
     restore_from_store {
 
 
@@ -440,14 +440,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       // kick off dispatching to the consumers.
       check_idle
       trigger_swap
-      dispatch_queue << head_entry
+      dispatch_queue << head_entry.task
 
     }
   }
 
-  var stop_listener_waiting_for_flush:Runnable = _
+  var stop_listener_waiting_for_flush:Task = _
 
-  protected def _stop(on_completed: Runnable) = {
+  protected def _stop(on_completed: Task) = {
 
     // Now that we are stopping the queue will no longer be 'full'
     // draining will nack all enqueue attempts.
@@ -505,7 +505,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   object messages extends Sink[Delivery] {
 
-    var refiller: Runnable = null
+    var refiller: Task = null
 
     def is_quota_exceeded = (tune_quota >= 0 && queue_size > tune_quota)
     def is_enqueue_throttled = (enqueues_remaining!=null && enqueues_remaining.get() <= 0)
@@ -1046,7 +1046,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
-  val swap_out_completes_source = createSource(new ListEventAggregator[Runnable](), dispatch_queue)
+  val swap_out_completes_source = createSource(new ListEventAggregator[Task](), dispatch_queue)
   swap_out_completes_source.setEventHandler(^ {drain_swap_out_completes});
   swap_out_completes_source.resume
 
@@ -1070,7 +1070,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
     data.foreach { case (swapped,_) =>
       if( swapped.entry.hasSubs ) {
-        swapped.entry.run
+        swapped.entry.task.run
       }
     }
   }
@@ -1081,8 +1081,10 @@ object QueueEntry extends Sizer[QueueEntry] with Log {
   def size(value: QueueEntry): Int = value.size
 }
 
-class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] with Runnable {
+class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] with Comparable[QueueEntry] {
   import QueueEntry._
+
+
 
   // Subscriptions waiting to dispatch this entry.
   var parked:List[Subscription] = Nil
@@ -1134,15 +1136,17 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * Dispatches this entry to the consumers and continues dispatching subsequent
    * entries as long as the dispatch results in advancing in their dispatch position.
    */
-  def run() = {
-    queue.assert_executing
-    var cur = this;
-    while( cur!=null && cur.isLinked ) {
-      val next = cur.getNext
-      cur = if( cur.dispatch ) {
-        next
-      } else {
-        null
+  final val task = new Task {
+    def run() {
+      queue.assert_executing
+      var cur = QueueEntry.this;
+      while( cur!=null && cur.isLinked ) {
+        val next = cur.getNext
+        cur = if( cur.dispatch ) {
+          next
+        } else {
+          null
+        }
       }
     }
   }
@@ -2029,7 +2033,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         check_consumer_stall
       }
       if( pos!=null ) {
-        pos.run
+        pos.task.run
       }
     }
     pos ::= this
@@ -2045,7 +2049,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     if( queue.service_state.is_started ) {
       // kick off the initial dispatch.
       refill_prefetch
-      queue.dispatch_queue << pos
+      queue.dispatch_queue << pos.task
     }
     queue.check_idle
   }
@@ -2117,7 +2121,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     value ::= this
     pos = value
     check_load_stall
-    queue.dispatch_queue << value // queue up the entry to get dispatched..
+    queue.dispatch_queue << value.task // queue up the entry to get dispatched..
   }
 
   def tail_parked = pos eq queue.tail_entry
@@ -2251,7 +2255,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       entry.remove // entry size changes to 0
 
       queue.trigger_swap
-      next.run
+      next.task.run
       check_finish_close
       
     }

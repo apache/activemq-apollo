@@ -20,9 +20,8 @@ package org.apache.activemq.apollo.openwire
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import org.apache.activemq.apollo.broker.{KeyStorage, Broker, BrokerFactory}
-import org.apache.activemq.apollo.util.{FileSupport, Logging, FunSuiteSupport, ServiceControl}
-import FileSupport._
+import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
+import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport, ServiceControl}
 import javax.jms.Connection
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{ActiveMQTopic, ActiveMQQueue}
@@ -47,7 +46,7 @@ class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with Befor
   var connections = List[Connection]()
 
   override protected def afterAll() {
-    broker.stop()
+    ServiceControl.stop(broker)
   }
 
   override protected def afterEach() {

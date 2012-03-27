@@ -62,13 +62,15 @@ abstract public class DestinationDTO {
         DestinationDTO that = (DestinationDTO) o;
 
         if (!name.equals(that.name)) return false;
+        if (path != null ? !path.equals(that.path) : that.path != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = name.hashCode();
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (path != null ? path.hashCode() : 0);
         return result;
     }
 
