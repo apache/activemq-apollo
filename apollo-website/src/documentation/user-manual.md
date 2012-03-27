@@ -268,7 +268,7 @@ the broker over WebSockets:
 * [stomp-websocket](http://github.com/jmesnil/stomp-websocket)
 
 The Apollo distribution include a simple WebSocket based chat example
-in the `examples/js-websocket` directory.
+in the `examples/websocket` directory.
 
 #### Virtual Hosts
 

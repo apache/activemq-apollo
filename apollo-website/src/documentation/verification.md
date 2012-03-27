@@ -7,19 +7,19 @@ If you have not already done so, install the `stomp` Ruby gem.
 
     gem install stomp
 
-Change to the `examples/ruby` directory that was included in the ${project_name} 
+Change to the `examples/stomp/ruby` directory that was included in the ${project_name} 
 distribution.  Then in a terminal window, run:
 
 {pygmentize_and_compare::}
 -----------------------------
 text: Unix/Linux/OS X
 -----------------------------
-cd ${APOLLO_HOME}/examples/ruby
+cd ${APOLLO_HOME}/examples/stomp/ruby
 ruby listener.rb
 -----------------------------
 text: Windows
 -----------------------------
-cd %APOLLO_HOME%\examples\ruby
+cd %APOLLO_HOME%\examples\stomp\ruby
 ruby listener.rb
 {pygmentize_and_compare}
 
@@ -28,12 +28,12 @@ Then in a separate terminal window, run:
 -----------------------------
 text: Unix/Linux/OS X
 -----------------------------
-cd ${APOLLO_HOME}/examples/ruby
+cd ${APOLLO_HOME}/examples/stomp/ruby
 ruby publisher.rb
 -----------------------------
 text: Windows
 -----------------------------
-cd %APOLLO_HOME%\examples\ruby
+cd %APOLLO_HOME%\examples\stomp\ruby
 ruby publisher.rb
 {pygmentize_and_compare}
 
