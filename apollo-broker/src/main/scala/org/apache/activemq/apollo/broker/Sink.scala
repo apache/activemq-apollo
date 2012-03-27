@@ -28,7 +28,7 @@ import collection.mutable.HashSet
  * <p>
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait Sink[T] {
+abstract class Sink[T] {
 
   /**
    * @return true if the sink is full

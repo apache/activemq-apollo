@@ -203,8 +203,13 @@ object DeliveryProducerRoute extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class DeliveryProducerRoute(router:Router) extends BaseRetained with BindableDeliveryProducer with Sink[Delivery] {
+abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with BindableDeliveryProducer {
   import DeliveryProducerRoute._
+
+  val reained_base = new BaseRetained
+  def release = reained_base.release
+  def retain = reained_base.retain
+  def retained = reained_base.retained
 
   var targets = List[DeliverySession]()
   val store = if(router!=null) {
