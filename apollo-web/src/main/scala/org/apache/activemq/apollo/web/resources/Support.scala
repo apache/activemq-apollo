@@ -18,8 +18,8 @@ package org.apache.activemq.apollo.web.resources
 
 import java.lang.String
 import javax.ws.rs._
-import core.{UriInfo, Response, Context}
 import com.sun.jersey.api.view.ImplicitProduces
+import core.{HttpHeaders, UriInfo, Response, Context}
 import Response._
 import Response.Status._
 import java.util.concurrent.TimeUnit
@@ -34,6 +34,13 @@ import java.net.{InetSocketAddress, URI}
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.dto.ErrorDTO
 import org.fusesource.hawtdispatch._
+import javax.servlet.ServletConfig
+import com.sun.jersey.server.impl.ThreadLocalInvoker
+import com.sun.jersey.spi.resource.Singleton
+import com.sun.jersey.api.view.ImplicitProduces
+import com.sun.jersey.api.core.ResourceConfig
+// import com.wordnik.swagger.jaxrs.{Help, ApiListing}
+// import com.wordnik.swagger.core.{Documentation, ApiOperation, Api}
 
 object Resource extends Log {
 
@@ -41,6 +48,8 @@ object Resource extends Log {
   val HEADER_WWW_AUTHENTICATE: String = "WWW-Authenticate"
   val HEADER_AUTHORIZATION: String = "Authorization"
   val AUTHENTICATION_SCHEME_BASIC: String = "Basic"
+
+  val x:ServletConfig = null
 
   private def decode_base64(value: String): String = {
     var transformed: Array[Byte] = Base64.decode(value)
@@ -58,15 +67,26 @@ object Resource extends Log {
 /**
  * Defines the default representations to be used on resources
  */
-@ImplicitProduces(Array("text/html;qs=5"))
-@Produces(Array("application/json", "application/xml","text/xml"))
 abstract class Resource(parent:Resource=null) {
   import Resource._
 
   @Context
   var uri_info:UriInfo = null
-  @Context
+
   var http_request: HttpServletRequest = null
+
+  @Context
+  def setHttpRequest(value:HttpServletRequest) {
+    // Jersey's thread local wrapping messes /w us since we use the http_request
+    // in a different threads.  Lets try to unwrap it..
+    try {
+      http_request = java.lang.reflect.Proxy.getInvocationHandler(value).asInstanceOf[ThreadLocalInvoker[HttpServletRequest]].get()
+    } catch {
+      case e:Throwable =>
+        http_request = value
+    }
+  }
+
 
   if( parent!=null ) {
     copy(parent)
@@ -437,4 +457,3 @@ class ViewHelper {
     friendly_duration(System.currentTimeMillis - value)
   }
 }
-

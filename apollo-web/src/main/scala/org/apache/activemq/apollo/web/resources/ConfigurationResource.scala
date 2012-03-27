@@ -30,7 +30,9 @@ case class ListConfigs(files:Array[String])
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
-case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends Resource(parent) {
+@Path("/broker/config")
+@Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML, "text/html;qs=5"))
+class ConfigurationResource extends Resource {
 
   lazy val etc_directory = {
     val apollo_base = Option(System.getProperty("apollo.base")).getOrElse(result(NOT_FOUND))
@@ -39,6 +41,13 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
       result(NOT_FOUND)
     }
     rc
+  }
+
+
+  lazy val dto:BrokerDTO = with_broker { broker =>
+    configing(broker) {
+      broker.config
+    }
   }
 
   @GET
@@ -62,8 +71,8 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @GET
+  @Path("/files")
   @Produces(Array(APPLICATION_JSON))
-  @Path("files")
   def list() = {
     etc_directory.listFiles().flatMap { file =>
       if( file.canRead ) {
@@ -76,14 +85,14 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
 
   @GET
   @Produces(Array(TEXT_HTML))
-  @Path("files")
+  @Path("/files")
   def list_html() = {
     ListConfigs(list())
   }
 
   @GET
   @Produces(Array(APPLICATION_OCTET_STREAM))
-  @Path("files/{name}")
+  @Path("/files/{name}")
   def get(@PathParam("name") name:String) = {
     val file = etc_directory / name
     if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
@@ -94,7 +103,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
 
   @GET
   @Produces(Array(TEXT_HTML))
-  @Path("files/{name}")
+  @Path("/files/{name}")
   def edit_html(@PathParam("name") name:String) = {
     val file = etc_directory / name
     if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
@@ -105,7 +114,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
 
   @POST
   @Consumes(Array(WILDCARD))
-  @Path("files/{name}")
+  @Path("/files/{name}")
   def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
     val file = etc_directory / name
     if( !file.exists() || !file.canWrite || file.getParentFile != etc_directory ) {
@@ -116,7 +125,7 @@ case class ConfigurationResource(parent:BrokerResource, dto:BrokerDTO) extends R
   }
 
   @POST
-  @Path("files/{name}")
+  @Path("/files/{name}")
   @Consumes(Array(APPLICATION_FORM_URLENCODED))
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML, TEXT_HTML))
   def edit_post(@PathParam("name") name:String, @FormParam("config") config:String):Unit = {

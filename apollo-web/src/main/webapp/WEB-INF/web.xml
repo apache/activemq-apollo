@@ -30,47 +30,12 @@
   </description>
 
   <filter>
-    <filter-name>Jersey Filter</filter-name>
-    <filter-class>com.sun.jersey.spi.container.servlet.ServletContainer</filter-class>
-    <!-- <init-param>
-      <param-name>com.sun.jersey.config.feature.Trace</param-name>
-      <param-value>true</param-value>
-    </init-param> -->
-    <init-param>
-      <param-name>com.sun.jersey.config.feature.Redirect</param-name>
-      <param-value>true</param-value>
-    </init-param>
-    <init-param>
-      <param-name>com.sun.jersey.config.feature.ImplicitViewables</param-name>
-      <param-value>true</param-value>
-    </init-param>
-    <init-param>
-      <param-name>com.sun.jersey.config.property.resourceConfigClass</param-name>
-      <param-value>com.sun.jersey.api.core.ClassNamesResourceConfig</param-value>
-    </init-param>
-    <init-param>
-      <param-name>com.sun.jersey.config.property.classnames</param-name>
-      <param-value>
-        org.apache.activemq.apollo.web.resources.RootResource,
-        org.apache.activemq.apollo.web.resources.JacksonJsonProvider
-        org.apache.activemq.apollo.web.resources.JaxrsExceptionMapper
-        org.fusesource.scalate.jersey.ScalateTemplateProvider
-        org.fusesource.scalate.jersey.ScalateTemplateProcessor
-      </param-value>
-    </init-param>
-    <init-param>
-      <param-name>com.sun.jersey.config.feature.FilterForwardOn404</param-name>
-      <param-value>true</param-value>
-    </init-param>
-    <init-param>
-      <param-name>com.sun.jersey.config.property.MediaTypeMappings</param-name>
-      <param-value>html : text/html, xml : application/xml, json : application/json</param-value>
-    </init-param>
-
+    <filter-name>static</filter-name>
+    <filter-class>org.apache.activemq.apollo.web.StaticContentFilter</filter-class>
   </filter>
 
   <filter-mapping>
-    <filter-name>Jersey Filter</filter-name>
+    <filter-name>static</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
 
@@ -86,6 +51,17 @@
     <filter-name>TemplateEngineFilter</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
+
+  <servlet>
+    <servlet-name>jersey</servlet-name>
+    <servlet-class>org.apache.activemq.apollo.web.JerseyServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+
+  <servlet-mapping>
+  	<servlet-name>jersey</servlet-name>
+  	<url-pattern>/*</url-pattern>
+  </servlet-mapping>
 
   <error-page>
     <error-code>500</error-code>

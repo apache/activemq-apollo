@@ -17,12 +17,15 @@
 package org.apache.activemq.apollo.web
 
 import org.apache.activemq.apollo.util.ClassFinder
-import resources.BrokerResource
 import collection.immutable.TreeMap
+import collection.mutable.LinkedHashMap
+import resources._
+import org.fusesource.scalate.jersey._
+//import com.wordnik.swagger.jaxrs.ApiHelpMessageBodyWriter
 
 trait WebModule {
   def priority:Int
-  def web_resources: Map[String, ()=>AnyRef]
+  def web_resources: Set[Class[_]]
   def root_redirect:String
 }
 
@@ -37,15 +40,14 @@ object WebModule {
   val finder = new ClassFinder[WebModule]("META-INF/services/org.apache.activemq.apollo/web-module.index",classOf[WebModule])
 
   val (root_redirect, web_resources) = {
-
     // sort by priority.  Highest priority wins.
     val sorted = TreeMap(finder.singletons.map(x=> x.priority -> x): _*).values
-    val web_resources = sorted.foldLeft(Map[String, ()=>AnyRef]()) { case (map, provider) =>
-      map ++ provider.web_resources
+    val web_resources = LinkedHashMap[Class[_], Class[_]]()
+    for( provider <- sorted; resource <- provider.web_resources ) {
+      web_resources.put(resource,resource)
     }
-    (sorted.last.root_redirect, web_resources)
+    (sorted.last.root_redirect, web_resources.keySet)
   }
-
 
 }
 
@@ -53,8 +55,32 @@ object DefaultWebModule extends WebModule {
 
   def priority: Int = 100
 
-  def create_broker_resource() = new BrokerResource
-  override def web_resources = Map("broker" -> create_broker_resource _ )
+  override def web_resources = Set(
+    classOf[RootResource],
+
+//    classOf[ApolloApiListing],
+//    classOf[ApiHelpMessageBodyWriter],
+
+    classOf[BrokerResource],
+//    classOf[BrokerResourceHTML],
+//    classOf[BrokerResourceJSON],
+//    classOf[BrokerResourceHelp],
+
+//    classOf[SessionResourceHTML],
+//    classOf[SessionResourceJSON],
+//    classOf[SessionResourceHelp],
+
+    classOf[ConfigurationResource],
+//    classOf[ConfigurationResourceHTML],
+//    classOf[ConfigurationResourceJSON],
+//    classOf[ConfigurationResourceHelp],
+
+    classOf[JacksonJsonProvider],
+    classOf[JaxrsExceptionMapper],
+    classOf[ScalateTemplateProvider],
+    classOf[ScalateTemplateProcessor]
+
+  )
 
   def root_redirect: String = "broker"
 
