@@ -18,8 +18,9 @@ package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.dto.KeyStorageDTO
 import javax.net.ssl._
-import java.security.KeyStore
 import java.io.FileInputStream
+import java.security.{Principal, KeyStore}
+import java.net.Socket
 
 /**
  *
@@ -62,8 +63,26 @@ class KeyStorage(val config:KeyStorageDTO) {
       val factory = KeyManagerFactory.getInstance(opt(config.key_algorithm).getOrElse("SunX509"))
       factory.init(create_key_store, opt(config.key_password).getOrElse("").toCharArray())
       key_managers = factory.getKeyManagers
+
+      if( config.key_alias!=null ) {
+        key_managers = key_managers.map  { m =>
+          m match {
+            case m:X509KeyManager => AliasFilteringKeyManager(config.key_alias, m)
+            case _ => m
+          }
+        }
+      }
     }
     key_managers
   }
 
+}
+
+case class AliasFilteringKeyManager(alias: String, next:X509KeyManager) extends X509KeyManager {
+  def chooseClientAlias(keyType: Array[String], issuers: Array[Principal], socket: Socket) = alias
+  def chooseServerAlias(keyType: String, issuers: Array[Principal], socket: Socket) = alias
+  def getClientAliases(keyType: String, issuers: Array[Principal]) = next.getClientAliases(keyType, issuers).filter(_==alias)
+  def getServerAliases(keyType: String, issuers: Array[Principal]) = next.getServerAliases(keyType, issuers).filter(_==alias)
+  def getCertificateChain(alias: String) = next.getCertificateChain(alias)
+  def getPrivateKey(alias: String) = next.getPrivateKey(alias)
 }

@@ -47,6 +47,12 @@ public class KeyStorageDTO {
     public String password;
 
     /**
+     * The alias of the key to use.  Defaults to the first key found.
+     */
+    @XmlAttribute(name="key_alias")
+    public String key_alias;
+
+    /**
      * The password to the keys in the key store.
      */
     @XmlAttribute(name="key_password")

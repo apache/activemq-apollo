@@ -580,6 +580,8 @@ The attributes that you can configure on the `key_storage` element are:
 
 * `file` : Path to where the key store is located.
 * `password` : The key store password
+* `key_alias` : The alias of private key to use.  Defaults to the first key found
+   in the key store.
 * `key_password` : The password to the keys in the key store.
 * `store_type` : The type of key store, defaults to `JKS`.
 * `trust_algorithm` : The trust management algorithm, defaults to `SunX509`.
