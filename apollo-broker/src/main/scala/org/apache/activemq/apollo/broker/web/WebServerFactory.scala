@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.broker.web
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.Broker
 import org.fusesource.hawtdispatch.Task
+import java.net.URI
 
 /**
  * <p>
@@ -28,6 +29,7 @@ import org.fusesource.hawtdispatch.Task
  */
 trait WebServer extends Service {
   def update(on_complete:Task):Unit
+  def uris():Array[URI]
 }
 
 trait WebServerFactory {

@@ -138,6 +138,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
 
   val dispatch_queue = createQueue()
   var web_admins = List[WebAdminDTO]()
+  var uri_addresses = List[URI]()
 
   protected def _start(on_completed: Task) = Broker.BLOCKABLE_THREAD_POOL {
     this.synchronized {
@@ -250,8 +251,9 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
             case _ => "http"
           }
 
-          def url = new URI(scheme, null, connector.getHost, localPort, prefix, null, null).toString
-          broker.console_log.info("Administration interface available at: "+url)
+          val uri:URI = new URI(scheme, null, connector.getHost, localPort, prefix, null, null)
+          broker.console_log.info("Administration interface available at: %s", uri)
+          uri_addresses ::= uri
         }
 
       }
@@ -265,10 +267,13 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       if( server!=null ) {
         server.stop
         server = null
+        uri_addresses = Nil
       }
       on_completed.run
     }
   }
+
+  def uris() = uri_addresses.toArray
 
   def update(on_complete: Task) = dispatch_queue {
     import collection.JavaConversions._

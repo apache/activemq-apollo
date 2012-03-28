@@ -20,34 +20,19 @@ package org.apache.activemq.apollo.openwire
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import org.apache.activemq.apollo.broker.{Broker, BrokerFactory}
-import org.apache.activemq.apollo.util.{Logging, FunSuiteSupport, ServiceControl}
 import javax.jms.Connection
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{ActiveMQTopic, ActiveMQQueue}
-import java.net.InetSocketAddress
+import org.apache.activemq.apollo.broker.BrokerFunSuiteSupport
 
-class OpenwireTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
-  var broker: Broker = null
-  var port = 0
+class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
-  def broker_config_uri = "xml:classpath:apollo-openwire.xml"
+  override def broker_config_uri = "xml:classpath:apollo-openwire.xml"
   val transport_scheme = "tcp"
   val transport_host = "localhost"
 
-  override protected def beforeAll() {
-    info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
-    broker = BrokerFactory.createBroker(broker_config_uri)
-    ServiceControl.start(broker, "Starting broker")
-    port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
-  }
-
   var default_connection:Connection = _
   var connections = List[Connection]()
-
-  override protected def afterAll() {
-    ServiceControl.stop(broker)
-  }
 
   override protected def afterEach() {
     super.afterEach()

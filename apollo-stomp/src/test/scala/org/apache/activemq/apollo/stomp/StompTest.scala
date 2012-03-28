@@ -19,41 +19,22 @@ package org.apache.activemq.apollo.stomp
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.broker.{LocalRouter, KeyStorage, Broker, BrokerFactory}
 import java.util.concurrent.TimeUnit._
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.dto.{QueueStatusDTO, TopicStatusDTO, KeyStorageDTO}
+import org.apache.activemq.apollo.dto.KeyStorageDTO
 import java.util.concurrent.atomic.AtomicLong
 import FileSupport._
-import java.net.{DatagramSocket, InetSocketAddress}
+import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 import org.fusesource.hawtbuf.AsciiBuffer
+import org.apache.activemq.apollo.broker._
 
-class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAndAfterEach with Logging {
-  var broker: Broker = null
-  var port = 0
+class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
-  val broker_config_uri = "xml:classpath:apollo-stomp.xml"
-
-  override protected def beforeAll() = {
-    try {
-      info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
-      broker = BrokerFactory.createBroker(broker_config_uri)
-      ServiceControl.start(broker, "Starting broker")
-      port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
-    }
-    catch {
-      case e:Throwable => e.printStackTrace
-    }
-  }
+  override val broker_config_uri = "xml:classpath:apollo-stomp.xml"
 
   var client = new StompClient
   var clients = List[StompClient]()
-
-  override protected def afterAll() = {
-    ServiceControl.stop(broker, "Stopping broker")
-  }
 
   override protected def afterEach() = {
     super.afterEach
@@ -61,10 +42,6 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     clients = Nil
   }
 
-  def connector_port(connector:String):Option[Int] = Option(connector).map { id =>
-    broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(port)
-  }
-  
   def connect_request(version:String, c: StompClient, headers:String="", connector:String=null) = {
     val p = connector_port(connector).getOrElse(port)
     c.open("localhost", p)
@@ -173,47 +150,6 @@ class StompTestSupport extends FunSuiteSupport with ShouldMatchers with BeforeAn
     frame should startWith("RECEIPT\n")
     frame should include("receipt-id:"+id+"\n")
   }
-
-  def queue_exists(name:String):Boolean = {
-    val host = broker.default_virtual_host
-    host.dispatch_queue.future {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_queue_domain.destination_by_id.get(name).isDefined
-    }.await()
-  }
-
-  def topic_exists(name:String):Boolean = {
-    val host = broker.default_virtual_host
-    host.dispatch_queue.future {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_topic_domain.destination_by_id.get(name).isDefined
-    }.await()
-  }
-
-  def topic_status(name:String):TopicStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_topic_domain.destination_by_id.get(name).get.status
-    }
-  }
-
-  def queue_status(name:String):QueueStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_queue_domain.destination_by_id.get(name).get.status(false)
-    }
-  }
-
-  def dsub_status(name:String):QueueStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_dsub_domain.destination_by_id.get(name).get.status(false)
-    }
-  }
-
 }
 
 /**

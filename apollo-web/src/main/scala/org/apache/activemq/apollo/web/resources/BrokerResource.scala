@@ -70,12 +70,12 @@ class BrokerResource() extends Resource {
     rc
   }
 
-  @Deprecated("The session resource should be used instead.")
+  @Deprecated()
   @GET
   @Path("/whoami")
   def whoami() = SessionResource().whoami()
 
-  @Deprecated("The session resource should be used instead.")
+  @Deprecated()
   @Produces(Array("text/html;qs=5"))
   @GET
   @Path("/signin")
@@ -85,19 +85,19 @@ class BrokerResource() extends Resource {
                       @QueryParam("target") target:String
                              ): ErrorDTO = SessionResource().get_signin_html(response, username, password, target)
 
-  @Deprecated("The session resource should be used instead.")
+  @Deprecated()
   @POST
   @Path("/signin")
   def post_signin(@Context response:HttpServletResponse,
                   @FormParam("username") username:String,
-                  @FormParam("password") password:String):Boolean = SessionResource().post_signin(response, username, password, target)
+                  @FormParam("password") password:String):Boolean = SessionResource().post_signin(response, username, password)
 
-  @Deprecated("The session resource should be used instead.")
+  @Deprecated()
   @Produces(Array("text/html"))
   @GET @Path("/signout")
   def signout_html():String = SessionResource().signout_html()
 
-  @Deprecated("The session resource should be used instead.")
+  @Deprecated()
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
   @GET @Path("/signout")
   def signout():String = SessionResource().signout()
