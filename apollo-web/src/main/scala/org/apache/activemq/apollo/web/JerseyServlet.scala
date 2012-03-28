@@ -21,7 +21,6 @@ import javax.servlet.ServletConfig
 import javax.servlet.ServletContext
 import java.util.Enumeration
 import collection.mutable.HashMap
-// import com.wordnik.swagger.jaxrs.JaxrsApiReader
 
 /**
  * <p>
@@ -55,12 +54,12 @@ class JerseyServlet extends ServletContainer {
   }
 
   override def init(config: ServletConfig): Unit = {
-    // JaxrsApiReader.setFormatString("")
+    com.wordnik.swagger.jaxrs.JaxrsApiReader.setFormatString("")
 
     original_config = config
     custom_config_map.put("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.ClassNamesResourceConfig")
     custom_config_map.put("com.sun.jersey.config.property.classnames", WebModule.web_resources.map(_.getName).mkString(" "))
-    // custom_config_map.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "true"))
+    custom_config_map.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "true"))
     custom_config_map.put("com.sun.jersey.spi.container.ContainerRequestFilters", "com.sun.jersey.api.container.filter.PostReplaceFilter")
     custom_config_map.put("com.sun.jersey.config.feature.Redirect", "true")
     custom_config_map.put("com.sun.jersey.config.feature.FilterForwardOn404", "true")

@@ -21,7 +21,7 @@ import collection.immutable.TreeMap
 import collection.mutable.LinkedHashMap
 import resources._
 import org.fusesource.scalate.jersey._
-//import com.wordnik.swagger.jaxrs.ApiHelpMessageBodyWriter
+import com.wordnik.swagger.jaxrs.ApiHelpMessageBodyWriter
 
 trait WebModule {
   def priority:Int
@@ -58,22 +58,20 @@ object DefaultWebModule extends WebModule {
   override def web_resources = Set(
     classOf[RootResource],
 
-//    classOf[ApolloApiListing],
-//    classOf[ApiHelpMessageBodyWriter],
+    classOf[ApolloApiListing],
+    classOf[ApiHelpMessageBodyWriter],
 
-    classOf[BrokerResource],
-//    classOf[BrokerResourceHTML],
-//    classOf[BrokerResourceJSON],
-//    classOf[BrokerResourceHelp],
+    classOf[BrokerResourceHTML],
+    classOf[BrokerResourceJSON],
+    classOf[BrokerResourceHelp],
 
-//    classOf[SessionResourceHTML],
-//    classOf[SessionResourceJSON],
-//    classOf[SessionResourceHelp],
+    classOf[SessionResourceHTML],
+    classOf[SessionResourceJSON],
+    classOf[SessionResourceHelp],
 
-    classOf[ConfigurationResource],
-//    classOf[ConfigurationResourceHTML],
-//    classOf[ConfigurationResourceJSON],
-//    classOf[ConfigurationResourceHelp],
+    classOf[ConfigurationResourceHTML],
+    classOf[ConfigurationResourceJSON],
+    classOf[ConfigurationResourceHelp],
 
     classOf[JacksonJsonProvider],
     classOf[JaxrsExceptionMapper],

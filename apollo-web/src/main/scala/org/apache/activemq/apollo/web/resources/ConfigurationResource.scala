@@ -23,15 +23,30 @@ import org.apache.activemq.apollo.util.FileSupport._
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.MediaType._
+import com.wordnik.swagger.core.{ApiOperation, Api}
 
 case class EditConfig(file:String, config:String, can_write:Boolean)
 case class ListConfigs(files:Array[String])
 
+@Path(          "/api/json/broker/config")
+@Api(value =    "/api/json/broker/config",
+  listingPath = "/api/docs/broker/config")
+@Produces(Array("application/json"))
+class ConfigurationResourceJSON extends ConfigurationResource
+
+@Path(          "/api/docs/broker/config{ext:(\\.json)?}")
+@Api(value =    "/api/json/broker/config",
+  listingPath = "/api/docs/broker/config",
+  listingClass = "org.apache.activemq.apollo.web.resources.ConfigurationResourceJSON")
+class ConfigurationResourceHelp extends HelpResourceJSON
+
+@Path("/broker/config")
+@Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML, "text/html;qs=5"))
+class ConfigurationResourceHTML extends ConfigurationResource
+
 /**
  * A broker resource is used to represent the configuration of a broker.
  */
-@Path("/broker/config")
-@Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML, "text/html;qs=5"))
 class ConfigurationResource extends Resource {
 
   lazy val etc_directory = {
@@ -52,7 +67,8 @@ class ConfigurationResource extends Resource {
 
   @GET
   @Path("runtime")
-  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
+//  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
+//  @ApiOperation(value = "Returns a BrokerDTO object with runtime configuraiton of the broker.")
   def runtime = {
 
     // Encode/Decode the runtime config so that we can get a copy that
@@ -72,6 +88,7 @@ class ConfigurationResource extends Resource {
 
   @GET
   @Path("/files")
+  @ApiOperation(value = "Returns the list of configuration files.")
   @Produces(Array(APPLICATION_JSON))
   def list() = {
     etc_directory.listFiles().flatMap { file =>
@@ -86,6 +103,7 @@ class ConfigurationResource extends Resource {
   @GET
   @Produces(Array(TEXT_HTML))
   @Path("/files")
+  @ApiOperation(value = "Returns the list of configuration files.")
   def list_html() = {
     ListConfigs(list())
   }
@@ -93,6 +111,7 @@ class ConfigurationResource extends Resource {
   @GET
   @Produces(Array(APPLICATION_OCTET_STREAM))
   @Path("/files/{name}")
+  @ApiOperation(value = "Returns the contents of the configuration file.")
   def get(@PathParam("name") name:String) = {
     val file = etc_directory / name
     if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
@@ -115,6 +134,7 @@ class ConfigurationResource extends Resource {
   @POST
   @Consumes(Array(WILDCARD))
   @Path("/files/{name}")
+  @ApiOperation(value = "Updates the contents of the configuration file.")
   def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
     val file = etc_directory / name
     if( !file.exists() || !file.canWrite || file.getParentFile != etc_directory ) {
