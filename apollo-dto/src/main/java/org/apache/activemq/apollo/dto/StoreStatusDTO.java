@@ -41,6 +41,12 @@ public abstract class StoreStatusDTO extends StringIdDTO {
 	public String state;
 
     /**
+     * The amount of disk space the store is using.
+     */
+	@XmlAttribute(name="disk_usage")
+	public long disk_usage;
+
+    /**
      * Since when has the service been in in this state?  In milliseconds since the epoch. 
      */
 	@XmlAttribute(name="state_since")

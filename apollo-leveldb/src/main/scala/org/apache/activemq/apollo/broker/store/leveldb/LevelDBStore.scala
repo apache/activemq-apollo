@@ -30,7 +30,7 @@ import org.apache.activemq.apollo.util.OptionSupport._
 import java.io._
 import org.apache.activemq.apollo.web.resources.ViewHelper
 import org.fusesource.hawtbuf.Buffer
-
+import FileSupport._
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -285,6 +285,11 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
   def get_store_status(callback: (StoreStatusDTO) => Unit) = dispatch_queue {
     val rc = new LevelDBStoreStatusDTO
     fill_store_status(rc)
+    for( file <- config.directory.recursive_list ) {
+      if(!file.isDirectory) {
+        rc.disk_usage += file.length()
+      }
+    }
     rc.message_load_batch_size = message_load_batch_size
     write_executor {
       client.using_index {

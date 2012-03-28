@@ -28,6 +28,7 @@ import org.apache.activemq.apollo.dto.StoreStatusDTO
 import org.apache.activemq.apollo.util.OptionSupport._
 import java.io.{InputStream, OutputStream}
 import org.fusesource.hawtbuf.Buffer
+import FileSupport._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -225,6 +226,11 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new BDBStoreStatusDTO
     fill_store_status(rc)
+    for( file <- config.directory.recursive_list ) {
+      if(!file.isDirectory) {
+        rc.disk_usage += file.length()
+      }
+    }
     rc.message_load_batch_size = message_load_batch_size
     callback(rc)
   }
