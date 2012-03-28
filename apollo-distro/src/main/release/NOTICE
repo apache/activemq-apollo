@@ -113,7 +113,11 @@ http://twitter.github.com/bootstrap/
 
 
 -------------------------------------------------------------------------
+
 This product includes software (stomp-websocket) developed at
 https://github.com/jmesnil/stomp-websocket
 
 -------------------------------------------------------------------------
+
+This product includes software (swagger) developed at
+Wordnik (http://swagger.wordnik.com/).

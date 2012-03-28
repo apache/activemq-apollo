@@ -58,7 +58,9 @@
         <include>org.fusesource.scalate:scalate-util</include>
         <include>net.sf.josql:josql</include>
         <include>net.sf.josql:gentlyweb-utils</include>
-        
+        <include>com.wordnik:swagger-jaxrs_2.9.1</include>
+        <include>com.wordnik:swagger-core_2.9.1</include>
+
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>
         <include>commons-logging:commons-logging</include>
