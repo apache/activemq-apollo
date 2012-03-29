@@ -1743,7 +1743,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             queue.store_load_source.merge((this, delivery.get))
           } else {
 
-            info("Detected store dropped message at seq: %d", seq)
+            warn("Queue '%s' detected store dropped message at seq: %d", queue.id, seq)
 
             // Looks like someone else removed the message from the store.. lets just
             // tombstone this entry now.
@@ -1921,7 +1921,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             val size_delta: Int = size - size_count
 
             if ( item_delta!=0 || size_delta!=0 ) {
-              info("Detected store change in range %d to %d. %d message(s) and %d bytes", seq, last, item_delta, size_delta)
+              warn("Queue '%s' detected store change in range [%d:%d]. %d message(s) and %d bytes", queue.id, seq, last, item_delta, size_delta)
               queue.enqueue_item_counter += item_delta
               queue.enqueue_size_counter += size_delta
             }
