@@ -472,14 +472,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   def on_queue_flushed = {
     if(stop_listener_waiting_for_flush!=null) {
-      address match {
-        case d:DurableSubscriptionDestinationDTO =>
-          DestinationMetricsSupport.add_destination_metrics(virtual_host.dead_dsub_metrics, get_queue_metrics)
-        case t:TopicDestinationDTO =>
-          // metrics are taken care of by topic
-        case _ =>
-          DestinationMetricsSupport.add_destination_metrics(virtual_host.dead_queue_metrics, get_queue_metrics)
-      }
       stop_listener_waiting_for_flush.run()
       stop_listener_waiting_for_flush = null
     }

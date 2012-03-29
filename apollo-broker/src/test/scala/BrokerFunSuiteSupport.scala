@@ -18,9 +18,9 @@ package org.apache.activemq.apollo.broker
 
 import org.apache.activemq.apollo.util.{ServiceControl, Logging, FunSuiteSupport}
 import java.net.InetSocketAddress
-import org.apache.activemq.apollo.dto.{QueueStatusDTO, TopicStatusDTO}
 import org.apache.activemq.apollo.util._
 import FileSupport._
+import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
 
 /**
  * <p>
@@ -70,6 +70,16 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     }.await()
   }
 
+  def delete_queue(name: String) = {
+    val host = broker.default_virtual_host
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      for( node<- router.local_queue_domain.destination_by_id.get(name) ) {
+        router._destroy_queue(node)
+      }
+    }.await()
+  }
+
   def topic_exists(name: String): Boolean = {
     val host = broker.default_virtual_host
     host.dispatch_queue.future {
@@ -83,6 +93,27 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     sync(host) {
       val router = host.router.asInstanceOf[LocalRouter]
       router.local_topic_domain.destination_by_id.get(name).get.status
+    }
+  }
+
+  def get_queue_metrics: AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_queue_metrics
+    }
+  }
+
+  def get_topic_metrics: AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_topic_metrics
+    }
+  }
+
+  def get_dsub_metrics: AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_dsub_metrics
     }
   }
 

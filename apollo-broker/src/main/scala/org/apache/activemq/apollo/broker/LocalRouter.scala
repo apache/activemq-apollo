@@ -32,6 +32,19 @@ import scala.collection.mutable.{HashSet, HashMap, LinkedHashMap}
 
 object DestinationMetricsSupport {
 
+  def clear_non_counters(metrics:DestMetricsDTO) = {
+    metrics.queue_items = 0
+    metrics.queue_size = 0
+    metrics.producer_count = 0
+    metrics.consumer_count = 0
+    metrics.swapped_in_size_max = 0
+    metrics.swapped_in_size = 0
+    metrics.swapped_in_items = 0
+    metrics.swapping_in_size = 0
+    metrics.swapping_out_size = 0;
+    metrics.swapping_out_size = 0;
+  }
+
   def add_destination_metrics(to:DestMetricsDTO, from:DestMetricsDTO) = {
     to.enqueue_item_counter += from.enqueue_item_counter
     to.enqueue_size_counter += from.enqueue_size_counter
@@ -1279,15 +1292,29 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
 
   def _destroy_queue(queue: Queue) {
-    queue.stop(dispatch_queue.runnable{
+    queue.stop(^{
+      var metrics = queue.get_queue_metrics
+      dispatch_queue {
 
-      queue.binding.unbind(this, queue)
-//      queues_by_binding.remove(queue.binding)
-      queues_by_store_id.remove(queue.store_id)
-      if (queue.tune_persistent) {
-        queue.dispatch_queue {
-          virtual_host.store.remove_queue(queue.store_id) {
-            x => Unit
+        queue.binding.unbind(this, queue)
+
+        for ( aggreator <-queue.address match {
+          case d:DurableSubscriptionDestinationDTO => Some(virtual_host.dead_dsub_metrics)
+          case t:TopicDestinationDTO => None
+          case _ => Some(virtual_host.dead_queue_metrics)
+        }) {
+
+          // Zero out all the NON counters since a removed queue is empty.
+          DestinationMetricsSupport.clear_non_counters(metrics)
+          DestinationMetricsSupport.add_destination_metrics(aggreator, metrics)
+        }
+
+        queues_by_store_id.remove(queue.store_id)
+        if (queue.tune_persistent) {
+          queue.dispatch_queue {
+            virtual_host.store.remove_queue(queue.store_id) {
+              x => Unit
+            }
           }
         }
       }
