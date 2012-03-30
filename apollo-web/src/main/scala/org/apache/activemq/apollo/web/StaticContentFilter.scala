@@ -27,13 +27,10 @@ import org.apache.activemq.apollo.util.FileSupport._
 
 object StaticContentFilter {
   val external_resource_dirs = Option(System.getProperty("apollo.web.resources")).map { x=>
-    println("got: !!!!!! "+x)
     x.split(""",""").toList.map{ x=>
-      println("got2: !!!!!! "+x)
       new File(x.trim).getCanonicalFile
     }
   }.getOrElse(List[File]())
-  println("external_resource_dirs "+external_resource_dirs)
 }
 
 /**
