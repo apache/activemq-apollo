@@ -21,7 +21,20 @@ import http.{HttpServletResponse, HttpServletRequest}
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.server.Dispatcher
 import org.eclipse.jetty.util.URIUtil
+import java.io.File
+import org.eclipse.jetty.util.resource.Resource
+import org.apache.activemq.apollo.util.FileSupport._
 
+object StaticContentFilter {
+  val external_resource_dirs = Option(System.getProperty("apollo.web.resources")).map { x=>
+    println("got: !!!!!! "+x)
+    x.split(""",""").toList.map{ x=>
+      println("got2: !!!!!! "+x)
+      new File(x.trim).getCanonicalFile
+    }
+  }.getOrElse(List[File]())
+  println("external_resource_dirs "+external_resource_dirs)
+}
 
 /**
  * <p>
@@ -30,8 +43,22 @@ import org.eclipse.jetty.util.URIUtil
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class StaticContentFilter extends Filter {
+  import StaticContentFilter._
 
-  val static_content_servlet = new DefaultServlet
+  val static_content_servlet = new DefaultServlet {
+    override def getResource(path: String):Resource = {
+      val rc = super.getResource(path);
+      if ( rc ==null && !external_resource_dirs.isEmpty ) {
+        for( dir <- external_resource_dirs ) {
+          val file = (dir / path).getCanonicalFile
+          if ( file.isFile && file.getPath.startsWith(dir.getPath) ) {
+            return Resource.newResource(file)
+          }
+        }
+      }
+      rc
+    }
+  }
 
   def init(config: FilterConfig) {
     static_content_servlet.init(new ServletConfig {
