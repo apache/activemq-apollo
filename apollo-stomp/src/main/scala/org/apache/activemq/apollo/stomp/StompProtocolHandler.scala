@@ -493,8 +493,11 @@ class StompProtocolHandler extends ProtocolHandler {
             var frame = StompFrame(MESSAGE, headers, BufferContent(EMPTY_BUFFER))
 
             val delivery = new Delivery()
-            delivery.message = StompFrameMessage(frame)
+            var message = StompFrameMessage(frame)
+            delivery.message = message
             delivery.size = frame.size
+            delivery.expiration = message.expiration
+            delivery.persistent = message.persistent
 
             if( downstream.full ) {
               // session is full so use an overflow sink so to hold the message,
@@ -1160,6 +1163,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
       val delivery = new Delivery
       delivery.message = message
+      delivery.expiration = message.expiration
+      delivery.persistent = message.persistent
       delivery.size = message.frame.size
       delivery.uow = uow
       get(frame.headers, RETAIN).foreach { retain =>
@@ -1349,7 +1354,7 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def on_stomp_nack(frame:StompFrame):Unit = {
-    on_stomp_ack(frame.headers, Delivered)
+    on_stomp_ack(frame.headers, Poisoned)
   }
 
   def on_stomp_ack(headers:HeaderMap, consumed:DeliveryResult):Unit = {

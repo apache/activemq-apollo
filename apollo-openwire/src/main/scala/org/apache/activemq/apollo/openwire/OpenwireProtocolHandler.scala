@@ -669,6 +669,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // We may need to add some headers..
       val delivery = new Delivery
       delivery.message = new OpenwireMessage(message)
+      delivery.expiration = message.getExpiration
+      delivery.persistent = message.isPersistent
       delivery.size = {
         val rc = message.getEncodedSize
         if( rc != 0 )

@@ -96,22 +96,6 @@ trait DeliverySession extends SessionSink[Delivery] {
 trait Message extends Filterable with Retained {
 
   /**
-   *  the message priority.
-   */
-  def priority:Byte
-
-  /**
-   * a positive value indicates that the delivery has an expiration
-   * time.
-   */
-  def expiration: Long
-
-  /**
-   * true if the delivery is persistent
-   */
-  def persistent: Boolean
-
-  /**
    * The protocol of the message
    */
   def protocol:Protocol
@@ -184,6 +168,16 @@ class Delivery {
   var size:Int = 0
 
   /**
+   * When the message will expire
+   */
+  var expiration:Long = 0
+
+  /**
+   * Is the delivery persistent?
+   */
+  var persistent:Boolean = false
+
+  /**
    *  the message being delivered
    */
   var message: Message = null
@@ -230,6 +224,9 @@ class Delivery {
 
   def set(other:Delivery) = {
     sender = other.sender
+    size = other.size
+    persistent = other.persistent
+    expiration = other.expiration
     size = other.size
     seq = other.seq
     message = other.message

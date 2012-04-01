@@ -41,12 +41,6 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   def protocol = OpenwireProtocol
 
-  def priority = message.getPriority
-
-  def persistent = message.isPersistent
-
-  def expiration = message.getExpiration
-
   def getBodyAs[T](toType : Class[T]) = {
     (message match {
       case x:ActiveMQTextMessage =>

@@ -294,15 +294,18 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         // only deliver to matching consumers
         if( target.consumer.matches(copy) ) {
 
-          if ( target.consumer.is_persistent && copy.message.persistent
-                && copy.storeKey == -1L && store != null) {
+          if ( target.consumer.is_persistent && copy.persistent && store != null) {
+
             if (copy.uow == null) {
               copy.uow = store.create_uow
             } else {
               copy.uow.retain
             }
-            copy.storeLocator = new AtomicReference[Object]()
-            copy.storeKey = copy.uow.store(copy.createMessageRecord)
+
+            if( copy.storeKey == -1L ) {
+              copy.storeLocator = new AtomicReference[Object]()
+              copy.storeKey = copy.uow.store(copy.createMessageRecord)
+            }
           }
 
           if( !target.offer(copy) ) {

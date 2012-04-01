@@ -517,7 +517,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       } else {
 
         // Don't even enqueue if the message has expired or the queue has stopped.
-        val expiration = delivery.message.expiration
+        val expiration = delivery.expiration
         val expired = expiration != 0 && expiration <= now
 
         if( !service_state.is_started || expired) {
@@ -1429,7 +1429,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def count = 1
     override def size = delivery.size
-    override def expiration = delivery.message.expiration
+    override def expiration = delivery.expiration
     override def message_key = delivery.storeKey
     override def message_locator = delivery.storeLocator
     override def redelivery_count = delivery.redeliveries
@@ -1747,19 +1747,27 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
+
+    def to_delivery = {
+      val delivery = new Delivery()
+      delivery.seq = seq
+      delivery.size = size
+      delivery.persistent = true
+      delivery.expiration = expiration
+      delivery.storeKey = message_key
+      delivery.storeLocator = message_locator
+      delivery.redeliveries = redelivery_count
+      delivery.sender = sender
+      delivery
+    }
+
     def swapped_in(messageRecord:MessageRecord) = {
       if( space!=null ) {
 //        debug("Loaded message seq: ", seq )
         queue.swapping_in_size -= size
 
-        val delivery = new Delivery()
-        delivery.seq = seq
-        delivery.size = size
+        val delivery = to_delivery
         delivery.message = ProtocolFactory.get(messageRecord.protocol.toString).get.decode(messageRecord)
-        delivery.storeKey = messageRecord.key
-        delivery.storeLocator = messageRecord.locator
-        delivery.redeliveries = redelivery_count
-        delivery.sender = sender
 
         space += delivery
 
