@@ -34,6 +34,11 @@ import org.apache.activemq.apollo.dto._
 import org.fusesource.hawtbuf._
 import java.util.regex.Pattern
 
+sealed trait FullDropPolicy
+object Block extends FullDropPolicy
+object DropHead extends FullDropPolicy
+object DropTail extends FullDropPolicy
+
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
 
@@ -104,10 +109,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   val head_entry = new QueueEntry(this, 0L).head
   var tail_entry = new QueueEntry(this, next_message_seq)
   entries.addFirst(head_entry)
-
-  //
-  // In-frequently accessed tuning configuration.
-  //
 
   //
   // Frequently accessed tuning configuration.
@@ -214,6 +215,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
   var config:QueueDTO = _
+  var full_drop_policy:FullDropPolicy = Block
 
   def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
 
@@ -232,6 +234,15 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,"-1")
     tune_quota = mem_size(update.quota,"-1")
 
+    full_drop_policy = Option(update.full_policy).getOrElse("none").toLowerCase match {
+      case "drop head" => DropHead
+      case "drop tail" => DropTail
+      case "block" => Block
+      case _ =>
+        warn("Invalid 'full_drop_policy' configured for queue '%s': '%s'", id, update.full_policy)
+        Block
+    }
+    
     auto_delete_after = update.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured queues,
@@ -500,7 +511,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   }
 
   def change_producer_capacity(amount:Int) = might_unfill {
-    producer_swapped_in.size_max += amount
+    // producer_swapped_in.size_max += amount
   }
   def change_consumer_capacity(amount:Int) = might_unfill {
     consumer_swapped_in.size_max += amount
@@ -515,7 +526,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     def is_enqueue_buffer_maxed = (producer_swapped_in.size >= producer_swapped_in.size_max)
 
     def full = if( service_state.is_started ) {
-      is_enqueue_buffer_maxed || is_enqueue_throttled || is_quota_exceeded
+      if ( full_drop_policy eq Block ) {
+        is_enqueue_buffer_maxed || is_enqueue_throttled || is_quota_exceeded
+      } else {
+        // we are never full since we can just drop messages at will.
+        false
+      }
     } else if( service_state.is_starting) {
       true
     } else {
@@ -527,11 +543,71 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         false
       } else {
 
-        // Don't even enqueue if the message has expired or the queue has stopped.
+        // We may need to drop this enqueue or head entries due
+        // to the drop policy.
+        var drop = false
+        if( full_drop_policy ne Block ) {
+
+          def eval_drop(entry:QueueEntry) = entry.state match {
+            case state: entry.Loaded =>
+              var next = entry.getNext
+              if (!entry.is_acquired) {
+                dequeue_item_counter += 1
+                dequeue_size_counter += entry.size
+                dequeue_ts = now
+                entry.remove
+              }
+              next
+            case state: entry.Swapped =>
+              var next = entry.getNext
+              if (!entry.is_acquired) {
+                dequeue_item_counter += 1
+                dequeue_size_counter += entry.size
+                dequeue_ts = now
+                entry.remove
+              }
+              next
+            case state: entry.SwappedRange =>
+              // we need to load in the range before we can drop entries..
+              entry.load(null)
+              null
+          }
+
+          if( tune_persistent ) {
+            var exceeded = is_quota_exceeded
+            if( exceeded) {
+              full_drop_policy match {
+                case Block =>
+                case DropTail =>
+                  drop = true // we can drop this enqueue attempt.
+                case DropHead =>
+                  var entry = head_entry.getNext
+                  while(entry!=null && is_quota_exceeded) {
+                    entry = eval_drop(entry)
+                  }
+              }
+            }
+          } else {
+            if( is_enqueue_buffer_maxed) {
+              full_drop_policy match {
+                case DropTail =>
+                  drop = true // we can drop this enqueue attempt.
+                case DropHead =>
+                  var entry = head_entry.getNext
+                  while(entry!=null && is_enqueue_buffer_maxed) {
+                    entry = eval_drop(entry)
+                  }
+              }
+            }
+          }
+        }
+        
         val expiration = delivery.expiration
         val expired = expiration != 0 && expiration <= now
 
-        if( !service_state.is_started || expired) {
+        // Don't even enqueue if the message has expired or
+        // the queue has stopped or message needs to get dropped.
+        if( !service_state.is_started || expired || drop) {
           if( delivery.ack!=null ) {
             delivery.ack(if ( expired ) Expired else Undelivered, delivery.uow)
           }

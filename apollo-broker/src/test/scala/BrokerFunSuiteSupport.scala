@@ -20,6 +20,7 @@ import org.apache.activemq.apollo.util.{ServiceControl, Logging, FunSuiteSupport
 import java.net.InetSocketAddress
 import org.apache.activemq.apollo.util._
 import FileSupport._
+import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
 
 /**
@@ -121,7 +122,10 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     val host = broker.default_virtual_host
     sync(host) {
       val router = host.router.asInstanceOf[LocalRouter]
-      router.local_queue_domain.destination_by_id.get(name).get.status(false)
+      val queue = router.local_queue_domain.destination_by_id.get(name).get
+      sync(queue) {
+        queue.status(false)
+      }
     }
   }
 

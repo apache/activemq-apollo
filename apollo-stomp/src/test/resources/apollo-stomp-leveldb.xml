@@ -21,6 +21,11 @@
   <virtual_host id="default">
     <host_name>localhost</host_name>
 
+    <queue id="drop.head.persistent" full_policy="drop head" quota="100k"/>
+    <queue id="drop.tail.persistent" full_policy="drop tail" quota="100k"/>
+    <queue id="drop.head.non" full_policy="drop head" tail_buffer="100k" persistent="false"/>
+    <queue id="drop.tail.non" full_policy="drop tail" tail_buffer="100k" persistent="false"/>
+
     <queue id="nacker.**" dlq="dlq.*" nak_limit="2"/>
     <queue id="mirrored.**" mirrored="true"/>
 

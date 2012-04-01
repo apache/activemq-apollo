@@ -368,9 +368,26 @@ memory.  Defaults to true.
    will be dropped.  If '*' appears in the name it will be replaced with 
    the queue's id.
 
-* `max_enqueue_rate`: The maximum enqueue rate of the queue.  Producers
-  will be flow controlled once this enqueue rate is reached.  If not set
-  then it is disabled
+* `nak_limit`: Once a message has been nacked the configured
+   number of times the message will be considered to be a
+   poison message and will get moved to the dead letter queue if that's
+   configured or dropped.  If set to less than one, then the message
+   will never be considered to be a poison message. Defaults to zero.
+
+* `full_drop_policy`: Once the queue is full, the `full_policy` 
+  controls how the   queue behaves when additional messages attempt to 
+  be enqueued onto the queue.
+  
+  You can set it to one of the following options:
+
+   * `block`: The producer blocks until some space frees up.
+   * `drop tail`: Drops the new messages being enqueued on the queue.
+   * `drop head`: Drops old messages at the front of the queue.
+  
+  If the queue is persistent then it is considered full when the max
+  quota size is reached.  If the queue is not persistent then
+  the queue is considered full once it's `tail_buffer` fills up.
+  Defaults to 'block' if not specified.
 
 ##### Topics
 

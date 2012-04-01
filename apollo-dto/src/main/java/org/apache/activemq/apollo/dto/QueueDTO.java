@@ -83,12 +83,30 @@ public class QueueDTO extends StringIdDTO {
     public Integer swap_range_size;
 
     /**
-     * The maximum amount of disk space the queue is allowed
+     * The maximum amount of size the queue is allowed
      * to grow to.  If not set then there is no limit.  You can
      * use settings values like: 500mb or 1g just plain 1024000
      */
     @XmlAttribute(name="quota")
     public String quota;
+
+    /**
+     * Once the queue is full, the `full_policy` controls how the
+     * queue behaves when additional messages attempt to be enqueued
+     * onto the queue.
+     *
+     * You can set it to one of the following options:
+     *  `block`: The producer blocks until some space frees up.
+     *  `drop tail`: Drops new messages being enqueued on the queue.
+     *  `drop head`: Drops old messages at the front of the queue.
+     *
+     * If the queue is persistent then it is considered full when the max
+     * quota size is reached.  If the queue is not persistent then
+     * the queue is considered full once it's `tail_buffer` fills up.
+     * Defaults to 'block' if not specified.
+     */
+    @XmlAttribute(name="full_policy")
+    public String full_policy;
 
     /**
      *  The message delivery rate (in bytes/sec) at which
