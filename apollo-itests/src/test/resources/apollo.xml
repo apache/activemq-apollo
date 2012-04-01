@@ -20,7 +20,7 @@
 
   <virtual_host id="default" purge_on_startup="true" auto_create_queues="true">
     <host_name>localhost</host_name>
-    <queue name="mirrored.**" mirrored="true"/>
+    <queue id="mirrored.**" mirrored="true"/>
   </virtual_host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>

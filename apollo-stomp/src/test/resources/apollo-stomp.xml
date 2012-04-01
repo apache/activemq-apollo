@@ -21,8 +21,8 @@
   <virtual_host id="default">
     <host_name>localhost</host_name>
 
-    <queue name="mirrored.**" mirrored="true"/>
-    <topic name="queued.**" slow_consumer_policy="queue"/>
+    <queue id="mirrored.**" mirrored="true"/>
+    <topic id="queued.**" slow_consumer_policy="queue"/>
 
   </virtual_host>
 
