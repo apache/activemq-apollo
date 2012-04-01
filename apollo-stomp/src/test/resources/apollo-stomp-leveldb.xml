@@ -21,6 +21,7 @@
   <virtual_host id="default">
     <host_name>localhost</host_name>
 
+    <queue id="nacker.**" dlq="dlq.*" nak_limit="2"/>
     <queue id="mirrored.**" mirrored="true"/>
 
     <leveldb_store directory="${testdatadir}"/>

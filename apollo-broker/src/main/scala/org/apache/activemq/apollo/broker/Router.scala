@@ -287,8 +287,11 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       // Do we need to store the message if we have a matching consumer?
       pendingAck = delivery.ack
       val copy = delivery.copy
-      copy.message.retain
-
+      
+      if(copy.message!=null) {
+        copy.message.retain
+      }
+      
       targets.foreach { target=>
 
         // only deliver to matching consumers
@@ -340,7 +343,9 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     if (delivery.uow != null) {
       delivery.uow.release
     }
-    delivery.message.release
+    if( delivery.message!=null ) {
+      delivery.message.release
+    }
   }
 
   val drainer = ^{
@@ -355,7 +360,8 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       if( overflowSessions==Nil ) {
         delivered(overflow)
         overflow = null
-        refiller.run
+        if(refiller!=null)
+          refiller.run
       }
     }
   }

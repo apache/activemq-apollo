@@ -95,7 +95,7 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
       body)
   }
 
-  def subscribe(id:String, dest:String, mode:String="auto", persistent:Boolean=false, headers:String="", c: StompClient = client) = {
+  def subscribe(id:String, dest:String, mode:String="auto", persistent:Boolean=false, headers:String="", sync:Boolean=true, c: StompClient = client) = {
     val rid = receipt_counter.incrementAndGet()
     c.write(
       "SUBSCRIBE\n" +
@@ -103,10 +103,12 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
       "id:"+id+"\n" +
       (if(persistent) "persistent:true\n" else "")+
       "ack:"+mode+"\n"+
-      "receipt:"+rid+"\n" +
+      (if(sync) "receipt:"+rid+"\n" else "") +
       headers+
       "\n")
-    wait_for_receipt(""+rid, c)
+    if(sync) {
+      wait_for_receipt(""+rid, c)
+    }
   }
 
   def unsubscribe(id:String, headers:String="", c: StompClient=client) = {
@@ -120,7 +122,7 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     wait_for_receipt(""+rid, c)
   }
 
-  def assert_received(body:Any, sub:String=null, c: StompClient=client)={
+  def assert_received(body:Any, sub:String=null, c: StompClient=client):(Boolean)=>Unit = {
     val frame = c.receive()
     frame should startWith("MESSAGE\n")
     if(sub!=null) {
@@ -132,13 +134,13 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
       case body => frame should endWith("\n\n"+body)
     }
     // return a func that can ack the message.
-    ()=> {
+    (ack:Boolean)=> {
       val sub_regex = """(?s).*\nsubscription:([^\n]+)\n.*""".r
       val msgid_regex = """(?s).*\nmessage-id:([^\n]+)\n.*""".r
       val sub_regex(sub) = frame
       val msgid_regex(msgid) = frame
       c.write(
-        "ACK\n" +
+        (if(ack) "ACK\n" else "NACK\n") +
         "subscription:"+sub+"\n" +
         "message-id:"+msgid+"\n" +
         "\n")
@@ -299,7 +301,7 @@ class StompMetricsTest extends StompTestSupport {
     stat2.metrics.queue_items should be(2)
 
     // Ack now..
-    ack2() ; ack3()
+    ack2(true) ; ack3(true)
 
     within(1, SECONDS) {
       val stat3 = topic_status("queued.stats")
@@ -352,7 +354,7 @@ class StompMetricsTest extends StompTestSupport {
     stat2.metrics.queue_items should be(2)
 
     // Ack SOME now..
-    ack2();
+    ack2(true);
 
     within(1, SECONDS) {
       val stat3 = topic_status("dsubed.stats")
@@ -1481,32 +1483,9 @@ class StompMirroredQueueTest extends StompTestSupport {
 
   test("Topic gets copy of message sent to queue") {
     connect("1.1")
-
-    // Connect to subscribers
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/mirrored.a\n" +
-      "id:1\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    def put(id:Int) = {
-      client.write(
-        "SEND\n" +
-        "destination:/queue/mirrored.a\n" +
-        "\n" +
-        "message:"+id+"\n")
-    }
-
-    put(1)
-
-    def get(id:Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith regex("\n\nmessage:"+id+"\n")
-    }
-    get(1)
+    subscribe("1", "/topic/mirrored.a")
+    async_send("/queue/mirrored.a", "message:1\n")
+    assert_received("message:1\n")
   }
 
   test("Queue gets copy of message sent to topic") {
@@ -2397,4 +2376,41 @@ class StompUdpInteropTest extends StompTestSupport {
 
     assert_received("Hello")
   }
+}
+
+class StompNackTest extends StompTestSupport {
+
+  test("NACKing moves messages to DLQ (non-persistent)") {
+    connect("1.1")
+    sync_send("/queue/nacker.a", "this msg is not persistent")
+
+    subscribe("0", "/queue/nacker.a", "client", false, "", false)
+    subscribe("dlq", "/queue/dlq.nacker.a", "auto", false, "", false)
+    var ack = assert_received("this msg is not persistent", "0")
+    ack(false)
+    ack = assert_received("this msg is not persistent", "0")
+    ack(false)
+
+    // It should be sent to the DLQ after the 2nd nak
+    assert_received("this msg is not persistent", "dlq")
+  }
+
+  test("NACKing moves messages to DLQ (persistent)") {
+    connect("1.1")
+    sync_send("/queue/nacker.b", "this msg is persistent", "persistent:true\n")
+
+    subscribe("0", "/queue/nacker.b", "client", false, "", false)
+    subscribe("dlq", "/queue/dlq.nacker.b", "auto", false, "", false)
+    var ack = assert_received("this msg is persistent", "0")
+    ack(false)
+    ack = assert_received("this msg is persistent", "0")
+    ack(false)
+
+    // It should be sent to the DLQ after the 2nd nak
+    assert_received("this msg is persistent", "dlq")
+  }
+}
+
+class StompNackTestOnLevelDBTest extends StompNackTest {
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 }

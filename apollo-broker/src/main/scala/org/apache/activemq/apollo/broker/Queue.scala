@@ -31,7 +31,8 @@ import java.lang.UnsupportedOperationException
 import security.SecuredResource._
 import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
-import org.fusesource.hawtbuf.UTF8Buffer
+import org.fusesource.hawtbuf._
+import java.util.regex.Pattern
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -213,6 +214,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
   var config:QueueDTO = _
+
+  def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
 
   def configure(update:QueueDTO) = {
     def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
@@ -462,6 +465,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       sub.close()
     }
 
+    if( dql_route!=null ) {
+      val route = dql_route
+      dql_route = null
+      virtual_host.dispatch_queue {
+        router.disconnect(route.addresses, route)
+      }
+    }
+
     trigger_swap
 
     stop_listener_waiting_for_flush = on_completed
@@ -551,7 +562,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         // Do we need to do a persistent enqueue???
         val persisted = queue_delivery.uow != null
         if (persisted) {
-          entry.as_loaded.store
+          entry.state match {
+            case state:entry.Loaded => state.store
+            case state:entry.Swapped => delivery.uow.enqueue(entry.toQueueEntryRecord)
+          }
         }
 
         if( entry.hasSubs ) {
@@ -855,6 +869,60 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
+  class DlqProducerRoute(val addresses:Array[ConnectAddress]) extends DeliveryProducerRoute(router) {
+    override def connection = None
+    override def dispatch_queue = Queue.this.dispatch_queue
+  }
+  var dql_route:DlqProducerRoute = _
+  
+  def dead_letter(original_uow:StoreUOW, entry:QueueEntry)(removeFunc: (StoreUOW)=>Unit) = {
+
+    if( config.dlq==null ) {
+      removeFunc(original_uow)
+    } else {
+      val delivery:Delivery = entry.state match {
+        case x:entry.Loaded=>
+          x.delivery.copy()
+        case x:entry.Swapped=>
+          x.to_delivery
+        case _ =>
+          throw new Exception("Invalid queue entry state, it cannot be DQLed.")
+      }
+
+      delivery.uow = original_uow
+
+//      delivery.uow = if( tune_persistent ) {
+//        if(original_uow!=null ) {
+//          original_uow
+//        } else {
+//          virtual_host.store.create_uow()
+//        }
+//      } else {
+//        null
+//      }
+
+      delivery.ack = (result, uow) => {
+        removeFunc(uow)
+      }
+
+      if( dql_route==null ) {
+        val dlq = config.dlq.replaceAll(Pattern.quote("*"), id)
+        dql_route = new DlqProducerRoute(Array(SimpleAddress("queue:"+dlq)))
+        router.virtual_host.dispatch_queue {
+          val rc = router.connect(dql_route.addresses, dql_route, null)
+          assert( rc == None ) // Not expecting this to ever fail.
+          dql_route.dispatch_queue {
+            dql_route.offer(delivery)
+          }
+        }
+      } else {
+        dql_route.offer(delivery)
+      }
+
+    }
+  }
+  
+  
   def drain_acks = might_unfill {
     ack_source.getData.foreach {
       case (entry, consumed, uow) =>
@@ -867,14 +935,24 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             entry.entry.queue.expired(entry.entry, false)
             entry.ack(uow)
           case Delivered =>
+            entry.increment_nack
             entry.entry.redelivered
             entry.nack
           case Poisoned =>
-            // TODO: send to DLQ once that is supported.
+            entry.increment_nack
             entry.entry.redelivered
-            entry.nack
+            var limit = dlq_nak_limit
+            if( limit>0 && entry.entry.redelivery_count >= limit ) {
+              dead_letter(uow, entry.entry) { uow =>
+                dispatch_queue {
+                  entry.ack(uow)
+                }
+              }
+            } else {
+              entry.nack
+            }
           case Undelivered =>
-            entry.nack
+            entry.increment_nack
         }
         if( uow!=null ) {
           uow.release()
@@ -924,7 +1002,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       if (downstream.full) {
         false
       } else {
-        delivery.message.retain
+        if( delivery.message!=null ) {
+          delivery.message.retain
+        }
         if( tune_persistent && delivery.uow!=null ) {
           delivery.uow.retain
         }
@@ -1102,8 +1182,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(delivery:Delivery):QueueEntry = {
-    queue.producer_swapped_in += delivery
-    state = new Loaded(delivery, false, queue.producer_swapped_in)
+    if( delivery.message == null ) {
+      // This must be a swapped out message which has been previously persisted in
+      // another queue.  We need to enqueue it to this queue..
+      queue.swap_out_size_counter += delivery.size
+      queue.swap_out_item_counter += 1
+      state = new Swapped(delivery.storeKey, delivery.storeLocator, delivery.size, delivery.expiration, 0, null, delivery.sender)
+    } else {
+      queue.producer_swapped_in += delivery
+      state = new Loaded(delivery, false, queue.producer_swapped_in)
+    }
     this
   }
 
@@ -2260,6 +2348,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       
     }
 
+    def increment_nack = total_nack_count += 1
+
     def nack:Unit = {
       assert_executing
       if(!isLinked) {
@@ -2267,7 +2357,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         return
       }
 
-      total_nack_count += 1
       entry.state match {
         case x:entry.Loaded=> x.acquirer = null
         case x:entry.Swapped=> x.acquirer = null

@@ -124,6 +124,27 @@ public class QueueDTO extends StringIdDTO {
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
 
+    /**
+     * Is the dead letter queue configured for the destination.  A
+     * dead letter queue is used for storing messages that failed to get processed
+     * by consumers.  If not set, then messages that fail to get processed
+     * will be dropped.  If '*' appears in the name it will be replaced with
+     * the queue's id.
+     */
+    @XmlAttribute(name="dlq")
+    public String dlq;
+
+    /**
+     * Once a message has been nacked the configured
+     * number of times the message will be considered to be a
+     * poison message and will get moved to the dead letter queue if that's
+     * configured or dropped.  If set to less than one, then the message
+     * will never be considered to be a poison message.
+     * Defaults to zero.
+     */
+    @XmlAttribute(name="nak_limit")
+    public Integer nak_limit;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -147,6 +168,8 @@ public class QueueDTO extends StringIdDTO {
         if (swap_range_size != null ? !swap_range_size.equals(queueDTO.swap_range_size) : queueDTO.swap_range_size != null)
             return false;
         if (mirrored != null ? !mirrored.equals(queueDTO.mirrored) : queueDTO.mirrored != null) return false;
+        if (dlq != null ? !dlq.equals(queueDTO.dlq) : queueDTO.dlq != null) return false;
+        if (nak_limit != null ? !nak_limit.equals(queueDTO.nak_limit) : queueDTO.nak_limit != null) return false;
 
         return true;
     }
@@ -164,6 +187,8 @@ public class QueueDTO extends StringIdDTO {
         result = 31 * result + (catchup_enqueue_rate != null ? catchup_enqueue_rate.hashCode() : 0);
         result = 31 * result + (max_enqueue_rate != null ? max_enqueue_rate.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
+        result = 31 * result + (dlq != null ? dlq.hashCode() : 0);
+        result = 31 * result + (nak_limit != null ? nak_limit.hashCode() : 0);
         return result;
     }
 }

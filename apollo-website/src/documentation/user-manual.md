@@ -362,6 +362,15 @@ memory.  Defaults to true.
   will be flow controlled once this enqueue rate is reached.  If not set
   then it is disabled
 
+* `dlq`: Is the dead letter queue configured for the destination.  A 
+   dead letter queue is used for storing messages that failed to get processed
+   by consumers.  If not set, then messages that fail to get processed
+   will be dropped.  If '*' appears in the name it will be replaced with 
+   the queue's id.
+
+* `max_enqueue_rate`: The maximum enqueue rate of the queue.  Producers
+  will be flow controlled once this enqueue rate is reached.  If not set
+  then it is disabled
 
 ##### Topics
 
