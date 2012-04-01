@@ -48,4 +48,43 @@
 
   </dependencies>
   
+  <profiles>
+    <profile>
+      <id>lib/tools.jar</id>
+      <activation>
+        <file>
+          <exists>${java.home}/lib/tools.jar</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.sun</groupId>
+          <artifactId>tools</artifactId>
+          <version>1.6.0</version>
+          <scope>system</scope>
+          <optional>true</optional>
+          <systemPath>${java.home}/lib/tools.jar</systemPath>
+        </dependency>
+      </dependencies>
+    </profile>    
+    <profile>
+      <id>../lib/tools.jar</id>
+      <activation>
+        <file>
+          <exists>${java.home}/../lib/tools.jar</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.sun</groupId>
+          <artifactId>tools</artifactId>
+          <version>1.6.0</version>
+          <scope>system</scope>
+          <optional>true</optional>
+          <systemPath>${java.home}/../lib/tools.jar</systemPath>
+        </dependency>
+      </dependencies>
+    </profile>    
+  </profiles>
+  
 </project>
