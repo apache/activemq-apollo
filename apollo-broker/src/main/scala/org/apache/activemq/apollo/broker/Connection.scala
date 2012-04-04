@@ -155,8 +155,8 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
     result.state_since = service_state.since
     result.protocol = protocol_handler.protocol
     result.connector = connector.id
-    result.remote_address = transport.getRemoteAddress.toString
-    result.local_address = transport.getLocalAddress.toString
+    result.remote_address = Option(transport.getRemoteAddress).map(_.toString).getOrElse(null)
+    result.local_address = Option(transport.getLocalAddress).map(_.toString).getOrElse(null)
     result.protocol_session_id = protocol_handler.session_id.getOrElse(null)
     val wf = transport.getProtocolCodec
     if( wf!=null ) {
