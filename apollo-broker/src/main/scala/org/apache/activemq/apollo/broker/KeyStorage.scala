@@ -67,7 +67,7 @@ class KeyStorage(val config:KeyStorageDTO) {
       if( config.key_alias!=null ) {
         key_managers = key_managers.map  { m =>
           m match {
-            case m:X509KeyManager => AliasFilteringKeyManager(config.key_alias, m)
+            case m:X509ExtendedKeyManager => AliasFilteringKeyManager(config.key_alias, m)
             case _ => m
           }
         }
@@ -78,11 +78,13 @@ class KeyStorage(val config:KeyStorageDTO) {
 
 }
 
-case class AliasFilteringKeyManager(alias: String, next:X509KeyManager) extends X509KeyManager {
+case class AliasFilteringKeyManager(alias: String, next:X509ExtendedKeyManager) extends X509ExtendedKeyManager {
+  override def chooseEngineClientAlias(keyType: Array[String], issuers: Array[Principal], engine: SSLEngine) = alias
+  override def chooseEngineServerAlias(keyType: String, issuers: Array[Principal], engine: SSLEngine) = alias
   def chooseClientAlias(keyType: Array[String], issuers: Array[Principal], socket: Socket) = alias
   def chooseServerAlias(keyType: String, issuers: Array[Principal], socket: Socket) = alias
-  def getClientAliases(keyType: String, issuers: Array[Principal]) = next.getClientAliases(keyType, issuers).filter(_==alias)
-  def getServerAliases(keyType: String, issuers: Array[Principal]) = next.getServerAliases(keyType, issuers).filter(_==alias)
+  def getClientAliases(keyType: String, issuers: Array[Principal]) = next.getClientAliases(keyType, issuers)
+  def getServerAliases(keyType: String, issuers: Array[Principal]) = next.getServerAliases(keyType, issuers)
   def getCertificateChain(alias: String) = next.getCertificateChain(alias)
   def getPrivateKey(alias: String) = next.getPrivateKey(alias)
 }
