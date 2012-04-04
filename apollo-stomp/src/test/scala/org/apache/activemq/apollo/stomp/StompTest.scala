@@ -2034,21 +2034,19 @@ class StompSecurityTest extends StompTestSupport {
     frame should include("message:Not authorized to consume from the queue")
   }
 
-//  test("Consume authorized and JMSXUserID is set on message") {
-//    connect("1.1", client,
-//      "login:can_consume_queue\n" +
-//      "passcode:can_consume_queue\n")
-//
-//    client.write(
-//      "SUBSCRIBE\n" +
-//      "destination:/queue/secure\n" +
-//      "id:0\n" +
-//      "\n")
-//
-//    val frame = client.receive()
-//    frame should startWith("MESSAGE\n")
-//    frame should include("JMSXUserID:can_send_create_queue\n")
-//  }
+  test("Consume authorized and JMSXUserID is set on message") {
+    connect("1.1", client,
+      "login:can_send_create_consume_queue\n" +
+      "passcode:can_send_create_consume_queue\n")
+
+    subscribe("0","/queue/sendsid")
+    async_send("/queue/sendsid", "hello")
+
+    val frame = client.receive()
+    frame should startWith("MESSAGE\n")
+    frame should include("JMSXUserID:can_send_create_consume_queue\n")
+    frame should include("sender-ip:127.0.0.1\n")
+  }
 }
 
 class StompSslSecurityTest extends StompTestSupport {

@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.broker.security
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,6 +14,7 @@ package org.apache.activemq.apollo.broker.security
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.activemq.apollo.broker.security
 
 import javax.security.auth.Subject
 import javax.security.auth.callback.CallbackHandler
@@ -27,6 +26,7 @@ import javax.security.auth.spi.LoginModule
 import java.net.{InetSocketAddress, SocketAddress}
 import java.io.{File, IOException}
 import org.apache.activemq.apollo.util.{FileCache, FileSupport, Log}
+import java.security.Principal
 
 /**
  * <p>
@@ -78,11 +78,14 @@ class SocketAddressLoginModule extends LoginModule {
 
   var white_list_file: Option[File] = None
   var black_list_file: Option[File] = None
+  private val principals = new ju.HashSet[Principal]()
+  private var subject:Subject = _
 
   /**
    * Overriding to allow for proper initialization. Standard JAAS.
    */
   def initialize(subject: Subject, callback_handler: CallbackHandler, shared_state: ju.Map[String, _], options: ju.Map[String, _]): Unit = {
+    this.subject = subject
     this.callback_handler = callback_handler
 
     val base_dir = if (System.getProperty(LOGIN_CONFIG) != null) {
@@ -112,10 +115,16 @@ class SocketAddressLoginModule extends LoginModule {
       return false;
     }
 
+    val address = address_callback.remote match {
+      case address:InetSocketAddress =>
+        address.getAddress.getHostAddress
+      case _ => null
+    }
+
     white_list_file match {
       case None =>
       case Some(file)=>
-        if( !matches(file, address_callback.remote) ) {
+        if( !matches(file, address) ) {
           throw new LoginException("Remote address is not whitelisted.")
         }
     }
@@ -123,37 +132,42 @@ class SocketAddressLoginModule extends LoginModule {
     black_list_file match {
       case None =>
       case Some(file)=>
-        if( matches(file, address_callback.remote) ) {
+        if( matches(file, address) ) {
           throw new LoginException("Remote address blacklisted.")
         }
+    }
+
+    if( address!=null ) {
+      principals.add(SourceAddressPrincipal(address))
     }
 
     return false
   }
 
-  def matches(file:File, address:SocketAddress):Boolean = {
-    val needle = address match {
-      case address:InetSocketAddress =>
-        address.getAddress.getHostAddress
-      case _ => return false
-    }
+  def matches(file:File, address:String):Boolean = {
+    if( address == null )
+      return false
 
     file_cache.get(file) match {
       case None => false
       case Some(haystack) =>
-        haystack.contains(needle)
+        haystack.contains(address)
     }
   }
 
   def commit: Boolean = {
+    subject.getPrincipals().addAll(principals)
     return true
   }
 
   def abort: Boolean = {
+    principals.clear
     return true
   }
 
   def logout: Boolean = {
+    subject.getPrincipals().removeAll(principals)
+    principals.clear
     return true
   }
 

@@ -607,6 +607,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
                   while(entry!=null && is_enqueue_buffer_maxed) {
                     entry = eval_drop(entry)
                   }
+                case _ =>
               }
             }
           }

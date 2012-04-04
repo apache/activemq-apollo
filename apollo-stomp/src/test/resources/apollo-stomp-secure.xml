@@ -19,6 +19,7 @@
 
   <authentication domain="StompSecurityTest"/>
   <access_rule allow="connect_group" action="connect"/>
+  <access_rule allow="can_send_create_consume_queue" kind="queue" action="send create consume"/>
   <access_rule allow="can_send_create_queue" kind="queue" action="send create"/>
   <access_rule allow="can_send_queue"        kind="queue" action="send"/>
   <access_rule allow="can_receive_queue"     kind="queue" action="receive"/>
@@ -42,7 +43,10 @@
   </virtual_host>
 
   <connector id="tcp" bind="tcp://0.0.0.0:0">
-    <stomp add_user_header="JMSXUserID"/>
+    <stomp>
+      <add_user_header kind="org.apache.activemq.jaas.UserPrincipal">JMSXUserID</add_user_header>
+      <add_user_header kind="org.apache.activemq.apollo.broker.security.SourceAddressPrincipal">sender-ip</add_user_header>
+    </stomp>
   </connector>
   <connector id="tcp2" bind="tcp://0.0.0.0:0">
   </connector>
