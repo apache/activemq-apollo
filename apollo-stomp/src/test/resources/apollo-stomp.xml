@@ -23,7 +23,9 @@
 
     <queue id="nacker.**" dlq="dlq.*" nak_limit="2"/>
     <queue id="mirrored.**" mirrored="true"/>
-    <topic id="queued.**" slow_consumer_policy="queue"/>
+    <topic id="queued.**" slow_consumer_policy="queue">
+      <subscription tail_buffer="4k"/>
+    </topic>
 
   </virtual_host>
 

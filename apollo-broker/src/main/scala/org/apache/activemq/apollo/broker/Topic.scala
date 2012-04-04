@@ -306,7 +306,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     auto_delete_after = config.auto_delete_after.getOrElse(30)
     if( auto_delete_after!= 0 ) {
       // we don't auto delete explicitly configured destinations.
-      if( !LocalRouter.is_wildcard_config(config) ) {
+      if( !LocalRouter.is_wildcard_destination(config.id) ) {
         auto_delete_after = 0
       }
     }
@@ -343,7 +343,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(new TempQueueBinding(consumer, address))
+            val queue = router._create_queue(new TempQueueBinding(consumer, address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
             consumer_queues += consumer->queue

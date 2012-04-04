@@ -76,7 +76,7 @@ trait Binding {
 
   def message_filter:BooleanExpression = ConstantExpression.TRUE
 
-  def config(host:VirtualHost):QueueDTO
+  def config(host:VirtualHost):QueueSettingsDTO
 
   override def toString = address.toString
 }
@@ -255,7 +255,7 @@ object TempQueueBinding {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class TempQueueBinding(key:AnyRef, address:DestinationAddress) extends Binding {
+case class TempQueueBinding(key:AnyRef, address:DestinationAddress, settings:QueueSettingsDTO) extends Binding {
   import TempQueueBinding._
 
   def binding_kind = TEMP_KIND
@@ -270,7 +270,7 @@ case class TempQueueBinding(key:AnyRef, address:DestinationAddress) extends Bind
 
   override def hashCode = if(key==null) 0 else key.hashCode
 
-  def config(host: VirtualHost) = new QueueDTO
+  def config(host: VirtualHost) = settings
 
   override def equals(o:Any):Boolean = o match {
     case x: TempQueueBinding => x.key == key

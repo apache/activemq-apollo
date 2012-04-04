@@ -34,7 +34,7 @@ import java.util.List;
 public class QueueStatusDTO extends ServiceStatusDTO {
 
     @XmlElement
-    public QueueDTO config;
+    public QueueSettingsDTO config;
 
     @XmlElement
     public DestinationDTO binding;

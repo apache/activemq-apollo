@@ -30,7 +30,13 @@ import java.util.List;
 @XmlRootElement(name = "topic")
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class TopicDTO extends StringIdDTO {
+public class TopicDTO {
+
+    /**
+     * A unique id of the topic.
+     */
+	@XmlAttribute
+	public String id;
 
     /**
      * Controls when the topic will auto delete.
@@ -47,6 +53,13 @@ public class TopicDTO extends StringIdDTO {
     public String slow_consumer_policy;
 
     /**
+     * The subscription settings that will be used for queues which are created
+     * for each subscription when the `slow_consumer_policy` is set to `queue`.
+     */
+    @XmlElement(name="subscription")
+    public QueueSettingsDTO subscription;
+
+    /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)
@@ -56,13 +69,14 @@ public class TopicDTO extends StringIdDTO {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof TopicDTO)) return false;
-        if (!super.equals(o)) return false;
 
         TopicDTO topicDTO = (TopicDTO) o;
 
         if (auto_delete_after != null ? !auto_delete_after.equals(topicDTO.auto_delete_after) : topicDTO.auto_delete_after != null)
             return false;
+        if (id != null ? !id.equals(topicDTO.id) : topicDTO.id != null) return false;
         if (other != null ? !other.equals(topicDTO.other) : topicDTO.other != null) return false;
+        if (subscription != null ? !subscription.equals(topicDTO.subscription) : topicDTO.subscription != null) return false;
         if (slow_consumer_policy != null ? !slow_consumer_policy.equals(topicDTO.slow_consumer_policy) : topicDTO.slow_consumer_policy != null)
             return false;
 
@@ -71,9 +85,10 @@ public class TopicDTO extends StringIdDTO {
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
+        int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (auto_delete_after != null ? auto_delete_after.hashCode() : 0);
         result = 31 * result + (slow_consumer_policy != null ? slow_consumer_policy.hashCode() : 0);
+        result = 31 * result + (subscription != null ? subscription.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }

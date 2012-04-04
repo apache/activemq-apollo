@@ -214,12 +214,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var loaded_size = 0
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
-  var config:QueueDTO = _
+  var config:QueueSettingsDTO = _
   var full_drop_policy:FullDropPolicy = Block
 
   def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
 
-  def configure(update:QueueDTO) = {
+  def configure(update:QueueSettingsDTO) = {
     def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
 
     producer_swapped_in.size_max += mem_size(update.tail_buffer, "640k") - Option(config).map{ config=>
@@ -242,17 +242,27 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         warn("Invalid 'full_drop_policy' configured for queue '%s': '%s'", id, update.full_policy)
         Block
     }
-    
-    auto_delete_after = update.auto_delete_after.getOrElse(30)
-    if( auto_delete_after!= 0 ) {
-      // we don't auto delete explicitly configured queues,
-      // non destination queues, or mirrored queues.
-      if( update.mirrored.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_config(update) ) {
-        auto_delete_after = 0
-      }
+
+    update match {
+      case update:QueueDTO =>
+        auto_delete_after = update.auto_delete_after.getOrElse(30)
+        if( auto_delete_after!= 0 ) {
+          // we don't auto delete explicitly configured queues,
+          // non destination queues, or mirrored queues.
+          if( update.mirrored.getOrElse(false) || !binding.isInstanceOf[QueueDomainQueueBinding] || !LocalRouter.is_wildcard_destination(update.id) ) {
+            auto_delete_after = 0
+          }
+        }
+      case _ =>
     }
     config = update
     this
+  }
+
+  def mirrored = config match {
+    case config:QueueDTO =>
+      config.mirrored.getOrElse(false)
+    case _ => false
   }
 
   def get_queue_metrics:DestMetricsDTO = {
@@ -1149,8 +1159,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   }
 
   def connect (connect_address:ConnectAddress, producer:BindableDeliveryProducer) = {
-    import OptionSupport._
-    if( config.mirrored.getOrElse(false) ) {
+    if( mirrored ) {
       // this is a mirrored queue.. actually have the produce bind to the topic, instead of the
       val topic_address = new SimpleAddress("topic", binding.address.path)
       val topic = router.local_topic_domain.get_or_create_destination(topic_address, null).success
@@ -1165,8 +1174,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   }
 
   def disconnect (producer:BindableDeliveryProducer) = {
-    import OptionSupport._
-    if( config.mirrored.getOrElse(false) ) {
+    if( mirrored ) {
       val topic_address = new SimpleAddress("topic", binding.address.path)
       val topic = router.local_topic_domain.get_or_create_destination(topic_address, null).success
       topic.disconnect(producer)

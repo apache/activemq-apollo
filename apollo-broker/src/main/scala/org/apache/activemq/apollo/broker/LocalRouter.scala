@@ -153,11 +153,11 @@ object LocalRouter extends Log {
 
   val destination_parser = new DestinationParser
 
-  def is_wildcard_config(dto:StringIdDTO) = {
-    if( dto.id == null ) {
+  def is_wildcard_destination(id:String) = {
+    if( id == null ) {
       true
     } else {
-      val path = destination_parser.decode_path(dto.id)
+      val path = destination_parser.decode_path(id)
       PathParser.containsWildCards(path)
     }
   }
@@ -740,8 +740,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       assert( !PathParser.containsWildCards(path) )
       add_destination(path, queue)
 
-      import OptionSupport._
-      if( queue.config.mirrored.getOrElse(false) ) {
+      if( queue.mirrored ) {
         // hook up the queue to be a subscriber of the topic.
         val topic = local_topic_domain.get_or_create_destination(SimpleAddress("topic", path), null).success
         topic.bind(SimpleAddress("queue", path), queue)
@@ -752,8 +751,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       val path = queue.address.path
       remove_destination(path, queue)
 
-      import OptionSupport._
-      if( queue.config.mirrored.getOrElse(false) ) {
+      if( queue.mirrored ) {
         // unhook the queue from the topic
         val topic = local_topic_domain.get_or_create_destination(SimpleAddress("topic", path), null).success
         topic.unbind(queue, false)
@@ -818,22 +816,22 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   protected def create_configure_destinations {
     import collection.JavaConversions._
-    def create_configured_dests(list: ArrayList[_ <: StringIdDTO], d: Domain[_], to_address: (Path) => DestinationAddress) = {
-      list.foreach { dto =>
-        if (dto.id != null) {
+    def create_configured_dests(list: Traversable[String], d: Domain[_], to_address: (Path) => DestinationAddress) = {
+      list.foreach { id =>
+        if (id != null) {
           try {
-            val path = destination_parser.decode_path(dto.id)
+            val path = destination_parser.decode_path(id)
             if (!PathParser.containsWildCards(path)) {
               d.get_or_create_destination(to_address(path), null)
             }
           } catch {
-            case x:PathException => warn(x, "Invalid destination id '%s'", dto.id)
+            case x:PathException => warn(x, "Invalid destination id '%s'", id)
           }
         }
       }
     }
-    create_configured_dests(virtual_host.config.queues, local_queue_domain, (path) => SimpleAddress("queue", path))
-    create_configured_dests(virtual_host.config.topics, local_topic_domain, (path) => SimpleAddress("topic", path))
+    create_configured_dests(virtual_host.config.queues.map(_.id), local_queue_domain, (path) => SimpleAddress("queue", path))
+    create_configured_dests(virtual_host.config.topics.map(_.id), local_topic_domain, (path) => SimpleAddress("topic", path))
 
     virtual_host.config.dsubs.foreach { dto =>
       if (dto.id != null && ( dto.topic!=null || !dto.topics.isEmpty) ) {

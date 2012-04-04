@@ -389,6 +389,19 @@ memory.  Defaults to true.
   the queue is considered full once it's `tail_buffer` fills up.
   Defaults to 'block' if not specified.
 
+Example configuraiton:
+
+{pygmentize:: xml}
+...
+  <virtual_host id="default">
+    ...
+    <queue id="app1.**" dlq="dlq.*" nak_limit="3" auto_delete_after="0"/>
+    ...
+  </virtual_host>
+...
+{pygmentize}
+
+
 ##### Topics
 
 When a new topic is first created in the broker, it's configuration will be
@@ -414,6 +427,25 @@ A `topic` element may be configured with the following attributes:
 * `auto_delete_after`: If not set to `0` then the topic will automatically
   delete once there have been no consumers or producers on it
   for the configured number of seconds.  Defaults to 30 if not set.
+
+A `topic` that has the `slow_consumer_policy` set to `queue` can customize
+the settings of the per subscription queues by adding a nested `subscription`
+element.  The `subscription` element supports the following configuration
+attributes of the `queue` element: `tail_buffer`, `persistent`, `swap`
+`swap_range_size`, `quota`, `full_policy`, `fast_delivery_rate`, 
+`catchup_enqueue_rate`, `max_enqueue_rate`, `dlq`, `nak_limit`.  Example:
+
+{pygmentize:: xml}
+...
+  <virtual_host id="default">
+    ...
+    <topic id="example" slow_consumer_policy="queue">
+      <subscription tail_buffer="4k"/>
+    </topic>
+    ...
+  </virtual_host>
+...
+{pygmentize}
 
 ##### Durable Subscriptions
 
