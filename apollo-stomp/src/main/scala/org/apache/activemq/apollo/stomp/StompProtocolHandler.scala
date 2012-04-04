@@ -558,7 +558,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
   var producerRoutes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
     override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
-      host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+      host.dispatch_queue {
+        host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+      }
     }
   }
 
