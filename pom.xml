@@ -96,9 +96,9 @@
     <xbean-version>3.4</xbean-version>
     <felix-version>1.0.0</felix-version>
 
-    <hawtdispatch-version>1.10-SNAPSHOT</hawtdispatch-version>
+    <hawtdispatch-version>1.10</hawtdispatch-version>
     <hawtbuf-version>1.9</hawtbuf-version>
-    <stompjms-version>1.9</stompjms-version>
+    <stompjms-version>1.10</stompjms-version>
     
     <bdb-version>5.0.34</bdb-version>
 
