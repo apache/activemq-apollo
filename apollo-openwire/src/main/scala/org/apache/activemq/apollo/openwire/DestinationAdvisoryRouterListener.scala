@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.openwire
 
 import command._
-import org.apache.activemq.apollo.dto.DestinationDTO
 import org.apache.activemq.apollo.broker.security.SecurityContext
 import collection.mutable.HashMap
 import DestinationConverter._
@@ -177,22 +176,23 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
     val message = delivery.message.asInstanceOf[OpenwireMessage].message
     val dest = to_destination_dto(message.getDestination,null)
     val key = dest.toList
+    if( router.virtual_host.service_state.is_started ) {
+      val route = producerRoutes.get(key) match {
+        case null =>
+          // create the producer route...
+          val route = new ProducerRoute
+          producerRoutes.put(key, route)
+          val rc = router.connect(dest, route, null)
+          rc match {
+            case Some(failure) => warn("Could not connect to advisory topic '%s' due to: %s", message.getDestination, failure)
+            case None =>
+          }
+          route
 
-    val route = producerRoutes.get(key) match {
-      case null =>
-        // create the producer route...
-        val route = new ProducerRoute
-        producerRoutes.put(key, route)
-        val rc = router.connect(dest, route, null)
-        rc match {
-          case Some(failure) => warn("Could not connect to advisory topic: " + message.getDestination)
-          case None =>
-        }
-        route
-
-      case route => route
+        case route => route
+      }
+      route.overflow_sink.offer(delivery)
     }
-    route.overflow_sink.offer(delivery)
   }
 
 }
