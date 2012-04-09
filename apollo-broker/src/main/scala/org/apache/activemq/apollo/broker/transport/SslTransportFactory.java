@@ -24,6 +24,7 @@ import org.fusesource.hawtdispatch.transport.TcpTransportServer;
 
 import javax.net.ssl.SSLContext;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -44,7 +45,7 @@ public class SslTransportFactory extends TcpTransportFactory {
                 @Override
                 protected TcpTransport createTransport() {
                     TcpTransport transport = super.createTransport();
-                    IntrospectionSupport.setProperties(transport, options);
+                    IntrospectionSupport.setProperties(transport, new HashMap(options));
                     return transport;
                 }
             }.protocol(protocol);

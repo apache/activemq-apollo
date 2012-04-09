@@ -52,7 +52,7 @@ public class TcpTransportFactory implements TransportFactory.Provider {
         if (server == null) return null;
 
         Map<String, String> copy = new HashMap<String, String>(options);
-        IntrospectionSupport.setProperties(server, options);
+        IntrospectionSupport.setProperties(server, new HashMap(options));
         return server;
     }
 
@@ -85,7 +85,7 @@ public class TcpTransportFactory implements TransportFactory.Provider {
             @Override
             protected TcpTransport createTransport() {
                 TcpTransport transport = super.createTransport();
-                IntrospectionSupport.setProperties(transport, options);
+                IntrospectionSupport.setProperties(transport, new HashMap(options));
                 return transport;
             }
         };

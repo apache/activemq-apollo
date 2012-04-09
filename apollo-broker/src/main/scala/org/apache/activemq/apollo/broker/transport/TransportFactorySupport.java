@@ -20,6 +20,7 @@ import org.fusesource.hawtdispatch.transport.Transport;
 import org.apache.activemq.apollo.util.IntrospectionSupport;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -28,7 +29,7 @@ import java.util.Map;
 public class  TransportFactorySupport {
 
     static public Transport configure(Transport transport, Map<String, String> options) throws IOException {
-        IntrospectionSupport.setProperties(transport, options);
+        IntrospectionSupport.setProperties(transport, new HashMap(options));
         return transport;
     }
 
