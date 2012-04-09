@@ -215,7 +215,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def swapped_in_size_max = this.producer_swapped_in.size_max + this.consumer_swapped_in.size_max
 
   var config:QueueSettingsDTO = _
-  var full_drop_policy:FullDropPolicy = Block
+  var full_policy:FullDropPolicy = Block
 
   def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
 
@@ -234,12 +234,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,"-1")
     tune_quota = mem_size(update.quota,"-1")
 
-    full_drop_policy = Option(update.full_policy).getOrElse("none").toLowerCase match {
+    full_policy = Option(update.full_policy).getOrElse("block").toLowerCase match {
       case "drop head" => DropHead
       case "drop tail" => DropTail
       case "block" => Block
       case _ =>
-        warn("Invalid 'full_drop_policy' configured for queue '%s': '%s'", id, update.full_policy)
+        warn("Invalid 'full_policy' configured for queue '%s': '%s'", id, update.full_policy)
         Block
     }
 
@@ -536,7 +536,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     def is_enqueue_buffer_maxed = (producer_swapped_in.size >= producer_swapped_in.size_max)
 
     def full = if( service_state.is_started ) {
-      if ( full_drop_policy eq Block ) {
+      if ( full_policy eq Block ) {
         is_enqueue_buffer_maxed || is_enqueue_throttled || is_quota_exceeded
       } else {
         // we are never full since we can just drop messages at will.
@@ -556,7 +556,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         // We may need to drop this enqueue or head entries due
         // to the drop policy.
         var drop = false
-        if( full_drop_policy ne Block ) {
+        if( full_policy ne Block ) {
 
           def eval_drop(entry:QueueEntry) = entry.state match {
             case state: entry.Loaded =>
@@ -586,7 +586,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           if( tune_persistent ) {
             var exceeded = is_quota_exceeded
             if( exceeded) {
-              full_drop_policy match {
+              full_policy match {
                 case Block =>
                 case DropTail =>
                   drop = true // we can drop this enqueue attempt.
@@ -599,7 +599,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             }
           } else {
             if( is_enqueue_buffer_maxed) {
-              full_drop_policy match {
+              full_policy match {
                 case DropTail =>
                   drop = true // we can drop this enqueue attempt.
                 case DropHead =>

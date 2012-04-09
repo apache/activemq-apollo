@@ -374,7 +374,7 @@ memory.  Defaults to true.
    configured or dropped.  If set to less than one, then the message
    will never be considered to be a poison message. Defaults to zero.
 
-* `full_drop_policy`: Once the queue is full, the `full_policy` 
+* `full_policy`: Once the queue is full, the `full_policy` 
   controls how the   queue behaves when additional messages attempt to 
   be enqueued onto the queue.
   
