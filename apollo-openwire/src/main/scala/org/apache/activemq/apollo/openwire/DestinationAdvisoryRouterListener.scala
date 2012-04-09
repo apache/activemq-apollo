@@ -58,6 +58,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
   final val messageIdGenerator = new LongSequenceGenerator
 
   advisoryProducerId.setConnectionId(new UTF8Buffer(ID_GENERATOR.generateId))
+  var enabled = false
 
 
   class ProducerRoute extends DeliveryProducerRoute(router) {
@@ -103,25 +104,28 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
   def on_bind(dest: DomainDestination, consumer: DeliveryConsumer, security: SecurityContext) = {
     val destination = to_activemq_destination(Array(dest.address))
-    if (destination!=null && AdvisorySupport.isDestinationAdvisoryTopic(destination) && !destination_advisories.isEmpty) {
+    if (destination!=null && AdvisorySupport.isDestinationAdvisoryTopic(destination)) {
       // replay the destination advisories..
-      val producer = new ProducerRoute {
-        override def on_connected = {
-          overflow_sink.refiller = ^{
-            // once the sink is not overflowed.. then we can disconnect
-            if(!overflow_sink.overflowed) {
-              unbind(consumer::Nil)
-              overflow_sink.refiller = NOOP
+      enabled = true
+      if( !destination_advisories.isEmpty ) {
+        val producer = new ProducerRoute {
+          override def on_connected = {
+            overflow_sink.refiller = ^{
+              // once the sink is not overflowed.. then we can disconnect
+              if(!overflow_sink.overflowed) {
+                unbind(consumer::Nil)
+                overflow_sink.refiller = NOOP
+              }
             }
+            overflow_sink.refiller.run()
+            super.on_connected
           }
-          overflow_sink.refiller.run()
-          super.on_connected
         }
-      }
-      producer.bind(consumer::Nil)
-      producer.connected()
-      for( info <- destination_advisories.values ) {
-        producer.overflow_sink.offer(info)
+        producer.bind(consumer::Nil)
+        producer.connected()
+        for( info <- destination_advisories.values ) {
+          producer.overflow_sink.offer(info)
+        }
       }
     }
   }
@@ -176,7 +180,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
     val message = delivery.message.asInstanceOf[OpenwireMessage].message
     val dest = to_destination_dto(message.getDestination,null)
     val key = dest.toList
-    if( router.virtual_host.service_state.is_started ) {
+    if( enabled && router.virtual_host.service_state.is_started ) {
       val route = producerRoutes.get(key) match {
         case null =>
           // create the producer route...
