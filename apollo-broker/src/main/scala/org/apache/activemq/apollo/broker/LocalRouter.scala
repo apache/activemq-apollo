@@ -936,13 +936,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   protected def _stop(on_completed: Task) = {
-//    val tracker = new LoggingTracker("router shutdown", virtual_host.console_log, dispatch_queue)
     queues_by_store_id.valuesIterator.foreach { queue=>
       queue.stop(NOOP)
-//      tracker.stop(queue)
     }
-//    tracker.callback(on_completed)
-    on_completed.run
+    on_queues_destroyed_actions ::= ^{
+      on_completed.run
+    }
+    check_on_queues_destroyed_actions
   }
 
 
@@ -1288,8 +1288,33 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     None
   }
 
+  var pending_queue_destroys = 0
+  var on_queues_destroyed_actions = List[Runnable]()
+
+  def on_queue_destroy_start = {
+    dispatch_queue.assertExecuting()
+    pending_queue_destroys += 1
+  }
+
+  def on_queue_destroy_end = {
+    dispatch_queue.assertExecuting()
+    assert(pending_queue_destroys > 0)
+    pending_queue_destroys -= 1
+    check_on_queues_destroyed_actions
+  }
+
+  def check_on_queues_destroyed_actions = {
+    if( pending_queue_destroys==0 && !on_queues_destroyed_actions.isEmpty) {
+      val actions = on_queues_destroyed_actions
+      on_queues_destroyed_actions = Nil
+      for( action <- actions ) {
+        action.run()
+      }
+    }
+  }
 
   def _destroy_queue(queue: Queue) {
+    on_queue_destroy_start
     queue.stop(^{
       var metrics = queue.get_queue_metrics
       dispatch_queue {
@@ -1310,10 +1335,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         queues_by_store_id.remove(queue.store_id)
         if (queue.tune_persistent) {
           queue.dispatch_queue {
-            virtual_host.store.remove_queue(queue.store_id) {
-              x => Unit
+            virtual_host.store.remove_queue(queue.store_id) { x =>
+              dispatch_queue {
+                on_queue_destroy_end
+              }
             }
           }
+        } else {
+          on_queue_destroy_end
         }
       }
     })

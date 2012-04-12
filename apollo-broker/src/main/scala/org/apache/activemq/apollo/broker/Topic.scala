@@ -429,7 +429,9 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             case x:TempQueueBinding =>
               queue.dispatch_queue {
                 val metrics = queue.get_queue_metrics
-                router._destroy_queue(queue)
+                router.dispatch_queue {
+                  router._destroy_queue(queue)
+                }
                 dispatch_queue {
                   topic_metrics.dequeue_item_counter += metrics.dequeue_item_counter
                   topic_metrics.dequeue_size_counter += metrics.dequeue_size_counter
