@@ -184,18 +184,20 @@ and port to determine to which local interfaces to bind.  For example:
 The TCP URI also supports several query parameters to fine tune the
 settings used on the socket.  The supported parameters are:
 
+* `backlog` : Sets the listen backlog size.  Defaults to 100.
+
 * `receive_buffer_size` : Sets the size of the internal socket receive 
-   buffer.  Defaults to 65536 (64k)
+   buffer (aka setting the socket's SO_RCVBUF).  Defaults to 65536 (64k)
 
-* `send_buffer_size` : Sets the size of the internal socket send buffer.  
-   Defaults to 65536 (64k)
+* `send_buffer_size` : Sets the size of the internal socket send buffer
+  (aka setting the socket's SO_SNDBUF).  Defaults to 65536 (64k)
 
-* `keep_alive` : Enable or disable the SO_KEEPALIVE socket option.  
-   Defaults to true.
+* `keep_alive` : Enable or disable the SO_KEEPALIVE socket option  
+   (aka setting the socket's SO_KEEPALIVE). Defaults to true.
 
 * `traffic_class` : Sets traffic class or type-of-service octet in the IP 
-  header for packets sent from the transport.  Defaults to `8` which
-  means the traffic should be optimized for throughput.
+  header for packets sent from the transport (aka setting the socket's IP_TOS).  
+  Defaults to `8` which means the traffic should be optimized for throughput.
 
 * `max_read_rate` : Sets the maximum bytes per second that this transport will
   receive data at.  This setting throttles reads so that the rate is not exceeded.
