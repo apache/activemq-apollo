@@ -72,7 +72,7 @@
     <dependency>
       <groupId>com.wordnik</groupId>
       <artifactId>swagger-jaxrs_2.9.1</artifactId>
-      <version>1.02-SNAPSHOT</version>
+      <version>${swagger-version}</version>
       <exclusions>
         <exclusion>
           <groupId>javax.servlet</groupId>
