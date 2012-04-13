@@ -1,0 +1,55 @@
+---
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blog_post: true
+title: Apollo 1.2
+author: Hiram Chirino
+author_url: http://fusesource.com
+created_at: 2012-04-19 12:06:40 -0000
+--- 
+
+The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
+availability of Apollo 1.2. ActiveMQ Apollo is a faster, more reliable, easier 
+to maintain messaging broker built from the foundations of the original ActiveMQ. 
+
+This release fixes several bugs, improves performance and introduces a few
+new features like:
+
+ * Support Dead Letter Queues
+ * Support dropping messages on queues that are full.
+ * Allow customizing the settings of the per subscription queues created when slow_consumer_policy="queue" on a topic
+ * Support allowing cross origin resource sharing (CORS) of web admin APIs and websocket APIs.
+ * Experimental support for lossy UDP based messaging
+ * Experimental support for Swagger based REST API documentation acceisble at http://localhost:61680/api/index.html
+ * Include examples of how to use MQTT on Apollo
+ * Added a total disk space used to the reporting metrics
+ * You can now select the private key to be used for SSL in the keystore
+ * Sender IP address is now passed as a JAAS principal
+ * You can now force client side certs on SSL connections 
+
+For further information see:
+
+* [Download](${website_base_url}/download.html)
+* [Issues Fixed](https://issues.apache.org/jira/secure/ReleaseNote.jspa?version=12319854&styleName=Text&projectId=12311310&Create=Create)
+* [Documentation](${website_base_url}/versions/1.2/website/documentation)
+
+[Feedback](http://activemq.apache.org/community/index.html) is always welcomed! 
+
+
+
+
+
+
