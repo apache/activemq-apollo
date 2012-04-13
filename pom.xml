@@ -116,7 +116,7 @@
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.7</jersey-version>
     <snakeyaml-version>1.7</snakeyaml-version>
-    <swagger-version>1.02-SNAPSHOT</swagger-version>
+    <swagger-version>1.0.1</swagger-version>
       
     <!-- maven plugin versions -->
     <maven-scala-plugin-version>2.15.2</maven-scala-plugin-version>
