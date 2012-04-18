@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.broker.web
 
 import javax.servlet._
 import http.{HttpServletRequest, HttpServletResponse}
+import java.util.concurrent.TimeUnit._
 
 /**
  * Servlet filter which adds a 'Access-Control-Allow-Origin: *' HTTP header
@@ -33,11 +34,22 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
   override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) = {
     response match {
       case response: HttpServletResponse =>
+        val req = request.asInstanceOf[HttpServletRequest]
         if( allow_any ) {
+          if ( req.getMethod == "OPTIONS" ) {
+            response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
+            response.addHeader("Access-Control-Request-Headers", "");
+            response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
+          }
           response.addHeader("Access-Control-Allow-Origin", "*");
         } else {
           for( origin <- Option(request.asInstanceOf[HttpServletRequest].getHeader("Origin")) ) {
             if ( allowed.contains(origin) ) {
+              if ( req.getMethod == "OPTIONS" ) {
+                response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
+                response.addHeader("Access-Control-Request-Headers", "");
+                response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
+              }
               response.addHeader("Access-Control-Allow-Origin", origin);
             }
           }
