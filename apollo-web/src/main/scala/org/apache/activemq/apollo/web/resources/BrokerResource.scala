@@ -563,7 +563,9 @@ class BrokerResource() extends Resource {
       val router: LocalRouter = host
       val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       admining(node) {
-        router._destroy_queue(node)
+        host.dispatch_queue {
+          router._destroy_queue(node)
+        }
       }
     }
   }
@@ -614,7 +616,9 @@ class BrokerResource() extends Resource {
       val router: LocalRouter = host
       val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       admining(node) {
-        router._destroy_queue(node)
+        host.dispatch_queue {
+          router._destroy_queue(node)
+        }
       }
     }
   }
