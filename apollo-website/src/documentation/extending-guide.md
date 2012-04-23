@@ -65,7 +65,7 @@ interface. Here's a list of extension points supported by Apollo:
   `org.apache.activemq.apollo.broker.protocol.ProtocolCodecFactory.Provider`
 -->
 
-### Extending the Data/Configuraiton model with new Objects
+### Extending the Data Model
 
 If you want to extend the Apollo xml configuration model to understand some
 custom JAXB object you have defined in your own packages, then you need
@@ -89,6 +89,85 @@ class Module extends DtoModule {
 Example `META-INF/services/org.apache.activemq.apollo/dto-module.index` resource:
 
     org.example.Module
+
+
+#### Polymorphic Data/Configuraiton objects Objects
+
+The following objects in the Apollo data model can be extended:
+
+* [`VirtualHostDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/VirtualHostDTO.html)
+* [`ConnectorTypeDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/ConnectorTypeDTO.html)
+* [`ConnectionStatusDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/ConnectionStatusDTO.html)
+* [`ProtocolDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/ProtocolDTO.html)
+* [`StoreDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/StoreDTO.html)
+* [`StoreStatusDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/StoreStatusDTO.html)
+
+<!-- Not sure we should expose this one...
+* [`DestinationDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/DestinationDTO.html)
+-->
+
+### Using a custom `VirtualHost` implementation
+
+Virtual hosts control the lifescycle of destinations and how producers 
+and consumers are connected to those destinations.  You can subclass the 
+default virtual host implemenation to override the default behaviour
+that Apollo provides.
+
+To create your own VirtualHost extension, you first extend the [`org.apache.activemq.apollo.broker.VirtualHost`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.VirtualHost) class and override it's implemenation suite your needs.  Example:
+
+    package example;
+    class MyVirtualHost(broker: Broker, id:String) extends VirtualHost(broker, id) {
+      // ... todo: override
+    }
+
+Then, to allow an `apollo.xml` configration file you your extended version of the virtual host you need to
+extend the [`VirtualHostDTO`](api/apollo-dto/org/apache/activemq/apollo/dto/VirtualHostDTO.html) class to define 
+a new XML emlement for your new virtual host type.  
+
+    package example;
+    @XmlRootElement(name = "my_virtual_host")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    class MyVirtualHostDTO extends VirtualHostDTO {
+      // example config attribute
+      @XmlAttribute(name="trace")
+      public Boolean trace;
+    }
+
+Since this is extending the data model, we follow the direction in the 
+['Extending the Data Model'](#Extending_the_Data_Model) section of this guide and add a
+`Module` class:
+
+    package example;
+    class Module extends DtoModule {
+      def dto_package = "example"
+      def extension_classes = Array(classOf[MyVirtualHostDTO])
+    }
+
+and a `META-INF/services/org.apache.activemq.apollo/dto-module.index` resource file containing:
+
+    example.Module
+
+Now that we can define an XML element to configure the custom virtual host and create it, 
+lets define a factory class which will be used to create a `MyVirtualHost` when a `<my_virtual_host>`
+xml element is used in the configuration file:
+
+    package example;
+    object MyVirtualHostFactory extends VirtualHostFactory {
+
+      def create(broker: Broker, dto: VirtualHostDTO): VirtualHost = dto match {
+        case dto:MyVirtualHostDTO =>
+          val rc = new MyVirtualHostDTO(broker, dto.id)
+          rc.config = dto
+          rc
+        case _ => null
+      }
+    }
+
+
+and a `META-INF/services/org.apache.activemq.apollo/virtual-host-factory.index` resource file containing:
+
+    example.MyVirtualHostFactory
+  
 
 ### Plugging into the Broker Lifecycle
 
