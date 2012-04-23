@@ -411,7 +411,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
           // Have we been idle that whole time?
           if( idled_at == idled_at_start ) {
-            router._destroy_queue(this)
+            virtual_host.dispatch_queue {
+              router._destroy_queue(this)
+            }
           }
         }
       }
