@@ -12,6 +12,7 @@ all the supported extension points.
 Just create a `.jar` out of out code and add it to the `${apollo.home}/lib`
 directory.  When Apollo restarts it will add the new jar to it's class path.
 
+
 ### Extension Discovery
 
 Apollo discovers your extensions by looking for extension resource files in
@@ -24,38 +25,38 @@ in the `broker-core` module.  It's contents are:
     org.apache.activemq.apollo.broker.protocol.UdpProtocolFactory
     org.apache.activemq.apollo.broker.protocol.RawProtocolFactory
 
-All three of the the listed classes implement the `ProtocolFactory` interface.
-Here's a list of extension points supported by Apollo:
+All three of the the listed classes implement the [`ProtocolFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.protocol.ProtocolFactory) 
+interface. Here's a list of extension points supported by Apollo:
 
 * Data Model: `META-INF/services/org.apache.activemq.apollo/dto-module.index` ->
-  `org.apache.activemq.apollo.util.DtoModule`
+  [`org.apache.activemq.apollo.util.DtoModule`](api/apollo-util/index.html#org.apache.activemq.apollo.util.DtoModule)
 
 * Transports: `META-INF/services/org.apache.activemq.apollo/transport-factory.index` ->
-  `org.apache.activemq.apollo.broker.transport.TransportFactory.Provider`
+  [`org.apache.activemq.apollo.broker.transport.TransportFactory.Provider`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.transport.TransportFactory$$Provider)
 
 * Protocols: `META-INF/services/org.apache.activemq.apollo/protocol-factory.index` ->
-  `org.apache.activemq.apollo.broker.protocol.ProtocolFactory`
+  [`org.apache.activemq.apollo.broker.protocol.ProtocolFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.protocol.ProtocolFactory)
 
 * Broker Factories: `META-INF/services/org.apache.activemq.apollo/broker-factory.index` ->
-  `org.apache.activemq.apollo.broker.BrokerFactoryTrait`
+  [`org.apache.activemq.apollo.broker.BrokerFactoryTrait`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.BrokerFactoryTrait)
 
 * Connectors: `META-INF/services/org.apache.activemq.apollo/connector-factory.index` ->
-  `org.apache.activemq.apollo.broker.ConnectorFactory`
+  [`org.apache.activemq.apollo.broker.ConnectorFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.ConnectorFactory)
 
 * Virtual Hosts: `META-INF/services/org.apache.activemq.apollo/virtual-host-factory.index` ->
-  `org.apache.activemq.apollo.broker.VirtualHostFactory`
+  [`org.apache.activemq.apollo.broker.VirtualHostFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.VirtualHostFactory)
 
 * Route Listeners: `META-INF/services/org.apache.activemq.apollo/router-listener-factory.index` ->
-  `org.apache.activemq.apollo.broker.RouterListenerFactory`
+  [`org.apache.activemq.apollo.broker.RouterListenerFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.RouterListenerFactory)
 
 * Stores: `META-INF/services/org.apache.activemq.apollo/store-factory.index` ->
-  `org.apache.activemq.apollo.broker.store.StoreFactory`
+  [`org.apache.activemq.apollo.broker.store.StoreFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.store.StoreFactory)
 
 * Web Admin Components: `META-INF/services/org.apache.activemq.apollo/web-module.index` ->
   `org.apache.activemq.apollo.web.WebModule`
 
 * Web Servers -> `META-INF/services/org.apache.activemq.apollo/web-server-factory.index`->
-  `org.apache.activemq.apollo.broker.web.WebServerFactory`
+  [`org.apache.activemq.apollo.broker.web.WebServerFactory`](api/apollo-broker/index.html#org.apache.activemq.apollo.broker.web.WebServerFactory)
 
 <!-- These might go away...
 * `META-INF/services/org.apache.activemq.apollo/binding-factory.index`:
@@ -91,7 +92,8 @@ Example `META-INF/services/org.apache.activemq.apollo/dto-module.index` resource
 
 ### Plugging into the Broker Lifecycle
 
-You can implement custom [Service][] objects which get started / stopped when 
+You can implement custom [Service](api/apollo-util/index.html#org.apache.activemq.apollo.util.Service) 
+objects which get started / stopped when 
 the broker starts and stops.  Once you have packaged your custom
 service, and added it to the Apollo class path, you can 
 update the `apollo.xml` to add the service so it gets started when 
