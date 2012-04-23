@@ -38,7 +38,10 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
         if( allow_any ) {
           if ( req.getMethod == "OPTIONS" ) {
             response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
-            response.addHeader("Access-Control-Request-Headers", "");
+            req.getHeader("Access-Control-Request-Headers") match {
+              case headers:String=> response.addHeader("Access-Control-Allow-Header", headers);
+              case _ =>
+            }
             response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
           }
           response.addHeader("Access-Control-Allow-Origin", "*");
@@ -47,7 +50,10 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
             if ( allowed.contains(origin) ) {
               if ( req.getMethod == "OPTIONS" ) {
                 response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
-                response.addHeader("Access-Control-Request-Headers", "");
+                req.getHeader("Access-Control-Request-Headers") match {
+                  case headers:String=> response.addHeader("Access-Control-Allow-Header", headers);
+                  case _ =>
+                }
                 response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
               }
               response.addHeader("Access-Control-Allow-Origin", origin);
