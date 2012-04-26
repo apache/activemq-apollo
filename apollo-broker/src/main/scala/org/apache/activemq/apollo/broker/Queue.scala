@@ -1027,6 +1027,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             entry.increment_nack
             entry.entry.redelivered
             entry.nack
+          case Undelivered =>
+            entry.nack
           case Poisoned =>
             entry.increment_nack
             entry.entry.redelivered
@@ -1040,8 +1042,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             } else {
               entry.nack
             }
-          case Undelivered =>
-            entry.increment_nack
         }
         if( uow!=null ) {
           uow.release()

@@ -147,10 +147,19 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     }
   }
 
-  def wait_for_receipt(id:String, c: StompClient = client): Unit = {
-    val frame = c.receive()
-    frame should startWith("RECEIPT\n")
-    frame should include("receipt-id:"+id+"\n")
+  def wait_for_receipt(id:String, c: StompClient = client, discard_others:Boolean=false): Unit = {
+    if( !discard_others ) {
+      val frame = c.receive()
+      frame should startWith("RECEIPT\n")
+      frame should include("receipt-id:"+id+"\n")
+    } else {
+      while(true) {
+        val frame = c.receive()
+        if( frame.startsWith("RECEIPT\n") && frame.indexOf("receipt-id:"+id+"\n")>=0 ) {
+          return
+        }
+      }
+    }
   }
 }
 
@@ -518,6 +527,43 @@ class Stomp11HeartBeatTest extends StompTestSupport {
   }
 
 }
+
+class StompPersistentQueueTest extends StompTestSupport {
+
+  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+
+  test("(APLO-198) Apollo sometimes does not send all the messages in a queue") {
+    connect("1.1")
+    for( i <- 0 until 10000 ) {
+      async_send("/queue/BIGQUEUE", "message #"+i)
+    }
+    sync_send("/queue/BIGQUEUE", "END")
+    client.close
+    
+    var counter = 0
+    for( i <- 0 until 100 ) {
+      connect("1.1")
+      subscribe("1", "/queue/BIGQUEUE", "client", false, "", false)
+      for( j <- 0 until 100 ) {
+        assert_received("message #"+counter)(true)
+        counter+=1
+      }
+      client.write(
+        "DISCONNECT\n" +
+        "receipt:disco\n" +
+        "\n")
+      wait_for_receipt("disco", client, true)
+      client.close
+    }
+
+    connect("1.1")
+    subscribe("1", "/queue/BIGQUEUE", "client")
+    assert_received("END")(true)
+
+  }
+
+}
+
 class StompDestinationTest extends StompTestSupport {
 
   test("Browsing queues does not cause AssertionError.  Reported in APLO-156") {
