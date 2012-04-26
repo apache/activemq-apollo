@@ -23,7 +23,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import Buffer._
 import java.lang.String
-import protocol.{ProtocolFilter, ProtocolHandler}
+import protocol.{ProtocolFilter2, ProtocolHandler}
 import security.SecurityContext
 import Stomp._
 import org.apache.activemq.apollo.selector.SelectorParser
@@ -579,7 +579,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var waiting_on = WAITING_ON_CLIENT_REQUEST
   var config:StompDTO = _
 
-  var protocol_filters = List[ProtocolFilter]()
+  var protocol_filters = List[ProtocolFilter2]()
 
   var destination_parser = Stomp.destination_parser
   var protocol_convert = "full"
@@ -623,7 +623,7 @@ class StompProtocolHandler extends ProtocolHandler {
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
-    protocol_filters = ProtocolFilter.create_filters(config.protocol_filters.toList, this)
+    protocol_filters = ProtocolFilter2.create_filters(config.protocol_filters.toList, this)
 
     import OptionSupport._
     Option(config.max_data_length).map(MemoryPropertyEditor.parse(_).toInt).foreach( codec.max_data_length = _ )
@@ -717,10 +717,23 @@ class StompProtocolHandler extends ProtocolHandler {
 
   override def on_transport_connected() = {
     connection_log = connection.connector.broker.connection_log
-    sink_manager = new SinkMux[StompFrame]( connection.transport_sink.map {x=>
+
+    var filtering_sink:Sink[StompFrame] = connection.transport_sink.map { x=>
       trace("sending frame: %s", x)
       x
-    })
+    }
+
+    if(!protocol_filters.isEmpty) {
+      filtering_sink = filtering_sink.flatMap {x=>
+        var cur = Option(x)
+        protocol_filters.foreach { filter =>
+          cur = cur.flatMap(filter.filter_outbound(_))
+        }
+        cur
+      }
+    }
+
+    sink_manager = new SinkMux[StompFrame](filtering_sink)
     connection_sink = new OverflowSink(sink_manager.open());
     resume_read
   }
@@ -769,9 +782,17 @@ class StompProtocolHandler extends ProtocolHandler {
 
           trace("received frame: %s", f)
 
-          var frame = f
-          protocol_filters.foreach { filter =>
-            frame = filter.filter(frame)
+          val frame = if(!protocol_filters.isEmpty) {
+            var cur = Option(f)
+            protocol_filters.foreach { filter =>
+              cur = cur.flatMap(filter.filter_inbound(_))
+            }
+            cur match {
+              case Some(f) => f
+              case None => return // dropping the frame.
+            } 
+          } else {
+            f
           }
 
           if( protocol_version == null ) {

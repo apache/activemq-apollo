@@ -90,10 +90,16 @@ trait ProtocolHandler {
 
 }
 
-object ProtocolFilter {
+@deprecated(message="Please use the ProtocolFilter2 interface instead", since="1.3")
+trait ProtocolFilter {
+  def filter[T](command: T):T
+}
+
+object ProtocolFilter2 {
+
   def create_filters(clazzes:List[String], handler:ProtocolHandler) = {
     clazzes.map { clazz =>
-      val filter = Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[ProtocolFilter]
+      val filter = ProtocolFilter2(Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[AnyRef])
 
       type ProtocolHandlerAware = { var protocol_handler:ProtocolHandler }
       try {
@@ -103,8 +109,39 @@ object ProtocolFilter {
       filter
     }
   }
+
+  /**
+   * Allows you to convert any ProtocolFilter object into a ProtocolFilter2 object.
+   */
+  def apply(filter:AnyRef):ProtocolFilter2 = {
+    filter match {
+      case self:ProtocolFilter2 => self
+      case self:ProtocolFilter => new ProtocolFilter2() {
+        override def filter_inbound[T](command: T): Option[T] = Some(self.filter(command))
+        override def filter_outbound[T](command: T): Option[T] = Some(command)
+      } 
+      case null => null
+      case _ => throw new IllegalArgumentException("Invalid protocol filter type: "+filter.getClass)
+    }
+  }
 }
 
-trait ProtocolFilter {
-  def filter[T](command: T):T
+/**
+ * A Protocol filter can filter frames being sent/received to and from a client.  It can modify
+ * the frame or even drop it.
+ */
+abstract class ProtocolFilter2 {
+
+  /**
+   * Filters a command frame received from a client.
+   * returns None if the filter wants to drop the frame.
+   */
+  def filter_inbound[T](frame: T):Option[T]
+
+  /**
+   * Filters a command frame being sent client.
+   * returns None if the filter wants to drop the frame.
+   */
+  def filter_outbound[T](frame: T):Option[T]
 }
+
