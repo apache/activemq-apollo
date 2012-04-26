@@ -543,7 +543,8 @@ class StompPersistentQueueTest extends StompTestSupport {
     var counter = 0
     for( i <- 0 until 100 ) {
       connect("1.1")
-      subscribe("1", "/queue/BIGQUEUE", "client", false, "", false)
+      // Use exclusive to avoid 2 concurrent subs (disconnect is async..)
+      subscribe("1", "/queue/BIGQUEUE", "client", false, "exclusive:true\n", false)
       for( j <- 0 until 100 ) {
         assert_received("message #"+counter)(true)
         counter+=1
@@ -554,6 +555,7 @@ class StompPersistentQueueTest extends StompTestSupport {
         "\n")
       wait_for_receipt("disco", client, true)
       client.close
+      Thread.sleep(200)
     }
 
     connect("1.1")
