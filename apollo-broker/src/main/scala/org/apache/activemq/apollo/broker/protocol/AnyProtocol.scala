@@ -18,7 +18,6 @@ package org.apache.activemq.apollo.broker.protocol
 
 import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.fusesource.hawtdispatch.transport.ProtocolCodec
 import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
 import java.nio.ByteBuffer
 import java.io.IOException
@@ -28,6 +27,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.OptionSupport
 import org.apache.activemq.apollo.broker.{Message, ProtocolException}
 import org.apache.activemq.apollo.dto.{DetectDTO, AcceptingConnectorDTO}
+import transport.{Transport, TransportAware, ProtocolCodec}
 
 /**
  * <p>
@@ -89,7 +89,7 @@ class AnyProtocol(val func: ()=>Array[Protocol]) extends Protocol {
 
 case class ProtocolDetected(id:String, codec:ProtocolCodec)
 
-class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
+class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec with TransportAware {
 
   if (protocols.isEmpty) {
     throw new IllegalArgumentException("No protocol configured for identification.")
@@ -98,6 +98,9 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
   var channel: ReadableByteChannel = null
 
   def setReadableByteChannel(channel: ReadableByteChannel) = {this.channel = channel}
+
+  var transport:Transport = _
+  def setTransport(t: Transport) = transport = t
 
   def read: AnyRef = {
     if (channel == null) {
@@ -109,6 +112,7 @@ class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec {
     protocols.foreach {protocol =>
       if (protocol.matchesIdentification(buff)) {
         val protocolCodec = protocol.createProtocolCodec()
+        transport.setProtocolCodec(protocolCodec)
         protocolCodec.unread(buff.toByteArray)
         return ProtocolDetected(protocol.id, protocolCodec)
       }
@@ -176,7 +180,6 @@ class AnyProtocolHandler extends ProtocolHandler {
 
      // replace the current handler with the new one.
     connection.protocol_handler = protocol_handler
-    connection.transport.setProtocolCodec(protocol.codec)
     connection.transport.suspendRead
 
     protocol_handler.set_connection(connection);

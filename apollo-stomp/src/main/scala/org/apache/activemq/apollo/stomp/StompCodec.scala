@@ -150,28 +150,6 @@ class StompCodec extends ProtocolCodec with TransportAware {
 
   def protocol() = "stomp"
 
-  
-  /////////////////////////////////////////////////////////////////////
-  //
-  // Non blocking write imp
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  var write_buffer_size = 1024*64;
-  var write_counter = 0L
-  var write_channel:WritableByteChannel = null
-
-  var next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
-  var next_write_direct:DirectBuffer = null
-
-  var write_buffer = ByteBuffer.allocate(0)
-  var write_direct:DirectBuffer = null
-  var write_direct_pos = 0
-  var last_write_io_size = 0
-
-  def full = next_write_direct!=null || next_write_buffer.size >= (write_buffer_size >> 1)
-  def is_empty = write_buffer.remaining == 0 && write_direct==null
-
   def setTransport(transport:Transport) {
     transport match {
       case tcp:TcpTransport=>
@@ -195,7 +173,30 @@ class StompCodec extends ProtocolCodec with TransportAware {
         }
 
     }
+    next_write_buffer = new DataByteArrayOutputStream(write_buffer_size)
+    read_buffer = ByteBuffer.allocate(read_buffer_size)
   }
+  
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Non blocking write imp
+  //
+  /////////////////////////////////////////////////////////////////////
+
+  var write_buffer_size = 1024*64;
+  var write_counter = 0L
+  var write_channel:WritableByteChannel = null
+
+  var next_write_buffer : DataByteArrayOutputStream = _
+  var next_write_direct:DirectBuffer = null
+
+  var write_buffer = ByteBuffer.allocate(0)
+  var write_direct:DirectBuffer = null
+  var write_direct_pos = 0
+  var last_write_io_size = 0
+
+  def full = next_write_direct!=null || next_write_buffer.size >= (write_buffer_size >> 1)
+  def is_empty = write_buffer.remaining == 0 && write_direct==null
 
   def setWritableByteChannel(channel: WritableByteChannel) = {
     this.write_channel = channel
@@ -327,7 +328,7 @@ class StompCodec extends ProtocolCodec with TransportAware {
   var read_buffer_size = 1024*64
   var read_channel:ReadableByteChannel = null
 
-  var read_buffer = ByteBuffer.allocate(read_buffer_size)
+  var read_buffer:ByteBuffer = _
   var read_end = 0
   var read_start = 0
 
