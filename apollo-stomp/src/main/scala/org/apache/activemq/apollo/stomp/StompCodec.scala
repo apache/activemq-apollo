@@ -134,7 +134,7 @@ object StompCodec extends Log {
 
 }
 
-class StompCodec extends ProtocolCodec {
+class StompCodec extends ProtocolCodec with TransportAware {
 
   import StompCodec._
   var max_header_length = 1024*10
@@ -172,11 +172,33 @@ class StompCodec extends ProtocolCodec {
   def full = next_write_direct!=null || next_write_buffer.size >= (write_buffer_size >> 1)
   def is_empty = write_buffer.remaining == 0 && write_direct==null
 
+  def setTransport(transport:Transport) {
+    transport match {
+      case tcp:TcpTransport=>
+        write_buffer_size = tcp.getSendBufferSize();
+        read_buffer_size = tcp.getReceiveBufferSize();
+      case udp:UdpTransport=>
+        write_buffer_size = udp.getSendBufferSize();
+        read_buffer_size = udp.getReceiveBufferSize();
+      case _ =>
+        try {
+          write_channel match {
+            case channel:SocketChannel =>
+              write_buffer_size = channel.socket.getSendBufferSize();
+              read_buffer_size = channel.socket.getReceiveBufferSize()
+            case channel:SslTransport#SSLChannel =>
+              write_buffer_size = channel.socket.getSendBufferSize();
+              read_buffer_size = channel.socket.getReceiveBufferSize()
+          }
+        } catch {
+          case _ =>
+        }
+
+    }
+  }
+
   def setWritableByteChannel(channel: WritableByteChannel) = {
     this.write_channel = channel
-    if( this.write_channel.isInstanceOf[SocketChannel] ) {
-      write_buffer_size = this.write_channel.asInstanceOf[SocketChannel].socket().getSendBufferSize
-    }
   }
 
   def getWriteCounter = write_counter
@@ -319,9 +341,6 @@ class StompCodec extends ProtocolCodec {
 
   def setReadableByteChannel(channel: ReadableByteChannel) = {
     this.read_channel = channel
-    if( this.read_channel.isInstanceOf[SocketChannel] ) {
-      read_buffer_size = this.read_channel.asInstanceOf[SocketChannel].socket().getReceiveBufferSize
-    }
   }
 
   def unread(buffer: Array[Byte]) = {
