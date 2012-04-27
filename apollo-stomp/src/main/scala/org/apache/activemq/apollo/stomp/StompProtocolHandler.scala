@@ -819,7 +819,7 @@ class StompProtocolHandler extends ProtocolHandler {
               case ABORT =>
                 on_stomp_abort(frame.headers)
               case SUBSCRIBE =>
-                on_stomp_subscribe(frame.headers)
+                on_stomp_subscribe(deep_copy(frame.headers))
               case UNSUBSCRIBE =>
                 on_stomp_unsubscribe(frame.headers)
               case NACK =>
@@ -1225,7 +1225,14 @@ class StompProtocolHandler extends ProtocolHandler {
     frame.release
   }
 
+  def deep_copy(headers:HeaderMap) = {
+    headers.map { header=>
+      (header._1.deepCopy().ascii(), header._2.deepCopy().ascii())
+    }
+  }
+
   def on_stomp_subscribe(headers:HeaderMap):Unit = {
+
     val dest = get(headers, DESTINATION).getOrElse(die("destination not set."))
     var addresses:Array[_ <: BindAddress] = decode_addresses(dest)
 
@@ -1234,7 +1241,7 @@ class StompProtocolHandler extends ProtocolHandler {
       if( protocol_version eq V1_0 ) {
           // in 1.0 it's ok if the client does not send us the
           // the id header
-          dest.deepCopy()
+          dest.deepCopy().ascii()
         } else {
           die("The id header is missing from the SUBSCRIBE frame");
         }
