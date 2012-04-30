@@ -1055,8 +1055,10 @@ class StompProtocolHandler extends ProtocolHandler {
     val dest = get(frame.headers, DESTINATION).get
     producerRoutes.get(dest) match {
       case null =>
+        // Deep copy to avoid holding onto a 64k buffer
+        val trimmed_dest = dest.deepCopy().ascii()
         // create the producer route...
-        val route = new StompProducerRoute(dest)   // don't process frames until producer is connected...
+        val route = new StompProducerRoute(trimmed_dest)   // don't process frames until producer is connected...
         connection.transport.suspendRead
         host.dispatch_queue {
           val rc = host.router.connect(route.addresses, route, security_context)
@@ -1067,7 +1069,7 @@ class StompProtocolHandler extends ProtocolHandler {
               case None =>
                 if (!connection.stopped) {
                   resume_read
-                  producerRoutes.put(dest, route)
+                  producerRoutes.put(trimmed_dest, route)
                   send_via_route(route.addresses, route, frame, uow)
                 }
             }
@@ -1200,9 +1202,10 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       if( receipt!=null ) {
+        val trimmed_receipt = receipt.deepCopy().ascii()
         delivery.ack = { (consumed, uow) =>
           dispatchQueue <<| ^{
-            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, trimmed_receipt))))
           }
         }
       }
