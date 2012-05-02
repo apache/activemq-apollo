@@ -19,12 +19,12 @@ package org.apache.activemq.apollo.openwire
 
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import OpenwireConstants._
-import org.apache.activemq.apollo.broker.{Sizer, Message}
 import org.apache.activemq.apollo.openwire.codec.OpenWireFormat
 import org.apache.activemq.apollo.openwire.command._
 import org.apache.activemq.apollo.broker.BufferConversions._
 import org.fusesource.hawtdispatch.transport.AbstractProtocolCodec
 import org.fusesource.hawtbuf._
+import org.apache.activemq.apollo.broker.{Broker, Sizer, Message}
 
 case class CachedEncoding(tight:Boolean, version:Int, buffer:Buffer) extends CachedEncodingTrait
 
@@ -104,6 +104,7 @@ object OpenwireCodec extends Sizer[Command] {
 
 class OpenwireCodec extends AbstractProtocolCodec {
 
+  this.bufferPools = Broker.buffer_pools
   val format = new OpenWireFormat(1);
 
   protected def encode(command: AnyRef) = {

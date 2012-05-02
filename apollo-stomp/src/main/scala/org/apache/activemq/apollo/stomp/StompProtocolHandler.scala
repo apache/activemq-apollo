@@ -950,7 +950,7 @@ class StompProtocolHandler extends ProtocolHandler {
       }
 
       connection_sink.offer(StompFrame(CONNECTED,connected_headers.toList))
-      codec.direct_buffer_allocator = this.host.direct_buffer_allocator
+//      codec.direct_buffer_allocator = this.host.direct_buffer_allocator
     }
 
     suspend_read("virtual host lookup")

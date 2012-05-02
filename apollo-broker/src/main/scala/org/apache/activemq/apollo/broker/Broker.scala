@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import security.SecuredResource.BrokerKind
 import reflect.BeanProperty
 import java.net.InetSocketAddress
+import org.fusesource.hawtdispatch.util.BufferPools
 
 /**
  * <p>
@@ -153,6 +154,7 @@ object Broker extends Log {
 
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
   private val SERVICE_TIMEOUT = 1000*5;
+  val buffer_pools = new BufferPools
 
   def class_loader:ClassLoader = ClassFinder.class_loader
 
