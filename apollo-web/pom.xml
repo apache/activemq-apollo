@@ -178,7 +178,7 @@
       <!-- <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         <artifactId>maven-fab-plugin</artifactId>
-        <version>1.16-SNAPSHOT</version>
+        <version>1.26</version>
         <configuration>
           <descriptor>
             <Name>web</Name>

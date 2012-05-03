@@ -113,7 +113,7 @@
       <!-- <plugin>
         <groupId>org.fusesource.mvnplugins</groupId>
         http://svn.apache.org/repos/asf/activemq/activemq-apollo/
-        <version>1.16-SNAPSHOT</version>
+        <version>1.26</version>
         <configuration>
           <descriptor>
             <Name>bdb</Name>
