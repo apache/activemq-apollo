@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>1.3</version>
+    <version>99-trunk-SNAPSHOT</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
   
