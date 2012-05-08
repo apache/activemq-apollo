@@ -19,9 +19,9 @@ package org.apache.activemq.apollo.broker.protocol
 import java.io.IOException
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.dto.ConnectionStatusDTO
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
+import org.apache.activemq.apollo.dto.{SimpleProtocolFilterDTO, ProtocolFilterDTO, ConnectionStatusDTO}
 
 trait ProtocolFactory {
   def create():Protocol
@@ -95,34 +95,56 @@ trait ProtocolFilter {
   def filter[T](command: T):T
 }
 
-object ProtocolFilter2 {
+object ProtocolFilter2Factory {
 
-  def create_filters(clazzes:List[String], handler:ProtocolHandler) = {
-    clazzes.map { clazz =>
-      val filter = ProtocolFilter2(Broker.class_loader.loadClass(clazz).newInstance().asInstanceOf[AnyRef])
+  val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-filter-factory.index",classOf[Provider])
 
-      type ProtocolHandlerAware = { var protocol_handler:ProtocolHandler }
-      try {
-        filter.asInstanceOf[ProtocolHandlerAware].protocol_handler = handler
-      } catch { case _ => }
-
-      filter
-    }
+  trait Provider {
+    def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2
   }
 
-  /**
-   * Allows you to convert any ProtocolFilter object into a ProtocolFilter2 object.
-   */
-  def apply(filter:AnyRef):ProtocolFilter2 = {
-    filter match {
-      case self:ProtocolFilter2 => self
-      case self:ProtocolFilter => new ProtocolFilter2() {
-        override def filter_inbound[T](command: T): Option[T] = Some(self.filter(command))
-        override def filter_outbound[T](command: T): Option[T] = Some(command)
-      } 
-      case null => null
-      case _ => throw new IllegalArgumentException("Invalid protocol filter type: "+filter.getClass)
+  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2 = {
+    for( p <- providers.singletons ) {
+      val rc = p.create(dto, handler)
+      if( rc!=null ) {
+        return rc;
+      }  
     }
+    throw new IllegalArgumentException("Cannot create a protocol filter for DTO: "+dto)
+  }
+}
+
+object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
+  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2 = dto match {
+    case dto:SimpleProtocolFilterDTO =>
+      val instance = Broker.class_loader.loadClass(dto.kind).newInstance().asInstanceOf[AnyRef]
+      val filter = instance match {
+        case self:ProtocolFilter2 => self
+        case self:ProtocolFilter => new ProtocolFilter2() {
+          override def filter_inbound[T](command: T): Option[T] = Some(self.filter(command))
+          override def filter_outbound[T](command: T): Option[T] = Some(command)
+        }
+        case null => null
+        case _ => throw new IllegalArgumentException("Invalid protocol filter type: "+instance.getClass)
+      }
+      type FilterDuckType = {
+        var protocol_handler:ProtocolHandler
+        var dto:SimpleProtocolFilterDTO
+      }
+      try {
+        filter.asInstanceOf[FilterDuckType].protocol_handler = handler
+      } catch { case _ => }
+      try {
+        filter.asInstanceOf[FilterDuckType].dto = dto
+      } catch { case _ => }
+      filter
+    case _ => null
+  }
+}
+
+object ProtocolFilter2 {
+  def create_filters(dtos:List[ProtocolFilterDTO], handler:ProtocolHandler) = {
+    dtos.map(ProtocolFilter2Factory.create(_, handler))
   }
 }
 

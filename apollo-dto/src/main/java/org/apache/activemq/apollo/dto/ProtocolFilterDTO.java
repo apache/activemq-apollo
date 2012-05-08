@@ -16,29 +16,20 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.apache.activemq.apollo.util.DtoModule;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.map.annotate.JsonTypeIdResolver;
+
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class Module implements DtoModule {
-    public String dto_package() {
-        return "org.apache.activemq.apollo.dto";
-    }
-    public Class<?>[] extension_classes() {
-        return new Class<?>[]{
-                AcceptingConnectorDTO.class,
-                TopicDestinationDTO.class,
-                DurableSubscriptionDestinationDTO.class,
-                QueueDestinationDTO.class,
-                NullStoreDTO.class,
-                SimpleStoreStatusDTO.class,
-                DetectDTO.class,
-                UdpDTO.class,
-                SimpleProtocolFilterDTO.class
-        };
-    }
+@XmlType (name = "protocol_filter_type")
+@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeIdResolver(ApolloTypeIdResolver.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
+abstract public class ProtocolFilterDTO {
 }

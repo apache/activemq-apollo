@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.stomp.dto;
 
 import org.apache.activemq.apollo.dto.AddUserHeaderDTO;
 import org.apache.activemq.apollo.dto.ProtocolDTO;
+import org.apache.activemq.apollo.dto.ProtocolFilterDTO;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
@@ -67,11 +68,8 @@ public class StompDTO extends ProtocolDTO {
     @XmlAttribute(name="max_data_length")
     public String max_data_length;
 
-    /**
-     * A broker accepts connections via it's configured connectors.
-     */
-    @XmlElement(name="protocol_filter")
-    public List<String> protocol_filters = new ArrayList<String>();
+    @XmlElementRef
+    public List<ProtocolFilterDTO> protocol_filters = new ArrayList<ProtocolFilterDTO>();
 
     @XmlAttribute(name="queue_prefix")
     public String queue_prefix;

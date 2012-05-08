@@ -46,6 +46,8 @@ MemoryMetricsDTO
 NullStoreDTO
 PrincipalDTO
 ProtocolDTO
+ProtocolFilterDTO
+SimpleProtocolFilterDTO
 QueueConsumerLinkDTO
 QueueDTO
 QueueDestinationDTO
