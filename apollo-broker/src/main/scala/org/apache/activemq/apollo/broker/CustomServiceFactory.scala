@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.apache.activemq.apollo.dto.{AutoGCServiceDTO, CustomServiceDTO}
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch._
 import java.util.concurrent.TimeUnit
+import org.apache.activemq.apollo.dto.{SimpleCustomServiceDTO, AutoGCServiceDTO, CustomServiceDTO}
 
 trait CustomServiceFactory {
   def create(broker:Broker, dto:CustomServiceDTO):Service
@@ -50,40 +50,44 @@ object CustomServiceFactory {
 
 }
 
-object ReflectiveCustomServiceFactory extends CustomServiceFactory with Log {
+object SimpleCustomServiceFactory extends CustomServiceFactory with Log {
 
-  def create(broker: Broker, dto: CustomServiceDTO): Service = {
-    if( dto.getClass != classOf[CustomServiceDTO] ) {
-      // don't process sub classes of CustomServiceDTO
-      return null;
-    }
-
-    val service = try {
-      Broker.class_loader.loadClass(dto.kind).newInstance().asInstanceOf[Service]
-    } catch {
-      case e:Throwable =>
-        debug(e, "could not create instance of %d for service %s", dto.kind, dto.id)
+  def create(broker: Broker, dto: CustomServiceDTO): Service = dto match {
+    case dto:SimpleCustomServiceDTO =>
+      if( dto.getClass != classOf[CustomServiceDTO] ) {
+        // don't process sub classes of CustomServiceDTO
         return null;
-    }
+      }
 
-    // Try to inject the broker via reflection..
-    try {
-      type BrokerAware = {var broker: Broker}
-      service.asInstanceOf[BrokerAware].broker = broker
-    } catch {
-      case _ =>
-    }
+      val service = try {
+        Broker.class_loader.loadClass(dto.kind).newInstance().asInstanceOf[Service]
+      } catch {
+        case e:Throwable =>
+          debug(e, "could not create instance of %d for service %s", dto.kind, Option(dto.id).getOrElse("<not set>"))
+          return null;
+      }
 
-    // Try to inject the config via reflection..
-    try {
-      type ConfigAware = {var config: CustomServiceDTO}
-      service.asInstanceOf[ConfigAware].config = dto
-    } catch {
-      case _ =>
-    }
+      type ServiceDuckType = {
+        var broker: Broker
+        var config: CustomServiceDTO
+      }
 
-    service
+      // Try to inject the broker via reflection..
+      try {
+        service.asInstanceOf[ServiceDuckType].broker = broker
+      } catch {
+        case _ =>
+      }
 
+      // Try to inject the config via reflection..
+      try {
+        service.asInstanceOf[ServiceDuckType].config = dto
+      } catch {
+        case _ =>
+      }
+
+      service
+    case _ => null
   }
 }
 
@@ -92,7 +96,9 @@ object AutoGCServiceFactory extends CustomServiceFactory with Log {
 
     case dto:AutoGCServiceDTO => new BaseService {
 
-      def interval = OptionSupport(dto.interval).getOrElse(1)
+      val dispatch_queue = createQueue("auto gc service")
+
+      def interval = OptionSupport(dto.interval).getOrElse(30)
       var run_counter = 0
 
       protected def _start(on_completed: Task) = {

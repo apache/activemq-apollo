@@ -20,6 +20,7 @@ AddUserHeaderDTO
 AggregateConnectionMetricsDTO
 AggregateDestMetricsDTO
 AuthenticationDTO
+AutoGCServiceDTO
 BrokerDTO
 BrokerStatusDTO
 ConnectionStatusDTO
@@ -54,6 +55,7 @@ QueueDestinationDTO
 QueueStatusDTO
 ServiceDTO
 ServiceStatusDTO
+SimpleCustomServiceDTO
 SimpleStoreStatusDTO
 StoreDTO
 StoreStatusDTO

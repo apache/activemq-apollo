@@ -93,7 +93,7 @@ public class BrokerDTO {
      * Opaque service class names which gets started/stopped when the broker
      * starts/stops.
      */
-    @XmlElement(name="service")
+    @XmlElementRef
     public List<CustomServiceDTO> services = new ArrayList<CustomServiceDTO>();
 
     /**

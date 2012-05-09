@@ -27,27 +27,41 @@ import java.util.List;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="auto_gc")
+@XmlRootElement(name="service")
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AutoGCServiceDTO extends CustomServiceDTO {
+public class SimpleCustomServiceDTO extends CustomServiceDTO {
 
     /**
-     * How often to force a GC in seconds.  Defaults to 30.
+     * Optional id for the object
      */
     @XmlAttribute
-    public Integer interval;
+    public String id;
+
+    /**
+     * The class name of the service.
+     */
+    @XmlAttribute
+    public String kind;
+
+    /**
+     * To hold any other non-matching XML elements
+     */
+    @XmlAnyElement(lax=true)
+    public List<Object> other = new ArrayList<Object>();
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof AutoGCServiceDTO)) return false;
+        if (!(o instanceof SimpleCustomServiceDTO)) return false;
         if (!super.equals(o)) return false;
 
-        AutoGCServiceDTO that = (AutoGCServiceDTO) o;
+        SimpleCustomServiceDTO that = (SimpleCustomServiceDTO) o;
 
-        if (interval != null ? !interval.equals(that.interval) : that.interval != null)
-            return false;
+        if (id != null ? !id.equals(that.id) : that.id != null) return false;
+        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
+        if (other != null ? !other.equals(that.other) : that.other != null) return false;
 
         return true;
     }
@@ -55,7 +69,9 @@ public class AutoGCServiceDTO extends CustomServiceDTO {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (interval != null ? interval.hashCode() : 0);
+        result = 31 * result + (id != null ? id.hashCode() : 0);
+        result = 31 * result + (kind != null ? kind.hashCode() : 0);
+        result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
 }

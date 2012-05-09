@@ -38,7 +38,9 @@ public class Module implements DtoModule {
                 SimpleStoreStatusDTO.class,
                 DetectDTO.class,
                 UdpDTO.class,
-                SimpleProtocolFilterDTO.class
+                SimpleProtocolFilterDTO.class,
+                SimpleCustomServiceDTO.class,
+                AutoGCServiceDTO.class
         };
     }
 }

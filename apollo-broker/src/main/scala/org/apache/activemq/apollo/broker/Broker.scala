@@ -266,7 +266,7 @@ class Broker() extends BaseService with SecuredResource {
   var security_log:Log  = Broker
   var connection_log:Log = Broker
   var console_log:Log = Broker
-  var services = Map[String, (CustomServiceDTO, Service)]()
+  var services = Map[CustomServiceDTO, Service]()
 
   override def toString() = "broker: "+id
 
@@ -310,9 +310,7 @@ class Broker() extends BaseService with SecuredResource {
     val tracker = new LoggingTracker("broker shutdown", console_log, SERVICE_TIMEOUT)
 
     // Stop the services...
-    services.values.foreach( x=>
-      tracker.stop(x._2)
-    )
+    services.values.foreach(tracker.stop(_))
     services = Map()
 
     // Stop accepting connections..
@@ -511,50 +509,24 @@ class Broker() extends BaseService with SecuredResource {
       }
     }
 
-    val t:Seq[(String, CustomServiceDTO)] = asScalaBuffer(config.services).map(x => (x.id ->x) )
-    val services_config = Map(t: _*)
-    diff(services.keySet, services_config.keySet) match { case (added, updated, removed) =>
-      removed.foreach { id =>
-        for( service <- services.get(id) ) {
-          services -= id
-          tracker.stop(service._2)
-        }
-      }
+    val services_config = asScalaBuffer(config.services).toSet
+    diff(services.keySet, services_config) match { case (added, updated, removed) =>
 
-      // Handle the updates.
-      added.foreach { id=>
-        for( new_dto <- services_config.get(id); (old_dto, service) <- services.get(id) ) {
-          if( new_dto != old_dto ) {
-
-            // restart.. needed.
-            val task = tracker.task("restart "+service)
-            service.stop(dispatch_queue.runnable {
-
-              // create with the new config..
-              val service = CustomServiceFactory.create(this, new_dto)
-              if( service == null ) {
-                console_log.warn("Could not create service: "+new_dto.id);
-                task.run()
-              } else {
-                // start it again..
-                services += new_dto.id -> (new_dto, service)
-                service.start(task)
-              }
-            })
-          }
+      removed.foreach { service_config =>
+        for( service <- services.get(service_config) ) {
+          services -= service_config
+          tracker.stop(service)
         }
       }
 
       // Create the new services..
-      added.foreach { id=>
-        for( dto <- services_config.get(id) ) {
-          val service = CustomServiceFactory.create(this, dto)
-          if( service == null ) {
-            console_log.warn("Could not create service: "+dto.id);
-          } else {
-            services += dto.id -> (dto, service)
-            tracker.start(service)
-          }
+      added.foreach { service_config =>
+        val service = CustomServiceFactory.create(this, service_config)
+        if( service == null ) {
+          console_log.warn("Could not create service: "+service_config);
+        } else {
+          services += service_config -> service
+          tracker.start(service)
         }
       }
     }
