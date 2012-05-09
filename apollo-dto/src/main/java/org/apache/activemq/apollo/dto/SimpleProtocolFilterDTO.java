@@ -27,8 +27,6 @@ import java.util.List;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
-@JsonTypeIdResolver(ApolloTypeIdResolver.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @XmlRootElement(name = "protocol_filter")
 @XmlAccessorType(XmlAccessType.FIELD)
