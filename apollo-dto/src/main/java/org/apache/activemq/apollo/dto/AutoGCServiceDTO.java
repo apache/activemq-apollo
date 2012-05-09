@@ -27,23 +27,13 @@ import java.util.List;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="service")
+@XmlRootElement(name="auto_gc_service")
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AutoGCServiceDTO extends ServiceDTO {
+public class AutoGCServiceDTO extends CustomServiceDTO {
 
-    /**
-     * The class name of the service.
-     */
     @XmlAttribute
-    public String kind;
-
-    /**
-     * To hold any other non-matching XML elements
-     */
-    @XmlAnyElement(lax=true)
-    public List<Object> other = new ArrayList<Object>();
-
+    public Integer interval;
 
     @Override
     public boolean equals(Object o) {
@@ -53,8 +43,8 @@ public class AutoGCServiceDTO extends ServiceDTO {
 
         AutoGCServiceDTO that = (AutoGCServiceDTO) o;
 
-        if (kind != null ? !kind.equals(that.kind) : that.kind != null) return false;
-        if (other != null ? !other.equals(that.other) : that.other != null) return false;
+        if (interval != null ? !interval.equals(that.interval) : that.interval != null)
+            return false;
 
         return true;
     }
@@ -62,8 +52,7 @@ public class AutoGCServiceDTO extends ServiceDTO {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (kind != null ? kind.hashCode() : 0);
-        result = 31 * result + (other != null ? other.hashCode() : 0);
+        result = 31 * result + (interval != null ? interval.hashCode() : 0);
         return result;
     }
 }

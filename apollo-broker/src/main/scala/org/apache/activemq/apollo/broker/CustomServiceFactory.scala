@@ -16,8 +16,10 @@
  */
 package org.apache.activemq.apollo.broker
 
-import org.apache.activemq.apollo.dto.CustomServiceDTO
-import org.apache.activemq.apollo.util.{Log, Service, ClassFinder}
+import org.apache.activemq.apollo.dto.{AutoGCServiceDTO, CustomServiceDTO}
+import org.apache.activemq.apollo.util._
+import org.fusesource.hawtdispatch._
+import java.util.concurrent.TimeUnit
 
 trait CustomServiceFactory {
   def create(broker:Broker, dto:CustomServiceDTO):Service
@@ -82,5 +84,37 @@ object ReflectiveCustomServiceFactory extends CustomServiceFactory with Log {
 
     service
 
+  }
+}
+
+object AutoGCServiceFactory extends CustomServiceFactory with Log {
+  def create(broker: Broker, dto: CustomServiceDTO): Service = dto match {
+
+    case dto:AutoGCServiceDTO => new BaseService {
+
+      def interval = OptionSupport(dto.interval).getOrElse(1)
+      var run_counter = 0
+
+      protected def _start(on_completed: Task) = {
+        schedule_gc(run_counter)
+        on_completed.run
+      }
+
+      protected def _stop(on_completed: Task) = {
+        run_counter += 1
+        on_completed.run
+      }
+
+      def schedule_gc(counter:Int):Unit = {
+        if(counter == run_counter) {
+          dispatch_queue.after(interval, TimeUnit.SECONDS) {
+            Runtime.getRuntime.gc()
+            schedule_gc(counter)
+          }
+        }
+      }
+
+    }
+    case _ => null
   }
 }
