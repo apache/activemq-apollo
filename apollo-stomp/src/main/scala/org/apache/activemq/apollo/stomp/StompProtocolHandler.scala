@@ -390,7 +390,10 @@ class StompProtocolHandler extends ProtocolHandler {
 
     val consumer_sink = sink_manager.open()
     val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
-      ack_handler.track(delivery)
+
+      if( !dead ) {
+        ack_handler.track(delivery)
+      }
 
       val message = delivery.message
       var frame = if( message.protocol eq StompProtocol ) {

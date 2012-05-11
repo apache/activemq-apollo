@@ -487,23 +487,27 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     }
 
     var outbound_capacity_remaining = 1024 * 64;
-    var outbound_drained = 0
 
     val outbound_executor = new SerialExecutor(Broker.BLOCKABLE_THREAD_POOL) {
+      var outbound_drained = 0
       override def drained  = {
-        outbound_capacity_remaining += outbound_drained
+        val amount = outbound_drained
         outbound_drained = 0
+        dispatch_queue {
+          outbound_capacity_remaining += amount
+          transportListener.onRefill()
+        }
       }
     }
 
-    def write(buf: ByteBuffer) = {
+    def write(buf: ByteBuffer):Int = {
       dispatchQueue.assertExecuting
-      var remaining = buf.remaining()
-      if( remaining > 0 ) {
-        if (outbound_capacity_remaining <= 0) {
-          outbound_capacity_remaining -= remaining;
-        }
+      val remaining = buf.remaining()
+      if( remaining==0 )
+        return 0
 
+      if( outbound_capacity_remaining > 0 ) {
+        outbound_capacity_remaining -= remaining;
         var buffer = new Buffer(buf.array(), buf.arrayOffset(), buf.remaining())
         outbound_executor {
           if( !binary_transfers ) {
@@ -511,11 +515,14 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           } else {
             connection.sendMessage(buffer.data, buffer.offset, buffer.length)
           }
-          outbound_drained += remaining
+          outbound_executor.outbound_drained += remaining
         }
         buf.position(buf.position()+ remaining);
+        return remaining
+
+      } else {
+        return 0
       }
-      remaining;
     }
 
   }
