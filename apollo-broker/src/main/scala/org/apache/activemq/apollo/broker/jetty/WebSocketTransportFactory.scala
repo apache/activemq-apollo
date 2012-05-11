@@ -226,6 +226,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       if( this.protocolCodec!=null ) {
         this.protocolCodec.setReadableByteChannel(this)
         this.protocolCodec.setWritableByteChannel(this)
+        this.protocolCodec match {
+          case protocolCodec:TransportAware => protocolCodec.setTransport(this);
+          case _ =>
+        }
       }
     }
 
