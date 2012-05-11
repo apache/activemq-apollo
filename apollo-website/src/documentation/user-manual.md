@@ -124,6 +124,24 @@ the `broker` element's `validation` attribute to `strict`.  Example:
 </broker>
 {pygmentize}
 
+If you would like the broker to automatically trigger a Java
+heap garbage collection (GC) cycle periodically, add a `auto_gc`
+element within the `broker` element.  GC cycles will automatically
+kick in when they are needed, but if your monitoring broker
+heap usage with an external monitoring tool, then periodically
+forcing a GC cycle might be nice since then your monitoring
+tool can more accurate track actual heap usage.  Set the `interval`
+attribute of the `auto_gc` to the number of seconds between
+forced GC cycles.  If interval is not set, it will default to 30.
+
+Example:
+{pygmentize:: xml}
+<broker>
+  ...
+  <auto_gc interval="10">
+  ...
+</broker>
+{pygmentize}
 #### Connectors
 
 A broker connector is used to accept new connections to the broker.
