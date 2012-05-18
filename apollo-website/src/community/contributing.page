@@ -36,8 +36,9 @@ Browse the [source code](source.html). Got an itch to scratch, want to
 tune some operation or add some feature?
 
 Want to do some hacking on the ${project_name} code? Try surfing the our
-[Issue Tracker]("${project_issue_url}") for open issues or features that
-need to be implemented, take ownership of an issue and try fix it.
+[Issue Tracker](${project_issue_url}) for open issues or features.  If something
+tickles your fancy, take ownership of the issue and start working on it!  Attach
+a patch once you fix it.
 
 ## Improving the documentation
 
