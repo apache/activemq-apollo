@@ -214,7 +214,9 @@ class StompProtocolHandler extends ProtocolHandler {
           if( delivery.ack!=null ) {
             delivery.ack(Consumed, null)
           }
-          credit_window_source.merge((delivery.size, 1))
+          if( !dead ) {
+            credit_window_source.merge((delivery.size, 1))
+          }
         }
       }
 
@@ -390,10 +392,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     val consumer_sink = sink_manager.open()
     val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
-
-      if( !dead ) {
-        ack_handler.track(delivery)
-      }
+      ack_handler.track(delivery)
 
       val message = delivery.message
       var frame = if( message.protocol eq StompProtocol ) {
