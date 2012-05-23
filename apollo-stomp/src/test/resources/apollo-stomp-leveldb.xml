@@ -32,7 +32,7 @@
     <leveldb_store directory="${testdatadir}"/>
   </virtual_host>
 
-  <web_admin bind="http://127.0.0.1:0"/>
+  <!--<web_admin bind="http://0.0.0.0:61680"/>-->
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>
 
 </broker>

@@ -31,7 +31,7 @@ import org.apache.activemq.apollo.broker._
 
 class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
-  override val broker_config_uri = "xml:classpath:apollo-stomp.xml"
+  override def broker_config_uri = "xml:classpath:apollo-stomp.xml"
 
   var client = new StompClient
   var clients = List[StompClient]()
@@ -530,7 +530,7 @@ class Stomp11HeartBeatTest extends StompTestSupport {
 
 class StompPersistentQueueTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
   test("(APLO-198) Apollo sometimes does not send all the messages in a queue") {
     connect("1.1")
@@ -1241,7 +1241,7 @@ class StompDestinationTest extends StompTestSupport {
 
 class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
   test("Can directly send an recieve from a durable sub") {
     connect("1.1")
@@ -1525,7 +1525,7 @@ class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
 }
 
 class DurableSubscriptionOnBDBTest extends DurableSubscriptionOnLevelDBTest {
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 }
 
 class StompMirroredQueueTest extends StompTestSupport {
@@ -1604,7 +1604,7 @@ class StompMirroredQueueTest extends StompTestSupport {
 }
 
 class StompSslDestinationTest extends StompDestinationTest {
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
 
   val config = new KeyStorageDTO
   config.file = basedir/"src"/"test"/"resources"/"client.ks"
@@ -1896,7 +1896,7 @@ class StompAckModeTest extends StompTestSupport {
 
 class StompSecurityTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
 
   override protected def beforeAll = {
     try {
@@ -2100,7 +2100,7 @@ class StompSecurityTest extends StompTestSupport {
 
 class StompSslSecurityTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
 
   override protected def beforeAll = {
     // System.setProperty("javax.net.debug", "all")
@@ -2170,7 +2170,7 @@ class StompWildcardTest extends StompTestSupport {
 }
 
 class CustomStompWildcardTest extends StompWildcardTest {
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
   override def path_separator = "/"
 }
 
@@ -2459,12 +2459,12 @@ class StompNackTest extends StompTestSupport {
 }
 
 class StompNackTestOnLevelDBTest extends StompNackTest {
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 }
 
 class StompDropPolicyTest extends StompTestSupport {
 
-  override val broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
   test("Head Drop Policy: Persistent") {
     connect("1.1")

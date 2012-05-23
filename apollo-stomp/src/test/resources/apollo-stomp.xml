@@ -29,7 +29,7 @@
 
   </virtual_host>
 
-  <web_admin bind="http://0.0.0.0:61680"/>
+  <!--<web_admin bind="http://0.0.0.0:61680"/>-->
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>
   <connector id="udp" bind="udp://0.0.0.0:0" protocol="udp"/>
 
