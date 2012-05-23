@@ -69,6 +69,11 @@ object StompProtocolHandler extends Log {
   var inbound_heartbeat = DEFAULT_INBOUND_HEARTBEAT
 
   val WAITING_ON_CLIENT_REQUEST = ()=> "client request"
+
+  object SessionDeliverySizer extends Sizer[(Session[Delivery], Delivery)] {
+    def size(value: (Session[Delivery], Delivery)) = Delivery.size(value._2)
+  }
+
 }
 
 /**
@@ -129,6 +134,8 @@ class StompProtocolHandler extends ProtocolHandler {
     message.asInstanceOf[StompFrameMessage].id
   }
 
+  case class InitialCreditWindow(count:Int,size:Int,auto_credit:Boolean)
+
   class StompConsumer (
 
     val subscription_id:Option[AsciiBuffer],
@@ -137,7 +144,7 @@ class StompProtocolHandler extends ProtocolHandler {
     val selector:(String, BooleanExpression),
     override val browser:Boolean,
     override val exclusive:Boolean,
-    val initial_credit_window:(Int,Int, Boolean),
+    val initial_credit_window:InitialCreditWindow,
     val include_seq:Option[AsciiBuffer],
     val from_seq:Long,
     override val close_on_drain:Boolean
@@ -194,7 +201,7 @@ class StompProtocolHandler extends ProtocolHandler {
     credit_window_source.resume
 
     trait AckHandler {
-      def track(delivery:Delivery):Unit
+      def track(event:(Session[Delivery], Delivery)):Unit
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
       def close:Unit
@@ -205,7 +212,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
       def close = { closed  = true}
 
-      def track(delivery:Delivery) = {
+      def track(event:(Session[Delivery], Delivery)) = {
+        val (session, delivery) = event
+        session_manager.delivered(session, delivery.size)
         if( closed ) {
           if( delivery.ack!=null ) {
             delivery.ack(Undelivered, null)
@@ -215,7 +224,7 @@ class StompProtocolHandler extends ProtocolHandler {
             delivery.ack(Consumed, null)
           }
           if( !dead ) {
-            credit_window_source.merge((delivery.size, 1))
+            credit_window_source.merge((1, delivery.size))
           }
         }
       }
@@ -229,7 +238,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     }
 
-    class TrackedAck(var credit:Option[Int], val ack:(DeliveryResult, StoreUOW)=>Unit)
+    class TrackedAck(var credit:Option[(Session[Delivery], Int)], val ack:(DeliveryResult, StoreUOW)=>Unit)
 
     class SessionAckHandler extends AckHandler{
       var consumer_acks = ListBuffer[(AsciiBuffer, TrackedAck)]()
@@ -244,8 +253,9 @@ class StompProtocolHandler extends ProtocolHandler {
         consumer_acks = null
       }
 
-      def track(delivery:Delivery) = {
+      def track(event:(Session[Delivery], Delivery)) = {
         queue.assertExecuting()
+        val (session, delivery) = event
         if( consumer_acks == null ) {
           // It can happen if we get closed.. but destination is still sending data..
           if( delivery.ack!=null ) {
@@ -256,13 +266,17 @@ class StompProtocolHandler extends ProtocolHandler {
             // register on the connection since 1.0 acks may not include the subscription id
             connection_ack_handlers += ( id(delivery.message) -> this )
           }
-          consumer_acks += id(delivery.message) -> new TrackedAck(Some(delivery.size), delivery.ack )
+          if( initial_credit_window.auto_credit ) {
+            consumer_acks += id(delivery.message) -> new TrackedAck(Some((session, delivery.size)), delivery.ack )
+          } else {
+            session_manager.delivered(session, delivery.size)
+          }
         }
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
         queue.assertExecuting()
-        if( initial_credit_window._3 ) {
+        if( initial_credit_window.auto_credit ) {
           var found = false
           val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
             if( id == msgid ) {
@@ -275,7 +289,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
           for( (id, delivery) <- acked ) {
             for( credit <- delivery.credit ) {
-              credit_window_source.merge((credit, 1))
+              session_manager.delivered(credit._1, credit._2)
+              credit_window_source.merge((1, credit._2))
               delivery.credit = None
             }
           }
@@ -332,8 +347,9 @@ class StompProtocolHandler extends ProtocolHandler {
         consumer_acks = null
       }
 
-      def track(delivery:Delivery) = {
+      def track(event:(Session[Delivery], Delivery)) = {
         queue.assertExecuting();
+        val (session, delivery) = event
         if( consumer_acks == null ) {
           // It can happen if we get closed.. but destination is still sending data..
           if( delivery.ack!=null ) {
@@ -344,16 +360,21 @@ class StompProtocolHandler extends ProtocolHandler {
             // register on the connection since 1.0 acks may not include the subscription id
             connection_ack_handlers += ( id(delivery.message) -> this )
           }
-          consumer_acks += id(delivery.message) -> new TrackedAck(Some(delivery.size), delivery.ack)
+          if( initial_credit_window.auto_credit ) {
+            consumer_acks += id(delivery.message) -> new TrackedAck(Some((session, delivery.size)), delivery.ack)
+          } else {
+            session_manager.delivered(session, delivery.size)
+          }
         }
       }
 
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
         queue.assertExecuting()
-        if( initial_credit_window._3 ) {
+        if( initial_credit_window.auto_credit ) {
           for( delivery <- consumer_acks.get(msgid)) {
             for( credit <- delivery.credit ) {
-              credit_window_source.merge((credit,1))
+              session_manager.delivered(credit._1, credit._2)
+              credit_window_source.merge((1, credit._2))
               delivery.credit = None
             }
           }
@@ -391,8 +412,9 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     val consumer_sink = sink_manager.open()
-    val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
-      ack_handler.track(delivery)
+    val credit_window_filter = new CreditWindowFilter[(Session[Delivery], Delivery)](consumer_sink.map { event =>
+      ack_handler.track(event)
+      val (_, delivery) = event
 
       val message = delivery.message
       var frame = if( message.protocol eq StompProtocol ) {
@@ -423,11 +445,11 @@ class StompProtocolHandler extends ProtocolHandler {
       }
       messages_sent += 1
       frame
-    }, Delivery)
+    }, SessionDeliverySizer)
 
-    credit_window_filter.credit(initial_credit_window._1, initial_credit_window._2)
+    credit_window_filter.credit(initial_credit_window.count, initial_credit_window.size)
 
-    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
+    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
       override def time_stamp = broker.now
     }
 
@@ -479,7 +501,7 @@ class StompProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, initial_credit_window.count.max(1), buffer_size)
 
       override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
 
@@ -613,9 +635,7 @@ class StompProtocolHandler extends ProtocolHandler {
     config.die_delay.getOrElse(DEFAULT_DIE_DELAY)
   }
 
-  def buffer_size = {
-    MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
-  }
+  lazy val buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
 
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
@@ -1276,15 +1296,16 @@ class StompProtocolHandler extends ProtocolHandler {
       case Some(value) =>
         value.toString.split(",").toList match {
           case x :: Nil =>
-            (buffer_size, x.toInt, true)
+            InitialCreditWindow(x.toInt, buffer_size, true)
           case x :: y :: Nil =>
-            (y.toInt, x.toInt, true)
+            InitialCreditWindow(x.toInt, y.toInt, true)
           case x :: y :: z :: _ =>
-            (y.toInt, x.toInt, z.toBoolean)
-          case _ => (buffer_size, 1, true)
+            InitialCreditWindow(x.toInt, y.toInt, z.toBoolean)
+          case _ =>
+            InitialCreditWindow(buffer_size, buffer_size, true)
         }
       case None =>
-        (buffer_size, 1, true)
+        InitialCreditWindow(buffer_size, buffer_size, true)
     }
 
     val selector = get(headers, SELECTOR) match {
@@ -1399,9 +1420,9 @@ class StompProtocolHandler extends ProtocolHandler {
       case Some(value) =>
         value.toString.split(",").toList match {
           case x :: Nil =>
-            (0, x.toInt)
+            (x.toInt, 0)
           case x :: y :: _ =>
-            (y.toInt, x.toInt)
+            (x.toInt, y.toInt)
           case _ => (0,0)
         }
 

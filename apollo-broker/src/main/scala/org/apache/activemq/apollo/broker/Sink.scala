@@ -266,8 +266,8 @@ class SinkMux[T](val downstream:Sink[T]) {
 
 class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends SinkMapper[T,T] {
 
-  var byte_credits = 0
   var delivery_credits = 0
+  var byte_credits = 0
   var disabled = true
 
   override def full: Boolean = downstream.full || ( disabled && byte_credits <= 0 && delivery_credits <= 0 )
@@ -278,12 +278,12 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
   }
 
   def passing(value: T) = {
-    byte_credits -= sizer.size(value)
     delivery_credits -= 1
+    byte_credits -= sizer.size(value)
     value
   }
 
-  def credit(byte_credits:Int, delivery_credits:Int) = {
+  def credit(delivery_credits:Int, byte_credits:Int) = {
     this.byte_credits += byte_credits
     this.delivery_credits += delivery_credits
     if( !full ) {
@@ -322,10 +322,6 @@ trait SessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
   def remaining_capacity = downstream.remaining_capacity
 }
 
-object SessionSinkMux {
-  val default_session_max_credits = System.getProperty("apollo.default_session_max_credits", ""+(1024*32)).toInt
-}
-
 /**
  *  <p>
  * A SinkMux multiplexes access to a target sink so that multiple
@@ -337,18 +333,14 @@ object SessionSinkMux {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
+class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
 
   var sessions = HashSet[Session[T]]()
+  val overflow = new OverflowSink[(Session[T],T)](downstream)
 
-  val overflow = new OverflowSink[(Session[T],T)](downstream.map(_._2)) {
-    // Once a value leaves the overflow, then we can credit the
-    // session so that more messages can be accepted.
-    override protected def onDelivered(event:(Session[T],T)) = {
-      val session = event._1
-      val value = event._2
-      session.credit_adder.merge(sizer.size(value));
-    }
+  def delivered(session:Session[Delivery], size:Int) = {
+    consumer_queue.assertExecuting()
+    session.credit_adder.merge((1, size));
   }
 
   // use a event aggregating source to coalesce multiple events from the same thread.
@@ -365,10 +357,10 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
     }
   }
 
-  def open(producer_queue:DispatchQueue, credits:Int=SessionSinkMux.default_session_max_credits):SessionSink[T] = {
-    val session = new Session[T](producer_queue, 0, this)
+  def open(producer_queue:DispatchQueue, delivery_credits:Int, size_credits:Int):SessionSink[T] = {
+    val session = new Session[T](this, producer_queue)
     consumer_queue <<| ^{
-      session.credit_adder.merge(credits);
+      session.credit_adder.merge((delivery_credits, size_credits));
       sessions += session
     }
     session
@@ -392,12 +384,14 @@ class SessionSinkMux[T](val downstream:Sink[T], val consumer_queue:DispatchQueue
 /**
  * tracks one producer to consumer session / credit window.
  */
-class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionSinkMux[T]) extends SessionSink[T] {
+class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extends SessionSink[T] {
 
   var refiller:Task = NOOP
 
   private def sizer = mux.sizer
   private def downstream = mux.source
+  var delivery_credits = 0
+  var size_credits = 0
 
   @volatile
   var enqueue_item_counter = 0L
@@ -407,19 +401,31 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   var enqueue_ts = mux.time_stamp
 
   // create a source to coalesce credit events back to the producer side...
-  val credit_adder = createSource(EventAggregators.INTEGER_ADD , producer_queue)
+  val credit_adder = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
+    def mergeEvent(previous:(Int, Int), event:(Int, Int)) = {
+      if( previous == null ) {
+        event
+      } else {
+        mergeEvents(previous, event)
+      }
+    }
+    def mergeEvents(previous:(Int, Int), event:(Int, Int)) = (previous._1+event._1, previous._2+event._2)
+  }, producer_queue)
+
   credit_adder.onEvent{
-    add_credits(credit_adder.getData.intValue)
+    val (count, size) = credit_adder.getData
+    add_credits(count, size)
+    if( (size > 0 || count>0) && !_full ) {
+      refiller.run
+    }
   }
   credit_adder.resume
 
   private var rejection_handler: (T)=>Unit = _
   
-  private def add_credits(value:Int) = {
-    credits += value;
-    if( value > 0 && !_full ) {
-      refiller.run
-    }
+  private def add_credits(count:Int, size:Int) = {
+    delivery_credits += count
+    size_credits += size
   }
 
   ///////////////////////////////////////////////////
@@ -427,14 +433,14 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
   // producer serial dispatch queue
   ///////////////////////////////////////////////////
 
-  def remaining_capacity = credits
+  def remaining_capacity = size_credits
 
   override def full = {
     producer_queue.assertExecuting()
     _full
   }
   
-  def _full = credits <= 0 && rejection_handler == null
+  def _full = ( size_credits <= 0 || delivery_credits<=0 ) && rejection_handler == null
 
   override def offer(value: T) = {
     producer_queue.assertExecuting()
@@ -450,7 +456,7 @@ class Session[T](val producer_queue:DispatchQueue, var credits:Int, mux:SessionS
         enqueue_size_counter += size
         enqueue_ts = mux.time_stamp
   
-        add_credits(-size)
+        add_credits(-1, -size)
         downstream.merge((this, value))
       }
       true

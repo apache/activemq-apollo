@@ -62,6 +62,10 @@ object OpenwireProtocolHandler extends Log {
   DEFAULT_WIREFORMAT_SETTINGS.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
 
   val WAITING_ON_CLIENT_REQUEST = ()=> "client request"
+
+  object SessionDeliverySizer extends Sizer[(Session[Delivery], Delivery)] {
+    def size(value: (Session[Delivery], Delivery)) = Delivery.size(value._2)
+  }
 }
 
 /**
@@ -818,7 +822,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     var addresses:Array[_ <: BindAddress] = _
 
     val consumer_sink = sink_manager.open()
-    val credit_window_filter = new CreditWindowFilter[Delivery](consumer_sink.map { delivery =>
+    val credit_window_filter = new CreditWindowFilter[(Session[Delivery], Delivery)](consumer_sink.map { event =>
+      val (session, delivery) = event
+      session_manager.delivered(session, delivery.size)
       val dispatch = new MessageDispatch
       dispatch.setConsumerId(info.getConsumerId)
       if( delivery.message eq EndOfBrowseMessage ) {
@@ -832,11 +838,11 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
       messages_sent += 1
       dispatch
-    }, Delivery)
+    }, SessionDeliverySizer)
 
-    credit_window_filter.credit(0, info.getPrefetchSize)
+    credit_window_filter.credit(info.getPrefetchSize, 0)
 
-    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
+    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
       override def time_stamp = broker.now
     }
 
@@ -943,7 +949,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, info.getCurrentPrefetchSize.max(1), buffer_size)
       var closed = false
 
       def consumer = ConsumerContext.this
@@ -1018,7 +1024,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     val ack_source = createSource(EventAggregators.INTEGER_ADD, dispatch_queue)
     ack_source.setEventHandler(^ {
       val data = ack_source.getData
-      credit_window_filter.credit(0, data)
+      credit_window_filter.credit(data, 0)
     });
     ack_source.resume
 

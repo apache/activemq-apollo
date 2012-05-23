@@ -529,7 +529,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     consumer_swapped_in.size_max += amount
   }
 
-  object messages extends Sink[Delivery] {
+  object messages extends Sink[(Session[Delivery], Delivery)] {
 
     var refiller: Task = null
 
@@ -550,11 +550,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       false
     }
 
-    def offer(delivery: Delivery): Boolean = {
+    def offer(event: (Session[Delivery], Delivery)): Boolean = {
       if (full) {
         false
       } else {
-
+        val (session, delivery) = event
+        session_manager.delivered(session, delivery.size)
         // We may need to drop this enqueue or head entries due
         // to the drop policy.
         var drop = false
@@ -1067,7 +1068,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     override def consumer = Queue.this
 
     val session_max = producer.send_buffer_size
-    val downstream = session_manager.open(producer.dispatch_queue, session_max)
+    val downstream = session_manager.open(producer.dispatch_queue, Integer.MAX_VALUE, session_max)
 
     dispatch_queue {
       inbound_sessions += this

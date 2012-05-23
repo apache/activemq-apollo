@@ -570,6 +570,27 @@ class StompPersistentQueueTest extends StompTestSupport {
 
 class StompDestinationTest extends StompTestSupport {
 
+  test("APLO-206 - Load balance of job queues using small consumer credit windows") {
+    connect("1.1")
+
+    for( i <- 1 to 4) {
+      async_send("/queue/load-balanced2", i)
+    }
+
+    subscribe("1", "/queue/load-balanced2", "client", false, "credit:1,0\n")
+    val ack1 = assert_received(1, "1")
+
+    subscribe("2", "/queue/load-balanced2", "client", false, "credit:1,0\n")
+    val ack2 = assert_received(2, "2")
+
+    // Ok lets ack now..
+    ack1(true)
+    val ack3 = assert_received(3, "1")
+
+    ack2(true)
+    val ack4 = assert_received(4, "2")
+  }
+
   test("Browsing queues does not cause AssertionError.  Reported in APLO-156") {
     connect("1.1")
     subscribe("0", "/queue/TOOL.DEFAULT")
@@ -881,33 +902,11 @@ class StompDestinationTest extends StompTestSupport {
 
   test("Queues load balance across subscribers") {
     connect("1.1")
-
-    // Connect to subscribers
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/load-balanced\n" +
-      "id:1\n" +
-      "\n")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/load-balanced\n" +
-      "receipt:0\n"+
-      "id:2\n" +
-      "\n")
-
-    wait_for_receipt("0")
-
-    def put(id:Int) = {
-      client.write(
-        "SEND\n" +
-        "destination:/queue/load-balanced\n" +
-        "\n" +
-        "message:"+id+"\n")
-    }
+    subscribe("1", "/queue/load-balanced")
+    subscribe("2", "/queue/load-balanced")
 
     for( i <- 0 until 4) {
-      put(i)
+      async_send("/queue/load-balanced", "message:"+i)
     }
 
     var sub1_counter=0
