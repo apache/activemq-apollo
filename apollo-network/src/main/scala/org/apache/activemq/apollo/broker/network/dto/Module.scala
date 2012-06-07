@@ -1,3 +1,5 @@
+package org.apache.activemq.apollo.broker.network.dto
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,20 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util
+import org.apache.activemq.apollo.util.DtoModule
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object CollectionsSupport {
+class Module extends DtoModule {
 
-  def diff[T](prev:scala.collection.Set[T], next:scala.collection.Set[T]) = {
-    val same = prev.intersect(next)
-    val added = next -- same
-    val removed = prev -- next
-    (added, same, removed)
-  }
+  def dto_package = "org.apache.activemq.apollo.broker.network.dto"
+  def extension_classes = Array(classOf[NetworkManagerDTO])
+
 }

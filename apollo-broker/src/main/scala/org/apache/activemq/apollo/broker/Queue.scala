@@ -308,6 +308,21 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
+  def load_status = {
+    val rc = new DestinationLoadDTO
+    rc.id = this.id
+    rc.message_count = queue_size
+    rc.message_size = queue_items
+    rc.message_count_enqueue_counter = enqueue_item_counter
+    rc.message_size_enqueue_counter = enqueue_size_counter
+    rc.message_count_dequeue_counter = dequeue_item_counter
+    rc.message_size_dequeue_counter = dequeue_size_counter
+//  TODO: expose selector attribute of consumer.
+//    for( consumer <- all_subscriptions.keys ) {
+//      rc.consumer_selectors.add(consumer.selector)
+//    }
+    rc
+  }
   def status(entries:Boolean=false) = {
     val rc = new QueueStatusDTO
     rc.id = this.id

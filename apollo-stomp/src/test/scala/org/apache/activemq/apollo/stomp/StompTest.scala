@@ -1898,7 +1898,7 @@ class StompSecurityTest extends StompTestSupport {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
 
-  override protected def beforeAll = {
+  override def beforeAll = {
     try {
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
       System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
@@ -2102,7 +2102,7 @@ class StompSslSecurityTest extends StompTestSupport {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
 
-  override protected def beforeAll = {
+  override def beforeAll = {
     // System.setProperty("javax.net.debug", "all")
     try {
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())

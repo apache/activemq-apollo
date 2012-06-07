@@ -23,7 +23,7 @@ abstract class SecurityTest extends OpenwireTestSupport {
 
   override val broker_config_uri: String = "xml:classpath:apollo-openwire-secure.xml"
 
-  override protected def beforeAll = {
+  override def beforeAll = {
     try {
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
       System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)

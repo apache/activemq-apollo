@@ -14,20 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util
+package org.apache.activemq.apollo.broker.network.dto;
+
+import org.apache.activemq.apollo.dto.CustomServiceDTO;
+import org.apache.activemq.apollo.dto.ServiceDTO;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object CollectionsSupport {
+@XmlRootElement(name="network_manager")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class NetworkManagerDTO extends CustomServiceDTO {
 
-  def diff[T](prev:scala.collection.Set[T], next:scala.collection.Set[T]) = {
-    val same = prev.intersect(next)
-    val added = next -- same
-    val removed = prev -- next
-    (added, same, removed)
-  }
+//    @XmlElementRef(name="bridge")
+//    public ArrayList<BridgeDTO> bridges = new ArrayList<BridgeDTO>();
+
+    @XmlElement(name="member")
+    public ArrayList<ClusterMemberDTO> members = new ArrayList<ClusterMemberDTO>();
 }

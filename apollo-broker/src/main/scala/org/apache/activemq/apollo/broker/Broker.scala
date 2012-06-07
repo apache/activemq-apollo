@@ -33,7 +33,7 @@ import management.ManagementFactory
 import org.apache.activemq.apollo.dto._
 import javax.management.ObjectName
 import org.fusesource.hawtdispatch.TaskTracker._
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit._
 import security.SecuredResource.BrokerKind
 import reflect.BeanProperty
 import java.net.InetSocketAddress
@@ -157,6 +157,9 @@ object Broker extends Log {
   val buffer_pools = new BufferPools
 
   def class_loader:ClassLoader = ClassFinder.class_loader
+  
+  @volatile
+  var now = System.currentTimeMillis()
 
   val version = using(getClass().getResourceAsStream("version.txt")) { source=>
     read_text(source).trim
@@ -259,7 +262,7 @@ class Broker() extends BaseService with SecuredResource {
   var web_server:WebServer = _
 
   @volatile
-  var now = System.currentTimeMillis()
+  def now = Broker.now
 
   var config_log:Log = Log(new MemoryLogger(Broker.log))
   var audit_log:Log = Broker
@@ -297,8 +300,12 @@ class Broker() extends BaseService with SecuredResource {
     check_file_limit
 
     BrokerRegistry.add(this)
-    schedule_now_update
-    schedule_virtualhost_maintenance
+    schedule_reoccurring(100, MILLISECONDS) {
+      Broker.now = System.currentTimeMillis
+    }
+    schedule_reoccurring(1, SECONDS) {
+      virtualhost_maintenance
+    }
 
     val tracker = new LoggingTracker("broker startup", console_log, SERVICE_TIMEOUT)
     apply_update(tracker)
@@ -340,28 +347,17 @@ class Broker() extends BaseService with SecuredResource {
 
   }
 
-  def schedule_now_update:Unit = dispatch_queue.after(100, TimeUnit.MILLISECONDS) {
-    if( service_state.is_starting_or_started ) {
-      now = System.currentTimeMillis
-      schedule_now_update
-    }
-  }
-
-  def schedule_virtualhost_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
-    if( service_state.is_started ) {
-      val active_sessions = connections.values.flatMap(_.session_id).toSet
-
-      virtual_hosts.values.foreach { host=>
-        host.dispatch_queue {
-          if(host.service_state.is_started) {
-            host.router.remove_temp_destinations(active_sessions)
-          }
+  def virtualhost_maintenance = {
+    val active_sessions = connections.values.flatMap(_.session_id).toSet
+    virtual_hosts.values.foreach { host=>
+      host.dispatch_queue {
+        if(host.service_state.is_started) {
+          host.router.remove_temp_destinations(active_sessions)
         }
       }
-
-      schedule_virtualhost_maintenance
     }
   }
+
   protected def init_logs = {
     import OptionSupport._
     // Configure the logging categories...

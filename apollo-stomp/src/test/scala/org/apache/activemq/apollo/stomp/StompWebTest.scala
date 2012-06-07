@@ -72,7 +72,7 @@ abstract class StompWebSocketTestSupport extends StompTestSupport with WebDriver
 
   def ws_port: Int = connector_port("ws").get
 
-  override protected def beforeAll() = {
+  override def beforeAll() = {
     try {
       driver = create_web_driver(test_data_dir / "profile")
       super.beforeAll()
@@ -82,7 +82,7 @@ abstract class StompWebSocketTestSupport extends StompTestSupport with WebDriver
     }
   }
 
-  override protected def afterAll() = {
+  override def afterAll() = {
     if (driver != null) {
       driver.quit()
       driver = null

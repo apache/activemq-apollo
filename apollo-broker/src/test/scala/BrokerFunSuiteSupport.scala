@@ -43,7 +43,7 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     broker
   }
 
-  override protected def beforeAll() = {
+  override def beforeAll() = {
     super.beforeAll()
     try {
       broker = createBroker
@@ -54,7 +54,7 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     }
   }
 
-  override protected def afterAll() = {
+  override def afterAll() = {
     ServiceControl.stop(broker)
     super.afterAll()
   }
@@ -139,6 +139,37 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
 
   def webadmin_uri(scheme:String = "http") = {
     Option(broker.web_server).flatMap(_.uris().find(_.getScheme == scheme)).get
+  }
+
+}
+
+class MultiBrokerTestSupport extends FunSuiteSupport {
+
+  case class BrokerAdmin(override val broker_config_uri:String) extends BrokerFunSuiteSupport
+
+  def broker_config_uris = Array("xml:classpath:apollo.xml")
+  var admins = Array[BrokerAdmin]()
+
+  override protected def beforeAll() = {
+    super.beforeAll()
+    try {
+      admins = broker_config_uris.map(BrokerAdmin(_))
+      admins.foreach(_.beforeAll)
+    } catch {
+      case e: Throwable => e.printStackTrace
+    }
+  }
+
+  override protected def afterAll() = {
+    for( admin <- admins ) {
+      try {
+        admin.afterAll
+      } catch {
+        case e => debug(e)
+      }
+    }
+    admins = Array()
+    super.afterAll()
   }
 
 }

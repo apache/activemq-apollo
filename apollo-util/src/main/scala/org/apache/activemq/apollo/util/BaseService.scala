@@ -19,6 +19,7 @@ package org.apache.activemq.apollo.util
 import org.fusesource.hawtdispatch.DispatchQueue
 import org.fusesource.hawtdispatch._
 import collection.mutable.ListBuffer
+import java.util.concurrent.TimeUnit
 
 object BaseService extends Log
 
@@ -82,6 +83,7 @@ trait BaseService extends Service with Dispatched {
       def do_start = {
         val state = new STARTING()
         _service_state = state
+        _start_transition_counter += 1
         try {
           _start(^ {
             _service_state = new STARTED
@@ -130,6 +132,7 @@ trait BaseService extends Service with Dispatched {
         case state:STARTED =>
           val state = new STOPPING
           _service_state = state
+          _start_transition_counter += 1
           try {
             _stop(^ {
               _service_state = new STOPPED
@@ -159,6 +162,20 @@ trait BaseService extends Service with Dispatched {
     stop_task >>: dispatch_queue
   }
 
+  var _start_transition_counter = 0
+  def schedule_reoccurring(time:Long, unit:TimeUnit)(func: =>Unit) = {
+    val counter = _start_transition_counter
+    def schedule:Unit = dispatch_queue.after(time, unit) {
+      if( counter == _start_transition_counter ) {
+        try {
+          func
+        } finally {
+          schedule
+        }
+      }
+    }
+    schedule
+  }
   protected def _start(on_completed:Task)
   protected def _stop(on_completed:Task)
 

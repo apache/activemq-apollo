@@ -479,6 +479,29 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @GET @Path("/virtual-hosts/{id}/load-status")
+  @ApiOperation(value = "Gets a report of the message load on the broker.")
+  @Produces(Array(APPLICATION_JSON))
+  def topics(@PathParam("id") id : String ):LoadStatusDTO = {
+    with_virtual_host[LoadStatusDTO](id) { host =>
+      val router: LocalRouter = host
+      val queue_loads = Future.all {
+        router.local_queue_domain.destination_by_id.values.map { value  =>
+          monitoring[DestinationLoadDTO](value) {
+            value.load_status
+          }
+        }
+      }
+      queue_loads.map { queue_loads=>
+        val rc = new LoadStatusDTO
+        queue_loads.flatMap(_.success_option).foreach { load=>
+          rc.queues.add(load)
+        }
+        Success(rc)
+      }
+    }
+  }
+
   @GET @Path("/virtual-hosts/{id}/topics")
   @ApiOperation(value = "Gets a list of all the topics that exist on the broker.")
   @Produces(Array(APPLICATION_JSON))

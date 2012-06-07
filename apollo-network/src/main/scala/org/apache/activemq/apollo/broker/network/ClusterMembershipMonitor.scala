@@ -14,20 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util
+package org.apache.activemq.apollo.broker.network
 
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object CollectionsSupport {
+import dto.ClusterMemberDTO
+import org.apache.activemq.apollo.util.{BaseService, Service}
+import org.fusesource.hawtdispatch._
 
-  def diff[T](prev:scala.collection.Set[T], next:scala.collection.Set[T]) = {
-    val same = prev.intersect(next)
-    val added = next -- same
-    val removed = prev -- next
-    (added, same, removed)
+trait ClusterMembershipMonitor extends Service {
+  var listener:ClusterMembershipListener = _
+}
+
+trait ClusterMembershipListener {
+  def on_cluster_change(members:Set[ClusterMemberDTO])
+}
+
+case class StaticClusterMembershipMonitor(members:Set[ClusterMemberDTO]) extends BaseService with ClusterMembershipMonitor {
+  val dispatch_queue = createQueue("bridge manager")
+  protected def _start(on_completed: Task) = {
+    dispatch_queue {
+      listener.on_cluster_change(members)
+    }
+    on_completed.run()
+  }
+  protected def _stop(on_completed: Task) = {
+    on_completed.run()
   }
 }

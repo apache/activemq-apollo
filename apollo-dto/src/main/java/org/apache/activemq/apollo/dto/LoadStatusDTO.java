@@ -14,20 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util
+package org.apache.activemq.apollo.dto;
+
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
- * <p>
- * </p>
- *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object CollectionsSupport {
+@XmlRootElement(name="flow_report")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class LoadStatusDTO {
 
-  def diff[T](prev:scala.collection.Set[T], next:scala.collection.Set[T]) = {
-    val same = prev.intersect(next)
-    val added = next -- same
-    val removed = prev -- next
-    (added, same, removed)
-  }
+    @XmlAttribute(name="id")
+    public String id;
+
+    @XmlAttribute(name="timestamp")
+    public long timestamp;
+
+    @XmlElementRef(name="queue")
+    public ArrayList<DestinationLoadDTO> queues = new ArrayList<DestinationLoadDTO>();
+
+    @XmlElementRef(name="topic")
+    public ArrayList<DestinationLoadDTO> topics = new ArrayList<DestinationLoadDTO>();
 }

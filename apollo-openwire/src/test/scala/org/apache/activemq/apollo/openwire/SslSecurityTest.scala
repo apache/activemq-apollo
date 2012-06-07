@@ -24,7 +24,7 @@ class SslSecurityTest extends OpenwireTestSupport {
   override val broker_config_uri: String = "xml:classpath:apollo-openwire-ssl-secure.xml"
   override val transport_scheme = "ssl"
 
-  override protected def beforeAll = {
+  override def beforeAll = {
     // System.setProperty("javax.net.debug", "all")
     try {
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())

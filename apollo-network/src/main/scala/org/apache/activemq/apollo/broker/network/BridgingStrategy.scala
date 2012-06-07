@@ -14,20 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util
+package org.apache.activemq.apollo.broker.network
 
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object CollectionsSupport {
+case class BridgeInfo(from:String, to:String, kind:String, dest:String)
 
-  def diff[T](prev:scala.collection.Set[T], next:scala.collection.Set[T]) = {
-    val same = prev.intersect(next)
-    val added = next -- same
-    val removed = prev -- next
-    (added, same, removed)
-  }
+trait BridgingStrategy {
+
+  def deploy(info:BridgeInfo)
+  def undeploy(info:BridgeInfo)
+
 }
