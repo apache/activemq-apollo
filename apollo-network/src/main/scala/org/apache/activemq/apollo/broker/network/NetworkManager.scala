@@ -56,6 +56,10 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
   var metrics_map = HashMap[String, BrokerMetrics]()
   val bridges = HashMap[BridgeInfo, BridgeDeployer]()
 
+  def network_user = Option(config.user).getOrElse("network")
+  def network_password = config.password
+  def monitoring_interval = OptionSupport(config.monitoring_interval).getOrElse(5)
+
   protected def _start(on_completed: Task) = {
     import collection.JavaConversions._
 
@@ -65,7 +69,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
     membership_monitor.listener = this
     membership_monitor.start(NOOP)
 
-    load_monitor = new RestLoadMonitor
+    load_monitor = new RestLoadMonitor(this)
     load_monitor.listener = this
     load_monitor.start(NOOP)
 
@@ -93,7 +97,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
   }
 
   def on_load_change(dto: LoadStatusDTO) = dispatch_queue {
-    metrics_map.getOrElseUpdate(dto.id, new BrokerMetrics()).update(dto, config.user)
+    metrics_map.getOrElseUpdate(dto.id, new BrokerMetrics()).update(dto, network_user)
   }
 
   def load_analysis = {

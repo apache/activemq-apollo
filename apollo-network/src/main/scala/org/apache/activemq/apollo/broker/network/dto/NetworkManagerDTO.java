@@ -43,6 +43,9 @@ public class NetworkManagerDTO extends CustomServiceDTO {
     @XmlAttribute(name="duplex")
     public Boolean duplex;
 
+    @XmlAttribute(name="monitoring_interval")
+    public Integer monitoring_interval;
+
     @XmlElement(name="member")
     public ArrayList<ClusterMemberDTO> members = new ArrayList<ClusterMemberDTO>();
 }

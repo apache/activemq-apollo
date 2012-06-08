@@ -39,16 +39,15 @@ trait BrokerLoadListener {
   def on_load_change(broker_load:LoadStatusDTO)
 }
 object RestLoadMonitor extends Log
-class RestLoadMonitor extends BaseService with BrokerLoadMonitor {
+class RestLoadMonitor(manager:NetworkManager) extends BaseService with BrokerLoadMonitor {
   import collection.JavaConversions._
   import RestLoadMonitor._
   
   val dispatch_queue = createQueue("rest load monitor")
   val members = HashMap[String, LoadMonitor]()
-  var poll_interval = 5*1000;
 
   protected def _start(on_completed: Task) = {
-    schedule_reoccurring(1, SECONDS) {
+    schedule_reoccurring(manager.monitoring_interval, SECONDS) {
       for(monitor <- members.values) {
         monitor.poll
       }
@@ -110,7 +109,9 @@ class RestLoadMonitor extends BaseService with BrokerLoadMonitor {
     dispatch_queue {
       for(service <- member.services) {
         if( service.kind == "web_admin" ) {
-          members.put(member.id, LoadMonitor(member.id, new URL(service.address)))
+          var monitor = LoadMonitor(member.id, new URL(service.address))
+          members.put(member.id, monitor)
+          monitor.poll
         }
       }
     }

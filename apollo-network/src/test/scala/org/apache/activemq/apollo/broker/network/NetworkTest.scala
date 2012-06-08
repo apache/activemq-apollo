@@ -19,12 +19,13 @@ package org.apache.activemq.apollo.broker.network
 
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
-import org.apache.activemq.apollo.broker.MultiBrokerTestSupport
 import javax.jms.Session._
 import org.fusesource.stomp.jms.{StompJmsDestination, StompJmsConnectionFactory}
 import collection.mutable.ListBuffer
 import javax.jms.{Message, TextMessage, Connection, ConnectionFactory}
 import java.util.concurrent.TimeUnit._
+import org.apache.activemq.apollo.broker.{Broker, MultiBrokerTestSupport}
+import org.fusesource.hawtdispatch._
 
 class NetworkTest extends MultiBrokerTestSupport with ShouldMatchers with BeforeAndAfterEach {
 
@@ -69,17 +70,27 @@ class NetworkTest extends MultiBrokerTestSupport with ShouldMatchers with Before
     case _ => None
   }
 
-  test("forward one message") {
+  test("forward 10000 messages") {
     val connections = create_connections
-    
-    val s0 = connections(0).createSession(false, AUTO_ACKNOWLEDGE)
-    val p0 = s0.createProducer(test_destination())
-    p0.send(s0.createTextMessage("1"))
+    val message_count = 10000;
+
+    var dest = test_destination()
+    val data = "x" * 1024
+
+    Broker.BLOCKABLE_THREAD_POOL {
+      val s0 = connections(0).createSession(false, AUTO_ACKNOWLEDGE)
+      val p0 = s0.createProducer(dest)
+      for( i <- 0 until message_count ) {
+        p0.send(s0.createTextMessage(i+":"+data))
+      }
+    }
 
     val s1 = connections(1).createSession(false, AUTO_ACKNOWLEDGE)
-    val c1 = s1.createConsumer(test_destination())
+    val c1 = s1.createConsumer(dest)
     within(30, SECONDS) {
-      text(c1.receive()) should be(Some("1"))
+      for( i <- 0 until message_count ) {
+        text(c1.receive()) should be(Some(i+":"+data))
+      }
     }
   }
 

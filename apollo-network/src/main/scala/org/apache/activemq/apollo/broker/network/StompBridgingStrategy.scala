@@ -40,20 +40,22 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
 
   val bridges = HashMap[(String, String), Bridge]()
 
-  def bridge_user = manager.config.user
-  def bridge_password = manager.config.password
+  def network_user = manager.network_user
+  def network_password = manager.network_password
 
-  def deploy(info:BridgeInfo) = {
+  def deploy(bridge_info:BridgeInfo) = {
     dispatch_queue.assertExecuting()
-    val bridge = bridges.getOrElseUpdate((info.from, info.to), new Bridge(info.from, info.to))
-    bridge.deploy(info.kind, info.dest)
+    val bridge = bridges.getOrElseUpdate((bridge_info.from, bridge_info.to), new Bridge(bridge_info.from, bridge_info.to))
+    info("Deploying bridge for destination %s, from %s to %s", bridge_info.dest, bridge_info.from, bridge_info.to)
+    bridge.deploy(bridge_info.kind, bridge_info.dest)
   }
 
 
-  def undeploy(info:BridgeInfo) = {
+  def undeploy(bridge_info:BridgeInfo) = {
     dispatch_queue.assertExecuting()
-    for( bridge <- bridges.get((info.from, info.to)) ) {
-      bridge.undeploy(info.kind, info.dest)
+    for( bridge <- bridges.get((bridge_info.from, bridge_info.to)) ) {
+      info("Undeploying bridge for destination %s, from %s to %s", bridge_info.dest, bridge_info.from, bridge_info.to)
+      bridge.undeploy(bridge_info.kind, bridge_info.dest)
     }
   }
 
@@ -69,7 +71,8 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
         case MESSAGE =>
           // forward it..
           frame.action(SEND)
-          println("forwarding message: "+frame.getHeader(MESSAGE_ID))
+          var msgid = frame.getHeader(MESSAGE_ID)
+          debug("forwarding message: %s", msgid)
           to_connection.send(frame, ()=>{
             // Ack it if the original connection is still up...
             // TODO: if it's not a we will probably get a dup/redelivery.
@@ -77,13 +80,13 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
             if( from_connection.state eq original_state ) {
               val ack = new StompFrame(ACK);
               ack.addHeader(SUBSCRIPTION, frame.getHeader(SUBSCRIPTION))
-              ack.addHeader(MESSAGE_ID, frame.getHeader(MESSAGE_ID))
+              ack.addHeader(MESSAGE_ID, msgid)
               from_connection.send(ack, null)
-              println("forwarded message, now acking: "+frame.getHeader(MESSAGE_ID))
+              debug("forwarded message, now acking: %s", msgid)
             }
           })
         case _ =>
-          println("unhandled stomp frame: "+frame)
+          println("unhandled stomp frame: %s", frame)
       }
     }
 
@@ -128,8 +131,8 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
           val to_stomp = new Stomp()
           to_stomp.setDispatchQueue(dispatch_queue)
           to_stomp.setRemoteURI(uri)
-          to_stomp.setLogin(bridge_user)
-          to_stomp.setPasscode(bridge_password)
+          to_stomp.setLogin(network_user)
+          to_stomp.setPasscode(network_password)
           to_stomp.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL)
           val headers = new Properties()
           headers.put("client-type", "apollo-bridge")
@@ -175,16 +178,18 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
           // Reconnect any subscriptions.
           subscriptions.keySet.foreach(subscribe(_))
           // Re-send messages..
-          pending_sends.values.foreach(x => do_send(x._1, x._2))
+          pending_sends.values.foreach(x => request(x._1, x._2))
 
         }
 
-        def do_send(frame:StompFrame, on_complete: ()=>Unit) = {
+        def request(frame:StompFrame, on_complete: ()=>Unit) = {
           connection.request(frame, new org.fusesource.stomp.client.Callback[StompFrame] {
             override def onSuccess(response: StompFrame) = on_complete()
             override def onFailure(value: Throwable) = failed(value)
           })
         }
+
+        def send(frame:StompFrame) = connection.send(frame, null)
 
         def failed(value: Throwable)= {
           debug("Bridge connection to %s failed due to: ", uri, value)
@@ -235,14 +240,18 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
         }
       }
 
-      def send(destination:StompFrame, on_complete: ()=>Unit) = {
-        val id = next_id
-        val cb = ()=>{
-          pending_sends.remove(id)
-          on_complete()
+      def send(frame:StompFrame, on_complete: ()=>Unit) = {
+        if( on_complete!=null ) {
+          val id = next_id
+          val cb = ()=>{
+            pending_sends.remove(id)
+            on_complete()
+          }
+          pending_sends.put(id, (frame, cb))
+          react[ConnectedState] { state => state.request(frame, cb) }
+        } else {
+          react[ConnectedState] { state => state.send(frame) }
         }
-        pending_sends.put(id, (destination, cb))
-        react[ConnectedState] { state => state.do_send(destination, cb) }
       }
     }
 

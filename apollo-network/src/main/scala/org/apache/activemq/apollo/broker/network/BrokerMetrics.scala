@@ -63,7 +63,7 @@ class BrokerMetrics() {
       dest_load.message_size = dest.message_size
 
       // Lets not include the network consumers in the the consumer rates..
-      val consumers = dest.consumers.filter(_.user == network_user).toArray
+      val consumers = dest.consumers.filter(_.user != network_user).toArray
 
       dest_load.consumer_count = consumers.size
       dest_load.dequeue_size_rate = 0
