@@ -20,7 +20,11 @@ package org.apache.activemq.apollo.broker.network
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import org.apache.activemq.apollo.broker.MultiBrokerTestSupport
-
+import javax.jms.Session._
+import org.fusesource.stomp.jms.{StompJmsDestination, StompJmsConnectionFactory}
+import collection.mutable.ListBuffer
+import javax.jms.{Message, TextMessage, Connection, ConnectionFactory}
+import java.util.concurrent.TimeUnit._
 
 class NetworkTest extends MultiBrokerTestSupport with ShouldMatchers with BeforeAndAfterEach {
 
@@ -29,10 +33,55 @@ class NetworkTest extends MultiBrokerTestSupport with ShouldMatchers with Before
     "xml:classpath:apollo-network-2.xml"
   )
 
-  test("basics") {
-    admins(0).broker should not be(null)
-    val config = admins(0).broker.config
-    admins(1).broker should not be(null)
+  val connections = ListBuffer[Connection]()
+
+  override protected def afterEach() = {
+    for( c <- connections ) {
+      try {
+        c.close()
+      } catch {
+        case ignore =>
+      }
+    }
+    connections.clear()
   }
+
+  def create_connection(factory:ConnectionFactory) = {
+    val rc = factory.createConnection()
+    rc.start()
+    connections += rc
+    rc
+  }
+
+  def connection_factories = admins.map { admin =>
+    val rc = new StompJmsConnectionFactory();
+    rc.setBrokerURI("tcp://localhost:"+admin.port);
+    rc
+  }
+
+  def create_connections = connection_factories.map(create_connection(_))
+
+  def test_destination(kind:String="queue", name:String=testName) =
+    new StompJmsDestination("/"+kind+"/"+name.replaceAll("[^a-zA-Z0-9._-]", "_"))
+
+  def text(msg:Message) = msg match {
+    case msg:TextMessage => Some(msg.getText)
+    case _ => None
+  }
+
+  test("forward one message") {
+    val connections = create_connections
+    
+    val s0 = connections(0).createSession(false, AUTO_ACKNOWLEDGE)
+    val p0 = s0.createProducer(test_destination())
+    p0.send(s0.createTextMessage("1"))
+
+    val s1 = connections(1).createSession(false, AUTO_ACKNOWLEDGE)
+    val c1 = s1.createConsumer(test_destination())
+    within(30, SECONDS) {
+      text(c1.receive()) should be(Some("1"))
+    }
+  }
+
 
 }

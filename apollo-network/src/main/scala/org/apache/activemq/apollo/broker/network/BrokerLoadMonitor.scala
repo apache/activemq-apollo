@@ -48,12 +48,12 @@ class RestLoadMonitor extends BaseService with BrokerLoadMonitor {
   var poll_interval = 5*1000;
 
   protected def _start(on_completed: Task) = {
-    on_completed.run()
     schedule_reoccurring(1, SECONDS) {
       for(monitor <- members.values) {
         monitor.poll
       }
     }
+    on_completed.run()
   }
 
   protected def _stop(on_completed: Task) = {
@@ -106,10 +106,12 @@ class RestLoadMonitor extends BaseService with BrokerLoadMonitor {
     }
   }
 
-  def add(member: ClusterMemberDTO) = dispatch_queue {
-    for(service <- member.services) {
-      if( service.kind == "webadmin" ) {
-        members.put(member.id, LoadMonitor(member.id, new URL(service.address)))
+  def add(member: ClusterMemberDTO) = {
+    dispatch_queue {
+      for(service <- member.services) {
+        if( service.kind == "web_admin" ) {
+          members.put(member.id, LoadMonitor(member.id, new URL(service.address)))
+        }
       }
     }
   }

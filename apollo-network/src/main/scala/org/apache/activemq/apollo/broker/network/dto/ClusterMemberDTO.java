@@ -31,7 +31,7 @@ public class ClusterMemberDTO {
     @XmlAttribute(name="id")
     public String id;
 
-    @XmlElementRef(name="service")
+    @XmlElement(name="service")
     public ArrayList<ClusterServiceDTO> services = new ArrayList<ClusterServiceDTO>();
 
 }

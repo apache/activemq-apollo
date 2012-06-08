@@ -39,10 +39,10 @@ class CounterDrivenRate {
 }
 
 class DestinationMetrics {
-  var consumer_count = 0L
   var message_size = 0L
   val enqueue_size_rate = new CounterDrivenRate()
-  val dequeue_size_rate = new CounterDrivenRate()
+  var consumer_count = 0L
+  var dequeue_size_rate = 0d
 }
 
 class BrokerMetrics() {
@@ -52,7 +52,7 @@ class BrokerMetrics() {
 //  var topic_load = HashMap[String, DestinationMetrics]()
   var timestamp = System.currentTimeMillis()
 
-  def update(current:LoadStatusDTO) = {
+  def update(current:LoadStatusDTO, network_user:String) = {
     val now = System.currentTimeMillis()
     val duration = (now - timestamp)/1000.0d
     timestamp = now
@@ -61,8 +61,18 @@ class BrokerMetrics() {
     for( dest <- current.queues ) {
       val dest_load = queue_load.get(dest.id).getOrElse(new DestinationMetrics())
       dest_load.message_size = dest.message_size
+
+      // Lets not include the network consumers in the the consumer rates..
+      val consumers = dest.consumers.filter(_.user == network_user).toArray
+
+      dest_load.consumer_count = consumers.size
+      dest_load.dequeue_size_rate = 0
+      for( c <- consumers ) {
+        if( c.ack_size_rate !=null ) {
+          dest_load.dequeue_size_rate +=  c.ack_size_rate
+        }
+      }
       dest_load.enqueue_size_rate.update(dest.message_size_enqueue_counter, duration)
-      dest_load.dequeue_size_rate.update(dest.message_size_dequeue_counter, duration)
       next_queue_load += dest.id -> dest_load
     }
     queue_load = next_queue_load

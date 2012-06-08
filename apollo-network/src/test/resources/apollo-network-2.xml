@@ -26,13 +26,13 @@
   <web_admin bind="http://0.0.0.0:42000"/>
   <connector id="tcp" bind="tcp://0.0.0.0:42001"/>
 
-  <network_manager>
+  <network_manager self="broker2">
     <member id="broker1">
-      <service kind="web_admin" address="http://0.0.0.0:41000"/>
+      <service kind="web_admin" address="http://0.0.0.0:41000/api/json/broker/virtual-hosts/broker1/load-status"/>
       <service kind="stomp" address="tcp://0.0.0.0:41001"/>
     </member>
     <member id="broker2">
-      <service kind="web_admin" address="http://0.0.0.0:42000"/>
+      <service kind="web_admin" address="http://0.0.0.0:42000/api/json/broker/virtual-hosts/broker2/load-status"/>
       <service kind="stomp" address="tcp://0.0.0.0:42001"/>
     </member>
   </network_manager>

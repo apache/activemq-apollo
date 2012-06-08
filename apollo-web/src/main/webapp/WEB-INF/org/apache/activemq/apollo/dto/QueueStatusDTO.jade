@@ -114,6 +114,10 @@ ul
       p acks: #{x.total_ack_count} messages
       p naks: #{x.total_nack_count} messages
       p waiting on: #{x.waiting_on}
+      p acks per second: #{x.ack_item_rate}
+      p bytes acked per second: #{x.ack_size_rate}
+
+
 
 - if ( entries.isEmpty )
   h2

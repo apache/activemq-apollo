@@ -21,12 +21,12 @@ import org.fusesource.hawtdispatch._
 import java.net.URI
 import org.apache.activemq.apollo.util.{StateMachine, Log}
 import org.fusesource.hawtbuf.AsciiBuffer
-import org.fusesource.stomp.codec.StompFrame
 import org.apache.activemq.apollo.broker.Broker
 import java.util.Properties
 import org.fusesource.stomp.client.{CallbackConnection, Stomp}
 import java.util.concurrent.TimeUnit
 import collection.mutable.HashMap
+import org.fusesource.stomp.codec.StompFrame
 
 
 object StompBridgingStrategy extends Log {
@@ -39,6 +39,9 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
   def dispatch_queue = manager.dispatch_queue
 
   val bridges = HashMap[(String, String), Bridge]()
+
+  def bridge_user = manager.config.user
+  def bridge_password = manager.config.password
 
   def deploy(info:BridgeInfo) = {
     dispatch_queue.assertExecuting()
@@ -60,8 +63,28 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
     val from_connection = ConnectionStateMachine(new URI(from))
     val to_connection = ConnectionStateMachine(new URI(to))
 
-    from_connection.refiller = ^{
-
+    from_connection.receive_handler = frame => {
+      val original_state = from_connection.state
+      frame.action() match {
+        case MESSAGE =>
+          // forward it..
+          frame.action(SEND)
+          println("forwarding message: "+frame.getHeader(MESSAGE_ID))
+          to_connection.send(frame, ()=>{
+            // Ack it if the original connection is still up...
+            // TODO: if it's not a we will probably get a dup/redelivery.
+            // Might want to introduce some dup detection at this point.
+            if( from_connection.state eq original_state ) {
+              val ack = new StompFrame(ACK);
+              ack.addHeader(SUBSCRIPTION, frame.getHeader(SUBSCRIPTION))
+              ack.addHeader(MESSAGE_ID, frame.getHeader(MESSAGE_ID))
+              from_connection.send(ack, null)
+              println("forwarded message, now acking: "+frame.getHeader(MESSAGE_ID))
+            }
+          })
+        case _ =>
+          println("unhandled stomp frame: "+frame)
+      }
     }
 
     dispatch_queue {
@@ -75,10 +98,8 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
       var subscriptions = HashMap[AsciiBuffer, AsciiBuffer]()
       var pending_sends = HashMap[Long, (StompFrame, ()=>Unit)]()
 
-      var refiller: Runnable = ^{ sys.error("refiller not set") }
-      var receive_handler: (StompFrame)=>Boolean = frame => {
+      var receive_handler: (StompFrame)=>Unit = frame => {
         info("dropping frame: %s", frame)
-        true
       }
 
 
@@ -107,8 +128,8 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
           val to_stomp = new Stomp()
           to_stomp.setDispatchQueue(dispatch_queue)
           to_stomp.setRemoteURI(uri)
-          to_stomp.setLogin("admin")
-          to_stomp.setPasscode("password")
+          to_stomp.setLogin(bridge_user)
+          to_stomp.setPasscode(bridge_password)
           to_stomp.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL)
           val headers = new Properties()
           headers.put("client-type", "apollo-bridge")
@@ -143,15 +164,13 @@ class StompBridgingStrategy(val manager:NetworkManager) extends BridgingStrategy
           debug("Bridge connected to: %s", uri)
           connection.receive(new org.fusesource.stomp.client.Callback[StompFrame] {
             override def onSuccess(value: StompFrame) = {
-              if( !receive_handler(value) ) {
-                connection.suspend()
-              }
+              receive_handler(value)
             }
             override def onFailure(value: Throwable) = {
               failed(value)
             }
           })
-          connection.refiller(refiller)
+          connection.resume()
 
           // Reconnect any subscriptions.
           subscriptions.keySet.foreach(subscribe(_))

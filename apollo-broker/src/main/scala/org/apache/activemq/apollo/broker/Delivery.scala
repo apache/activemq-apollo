@@ -65,6 +65,8 @@ trait DeliveryConsumer extends Retained {
   def start_from_tail = false
   def set_starting_seq(seq:Long) = {}
 
+  def user:String = null
+  def jms_selector:String = null
   def browser = false
   def exclusive = false
   def dispatch_queue:DispatchQueue;

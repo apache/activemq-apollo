@@ -178,6 +178,10 @@ class StompProtocolHandler extends ProtocolHandler {
 
     override def start_from_tail = from_seq == -1
 
+    override def jms_selector = if(selector!=null){ selector._1 } else { null }
+
+    override def user = security_context.user
+
     var starting_seq:Long = 0L
     override def set_starting_seq(seq: Long):Unit = {
       starting_seq=seq

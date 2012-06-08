@@ -334,17 +334,21 @@ abstract class Resource(parent:Resource=null) {
     host.router.asInstanceOf[LocalRouter]
   }
 
-  def now = BrokerRegistry.list.headOption.map(_.now).getOrElse(System.currentTimeMillis())
+  def now = System.currentTimeMillis()
 
   protected def with_broker[T](func: (org.apache.activemq.apollo.broker.Broker)=>FutureResult[T]):FutureResult[T] = {
-    BrokerRegistry.list.headOption match {
-      case Some(broker)=>
-        sync(broker) {
-          func(broker)
-        }
-      case None=>
-        result(NOT_FOUND)
+    val broker = http_request.getAttribute("APOLLO_BROKER").asInstanceOf[Broker]
+    sync(broker) {
+      func(broker)
     }
+//    BrokerRegistry.list.headOption match {
+//      case Some(broker)=>
+//        sync(broker) {
+//          func(broker)
+//        }
+//      case None=>
+//        result(NOT_FOUND)
+//    }
   }
 
   protected def with_connector[T](id:String)(func: (org.apache.activemq.apollo.broker.Connector)=>FutureResult[T]):FutureResult[T] = {

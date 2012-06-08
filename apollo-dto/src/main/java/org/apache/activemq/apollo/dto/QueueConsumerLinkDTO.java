@@ -36,6 +36,9 @@ public class QueueConsumerLinkDTO extends LinkDTO {
     public long total_ack_count;
     public long total_nack_count;
 
+    public Double ack_item_rate;
+    public Double ack_size_rate;
+
     /**
      * What the consumer is currently waiting on
      */

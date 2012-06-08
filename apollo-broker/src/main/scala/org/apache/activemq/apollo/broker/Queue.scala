@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit
 
 import org.fusesource.hawtdispatch._
 import protocol.ProtocolFactory
-import collection.mutable.ListBuffer
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
@@ -33,6 +32,8 @@ import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
 import org.fusesource.hawtbuf._
 import java.util.regex.Pattern
+import java.util.ArrayList
+import collection.mutable.{ArrayBuffer, ListBuffer}
 
 sealed trait FullDropPolicy
 object Block extends FullDropPolicy
@@ -317,10 +318,19 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc.message_size_enqueue_counter = enqueue_size_counter
     rc.message_count_dequeue_counter = dequeue_item_counter
     rc.message_size_dequeue_counter = dequeue_size_counter
-//  TODO: expose selector attribute of consumer.
-//    for( consumer <- all_subscriptions.keys ) {
-//      rc.consumer_selectors.add(consumer.selector)
-//    }
+
+    for( sub <- all_subscriptions.values ) {
+      val dto = new ConsumerLoadDTO
+      dto.user = sub.consumer.user
+      dto.selector = sub.consumer.jms_selector
+      sub.ack_rates match {
+        case Some((items_per_sec, size_per_sec) ) =>
+          dto.ack_item_rate = items_per_sec
+          dto.ack_size_rate = size_per_sec
+        case _ =>
+      }
+      rc.consumers.add(dto)
+    }
     rc
   }
   def status(entries:Boolean=false) = {
@@ -391,7 +401,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       link.total_nack_count = sub.total_nack_count
       link.acquired_size = sub.acquired_size
       link.acquired_count = sub.acquired_count
-      link.waiting_on = if( sub.full ) {
+      sub.ack_rates match {
+        case Some((items_per_sec, size_per_sec) ) =>
+          link.ack_item_rate = items_per_sec
+          link.ack_size_rate = size_per_sec
+        case _ =>
+      }
+
+      if( sub.full ) {
         "consumer"
       } else if( sub.pos.is_tail ) {
         "producer"
@@ -472,7 +489,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
       // by the time this is run, consumers and producers may have already joined.
       on_completed.run
-      schedule_periodic_maintenance
+      schedule_reoccurring(1, TimeUnit.SECONDS) {
+        queue_maintenance
+      }
+
       // wake up the producers to fill us up...
       if (messages.refiller != null) {
         messages.refiller.run
@@ -895,56 +915,53 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var delivery_rate = 0L
   def swapped_out_size = queue_size - (producer_swapped_in.size + consumer_swapped_in.size)
 
-  def schedule_periodic_maintenance:Unit = dispatch_queue.after(1, TimeUnit.SECONDS) {
-    if( service_state.is_started ) {
-      var elapsed = System.currentTimeMillis-now
-      now += elapsed
+  def queue_maintenance:Unit = {
+    var elapsed = System.currentTimeMillis-now
+    now += elapsed
 
-      consumers_keeping_up_historically = consumers_keeping_up_counter!=0
-      consumers_keeping_up_counter = 0
-      
-      delivery_rate = 0L
+    consumers_keeping_up_historically = consumers_keeping_up_counter!=0
+    consumers_keeping_up_counter = 0
 
-      var consumer_stall_ms = 0L
-      var load_stall_ms = 0L
+    delivery_rate = 0L
 
-      all_subscriptions.values.foreach{ sub=>
-        val (cs, ls) = sub.adjust_prefetch_size
-        consumer_stall_ms += cs
-        load_stall_ms += ls
-        if(!sub.browser) {
-          delivery_rate += sub.enqueue_size_per_interval
-        }
+    var consumer_stall_ms = 0L
+    var load_stall_ms = 0L
+
+    all_subscriptions.values.foreach{ sub=>
+      val (cs, ls) = sub.adjust_prefetch_size
+      consumer_stall_ms += cs
+      load_stall_ms += ls
+      if(!sub.browser) {
+        delivery_rate += sub.enqueue_size_per_interval
       }
-      
-      val rate_adjustment = elapsed.toFloat / 1000.toFloat
-      delivery_rate  = (delivery_rate / rate_adjustment).toLong
-
-      val stall_ratio = ((consumer_stall_ms*100)+1).toFloat / ((load_stall_ms*100)+1).toFloat
-
-      // Figure out what the max enqueue rate should be.
-      max_enqueue_rate = Int.MaxValue
-      if( tune_fast_delivery_rate>=0 && tune_catchup_enqueue_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 1.0 ) {
-        max_enqueue_rate = tune_catchup_enqueue_rate
-      }
-      if(tune_max_enqueue_rate >=0 ) {
-        max_enqueue_rate = max_enqueue_rate.min(tune_max_enqueue_rate)
-      }
-      if( max_enqueue_rate < Int.MaxValue ) {
-        if(enqueues_remaining==null) {
-          enqueues_remaining = new LongCounter()
-          enqueue_throttle_release(enqueues_remaining)
-        }
-      } else {
-        if(enqueues_remaining!=null) {
-          enqueues_remaining = null
-        }
-      }
-
-      swap_messages
-      check_idle
-      schedule_periodic_maintenance
     }
+
+    val rate_adjustment = elapsed.toFloat / 1000.toFloat
+    delivery_rate  = (delivery_rate / rate_adjustment).toLong
+
+    val stall_ratio = ((consumer_stall_ms*100)+1).toFloat / ((load_stall_ms*100)+1).toFloat
+
+    // Figure out what the max enqueue rate should be.
+    max_enqueue_rate = Int.MaxValue
+    if( tune_fast_delivery_rate>=0 && tune_catchup_enqueue_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 1.0 ) {
+      max_enqueue_rate = tune_catchup_enqueue_rate
+    }
+    if(tune_max_enqueue_rate >=0 ) {
+      max_enqueue_rate = max_enqueue_rate.min(tune_max_enqueue_rate)
+    }
+    if( max_enqueue_rate < Int.MaxValue ) {
+      if(enqueues_remaining==null) {
+        enqueues_remaining = new LongCounter()
+        enqueue_throttle_release(enqueues_remaining)
+      }
+    } else {
+      if(enqueues_remaining!=null) {
+        enqueues_remaining = null
+      }
+    }
+
+    swap_messages
+    check_idle
   }
     
   var max_enqueue_rate = Int.MaxValue
@@ -1029,6 +1046,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   
   
   def drain_acks = might_unfill {
+    val end = System.nanoTime()
     ack_source.getData.foreach {
       case (entry, consumed, uow) =>
         consumed match {
@@ -2194,8 +2212,29 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   var consumer_stall_start = 0L
   var load_stall_start = 0L
 
+  var started_at = Broker.now
   var total_ack_count = 0L
+  var total_ack_size = 0L
   var total_nack_count = 0L
+
+  var idle_start = System.nanoTime()
+  var idle_total = 0L
+  
+  def ack_rates = {
+    var duration = ((Broker.now - started_at)*1000000)
+    duration -= idle_total
+    if( idle_start!=0 ) {
+      duration -= System.nanoTime() - idle_start
+    }
+
+    if( duration != 0 && total_ack_count > 0 ) {
+      val ack_rate = 1000000000d * total_ack_count / duration
+      val ack_size_rate = 1000000000d * total_ack_size / duration
+      Some((ack_rate, ack_size_rate))
+    } else {
+      None
+    }
+  }
   
   override def toString = {
     def seq(entry:QueueEntry) = if(entry==null) null else entry.seq
@@ -2356,7 +2395,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   }
 
   def adjust_prefetch_size = {
-
     enqueue_size_per_interval = session.enqueue_size_counter - enqueue_size_at_last_interval
     enqueue_size_at_last_interval = session.enqueue_size_counter
 
@@ -2410,6 +2448,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   class AcquiredQueueEntry(val entry:QueueEntry) extends LinkedNode[AcquiredQueueEntry] {
 
+    if(acquired.isEmpty) {
+      idle_total = System.nanoTime() - idle_start
+      idle_start = 0
+    }
+    
     acquired.addLast(this)
     acquired_size += entry.size
 
@@ -2421,6 +2464,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       }
 
       total_ack_count += 1
+      total_ack_size += entry.size
       if (entry.messageKey != -1) {
         val storeBatch = if( uow == null ) {
           queue.virtual_host.store.create_uow
@@ -2438,6 +2482,9 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       // removes this entry from the acquired list.
       unlink()
+      if( acquired.isEmpty ) {
+        idle_start = System.nanoTime()
+      }
 
       // we may now be able to prefetch some messages..
       acquired_size -= entry.size
@@ -2492,6 +2539,9 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       }
       unlink()
+      if( acquired.isEmpty ) {
+        idle_start = System.nanoTime()
+      }
       check_finish_close
     }
   }

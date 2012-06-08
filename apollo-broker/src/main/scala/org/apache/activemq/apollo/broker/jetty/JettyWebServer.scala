@@ -34,6 +34,7 @@ import java.util.jar.JarInputStream
 import java.lang.String
 import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder}
 import org.apache.activemq.apollo.broker.web.{AllowAnyOriginFilter, WebServer, WebServerFactory}
+import javax.servlet._
 
 /**
  * <p>
@@ -226,6 +227,14 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
               val origins = cors_origin.split(",").map(_.trim()).toSet
               context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", FilterMapping.DEFAULT)
             }
+            context.addFilter(new FilterHolder(new Filter(){
+              def init(p1: FilterConfig) {}
+              def destroy() {}
+              def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) = {
+                request.setAttribute("APOLLO_BROKER", broker)
+                chain.doFilter(request, response)
+              }
+            }), "/*", FilterMapping.DEFAULT)
 
             if( broker.tmp !=null ) {
               context.setTempDirectory(broker.tmp)

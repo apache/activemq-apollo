@@ -14,35 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.network.dto;
+package org.apache.activemq.apollo.util
 
-import org.apache.activemq.apollo.dto.CustomServiceDTO;
-import org.apache.activemq.apollo.dto.ServiceDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
+import collection.mutable.ArrayBuffer
 
 /**
+ * <p>A circular buffer</p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="network_manager")
-@XmlAccessorType(XmlAccessType.FIELD)
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class NetworkManagerDTO extends CustomServiceDTO {
+class CircularBuffer[T](max:Int) extends ArrayBuffer[T](max) {
+  
+  def max_size = max
+  private var pos = 0
+  
+  override def +=(elem: T): this.type = {
+    if( size < initialSize ) {
+      super.+=(elem)
+    } else {
+      evicted(this(pos))
+      this.update(pos, elem)
+      pos += 1
+      if( pos >= initialSize ) {
+        pos = 0
+      }
+    }
+    this
+  }
 
-    @XmlAttribute(name="user")
-    public String user;
-
-    @XmlAttribute(name="password")
-    public String password;
-
-    @XmlAttribute(name="self")
-    public String self;
-
-    @XmlAttribute(name="duplex")
-    public Boolean duplex;
-
-    @XmlElement(name="member")
-    public ArrayList<ClusterMemberDTO> members = new ArrayList<ClusterMemberDTO>();
+  /**
+   * Sub classes can override this method to so they can be
+   * notified when an element is being evicted from the circular
+   * buffer.
+   */
+  protected def evicted(elem:T) = {}
+  
 }

@@ -93,7 +93,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
   }
 
   def on_load_change(dto: LoadStatusDTO) = dispatch_queue {
-    metrics_map.getOrElseUpdate(dto.id, new BrokerMetrics()).update(dto)
+    metrics_map.getOrElseUpdate(dto.id, new BrokerMetrics()).update(dto, config.user)
   }
 
   def load_analysis = {
@@ -113,15 +113,16 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
     val queue_demand_map = HashMap[String, DemandStatus]()
 
     for( (broker, broker_load) <- metrics_map) {
-      for( (id, dest) <- broker_load.queue_load ) {
-        val status = queue_demand_map.getOrElseUpdate(id, new DemandStatus)
-        if( can_bridge_from(broker) &&  needs_more_consumers(dest) ) {
+      for( (dest_name, dest) <- broker_load.queue_load ) {
+        val status = queue_demand_map.getOrElseUpdate(dest_name, new DemandStatus)
+        var needsmoreconsumers = needs_more_consumers(dest)
+        if( can_bridge_from(broker) && needsmoreconsumers ) {
           // The broker needs more consumers to drain the queue..
-          status.needs_consumers += (id->dest)
+          status.needs_consumers += (broker->dest)
         } else {
           // The broker can drain the queue of other brokers..
           if( can_bridge_to(broker) && dest.consumer_count > 0 ) {
-            status.has_consumers += (id->dest)
+            status.has_consumers += (broker->dest)
           }
         }
       }
@@ -129,7 +130,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
 
     val desired_bridges = HashSet[BridgeInfo]()
     for( (id, demand) <- queue_demand_map ) {
-      for( (to, to_metrics)<- demand.needs_consumers; (from, from_metrics) <-demand.has_consumers ) {
+      for( (from, from_metrics)<- demand.needs_consumers; (to, to_metrics) <-demand.has_consumers ) {
         // we could get fancy and compare the to_metrics and from_metrics to avoid
         // setting up bridges that won't make a big difference..
         desired_bridges += BridgeInfo(from, to, "queue", id)
@@ -152,13 +153,12 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
 
   }
 
-  var local_broker_id = ""
-  var enable_duplex = false
+  def local_broker_id = config.self
 
   def can_bridge_from(broker:String):Boolean = broker==local_broker_id
   def can_bridge_to(broker:String):Boolean = {
     if ( broker == local_broker_id) {
-      enable_duplex
+      OptionSupport(config.duplex).getOrElse(false)
     } else {
       true
     }
@@ -171,7 +171,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
       return false
     }
 
-    val drain_rate = dest.dequeue_size_rate.mean - dest.enqueue_size_rate.mean
+    val drain_rate = dest.dequeue_size_rate - dest.enqueue_size_rate.mean
     if( drain_rate < 0 ) {
       // Not draining...
       return true
@@ -204,7 +204,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
 
           // Lets look to see if we can use the strategy with services exposed by the broker..
           for( to_service <- to.services; from_service <- from.services ) {
-            if( to_service.kind==service_kind && to_service.kind==from_service.kind ) {
+            if( bridging_strategy==null && to_service.kind==service_kind && to_service.kind==from_service.kind ) {
               bridging_strategy = strategy
               bridging_strategy_info = BridgeInfo(from_service.address, to_service.address, info.kind, info.dest)
               bridging_strategy.deploy( bridging_strategy_info )
