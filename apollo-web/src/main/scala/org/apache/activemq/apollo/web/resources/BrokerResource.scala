@@ -581,7 +581,7 @@ class BrokerResource() extends Resource {
   @DELETE @Path("/virtual-hosts/{id}/queues/{name:.*}")
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
   @ApiOperation(value = "Deletes the named queue.")
-  def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
+  def queue_delete(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
@@ -595,7 +595,7 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/virtual-hosts/{id}/queues/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
+  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
     queue_delete(id, name)
     result(strip_resolve("../../.."))
   }
@@ -634,7 +634,7 @@ class BrokerResource() extends Resource {
   @DELETE @Path("/virtual-hosts/{id}/dsubs/{name:.*}")
   @ApiOperation(value = "Deletes the named virtual host.")
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
-  def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
+  def dsub_delete(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
@@ -648,7 +648,7 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/virtual-hosts/{id}/dsubs/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String):Unit = unwrap_future_result {
+  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
     dsub_delete(id, name)
     result(strip_resolve("../../.."))
   }
@@ -694,7 +694,7 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/connectors/{id}/action/stop")
   @ApiOperation(value = "Stops a connector.")
-  def post_connector_stop(@PathParam("id") id : String):Unit = unwrap_future_result {
+  def post_connector_stop(@PathParam("id") id : String) = ok {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.stop(NOOP)
@@ -705,7 +705,7 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/connectors/{id}/action/start")
   @ApiOperation(value = "Starts a connector.")
-  def post_connector_start(@PathParam("id") id : String):Unit = unwrap_future_result {
+  def post_connector_start(@PathParam("id") id : String) = ok {
     with_connector(id) { connector =>
       admining(connector.broker) {
         connector.start(NOOP)
@@ -774,7 +774,7 @@ class BrokerResource() extends Resource {
   @DELETE @Path("/connections/{id}")
   @ApiOperation(value = "Disconnect a connection from the broker.")
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
-  def connection_delete(@PathParam("id") id : Long):Unit = unwrap_future_result {
+  def connection_delete(@PathParam("id") id : Long) = ok {
     with_connection(id){ connection=>
       admining(connection.connector.broker) {
         connection.stop(NOOP)
@@ -786,7 +786,7 @@ class BrokerResource() extends Resource {
   @POST @Path("/connections/{id}/action/delete")
   @ApiOperation(value = "Disconnect a connection from the broker.")
   @Produces(Array("text/html;qs=5"))
-  def post_connection_delete_and_redirect(@PathParam("id") id : Long):Unit = unwrap_future_result {
+  def post_connection_delete_and_redirect(@PathParam("id") id : Long) = ok {
     connection_delete(id)
     result(strip_resolve("../../.."))
   }
@@ -794,7 +794,7 @@ class BrokerResource() extends Resource {
   @POST
   @Path("/action/shutdown")
   @ApiOperation(value = "Shutsdown the JVM")
-  def command_shutdown:Unit = unwrap_future_result {
+  def command_shutdown = ok {
     info("JVM shutdown requested via web interface")
     with_broker { broker =>
       admining(broker) {

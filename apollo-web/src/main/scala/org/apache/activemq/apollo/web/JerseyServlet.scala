@@ -59,7 +59,7 @@ class JerseyServlet extends ServletContainer {
     original_config = config
     custom_config_map.put("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.ClassNamesResourceConfig")
     custom_config_map.put("com.sun.jersey.config.property.classnames", WebModule.web_resources.map(_.getName).mkString(" "))
-    custom_config_map.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "true"))
+    custom_config_map.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "false"))
     custom_config_map.put("com.sun.jersey.spi.container.ContainerRequestFilters", "com.sun.jersey.api.container.filter.PostReplaceFilter")
     custom_config_map.put("com.sun.jersey.config.feature.Redirect", "true")
     custom_config_map.put("com.sun.jersey.config.feature.FilterForwardOn404", "true")

@@ -86,6 +86,11 @@ abstract class Resource(parent:Resource=null) {
         http_request = value
     }
   }
+  
+  def ok[T](value:FutureResult[T]):Unit = {
+    unwrap_future_result(value)
+    throw new WebApplicationException(Response.ok().build)
+  }  
 
 
   if( parent!=null ) {
