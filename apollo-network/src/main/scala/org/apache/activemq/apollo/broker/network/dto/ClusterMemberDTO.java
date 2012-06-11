@@ -34,4 +34,24 @@ public class ClusterMemberDTO {
     @XmlElement(name="service")
     public ArrayList<ClusterServiceDTO> services = new ArrayList<ClusterServiceDTO>();
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ClusterMemberDTO)) return false;
+
+        ClusterMemberDTO that = (ClusterMemberDTO) o;
+
+        if (id != null ? !id.equals(that.id) : that.id != null) return false;
+        if (services != null ? !services.equals(that.services) : that.services != null)
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (services != null ? services.hashCode() : 0);
+        return result;
+    }
 }

@@ -14,29 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.network
+package org.apache.activemq.apollo.broker.network.dto;
 
-import dto.ClusterMemberDTO
-import org.apache.activemq.apollo.util.{BaseService, Service}
-import org.fusesource.hawtdispatch._
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-trait ClusterMembershipMonitor extends Service {
-  var listener:ClusterMembershipListener = _
-}
+import javax.xml.bind.annotation.*;
 
-trait ClusterMembershipListener {
-  def on_cluster_change(members:Set[ClusterMemberDTO])
-}
-
-case class StaticClusterMembershipMonitor(members:Set[ClusterMemberDTO]) extends BaseService with ClusterMembershipMonitor {
-  val dispatch_queue = createQueue("bridge manager")
-  protected def _start(on_completed: Task) = {
-    dispatch_queue {
-      listener.on_cluster_change(members)
-    }
-    on_completed.run()
-  }
-  protected def _stop(on_completed: Task) = {
-    on_completed.run()
-  }
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+@XmlRootElement(name="jvm_membership")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class JVMMembershipMonitorDTO extends MembershipMonitorDTO {
 }

@@ -22,19 +22,15 @@
     <host_name>localhost</host_name>
   </virtual_host>
 
-  <!-- once we get dynamic discovery working we can avoid using fixed ports -->
-  <web_admin bind="http://0.0.0.0:41000"/>
-  <connector id="tcp" bind="tcp://0.0.0.0:41001"/>
+  <web_admin bind="http://0.0.0.0:0"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:0"/>
 
-  <network_manager self="broker1">
-    <member id="broker1">
-      <service kind="web_admin" address="http://0.0.0.0:41000/api/json/broker/virtual-hosts/broker1/load-status"/>
-      <service kind="stomp" address="tcp://0.0.0.0:41001"/>
-    </member>
-    <member id="broker2">
-      <service kind="web_admin" address="http://0.0.0.0:42000/api/json/broker/virtual-hosts/broker2/load-status"/>
-      <service kind="stomp" address="tcp://0.0.0.0:42001"/>
-    </member>
+  <network_manager>
+    <self id="{{host}}">
+      <service kind="web_admin" address="{{web_admin.url}}/api/json/broker/virtual-hosts/{{host}}/load-status"/>
+      <service kind="stomp" address="tcp://0.0.0.0:{{connector.tcp.port}}"/>
+    </self>
+    <jvm_membership/>
   </network_manager>
 
 </broker>

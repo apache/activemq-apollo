@@ -24,6 +24,9 @@ import org.apache.activemq.apollo.util.DtoModule
 class Module extends DtoModule {
 
   def dto_package = "org.apache.activemq.apollo.broker.network.dto"
-  def extension_classes = Array(classOf[NetworkManagerDTO])
+  def extension_classes = Array(
+    classOf[NetworkManagerDTO],
+    classOf[JVMMembershipMonitorDTO]
+  )
 
 }

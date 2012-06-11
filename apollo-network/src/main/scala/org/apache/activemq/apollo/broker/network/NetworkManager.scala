@@ -22,8 +22,9 @@ import org.apache.activemq.apollo.broker.network.dto._
 import CollectionsSupport._
 import java.util.concurrent.TimeUnit._
 import collection.mutable.{LinkedHashMap, HashSet, ListBuffer, HashMap}
-import org.apache.activemq.apollo.broker.{Broker, CustomServiceFactory}
 import org.apache.activemq.apollo.dto.{LoadStatusDTO, CustomServiceDTO}
+import org.apache.activemq.apollo.broker.{AcceptingConnector, VirtualHost, Broker, CustomServiceFactory}
+import java.net.InetSocketAddress
 
 /**
  * <p>
@@ -41,16 +42,60 @@ object NetworkManagerFactory extends CustomServiceFactory with Log {
   }
 }
 
-object NetworkManager extends Log
+object NetworkManager extends Log {
+  
+  def has_variables(x:String) = x.contains("{{"):Boolean
 
-class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipListener with BrokerLoadListener {
+  def has_variables(dto:ClusterMemberDTO):Boolean = {
+    import collection.JavaConversions._
+    has_variables(dto.id) || dto.services.foldLeft(false){ case (x,y) =>
+      x || has_variables(y.address)
+    }
+  }
+  
+  def resolve_variables(dto:ClusterMemberDTO, broker:Broker, host:VirtualHost):ClusterMemberDTO = {
+    import collection.JavaConversions._
+    def resolve(x:String) = if( !x.contains("{{") ) { x } else {
+      var rc = x;
+      if( host!=null ) {
+        rc = rc.replaceAllLiterally("{{host}}", host.id)
+      }
+      if( broker.web_server!=null && broker.web_server.uris()!=null && !broker.web_server.uris().isEmpty) {
+        rc = rc.replaceAllLiterally("{{web_admin.url}}", broker.web_server.uris()(0).toString.stripSuffix("/"))
+      }
+      for( (id, connector) <- broker.connectors ) {
+        connector match {
+          case connector:AcceptingConnector =>
+            connector.socket_address match {
+              case address:InetSocketAddress =>
+                rc = rc.replaceAllLiterally("{{connector."+id+".port}}", ""+address.getPort)
+            }
+          case _ =>
+        }
+      }
+      rc
+    }
+
+    val rc = new ClusterMemberDTO
+    rc.id = resolve(dto.id)
+    for( service <- dto.services) {
+      val s = new ClusterServiceDTO
+      s.kind = service.kind
+      s.address = resolve(service.address)
+      rc.services.add(s)
+    }
+    rc
+  }
+}
+
+class NetworkManager(broker: Broker) extends BaseService with MembershipListener with BrokerLoadListener {
   import NetworkManager._
 
   val dispatch_queue = createQueue("bridge manager")
 
   var config = new NetworkManagerDTO
-  var membership_monitor:ClusterMembershipMonitor = _
-  var members = Set[ClusterMemberDTO]()
+  var membership_monitor:MembershipMonitor = _
+  var members = collection.Set[ClusterMemberDTO]()
   var members_by_id = HashMap[String, ClusterMemberDTO]()
   var load_monitor: BrokerLoadMonitor = _
   var metrics_map = HashMap[String, BrokerMetrics]()
@@ -64,8 +109,22 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
     import collection.JavaConversions._
 
     // TODO: also support dynamic membership discovery..
-    membership_monitor = StaticClusterMembershipMonitor(config.members.toSet)
+    var monitors = List[MembershipMonitor]()
+    var static_set = config.members.toSet
+    if( !has_variables(config.self) ) {
+      static_set += config.self
+    }
 
+    monitors ::= StaticMembershipMonitor(static_set)
+
+    for( monitor_dto <- config.membership_monitors ) {
+      var monitor = MembershipMonitorFactory.create(broker, monitor_dto)
+      if(monitor!=null) {
+        monitors ::= monitor
+      }
+    }
+
+    membership_monitor = MulitMonitor(monitors)
     membership_monitor.listener = this
     membership_monitor.start(NOOP)
 
@@ -84,7 +143,7 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
     on_completed.run()
   }
 
-  def on_cluster_change(value: Set[ClusterMemberDTO]) = dispatch_queue {
+  def on_membership_change(value: collection.Set[ClusterMemberDTO]) = dispatch_queue {
     val (added, _, removed) = diff(members, value)
     for( m <- removed ) {
       load_monitor.remove(m)
@@ -157,11 +216,21 @@ class NetworkManager(broker: Broker) extends BaseService with ClusterMembershipL
 
   }
 
-  def local_broker_id = config.self
+  def is_local_broker_id(id:String):Boolean = {
+    if( has_variables(config.self.id) ) {
+      for( host <- broker.virtual_hosts.values ) {
+        if( config.self.id.replaceAllLiterally("{{host}}", host.id) == id )
+          return true
+      }
+      false
+    } else {
+      config.self.id == id
+    }
+  }
 
-  def can_bridge_from(broker:String):Boolean = broker==local_broker_id
+  def can_bridge_from(broker:String):Boolean = is_local_broker_id(broker)
   def can_bridge_to(broker:String):Boolean = {
-    if ( broker == local_broker_id) {
+    if ( is_local_broker_id(broker) ) {
       OptionSupport(config.duplex).getOrElse(false)
     } else {
       true

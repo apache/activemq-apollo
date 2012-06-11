@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.broker.network.dto;
 
 import org.apache.activemq.apollo.dto.CustomServiceDTO;
-import org.apache.activemq.apollo.dto.ServiceDTO;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
@@ -37,15 +36,54 @@ public class NetworkManagerDTO extends CustomServiceDTO {
     @XmlAttribute(name="password")
     public String password;
 
-    @XmlAttribute(name="self")
-    public String self;
-
     @XmlAttribute(name="duplex")
     public Boolean duplex;
 
     @XmlAttribute(name="monitoring_interval")
     public Integer monitoring_interval;
 
+    @XmlElement(name="self")
+    public ClusterMemberDTO self = null;
+
     @XmlElement(name="member")
     public ArrayList<ClusterMemberDTO> members = new ArrayList<ClusterMemberDTO>();
+
+    @XmlElementRef()
+    public ArrayList<MembershipMonitorDTO> membership_monitors = new ArrayList<MembershipMonitorDTO>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NetworkManagerDTO)) return false;
+        if (!super.equals(o)) return false;
+
+        NetworkManagerDTO that = (NetworkManagerDTO) o;
+
+        if (duplex != null ? !duplex.equals(that.duplex) : that.duplex != null)
+            return false;
+        if (members != null ? !members.equals(that.members) : that.members != null)
+            return false;
+        if (monitoring_interval != null ? !monitoring_interval.equals(that.monitoring_interval) : that.monitoring_interval != null)
+            return false;
+        if (password != null ? !password.equals(that.password) : that.password != null)
+            return false;
+        if (self != null ? !self.equals(that.self) : that.self != null)
+            return false;
+        if (user != null ? !user.equals(that.user) : that.user != null)
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (user != null ? user.hashCode() : 0);
+        result = 31 * result + (password != null ? password.hashCode() : 0);
+        result = 31 * result + (self != null ? self.hashCode() : 0);
+        result = 31 * result + (duplex != null ? duplex.hashCode() : 0);
+        result = 31 * result + (monitoring_interval != null ? monitoring_interval.hashCode() : 0);
+        result = 31 * result + (members != null ? members.hashCode() : 0);
+        return result;
+    }
 }
