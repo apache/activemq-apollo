@@ -529,6 +529,16 @@
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/cli/tips.txt</exclude>
                 <exclude>src/main/filtered-resources/org/apache/activemq/apollo/broker/version.txt</exclude>
 
+                <exclude>src/main/release/examples/websocket/css/bootstrap.min.css</exclude>
+                <exclude>src/main/release/examples/websocket/css/bootstrap.min.responsive.css</exclude>
+                <exclude>src/main/release/examples/websocket/index.html</exclude>
+                <exclude>src/main/release/examples/websocket/js/stomp.js</exclude>
+                <exclude>src/main/webapp/api/index.html</exclude>
+                <exclude>src/main/webapp/api/javascripts/app.js</exclude>
+                <exclude>src/main/webapp/api/javascripts/swagger-service.js</exclude>
+                <exclude>src/main/webapp/api/javascripts/swagger-ui.js</exclude>
+                <exclude>src/main/webapp/api/stylesheets/screen.css</exclude>
+
               </excludes>
               <useDefaultExcludes>false</useDefaultExcludes>
               <mapping>
