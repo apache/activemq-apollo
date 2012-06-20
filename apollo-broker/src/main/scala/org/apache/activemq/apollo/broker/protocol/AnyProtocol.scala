@@ -183,7 +183,7 @@ class AnyProtocolHandler extends ProtocolHandler {
     connection.transport.suspendRead
 
     protocol_handler.set_connection(connection);
-    protocol_handler.on_transport_connected
+    connection.transport.getTransportListener.onTransportConnected()
   }
 
   override def on_transport_connected = {

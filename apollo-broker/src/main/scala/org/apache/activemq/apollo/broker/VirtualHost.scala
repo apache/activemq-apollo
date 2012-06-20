@@ -90,7 +90,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   var config:VirtualHostDTO = _
   val router:Router = new LocalRouter(this)
 
-  var names:List[String] = Nil;
+  def names:List[String] = config.host_names.toList;
 
   var store:Store = null
   val queue_id_counter = new LongCounter()
