@@ -226,7 +226,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     consumers.foreach(_.retain)
     dispatch_queue {
       consumers.foreach{ x=>
-        debug("producer route attaching to conusmer.")
+        debug("producer route attaching to consumer.")
         val target = connect(x);
         target.refiller = drainer
         targets ::= target
@@ -240,7 +240,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     this.targets = this.targets.filterNot { x=>
       val rc = targets.contains(x.consumer)
       if( rc ) {
-        debug("producer route detaching from conusmer.")
+        debug("producer route detaching from consumer.")
         if( !overflowSessions.isEmpty ) {
           overflowSessions = overflowSessions.filterNot( _ == x )
           if( overflowSessions.isEmpty ) {
@@ -256,7 +256,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
   def disconnected() = dispatch_queue {
     this.targets.foreach { x=>
-      debug("producer route detaching from conusmer.")
+      debug("producer route detaching from consumer.")
       x.close
     }
   }
