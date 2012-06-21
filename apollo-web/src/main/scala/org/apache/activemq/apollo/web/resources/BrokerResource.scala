@@ -533,6 +533,27 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @DELETE @Path("/virtual-hosts/{id}/topics/{name:.*}")
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
+  @ApiOperation(value = "Deletes the named topic.")
+  def topic_delete(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
+    with_virtual_host(id) { host =>
+      val router: LocalRouter = host
+      val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      admining(node) {
+        node.delete.map(result(NOT_MODIFIED, _))
+      }
+    }
+  }
+
+  @POST @Path("/virtual-hosts/{id}/topics/{name:.*}/action/delete")
+  @Produces(Array("text/html;qs=5"))
+  def post_topic_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = {
+    if_ok(topic_delete(id, name)) {
+      result(strip_resolve("../../.."))
+    }
+  }
+
   @GET @Path("/virtual-hosts/{id}/topic-queues/{name:.*}/{qid}")
   @ApiOperation(value = "Gets the status of a topic consumer queue.")
   def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
@@ -595,9 +616,10 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/virtual-hosts/{id}/queues/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
-    queue_delete(id, name)
-    result(strip_resolve("../../.."))
+  def post_queue_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = {
+    if_ok(queue_delete(id, name)) {
+      result(strip_resolve("../../.."))
+    }
   }
 
   @GET @Path("/virtual-hosts/{id}/dsubs")
@@ -648,9 +670,10 @@ class BrokerResource() extends Resource {
 
   @POST @Path("/virtual-hosts/{id}/dsubs/{name:.*}/action/delete")
   @Produces(Array("text/html;qs=5"))
-  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
-    dsub_delete(id, name)
-    result(strip_resolve("../../.."))
+  def post_dsub_delete_and_redirect(@PathParam("id") id : String, @PathParam("name") name : String) = {
+    if_ok(dsub_delete(id, name)) {
+      result(strip_resolve("../../.."))
+    }
   }
 
 
@@ -786,9 +809,10 @@ class BrokerResource() extends Resource {
   @POST @Path("/connections/{id}/action/delete")
   @ApiOperation(value = "Disconnect a connection from the broker.")
   @Produces(Array("text/html;qs=5"))
-  def post_connection_delete_and_redirect(@PathParam("id") id : Long) = ok {
-    connection_delete(id)
-    result(strip_resolve("../../.."))
+  def post_connection_delete_and_redirect(@PathParam("id") id : Long) = {
+    if_ok(connection_delete(id)) {
+      result(strip_resolve("../../.."))
+    }
   }
 
   @POST

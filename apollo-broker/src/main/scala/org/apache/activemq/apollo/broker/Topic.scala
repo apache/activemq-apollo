@@ -198,12 +198,14 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     rc
   }
 
+  var state = "STARTED"
+
   def status(on_complete:(TopicStatusDTO)=>Unit) = {
     dispatch_queue.assertExecuting()
 
     val rc = new TopicStatusDTO
     rc.id = this.id
-    rc.state = "STARTED"
+    rc.state = state
     rc.state_since = this.created_at
     rc.config = this.config
 
@@ -313,6 +315,23 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     check_idle
   }
 
+  def delete:Option[String] = {
+    dispatch_queue.assertExecuting()
+    state match {
+      case "STARTED" =>
+        if (producers.isEmpty && consumers.isEmpty) {
+          state = "DELETED"
+          router.local_topic_domain.remove_destination(address.path, this)
+          DestinationMetricsSupport.add_destination_metrics(router.virtual_host.dead_topic_metrics, topic_metrics)
+          None
+        } else {
+          Some("Topic is in use.")
+        }        
+      case _ =>
+        Some("Topic already deleted.")
+    }
+  }
+
   def check_idle {
     if (producers.isEmpty && consumers.isEmpty) {
       if (idled_at==0) {
@@ -321,8 +340,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
         if( auto_delete_after!=0 ) {
           dispatch_queue.after(auto_delete_after, TimeUnit.SECONDS) {
             if( previously_idle_at == idled_at ) {
-              router.local_topic_domain.remove_destination(address.path, this)
-              DestinationMetricsSupport.add_destination_metrics(router.virtual_host.dead_topic_metrics, topic_metrics)
+              delete
             }
           }
         }

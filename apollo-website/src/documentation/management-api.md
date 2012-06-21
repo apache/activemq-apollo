@@ -46,6 +46,7 @@ succeeded or failed.  Expect the following:
 
 * *`200`*: If a GET, PUT, or DELETE request succeeds.
 * *`303`*: If a POST request succeeds.
+* *`304`*: If the resource cannot be modified at the current time.
 * *`400`*: The request could not be understood by the server due to malformed syntax. The client SHOULD NOT repeat the request without modifications.
 * *`404`*: If the resource cannot be found.
 * *`401`*: If the user does not have access to the resource.
@@ -614,6 +615,11 @@ parameter to define the order in which they are returned.  Example:
         }
       }
       {pygmentize}
+
+  - route("DELETE", "/broker/virtual-hosts/{host}/topics/{dest}.json", 200)
+    :markdown
+      Deletes the `{dest}` topic on the `{host}` virtual host.  Returns a 304 (Not Modified) if the 
+      topic is being used by any clients.
 
   - route("GET", "/broker/virtual-hosts/{host}/topic-queues/{dest}/{queue}.json", 200, "QueueStatusDTO")
     :markdown

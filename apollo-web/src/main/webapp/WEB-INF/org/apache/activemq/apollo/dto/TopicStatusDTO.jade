@@ -23,6 +23,10 @@
 h1 Topic: #{id}
 
 p state: #{state} #{ uptime(state_since) } ago
+- if( state == "STARTED" )
+  form(method="post" action={path("action/delete")})
+    input(type="submit" value="delete")
+
 h3 Topic Domain
 
 h4 Enqueue/Deqeueue Counters

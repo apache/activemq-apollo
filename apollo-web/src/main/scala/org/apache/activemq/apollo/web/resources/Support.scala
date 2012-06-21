@@ -90,7 +90,20 @@ abstract class Resource(parent:Resource=null) {
   def ok[T](value:FutureResult[T]):Unit = {
     unwrap_future_result(value)
     throw new WebApplicationException(Response.ok().build)
-  }  
+  }
+
+  def if_ok[T](func: =>T)(then: =>T):T = {
+    try {
+      func
+    } catch {
+      case e:WebApplicationException =>
+        if( e.getResponse.getStatus == 200 ) {
+          then
+        } else {
+          throw e;
+        }
+    }
+  }
 
 
   if( parent!=null ) {
@@ -165,7 +178,7 @@ abstract class Resource(parent:Resource=null) {
 
   protected def monitoring[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(broker.authenticator, broker.authorizer, "monitor", broker) {
-      broker.dispatch_queue.flatFuture {
+      sync(broker) {
         func
       }
     }
@@ -173,7 +186,7 @@ abstract class Resource(parent:Resource=null) {
 
   protected def admining[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(broker.authenticator, broker.authorizer, "admin", broker) {
-      broker.dispatch_queue.flatFuture {
+      sync(broker) {
         func
       }
     }
@@ -181,7 +194,7 @@ abstract class Resource(parent:Resource=null) {
 
   protected def configing[T](broker:Broker)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(broker.authenticator, broker.authorizer, "config", broker) {
-      broker.dispatch_queue.flatFuture {
+      sync(broker) {
         func
       }
     }
@@ -189,14 +202,14 @@ abstract class Resource(parent:Resource=null) {
 
   protected def admining[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(host.authenticator, host.authorizer, "admin", host) {
-      host.dispatch_queue.flatFuture {
+      sync(host) {
         func
       }
     }
   }
   protected def monitoring[T](host:VirtualHost)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(host.authenticator, host.authorizer, "monitor", host){
-      host.dispatch_queue.flatFuture {
+      sync(host) {
         func
       }
     }
@@ -204,14 +217,14 @@ abstract class Resource(parent:Resource=null) {
 
   protected def admining[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "admin", dest) {
-      dest.dispatch_queue.flatFuture {
+      sync(dest) {
         func
       }
     }
   }
   protected def monitoring[T](dest:Queue)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest){
-      dest.dispatch_queue.flatFuture {
+      sync(dest) {
         func
       }
     }
@@ -219,14 +232,14 @@ abstract class Resource(parent:Resource=null) {
 
   protected def admining[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer,"admin", dest) {
-      dest.virtual_host.dispatch_queue.flatFuture {
+      sync(dest.virtual_host) {
         func
       }
     }
   }
   protected def monitoring[T](dest:Topic)(func: =>FutureResult[T]):FutureResult[T] = {
     authorize(dest.virtual_host.authenticator, dest.virtual_host.authorizer, "monitor", dest) {
-      dest.virtual_host.dispatch_queue.flatFuture {
+      sync(dest.virtual_host) {
         func
       }
     }
