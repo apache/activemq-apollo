@@ -439,7 +439,6 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   def unbind (consumer:DeliveryConsumer, persistent:Boolean) = {
 
     for(proxy <- consumers.remove(consumer)) {
-      add_dequeue_counters(topic_metrics, proxy.link)
       val list = consumer_queues.remove(consumer) match {
         case Some(queue) =>
           queue.unbind(List(consumer))
@@ -465,6 +464,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           }
           List(queue)
         case None =>
+          add_dequeue_counters(topic_metrics, proxy.link)
           List(consumer)
       }
       producers.keys.foreach({ r=>

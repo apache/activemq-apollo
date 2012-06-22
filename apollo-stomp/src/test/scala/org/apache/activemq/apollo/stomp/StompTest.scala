@@ -21,13 +21,13 @@ import org.scalatest.BeforeAndAfterEach
 import java.lang.String
 import java.util.concurrent.TimeUnit._
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.dto.KeyStorageDTO
 import java.util.concurrent.atomic.AtomicLong
 import FileSupport._
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.dto.{TopicStatusDTO, KeyStorageDTO}
 
 class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
@@ -70,6 +70,16 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     frame should include regex("""session:.+?\n""")
     frame should include("version:"+version+"\n")
     c
+  }
+
+  def disconnect(c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    client.write(
+      "DISCONNECT\n" +
+      "receipt:"+rid+"\n" +
+      "\n")
+    wait_for_receipt(""+rid, c)
+    close(c)
   }
 
   def close(c: StompClient = client) = c.close()
@@ -170,6 +180,25 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
  * would be expected.
  */
 class StompMetricsTest extends StompTestSupport {
+
+  test("slow_consumer_policy='queue' metrics stay consistent on consumer close (APLO-211)") {
+    connect("1.1")
+
+    subscribe("0", "/topic/queued.APLO-211", "client");
+    async_send("/topic/queued.APLO-211", 1)
+    assert_received(1)(true)
+
+    val stat1 = topic_status("queued.APLO-211").metrics
+    disconnect()
+
+    within(3, SECONDS) {
+      val stat2 = topic_status("queued.APLO-211").metrics
+      stat2.producer_count should be(stat1.producer_count-1)
+      stat2.consumer_count should be(stat1.consumer_count-1)
+      stat2.enqueue_item_counter should be(stat1.enqueue_item_counter)
+      stat2.dequeue_item_counter should be(stat1.dequeue_item_counter)
+    }
+  }
 
 
   test("Deleted qeueus are removed to aggregate queue-stats") {

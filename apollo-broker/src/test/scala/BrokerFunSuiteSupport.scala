@@ -141,6 +141,8 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     Option(broker.web_server).flatMap(_.uris().find(_.getScheme == scheme)).get
   }
 
+  def json(value:Any) = org.apache.activemq.apollo.dto.JsonCodec.encode(value).ascii().toString;
+
 }
 
 class MultiBrokerTestSupport extends FunSuiteSupport {
