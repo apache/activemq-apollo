@@ -301,8 +301,6 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
             if (copy.uow == null) {
               copy.uow = store.create_uow
-            } else {
-              copy.uow.retain
             }
 
             if( copy.storeKey == -1L ) {

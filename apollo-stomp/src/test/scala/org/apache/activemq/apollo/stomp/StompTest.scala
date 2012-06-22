@@ -72,6 +72,8 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     c
   }
 
+  def close(c: StompClient = client) = c.close()
+
   val receipt_counter = new AtomicLong()
 
   def sync_send(dest:String, body:Any, headers:String="", c:StompClient = client) = {
@@ -1243,6 +1245,37 @@ class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
+  test("Multiple dsubs contain the same messages (Test case for APLO-210)") {
+
+    val sub_count = 3
+    val message_count = 1000
+
+    // establish 3 durable subs..
+    connect("1.1")
+    for( sub <- 1 to sub_count ) {
+      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true)
+    }
+    close()
+
+    connect("1.1")
+
+    val filler = ":"+("x"*(1024*10))
+
+    // Now send a bunch of messages....
+    for( i <- 1 to message_count ) {
+      async_send(dest="/topic/sometopic", headers="persistent:true\n", body=i+filler)
+    }
+
+    // Empty out the durable durable sub
+    for( sub <- 1 to sub_count ) {
+      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true, sync=false)
+      for( i <- 1 to message_count ) {
+        assert_received(body=i+filler, sub="sub"+sub)
+      }
+    }
+
+  }
+
   test("Can directly send an recieve from a durable sub") {
     connect("1.1")
 
@@ -1417,78 +1450,6 @@ class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
       "\n" +
       "2\n")
     get("2\n")
-
-  }
-
-  test("Two durable subs contain the same messages") {
-    connect("1.1")
-
-    // establish 2 durable subs..
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub1\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub2\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    client.close
-    connect("1.1")
-
-    // Now send a bunch of messages....
-    def put(id:Int) = {
-      client.write(
-        "SEND\n" +
-        "destination:/topic/sometopic\n" +
-        "\n" +
-        "message:"+id+"\n")
-    }
-
-    for( i <- 1 to 1000 ) {
-      put(i)
-    }
-
-    // Now try to get all the previously sent messages.
-
-    def get(id:Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith regex("\n\nmessage:"+id+"\n")
-    }
-
-    // Empty out the first durable sub
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub1\n" +
-      "persistent:true\n" +
-      "\n")
-
-    for( i <- 1 to 1000 ) {
-      get(i)
-    }
-
-    // Empty out the 2nd durable sub
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub2\n" +
-      "persistent:true\n" +
-      "\n")
-
-    for( i <- 1 to 1000 ) {
-      get(i)
-    }
 
   }
 
