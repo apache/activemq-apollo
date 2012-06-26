@@ -23,11 +23,11 @@ import java.util.concurrent.TimeUnit._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.atomic.AtomicLong
 import FileSupport._
-import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.dto.{TopicStatusDTO, KeyStorageDTO}
+import java.net.{SocketTimeoutException, InetSocketAddress}
 
 class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
@@ -597,6 +597,92 @@ class StompPersistentQueueTest extends StompTestSupport {
 
   }
 
+}
+
+/**
+ * These disconnect tests assure that we don't drop message deliviers that are in flight
+ * if a client disconnects before those deliveries are accepted by the target destination.
+ */
+class StompDisconnectTest extends StompTestSupport {
+
+  test("Messages delivery assured to a queued once a disconnect receipt is received") {
+
+    // figure out at what point a quota'ed queue stops accepting more messages.
+    connect("1.1")
+    client.socket.setSoTimeout(1*1000)
+    var block_count = 0
+    try {
+      while( true ) {
+        sync_send("/queue/quota.assured1", "%01024d".format(block_count))
+        block_count += 1
+      }
+    } catch{
+      case e:SocketTimeoutException =>
+    }
+    close()
+
+    // Send 5 more messages which do not fit in the queue, they will be
+    // held in the producer connection's delivery session buffer..
+    connect("1.1")
+    for(i <- 0 until (block_count+5)) {
+      async_send("/queue/quota.assured2", "%01024d".format(i))
+    }
+
+    // Even though we disconnect, those 5 that did not fit should still
+    // get delivered once the queue unblocks..
+    disconnect()
+
+    // Lets make sure non of the messages were dropped.
+    connect("1.1")
+    subscribe("0", "/queue/quota.assured2")
+    for(i <- 0 until (block_count+5)) {
+      assert_received("%01024d".format(i))
+    }
+
+  }
+
+  test("Messages delivery assured to a topic once a disconnect receipt is received") {
+
+    //setup a subscription which will block quickly..
+    var consumer = new StompClient
+    connect("1.1", consumer)
+    subscribe("0", "/topic/quota.assured1", "client", headers="credit:1,0\n", c=consumer)
+
+    // figure out at what point a quota'ed consumer stops accepting more messages.
+    connect("1.1")
+    client.socket.setSoTimeout(1*1000)
+    var block_count = 0
+    try {
+      while( true ) {
+        sync_send("/topic/quota.assured1", "%01024d".format(block_count))
+        block_count += 1
+      }
+    } catch{
+      case e:SocketTimeoutException =>
+    }
+    close()
+    close(consumer)
+
+    connect("1.1", consumer)
+    subscribe("0", "/topic/quota.assured2", "client", headers="credit:1,0\n", c=consumer)
+
+    // Send 5 more messages which do not fit in the consumer buffer, they will be
+    // held in the producer connection's delivery session buffer..
+    connect("1.1")
+    for(i <- 0 until (block_count+5)) {
+      async_send("/topic/quota.assured2", "%01024d".format(i))
+    }
+
+    // Even though we disconnect, those 5 that did not fit should still
+    // get delivered once the queue unblocks..
+    disconnect()
+
+    // Lets make sure non of the messages were dropped.
+    for(i <- 0 until (block_count+5)) {
+      assert_received("%01024d".format(i), c=consumer)(true)
+    }
+
+  }
 }
 
 class StompDestinationTest extends StompTestSupport {
