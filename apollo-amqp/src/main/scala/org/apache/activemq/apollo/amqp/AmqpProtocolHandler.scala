@@ -35,17 +35,16 @@ import org.apache.activemq.apollo.broker.security.SecurityContext
 import org.apache.activemq.apollo.amqp.dto._
 
 import org.fusesource.amqp._
-import org.fusesource.amqp.Callback
-import org.fusesource.amqp.codec.api.AnnotatedMessage
-import org.fusesource.amqp.codec.marshaller.MessageSupport
-import org.fusesource.amqp.codec.types._
+import org.fusesource.amqp.callback._
+import org.fusesource.amqp.callback.Callback
+import org.fusesource.amqp.types._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object AMQPMessage {
 
-  def apply(annotated:AnnotatedMessage):AMQPMessage = {
+  def apply(annotated:Envelope):AMQPMessage = {
     val payload = MessageSupport.toBuffer(annotated)
     val rc = AMQPMessage(payload)
     rc._annotated = annotated
@@ -53,14 +52,14 @@ object AMQPMessage {
   }
 }
 
-case class AMQPMessage(payload:Buffer) extends Message {
+case class AMQPMessage(payload:Buffer) extends org.apache.activemq.apollo.broker.Message {
   import AmqpProtocolHandler._
   def protocol = AmqpProtocol
 
-  var _annotated:AnnotatedMessage = _
+  var _annotated:Envelope = _
   def annotated = {
     if ( _annotated ==null ) {
-      _annotated = MessageSupport.decodeAnnotatedMessage(payload)
+      _annotated = MessageSupport.decodeEnvelope(payload)
     }
     _annotated
   }
@@ -196,8 +195,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find( _.isInstanceOf[AmqpDTO]).map(_.asInstanceOf[AmqpDTO]).getOrElse(new AmqpDTO)
 
-    val options = new AMQPConnectionOptions
-    options.setServer(true);
+    val options = new AMQPServerConnectionOptions
     options.setTransport(connection.transport);
     options.setMaxFrameSize(1024*4)
     options.setIdleTimeout(-1);
@@ -213,7 +211,13 @@ class AmqpProtocolHandler extends ProtocolHandler {
     })
     options.setListener(new AMQPConnection.Listener(){
 
-      override def onBegin(begin: Begin) = new AMQPSessionOptions(100, 100, session_listener)
+      override def onBegin(begin: Begin) = {
+        val rc = new AMQPServerSessionOptions
+        rc.setIncomingWindow(100)
+        rc.setOutgoingWindow(100)
+        rc.setListener(session_listener)
+        rc
+      }
 
       override def onAccepted(session: AMQPSession) {
         connection_log.info("accepted: "+session)
@@ -374,13 +378,12 @@ class AmqpProtocolHandler extends ProtocolHandler {
     var receiver: AMQPReceiver = null
     // create the producer route...
     val options = new AMQPReceiverOptions();
-    options.source = attach.getSource.asInstanceOf[Source]
-    options.target = attach.getTarget.asInstanceOf[Target]
-    options.name = attach.getName
-    options.senderSettleMode = SenderSettleMode.valueOf(attach.getSndSettleMode)
-    options.receiverSettleMode = ReceiverSettleMode.valueOf(attach.getRcvSettleMode)
-
-    options.maxMessageSize = 10 * 1024 * 1024;
+    options.setSource(attach.getSource.asInstanceOf[Source])
+    options.setTarget(attach.getTarget.asInstanceOf[Target])
+    options.setName(attach.getName)
+    options.setSenderSettleMode(SenderSettleMode.valueOf(attach.getSndSettleMode))
+    options.setReceiverSettleMode(ReceiverSettleMode.valueOf(attach.getRcvSettleMode))
+    options.setMaxMessageSize(10 * 1024 * 1024);
 
     def pump = {
       while (target.is_connected && !target.full && receiver.peek() != null) {
@@ -424,7 +427,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     target.refiller = ^ {
       pump
     }
-    options.listener = new AMQPEndpoint.Listener {
+    options.setListener(new AMQPEndpoint.Listener {
       override def onTransfer() = pump
 
       override def onClosed(senderClosed: Boolean, error: Error) {
@@ -435,7 +438,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
           host.router.disconnect(target.addresses, target)
         }
       }
-    }
+    })
 
     // start with 0 credit window so that we don't receive any messages
     // until we have verified if that we can connect to the destination..
@@ -517,7 +520,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
         var annotated = if( message.protocol eq AmqpProtocol ) {
           val original = message.asInstanceOf[AMQPMessage].annotated
-          var annotated = new AnnotatedMessageImpl
+          var annotated = new Envelope
           annotated.setHeader(header)
           annotated.setDeliveryAnnotations(original.getDeliveryAnnotations)
           annotated.setMessageAnnotations(original.getMessageAnnotations)
@@ -531,14 +534,15 @@ class AmqpProtocolHandler extends ProtocolHandler {
             case _ => (message.encoded, "protocol/"+message.protocol.id())
           }
           
-          val bare = new ValueMessageImpl(new AMQPBinary(body))
+          val bare = new types.Message
+          bare.setData(new Data(body))
           var properties = new Properties()
           properties.setContentType(ascii(content_type))
           if( delivery.expiration!= 0 ) {
             properties.setAbsoluteExpiryTime(new Date(delivery.expiration))
           }
           bare.setProperties(properties)
-          var annotated = new AnnotatedMessageImpl
+          var annotated = new Envelope
           annotated.setHeader(header)
           annotated.setMessage(bare)
           annotated
@@ -555,7 +559,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     // AMQPEndpoint.Listener interface..
     ///////////////////////////////////////////////////////////////////
     object endpoint_listener extends AMQPEndpoint.Listener {
-      override def onTransfer = {
+      override def onTransfer = queue {
         sink.refiller.run()
       }
       override def onClosed(senderClosed: Boolean, error: Error) {
@@ -601,25 +605,28 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
   def attach_receiver(attach: Attach, address: String, requested_addresses:Array[SimpleAddress], callback: Callback[AMQPEndpoint]) = try {
     val options = new AMQPSenderOptions();
-    options.source = attach.getSource.asInstanceOf[Source]
-    options.source.setDefaultOutcome(new Released())
+
+    val src = attach.getSource.asInstanceOf[Source]
+    src.setDefaultOutcome(new Released())
 
     if (attach.getSndSettleMode == SenderSettleMode.SETTLED.getValue) {
       // if we are settling... then no other outcomes are possible..
-      options.source.setOutcomes(Array())
+      src.setOutcomes(Array())
     } else {
-      options.source.setOutcomes(Array(
+      src.setOutcomes(Array(
         new AMQPSymbol(Accepted.SYMBOLIC_ID),
         new AMQPSymbol(Rejected.SYMBOLIC_ID),
         new AMQPSymbol(Released.SYMBOLIC_ID),
         new AMQPSymbol(Modified.SYMBOLIC_ID)
       ))
     }
-    options.target = attach.getTarget.asInstanceOf[Target]
-    options.name = attach.getName
-    options.senderSettleMode = SenderSettleMode.valueOf(attach.getSndSettleMode)
-    options.receiverSettleMode = ReceiverSettleMode.valueOf(attach.getRcvSettleMode)
-    options.maxMessageSize = 10 * 1024 * 1024;
+    options.setSource(src)
+
+    options.setTarget(attach.getTarget.asInstanceOf[Target])
+    options.setName(attach.getName)
+    options.setSenderSettleMode(SenderSettleMode.valueOf(attach.getSndSettleMode))
+    options.setReceiverSettleMode(ReceiverSettleMode.valueOf(attach.getRcvSettleMode))
+    options.setMaxMessageSize(10 * 1024 * 1024);
 
 
     val subscription_id = attach.getName
@@ -676,7 +683,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     val from_seq = from_seq_opt.getOrElse(0L)
 
     val source = new AMQPConsumer(subscription_id, addresses, selector, browser, exclusive, include_seq, from_seq, browser_end);
-    options.listener = source.endpoint_listener
+    options.setListener(source.endpoint_listener)
     source.sender = AMQP.createSender(options)
 
     host.dispatch_queue {
