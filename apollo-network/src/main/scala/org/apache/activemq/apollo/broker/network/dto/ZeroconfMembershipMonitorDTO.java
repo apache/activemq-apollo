@@ -1,5 +1,3 @@
-package org.apache.activemq.apollo.broker.network.dto
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,18 +14,26 @@ package org.apache.activemq.apollo.broker.network.dto
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.activemq.apollo.util.DtoModule
+package org.apache.activemq.apollo.broker.network.dto;
+
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Module extends DtoModule {
+@XmlRootElement(name="zeroconf_membership")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ZeroconfMembershipMonitorDTO extends MembershipMonitorDTO {
 
-  def dto_package = "org.apache.activemq.apollo.broker.network.dto"
-  def extension_classes = Array(
-    classOf[NetworkManagerDTO],
-    classOf[JVMMembershipMonitorDTO],
-    classOf[ZeroconfMembershipMonitorDTO]
-  )
+    @XmlAttribute
+    public String address;
+    @XmlAttribute
+    public String group;
 
 }

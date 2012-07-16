@@ -69,6 +69,7 @@ object NetworkManager extends Log {
             connector.socket_address match {
               case address:InetSocketAddress =>
                 rc = rc.replaceAllLiterally("{{connector."+id+".port}}", ""+address.getPort)
+              case _ =>
             }
           case _ =>
         }
@@ -121,6 +122,8 @@ class NetworkManager(broker: Broker) extends BaseService with MembershipListener
       var monitor = MembershipMonitorFactory.create(broker, monitor_dto)
       if(monitor!=null) {
         monitors ::= monitor
+      } else {
+        warn("Could not create the membership monitor for: "+monitor_dto)
       }
     }
 
@@ -146,9 +149,11 @@ class NetworkManager(broker: Broker) extends BaseService with MembershipListener
   def on_membership_change(value: collection.Set[ClusterMemberDTO]) = dispatch_queue {
     val (added, _, removed) = diff(members, value)
     for( m <- removed ) {
+      info("Broker host left the network: %s", m.id)
       load_monitor.remove(m)
     }
     for( m <- added ) {
+      info("Broker host joined the network: %s", m.id)
       load_monitor.add(m)
     }
     members = value

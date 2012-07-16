@@ -18,3 +18,4 @@ NetworkManagerDTO
 BridgeDTO
 MembershipMonitorDTO
 JVMMembershipMonitorDTO
+ZeroconfMembershipMonitorDTO
