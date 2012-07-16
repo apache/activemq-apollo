@@ -157,6 +157,24 @@
     <profile>
       <id>unstable</id>
       <dependencies>
+        
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-amqp</artifactId>
+          <version>99-trunk-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>apollo-network</artifactId>
+          <version>99-trunk-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-jmdns_1.0</artifactId>
+          <version>5.7-SNAPSHOT</version>
+          <optional>true</optional>
+        </dependency>
+
       </dependencies>
     </profile>
   </profiles>

@@ -70,6 +70,13 @@
         <!-- Implements the cli shell -->
         <include>org.apache.karaf.shell:org.apache.karaf.shell.console</include>
         
+        <!-- for the unstable stuff -->
+        <include>org.apache.activemq:activemq-jmdns_1.0</include>
+        <include>org.apache.commons:commons-math</include>
+        <include>org.fusesource.stompjms:stompjms-client</include>
+
+        <include>org.fusesource.fuse-extra:fusesource-amqp</include>
+
       </includes>
       <excludes>
         <exclude>org.apache.activemq:apollo-web:pom</exclude>
