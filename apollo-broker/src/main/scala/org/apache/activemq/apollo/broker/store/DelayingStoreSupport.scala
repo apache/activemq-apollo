@@ -252,16 +252,28 @@ trait DelayingStoreSupport extends Store with BaseService {
     def have_locators:Boolean = {
       actions.values.foreach{ a =>
         // There must either be a dequeue or a message record for a enqueue request.
-        if( !a.enqueues.isEmpty && ( a.message_record==null && a.dequeues.isEmpty ) ) {
-          return false 
-        }
-        if( locator_based && a.message_record==null && !a.dequeues.isEmpty ) {
-          a.dequeues.foreach { d =>
-            if ( d.message_locator.get() == null ) {
-              return false
+        // if not, then there should be a message locator
+
+        if( locator_based && a.message_record==null) {
+          if(!a.dequeues.isEmpty ){
+            a.dequeues.foreach { d =>
+              if ( d.message_locator.get() == null ) {
+                return false
+              }
+            }
+          }
+          else if (!a.enqueues.isEmpty){
+            a.enqueues.foreach { e =>
+              if ( e.message_locator.get() == null ) {
+                return false
+              }
             }
           }
         }
+        else if( !a.enqueues.isEmpty && ( a.message_record==null && a.dequeues.isEmpty ) ) {
+          return false
+        }
+
       }
       true  
     }

@@ -874,6 +874,9 @@ class LevelDBClient(store: LevelDBStore) {
                       var locator_buffer: Buffer = null
                       action.enqueues.foreach {
                         entry =>
+                          if (locator == null) {
+                            locator = entry.message_locator.get().asInstanceOf[(Long, Int)]
+                          }
                           assert(locator != null)
                           val (pos, len) = locator
                           if (locator_buffer == null) {

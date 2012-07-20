@@ -18,12 +18,12 @@ package org.apache.activemq.apollo.broker.store.leveldb
  */
 
 import dto.LevelDBStoreDTO
-import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.broker.store.{StoreTests, Store, StoreFunSuiteSupport}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class LevelDBStoreTest extends StoreFunSuiteSupport {
+class LevelDBStoreTest extends StoreTests {
 
   def create_store(flushDelay: Long): Store = {
     new LevelDBStore({

@@ -2536,6 +2536,19 @@ class StompNackTest extends StompTestSupport {
 
 class StompNackTestOnLevelDBTest extends StompNackTest {
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+
+  test("NACKing without DLQ consumer (persistent)"){
+    connect("1.1")
+    sync_send("/queue/nacker.b", "this msg is persistent", "persistent:true\n")
+
+    subscribe("0", "/queue/nacker.b", "client", false, "", false)
+
+    var ack = assert_received("this msg is persistent", "0")
+    ack(false)
+    ack = assert_received("this msg is persistent", "0")
+    ack(false)
+    Thread.sleep(1000)
+  }
 }
 
 class StompDropPolicyTest extends StompTestSupport {

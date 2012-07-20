@@ -37,6 +37,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   var store:Store = null
 
   def create_store(flushDelay:Long):Store
+  protected def get_flush_delay(): Long = 5*1000
 
   /**
    * Handy helper to call an async method on the store and wait for
@@ -49,7 +50,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   override protected def beforeAll() = {
     super.beforeAll()
     data_directory.recursive_delete
-    store = create_store(5*1000)
+    store = create_store(get_flush_delay())
     val tracker = new LoggingTracker("store startup")
     tracker.start(store)
     tracker.await
@@ -132,132 +133,5 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
     tracker.await
     msg_keys
   }
-
-  test("add and list queues") {
-    val A = add_queue("A")
-    val B = add_queue("B")
-    val C = add_queue("C")
-
-    val seq:Seq[Long] = List(A,B,C).toSeq
-    expectCB(seq) { cb=>
-      store.list_queues(cb)
-    }
-  }
-
-  test("export and import") {
-    val A = add_queue("A")
-    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
-
-    val rc:Option[MessageRecord] = sync_cb( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
-    expect(ascii("message 1").buffer) {
-      rc.get.buffer
-    }
-
-    val file = test_data_dir / "export.tgz"
-    file.getParentFile.mkdirs()
-    using( new BufferedOutputStream(new FileOutputStream(file))) { os =>
-      // Export the data...
-      expect(None) {
-        sync_cb[Option[String]] { cb =>
-          store.export_data(os, cb)
-        }
-      }
-    }
-
-    // purge the data..
-    purge
-
-    // There should ne no queues..
-    expectCB(Seq[Long]()) { cb=>
-      store.list_queues(cb)
-    }
-
-    // Import the data..
-    using(new BufferedInputStream(new FileInputStream(file))) { is =>
-      expect(None) {
-        sync_cb[Option[String]] { cb =>
-          store.import_data(is, cb)
-        }
-      }
-    }
-
-    // The data should be there now again..
-    val queues:Seq[Long] = sync_cb(store.list_queues(_))
-    expect(1)(queues.size)
-    val entries:Seq[QueueEntryRecord] = sync_cb(cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb))
-    expect(3) ( entries.size  )
-
-  }
-
-  test("load stored message") {
-    val A = add_queue("A")
-    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
-
-    val rc:Option[MessageRecord] = sync_cb( cb=> store.load_message(msg_keys.head._1, msg_keys.head._2)(cb) )
-    expect(ascii("message 1").buffer) {
-      rc.get.buffer
-    }
-  }
-
-  test("get queue status") {
-    val A = add_queue("my queue name")
-    populate(A, "message 1"::"message 2"::"message 3"::Nil)
-
-    val rc:Option[QueueRecord] = sync_cb( cb=> store.get_queue(A)(cb) )
-    expect(ascii("my queue name")) {
-      rc.get.binding_data.ascii
-    }
-  }
-
-  test("list queue entries") {
-    val A = add_queue("A")
-    val msg_keys = populate(A, "message 1"::"message 2"::"message 3"::Nil)
-
-    val rc:Seq[QueueEntryRecord] = sync_cb( cb=> store.list_queue_entries(A,0, Long.MaxValue)(cb) )
-    expect(msg_keys.toSeq.map(_._3)) {
-      rc.map( _.entry_seq )
-    }
-  }
-
-  test("batch completes after a delay") {x}
-  def x = {
-    val A = add_queue("A")
-    var batch = store.create_uow
-
-    val m1 = add_message(batch, "message 1")
-    batch.enqueue(entry(A, 1, m1))
-
-    val tracker = new TaskTracker()
-    val task = tracker.task("uow complete")
-    batch.on_complete(task.run)
-    batch.release
-
-    expect(false) {
-      tracker.await(3, TimeUnit.SECONDS)
-    }
-    expect(true) {
-      tracker.await(5, TimeUnit.SECONDS)
-    }
-  }
-
-  test("flush cancels the delay") {
-    val A = add_queue("A")
-    var batch = store.create_uow
-
-    val m1 = add_message(batch, "message 1")
-    batch.enqueue(entry(A, 1, m1))
-
-    val tracker = new TaskTracker()
-    val task = tracker.task("uow complete")
-    batch.on_complete(task.run)
-    batch.release
-
-    store.flush_message(m1._1) {}
-
-    expect(true) {
-      tracker.await(1, TimeUnit.SECONDS)
-    }
-  }
-
 
 }

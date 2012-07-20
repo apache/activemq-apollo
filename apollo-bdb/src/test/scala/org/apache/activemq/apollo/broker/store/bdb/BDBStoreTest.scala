@@ -17,12 +17,12 @@
 package org.apache.activemq.apollo.broker.store.bdb
 
 import dto.BDBStoreDTO
-import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.broker.store.{StoreTests, Store, StoreFunSuiteSupport}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class BDBStoreTest extends StoreFunSuiteSupport {
+class BDBStoreTest extends StoreTests {
 
   def create_store(flushDelay:Long):Store = {
     val rc = new BDBStore({
