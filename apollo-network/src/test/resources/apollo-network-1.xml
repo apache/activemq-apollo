@@ -27,7 +27,7 @@
 
   <network_manager>
     <self id="{{host}}">
-      <service kind="web_admin" address="{{web_admin.url}}/api/json/broker/virtual-hosts/{{host}}/load-status"/>
+      <service kind="web_admin" address="{{web_admin.url}}/api/json/network/load-status/{{host}}"/>
       <service kind="stomp" address="tcp://0.0.0.0:{{connector.tcp.port}}"/>
     </self>
     <jvm_membership/>

@@ -31,7 +31,7 @@ case class RootResource() extends Resource() {
 
   @GET
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML,TEXT_HTML))
-  def post_connection_shutdown_and_redirect() = {
+  def get_root_direct() = {
     Response.seeOther(strip_resolve(root_redirect)).build
   }
 
