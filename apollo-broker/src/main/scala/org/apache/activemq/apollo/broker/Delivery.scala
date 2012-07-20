@@ -24,6 +24,7 @@ import org.apache.activemq.apollo.util.Log
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.dto.DestinationDTO
 import org.apache.activemq.apollo.broker.protocol.{ProtocolFactory, Protocol}
+import scala.Array
 
 object DeliveryProducer extends Log
 
@@ -119,6 +120,7 @@ trait Message extends Filterable with Retained {
  */
 object Delivery extends Sizer[Delivery] {
   def size(value:Delivery):Int = value.size
+  val NO_SENDER = Array[DestinationAddress]()
 }
 
 sealed trait DeliveryResult
@@ -158,11 +160,12 @@ object RetainRemove extends RetainAction
 object RetainIgnore extends RetainAction
 
 class Delivery {
+  import Delivery._
 
   /**
    * Where the delivery is originating from.
    */
-  var sender:DestinationAddress = _
+  var sender = NO_SENDER
 
   /**
    * Total size of the delivery.  Used for resource allocation tracking

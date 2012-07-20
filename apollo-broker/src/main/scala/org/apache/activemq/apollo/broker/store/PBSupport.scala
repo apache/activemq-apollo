@@ -85,10 +85,12 @@ object PBSupport {
       pb.setExpiration(v.expiration)
     if(v.redeliveries!=0)
       pb.setRedeliveries(v.redeliveries)
-    pb.setSender(v.sender)
+    if ( v.sender!=null ) {
+      v.sender.foreach(pb.addSender(_))
+    }
     pb
   }
-
+  val EMPTY_BUFFER_ARRAY = Array[Buffer]()
   implicit def from_pb(pb: QueueEntryPB.Getter):QueueEntryRecord = {
     val rc = new QueueEntryRecord
     rc.queue_key = pb.getQueueKey
@@ -98,7 +100,12 @@ object PBSupport {
     rc.size = pb.getSize
     rc.expiration = pb.getExpiration
     rc.redeliveries = pb.getRedeliveries.toShort
-    rc.sender = pb.getSender
+    var senderList = pb.getSenderList
+    if( senderList!=null ) {
+      rc.sender = senderList.toArray(new Array[Buffer](senderList.size()))
+    } else {
+      rc.sender = EMPTY_BUFFER_ARRAY
+    }
     rc
   }
 

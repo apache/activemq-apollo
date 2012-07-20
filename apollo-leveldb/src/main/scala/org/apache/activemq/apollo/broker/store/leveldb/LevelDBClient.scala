@@ -884,7 +884,9 @@ class LevelDBClient(store: LevelDBStore) {
 
                           val log_record = new QueueEntryPB.Bean
                           // TODO: perhaps we should normalize the sender to make the index entries more compact.
-                          log_record.setSender(entry.sender)
+                          if( entry.sender!=null ) {
+                            entry.sender.foreach(log_record.addSender(_))
+                          }
                           log_record.setMessageLocator(locator_buffer)
                           log_record.setQueueKey(entry.queue_key)
                           log_record.setQueueSeq(entry.entry_seq)

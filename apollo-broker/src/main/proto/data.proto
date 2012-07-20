@@ -51,7 +51,7 @@ message QueueEntryPB {
   optional int32 redeliveries = 6;
   optional sint64 expiration=7;
   optional bytes messageLocator=8;
-  optional bytes sender=9;
+  repeated bytes sender=9;
 }
 
 message MapEntryPB {

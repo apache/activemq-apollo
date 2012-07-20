@@ -19,6 +19,7 @@ package org.apache.activemq.apollo
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.Future
 import java.util.concurrent.CountDownLatch
+import java.util
 
 /**
  *
@@ -80,6 +81,13 @@ package object util {
     func(cb)
     cd.await
     rc.get
+  }
+
+  def append[T](src:Array[T], value:T)(implicit m: scala.reflect.Manifest[T]) = {
+    val rc = new Array[T](src.length+1)
+    System.arraycopy(rc, 0, src, 0, src.length)
+    rc(src.length) = value
+    rc
   }
 
 }

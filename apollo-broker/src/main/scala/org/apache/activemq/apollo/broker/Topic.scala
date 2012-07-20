@@ -152,7 +152,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       val copy = value.copy();
       copy.uow = value.uow
       copy.ack = value.ack
-      copy.sender = address
+      copy.sender = append(copy.sender, address)
       downstream.offer(copy)
     }
   }
@@ -410,7 +410,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     val r = retained_message
     if (r != null) {
       val copy = r.copy()
-      copy.sender = address
+      copy.sender = append(copy.sender, address)
 
       val producer = new  DeliveryProducerRoute(router) {
         refiller = NOOP
