@@ -209,6 +209,7 @@ class StompProtocolHandler extends ProtocolHandler {
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit
       def perform_ack(consumed:DeliveryResult, msgid: AsciiBuffer, uow:StoreUOW=null):Unit
       def close:Unit
+      def consumer = StompConsumer.this
     }
 
     class AutoAckHandler extends AckHandler {
@@ -1402,10 +1403,10 @@ class StompProtocolHandler extends ProtocolHandler {
         
       case Some(consumer)=>
         // consumer gets disposed after all producer stop sending to it...
-        consumer.setDisposer(^{ send_receipt(headers) })
         consumers -= id
         host.dispatch_queue {
           host.router.unbind(consumer.addresses, consumer, persistent, security_context)
+          send_receipt(headers)
         }
     }
   }
@@ -1455,9 +1456,13 @@ class StompProtocolHandler extends ProtocolHandler {
           case None=>
             handler.perform_ack(consumed, messageId, null)
           case Some(txid)=>
-            get_or_create_tx_queue(txid).add{ uow=>
+            handler.consumer.retain()
+            get_or_create_tx_queue(txid).add({ uow=>
               handler.perform_ack(consumed, messageId, uow)
-            }
+              handler.consumer.release()
+            }, ()=>{
+              handler.consumer.release()
+            })
         }
       }
       send_receipt(headers)
@@ -1512,10 +1517,10 @@ class StompProtocolHandler extends ProtocolHandler {
     // TODO: eventually we want to back this /w a broker Queue which
     // can provides persistence and memory swapping.
 
-    val queue = ListBuffer[(StoreUOW)=>Unit]()
+    val queue = ListBuffer[((StoreUOW)=>Unit, ()=>Unit)]()
 
-    def add(proc:(StoreUOW)=>Unit):Unit = {
-      queue += proc
+    def add(on_commit:(StoreUOW)=>Unit, on_rollback:()=>Unit=null):Unit = {
+      queue += ((on_commit, on_rollback))
     }
 
     def commit(on_complete: => Unit) = {
@@ -1526,16 +1531,16 @@ class StompProtocolHandler extends ProtocolHandler {
 //          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
           on_complete
         }
-        queue.foreach{ _(uow) }
+        queue.foreach{ _._1(uow) }
         uow.release
       } else {
-        queue.foreach{ _(null) }
+        queue.foreach{ _._1(null) }
         on_complete
       }
     }
 
     def rollback = {
-      queue.clear
+      queue.foreach{ _._2() }
     }
 
   }
