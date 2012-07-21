@@ -1540,7 +1540,11 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     def rollback = {
-      queue.foreach{ _._2() }
+      queue.foreach{ case (x, y) =>
+        if( y != null ) {
+          y()
+        }
+      }
     }
 
   }
