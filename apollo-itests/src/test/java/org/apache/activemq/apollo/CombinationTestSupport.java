@@ -76,6 +76,10 @@ public abstract class CombinationTestSupport extends AutoFailTestSupport {
         }
     }
 
+    public void setCombinationValues(String attribute, Object[] options) {
+        ComboOption co = this.comboOptions.get(attribute);
+        this.comboOptions.put(attribute, new ComboOption(attribute, Arrays.asList(options)));
+    }
 
 
     public void runBare() throws Throwable {
