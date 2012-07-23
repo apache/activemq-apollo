@@ -772,6 +772,13 @@ class StompProtocolHandler extends ProtocolHandler {
       dead = true;
 
       import collection.JavaConversions._
+
+      // Rollback any in-progress transactions..
+      for( (id, tx) <- transactions ) {
+        tx.rollback
+      }
+      transactions.clear()
+
       producerRoutes.values().foreach{ route=>
         host.dispatch_queue {
           host.router.disconnect(route.addresses, route)
