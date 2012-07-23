@@ -37,7 +37,7 @@ public class JMSUsecaseTest extends JmsTestBase {
         junit.textui.TestRunner.run(suite());
     }
 
-    @Override
+    // this method can be removed once https://issues.apache.org/jira/browse/APLO-224 is resolved.
     public void initCombos() {
         super.initCombos();
         setCombinationValues("protocol", new Object[]{new OpenwireBrokerProtocol()});
