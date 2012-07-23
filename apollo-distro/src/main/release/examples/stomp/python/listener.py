@@ -44,6 +44,7 @@ class MyListener(object):
       diff = time.time() - self.start
       print("Received %s in %f seconds" % (self.count, diff))
       conn.disconnect()
+      sys.exit(0)
       
     else:
       if self.count==0:
@@ -59,3 +60,5 @@ conn.start()
 conn.connect(login=user,passcode=password)
 conn.subscribe(destination=destination, ack='auto')
 print("Waiting for messages...")
+while 1: 
+  time.sleep(10) 
