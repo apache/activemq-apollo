@@ -23,6 +23,90 @@ import FileSupport._
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
 
+object BrokerTestSupport {
+
+  def connector_port(broker:Broker, connector: String): Option[Int] = Option(connector).map {
+    id => broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(0)
+  }
+
+  def queue_exists(broker:Broker, name: String): Boolean = {
+    val host = broker.default_virtual_host
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_queue_domain.destination_by_id.get(name).isDefined
+    }.await()
+  }
+
+  def delete_queue(broker:Broker, name: String) = {
+    val host = broker.default_virtual_host
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      for( node<- router.local_queue_domain.destination_by_id.get(name) ) {
+        router._destroy_queue(node)
+      }
+    }.await()
+  }
+
+  def topic_exists(broker:Broker, name: String): Boolean = {
+    val host = broker.default_virtual_host
+    host.dispatch_queue.future {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_topic_domain.destination_by_id.get(name).isDefined
+    }.await()
+  }
+
+  def topic_status(broker:Broker, name: String): TopicStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_topic_domain.destination_by_id.get(name).get.status
+    }
+  }
+
+  def get_queue_metrics(broker:Broker): AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_queue_metrics
+    }
+  }
+
+  def get_topic_metrics(broker:Broker): AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_topic_metrics
+    }
+  }
+
+  def get_dsub_metrics(broker:Broker): AggregateDestMetricsDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      host.get_dsub_metrics
+    }
+  }
+
+  def queue_status(broker:Broker, name: String): QueueStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      val queue = router.local_queue_domain.destination_by_id.get(name).get
+      sync(queue) {
+        queue.status(false)
+      }
+    }
+  }
+
+  def dsub_status(broker:Broker, name: String): QueueStatusDTO = {
+    val host = broker.default_virtual_host
+    sync(host) {
+      val router = host.router.asInstanceOf[LocalRouter]
+      router.local_dsub_domain.destination_by_id.get(name).get.status(false)
+    }
+  }
+
+  def webadmin_uri(broker:Broker, scheme:String) = {
+    Option(broker.web_server).flatMap(_.uris().find(_.getScheme == scheme)).get
+  }
+}
 /**
  * <p>
  * </p>
@@ -59,87 +143,17 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     super.afterAll()
   }
 
-  def connector_port(connector: String): Option[Int] = Option(connector).map {
-    id => broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(port)
-  }
-
-  def queue_exists(name: String): Boolean = {
-    val host = broker.default_virtual_host
-    host.dispatch_queue.future {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_queue_domain.destination_by_id.get(name).isDefined
-    }.await()
-  }
-
-  def delete_queue(name: String) = {
-    val host = broker.default_virtual_host
-    host.dispatch_queue.future {
-      val router = host.router.asInstanceOf[LocalRouter]
-      for( node<- router.local_queue_domain.destination_by_id.get(name) ) {
-        router._destroy_queue(node)
-      }
-    }.await()
-  }
-
-  def topic_exists(name: String): Boolean = {
-    val host = broker.default_virtual_host
-    host.dispatch_queue.future {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_topic_domain.destination_by_id.get(name).isDefined
-    }.await()
-  }
-
-  def topic_status(name: String): TopicStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_topic_domain.destination_by_id.get(name).get.status
-    }
-  }
-
-  def get_queue_metrics: AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_queue_metrics
-    }
-  }
-
-  def get_topic_metrics: AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_topic_metrics
-    }
-  }
-
-  def get_dsub_metrics: AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_dsub_metrics
-    }
-  }
-
-  def queue_status(name: String): QueueStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      val queue = router.local_queue_domain.destination_by_id.get(name).get
-      sync(queue) {
-        queue.status(false)
-      }
-    }
-  }
-
-  def dsub_status(name: String): QueueStatusDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      val router = host.router.asInstanceOf[LocalRouter]
-      router.local_dsub_domain.destination_by_id.get(name).get.status(false)
-    }
-  }
-
-  def webadmin_uri(scheme:String = "http") = {
-    Option(broker.web_server).flatMap(_.uris().find(_.getScheme == scheme)).get
-  }
+  def connector_port(connector: String) = BrokerTestSupport.connector_port(broker, connector)
+  def queue_exists(name: String) = BrokerTestSupport.queue_exists(broker, name)
+  def delete_queue(name: String) = BrokerTestSupport.delete_queue(broker, name)
+  def topic_exists(name: String) = BrokerTestSupport.topic_exists(broker, name)
+  def topic_status(name: String) = BrokerTestSupport.topic_status(broker, name)
+  def get_queue_metrics = BrokerTestSupport.get_queue_metrics(broker)
+  def get_topic_metrics = BrokerTestSupport.get_topic_metrics(broker)
+  def get_dsub_metrics = BrokerTestSupport.get_dsub_metrics(broker)
+  def queue_status(name: String) = BrokerTestSupport.queue_status(broker, name)
+  def dsub_status(name: String) = BrokerTestSupport.dsub_status(broker, name)
+  def webadmin_uri(scheme:String = "http") = BrokerTestSupport.webadmin_uri(broker, scheme)
 
   def json(value:Any) = org.apache.activemq.apollo.dto.JsonCodec.encode(value).ascii().toString;
 

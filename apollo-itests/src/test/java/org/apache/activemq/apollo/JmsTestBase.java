@@ -169,13 +169,6 @@ public class JmsTestBase extends CombinationTestSupport {
     public String messageTextPrefix = "";
 
 
-    enum DestinationType {
-        QUEUE_TYPE,
-        TOPIC_TYPE,
-        TEMP_QUEUE_TYPE,
-        TEMP_TOPIC_TYPE
-    }
-
     // /////////////////////////////////////////////////////////////////
     //
     // Test support methods.

@@ -18,11 +18,17 @@ package org.apache.activemq.apollo;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
+import org.apache.activemq.apollo.broker.BrokerFunSuiteSupport;
+import org.apache.activemq.apollo.broker.BrokerTestSupport;
+import org.apache.activemq.apollo.dto.DestMetricsDTO;
+import org.apache.activemq.apollo.dto.QueueStatusDTO;
+import org.apache.activemq.apollo.dto.TopicStatusDTO;
 import org.apache.activemq.apollo.util.ServiceControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
 import java.net.InetSocketAddress;
 
 /**
@@ -51,6 +57,55 @@ abstract public class BrokerProtocol {
         return address.getPort();
     }
 
+    private DestMetricsDTO getMetrics(Broker broker, Destination destination) {
+        DestMetricsDTO metrics = null;
+        switch (DestinationType.of(destination)) {
+            case QUEUE_TYPE:
+            case TEMP_QUEUE_TYPE:{
+                QueueStatusDTO dto = BrokerTestSupport.queue_status((Broker) broker, name(destination));
+                if( dto != null ) {
+                    metrics = dto.metrics;
+                }
+            }
+            case TOPIC_TYPE: {
+                final TopicStatusDTO dto = BrokerTestSupport.topic_status((Broker) broker, name(destination));
+                if( dto != null ) {
+                    metrics = dto.metrics;
+                }
+            }
+            case TEMP_TOPIC_TYPE:
+        }
+        return metrics;
+    }
+
+    public long getInflightCount(Object broker, Destination destination) {
+        DestMetricsDTO metrics = getMetrics((Broker) broker, destination);
+        if( metrics==null ) {
+            return 0;
+        }
+        return metrics.queue_size;
+    }
+
+    public long getDequeueCount(Object broker, Destination destination) {
+        DestMetricsDTO metrics = getMetrics((Broker) broker, destination);
+        if( metrics==null ) {
+            return 0;
+        }
+        return metrics.dequeue_item_counter;
+    }
+
+//    protected DestinationViewMBean createView(ActiveMQDestination destination) throws Exception {
+//         String domain = "org.apache.activemq";
+//         ObjectName name;
+//        if (destination.isQueue()) {
+//            name = new ObjectName(domain + ":BrokerName=localhost,Type=Queue,Destination=test");
+//        } else {
+//            name = new ObjectName(domain + ":BrokerName=localhost,Type=Topic,Destination=test");
+//        }
+//        return (DestinationViewMBean)broker.getManagementContext().newProxyInstance(name, DestinationViewMBean.class, true);
+//    }
+
     abstract ConnectionFactory getConnectionFactory(Object broker);
+    protected abstract String name(Destination destination);
 
 }

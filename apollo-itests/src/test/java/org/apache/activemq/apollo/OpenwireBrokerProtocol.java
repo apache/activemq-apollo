@@ -17,10 +17,12 @@
 package org.apache.activemq.apollo;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.command.ActiveMQDestination;
 
 import static java.lang.String.*;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
 
 /**
  * <p>
@@ -42,4 +44,8 @@ public class OpenwireBrokerProtocol extends BrokerProtocol {
         return "OpenWire";
     }
 
+    @Override
+    protected String name(Destination destination) {
+        return ((ActiveMQDestination)destination).getPhysicalName();
+    }
 }

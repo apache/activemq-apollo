@@ -17,8 +17,10 @@
 package org.apache.activemq.apollo;
 
 import org.fusesource.stomp.jms.StompJmsConnectionFactory;
+import org.fusesource.stomp.jms.StompJmsDestination;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
 
 import static java.lang.String.format;
 
@@ -40,5 +42,10 @@ public class StompBrokerProtocol extends BrokerProtocol {
     @Override
     public String toString() {
         return "STOMP";
+    }
+
+    @Override
+    protected String name(Destination destination) {
+        return ((StompJmsDestination)destination).getPhysicalName();
     }
 }
