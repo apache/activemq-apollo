@@ -28,7 +28,6 @@
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-selector</artifactId>
   <version>99-trunk-SNAPSHOT</version>
-  <!-- <packaging>bundle</packaging> -->
 
   <name>${project.artifactId}</name>
 
@@ -37,31 +36,6 @@
   </properties>
 
   <dependencies>
-
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-util</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.fusesource.hawtbuf</groupId>
-      <artifactId>hawtbuf</artifactId>
-      <version>${hawtbuf-version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j-version}</version>
-    </dependency>
-
-    <!-- TODO: try to remove this dependency -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-beans</artifactId>
-      <version>${spring-version}</version>
-    </dependency>    
 
     <dependency>
       <groupId>xalan</groupId>

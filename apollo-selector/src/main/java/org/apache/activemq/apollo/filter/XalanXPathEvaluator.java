@@ -17,18 +17,15 @@
 
 package org.apache.activemq.apollo.filter;
 
-import java.io.StringReader;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import org.fusesource.hawtbuf.Buffer;
-import org.fusesource.hawtbuf.BufferInputStream;
 import org.apache.xpath.CachedXPathAPI;
 import org.apache.xpath.objects.XObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.traversal.NodeIterator;
 import org.xml.sax.InputSource;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 
 
 public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
@@ -44,42 +41,15 @@ public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
         if (stringBody!=null) {
             return evaluate(stringBody);
         } 
-        
-        Buffer bufferBody = m.getBodyAs(Buffer.class);
-        if (bufferBody!=null) {
-            return evaluate(bufferBody);
-        } 
         return false;
     }
 
-    private boolean evaluate(Buffer data) {
-        try {
-
-            InputSource inputSource = new InputSource(new BufferInputStream(data));
-
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(true);
-            DocumentBuilder dbuilder = factory.newDocumentBuilder();
-            Document doc = dbuilder.parse(inputSource);
-            
-            CachedXPathAPI cachedXPathAPI = new CachedXPathAPI();
-            XObject result = cachedXPathAPI.eval(doc, xpath);
-            if (result.bool())
-            	return true;
-            else {
-            	NodeIterator iterator = cachedXPathAPI.selectNodeIterator(doc, xpath);
-            	return (iterator.nextNode() != null);
-            }  
-
-        } catch (Throwable e) {
-            return false;
-        }
+    protected boolean evaluate(String text) {
+        return evaluate(new InputSource(new StringReader(text)));
     }
 
-    private boolean evaluate(String text) {
+    protected boolean evaluate(InputSource inputSource) {
         try {
-            InputSource inputSource = new InputSource(new StringReader(text));
-
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
             DocumentBuilder dbuilder = factory.newDocumentBuilder();
@@ -89,7 +59,7 @@ public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
             //eval() is a better way to determine the boolean value of the exp.
             //For compliance with legacy behavior where selecting an empty node returns true,
             //selectNodeIterator is attempted in case of a failure.
-            
+
             CachedXPathAPI cachedXPathAPI = new CachedXPathAPI();
             XObject result = cachedXPathAPI.eval(doc, xpath);
             if (result.bool())
@@ -97,8 +67,8 @@ public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
             else {
             	NodeIterator iterator = cachedXPathAPI.selectNodeIterator(doc, xpath);
             	return (iterator.nextNode() != null);
-            }    	
-            
+            }
+
         } catch (Throwable e) {
             return false;
         }

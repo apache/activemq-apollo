@@ -38,6 +38,8 @@ import security.SecuredResource.BrokerKind
 import reflect.BeanProperty
 import java.net.InetSocketAddress
 import org.fusesource.hawtdispatch.util.BufferPools
+import org.apache.activemq.apollo.filter.{Filterable, XPathExpression, XalanXPathEvaluator}
+import org.xml.sax.InputSource
 
 /**
  * <p>
@@ -155,6 +157,22 @@ object Broker extends Log {
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
   private val SERVICE_TIMEOUT = 1000*5;
   val buffer_pools = new BufferPools
+
+  // Make sure XPATH selector support is enabled and optimize a little.
+  XPathExpression.XPATH_EVALUATOR_FACTORY = new XPathExpression.XPathEvaluatorFactory {
+    def create(xpath: String): XPathExpression.XPathEvaluator = {
+      new XalanXPathEvaluator(xpath) {
+        override def evaluate(m: Filterable): Boolean = {
+          val body: Buffer = m.getBodyAs(classOf[Buffer])
+          if (body != null) {
+            evaluate(new InputSource(new BufferInputStream(body)))
+          } else {
+            super.evaluate(m)
+          }
+        }
+      }
+    }
+  }
 
   def class_loader:ClassLoader = ClassFinder.class_loader
   

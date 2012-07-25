@@ -40,6 +40,9 @@
         <include>org.fusesource.leveldbjni:*</include>
         <include>org.fusesource.hawtjni:*</include>
         
+        <!-- for XPATH selector support -->
+        <include>xalan:xalan</include> 
+        
         <!-- security stuff -->
         <include>org.jasypt:jasypt</include>
         <include>commons-lang:commons-lang</include>
