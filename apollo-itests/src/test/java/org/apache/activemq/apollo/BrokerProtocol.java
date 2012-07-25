@@ -18,7 +18,6 @@ package org.apache.activemq.apollo;
 
 import org.apache.activemq.apollo.broker.Broker;
 import org.apache.activemq.apollo.broker.BrokerFactory;
-import org.apache.activemq.apollo.broker.BrokerFunSuiteSupport;
 import org.apache.activemq.apollo.broker.BrokerTestSupport;
 import org.apache.activemq.apollo.dto.DestMetricsDTO;
 import org.apache.activemq.apollo.dto.QueueStatusDTO;
@@ -29,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
+import javax.jms.Queue;
+import javax.jms.Topic;
 import java.net.InetSocketAddress;
 
 /**
@@ -57,7 +58,7 @@ abstract public class BrokerProtocol {
         return address.getPort();
     }
 
-    private DestMetricsDTO getMetrics(Broker broker, Destination destination) {
+    public DestMetricsDTO getMetrics(Broker broker, Destination destination) {
         DestMetricsDTO metrics = null;
         switch (DestinationType.of(destination)) {
             case QUEUE_TYPE:
@@ -105,7 +106,9 @@ abstract public class BrokerProtocol {
 //        return (DestinationViewMBean)broker.getManagementContext().newProxyInstance(name, DestinationViewMBean.class, true);
 //    }
 
-    abstract ConnectionFactory getConnectionFactory(Object broker);
-    protected abstract String name(Destination destination);
+    public abstract ConnectionFactory getConnectionFactory(Object broker);
+    public abstract String name(Destination destination);
 
+    public abstract Queue createQueue(String name);
+    public abstract Topic createTopic(String name);
 }

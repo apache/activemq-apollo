@@ -18,9 +18,13 @@ package org.apache.activemq.apollo;
 
 import org.fusesource.stomp.jms.StompJmsConnectionFactory;
 import org.fusesource.stomp.jms.StompJmsDestination;
+import org.fusesource.stomp.jms.StompJmsQueue;
+import org.fusesource.stomp.jms.StompJmsTopic;
 
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
+import javax.jms.Queue;
+import javax.jms.Topic;
 
 import static java.lang.String.format;
 
@@ -33,7 +37,7 @@ import static java.lang.String.format;
 public class StompBrokerProtocol extends BrokerProtocol {
 
     @Override
-    ConnectionFactory getConnectionFactory(Object broker) {
+    public ConnectionFactory getConnectionFactory(Object broker) {
         StompJmsConnectionFactory factory = new StompJmsConnectionFactory();
         factory.setBrokerURI(format("tcp://localhost:%s", port(broker)));
         return factory;
@@ -45,7 +49,17 @@ public class StompBrokerProtocol extends BrokerProtocol {
     }
 
     @Override
-    protected String name(Destination destination) {
+    public String name(Destination destination) {
         return ((StompJmsDestination)destination).getPhysicalName();
+    }
+
+    @Override
+    public Queue createQueue(String name) {
+        return new StompJmsQueue("/queue/", name);
+    }
+
+    @Override
+    public Topic createTopic(String name) {
+        return new StompJmsTopic("/topic/", name);
     }
 }

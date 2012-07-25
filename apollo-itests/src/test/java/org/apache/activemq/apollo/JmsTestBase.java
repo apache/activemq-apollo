@@ -50,7 +50,7 @@ public class JmsTestBase extends CombinationTestSupport {
 
     public String brokerConfig = "xml:classpath:apollo.xml";
 
-    protected Object broker;
+    public Object broker;
     protected ConnectionFactory factory;
     protected Connection connection;
     protected List<Connection> connections = Collections.synchronizedList(new ArrayList<Connection>());
@@ -58,16 +58,20 @@ public class JmsTestBase extends CombinationTestSupport {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        startBroker();
+        factory = protocol.getConnectionFactory(broker);
+
+        connection = factory.createConnection(userName, password);
+        connections.add(connection);
+    }
+
+    public void startBroker() {
         if (System.getProperty("basedir") == null) {
             File file = new File(".");
             System.setProperty("basedir", file.getAbsolutePath());
         }
         broker = protocol.create(brokerConfig);
         protocol.start(broker);
-        factory = protocol.getConnectionFactory(broker);
-
-        connection = factory.createConnection(userName, password);
-        connections.add(connection);
     }
 
     @Override
@@ -82,11 +86,15 @@ public class JmsTestBase extends CombinationTestSupport {
         }
 
         connection = null;
+        stopBroker();
+        super.tearDown();
+    }
+
+    public void stopBroker() {
         if(broker!=null) {
             protocol.stop(broker);
             broker = null;
         }
-        super.tearDown();
     }
 
     public ConnectionFactory getConnectionFactory() throws Exception {

@@ -105,6 +105,13 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    
+    <dependency>
+      <groupId>org.fusesource.joram-jms-tests</groupId>
+      <artifactId>joram-jms-tests</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Test framework support files -->
     <dependency>
@@ -158,12 +165,12 @@
         <configuration>
           <!-- we must turn off the use of system class loader so our tests can find stuff - otherwise ScalaSupport compiler can't find stuff -->
           <useSystemClassLoader>false</useSystemClassLoader>
-          <!--forkMode>pertest</forkMode-->
+          <forkMode>pertest</forkMode>
           <childDelegation>false</childDelegation>
           <useFile>true</useFile>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <failIfNoTests>false</failIfNoTests>
-
+          
           <excludes>
             <!--
             <exclude>**/JmsTopicTransactionTest.*</exclude>
