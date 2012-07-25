@@ -127,6 +127,13 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
         Some(id)
       case "JMSType" =>
         headerIndex.get(ascii("type"))
+      case "JMSDeliveryMode" =>
+        Some(ascii(
+          if( persistent )
+            "PERSISTENT"
+          else
+            "NON_PERSISTENT"
+        ))
       case _=>
         headerIndex.get(ascii(name))
     }) match {
