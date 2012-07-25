@@ -133,7 +133,6 @@ public abstract class CombinationTestSupport extends AutoFailTestSupport {
     private CombinationTestSupport[] getCombinations() {
         try {
             Method method = getClass().getMethod("initCombos", (Class[])null);
-            LOG.info("initCombos for class " + getClass().getSimpleName() + " : " + method);
             method.invoke(this, (Object[])null);
         } catch (Throwable e) {
         }
