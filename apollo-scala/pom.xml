@@ -34,7 +34,8 @@
   <description>Holds the common Maven settings for Scala based modules.</description>
   
   <properties>
-    <scala-plugin-compile-goal>compile</scala-plugin-compile-goal>
+    <scala-plugin-main-goal>compile</scala-plugin-main-goal>
+    <scala-plugin-test-goal>testCompile</scala-plugin-test-goal>
   </properties>
   
   <dependencies>
@@ -82,9 +83,11 @@
             <id>compile</id>
             <phase>compile</phase>
             <goals>
-              <goal>${scala-plugin-compile-goal}</goal>
+              <goal>${scala-plugin-main-goal}</goal>
             </goals>
             <configuration>
+              <displayCmd>true</displayCmd>
+              <testSourceDir>dontcompile</testSourceDir>
               <useFsc>true</useFsc>
               <once>true</once>
               <args>
@@ -101,12 +104,13 @@
           </execution>
           <execution>
             <id>test</id>
-           <phase>test-compile</phase>
+            <phase>test-compile</phase>
             <goals>
-              <goal>${scala-plugin-compile-goal}</goal>
+              <goal>${scala-plugin-test-goal}</goal>
             </goals>
             <configuration>
-              <mainSourceDir>${project.build.sourceDirectory}/../../test/scala</mainSourceDir>
+              <displayCmd>true</displayCmd>
+              <mainSourceDir>dontcompile</mainSourceDir>
               <useFsc>true</useFsc>
               <once>true</once>
               <args>
@@ -155,7 +159,8 @@
     <profile>
       <id>fsc</id>
       <properties>
-        <scala-plugin-compile-goal>cc</scala-plugin-compile-goal>
+        <scala-plugin-main-goal>cc</scala-plugin-main-goal>
+        <scala-plugin-test-goal>cc</scala-plugin-test-goal>
       </properties>
     </profile>
     
