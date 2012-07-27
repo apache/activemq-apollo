@@ -1255,7 +1255,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   /**
    * Returns true if the queue no longer exists.
    */
-  def destroy_queue(id:Long, security:SecurityContext) = dispatch_queue ! { _destroy_queue(id,security) }
+  def destroy_queue(id:Long, security:SecurityContext)(cb: (Option[String])=>Unit) = dispatch_queue {
+    cb(_destroy_queue(id,security))
+  }
 
   def _destroy_queue(id:Long, security:SecurityContext):Option[String] = {
     queues_by_store_id.get(id) match {

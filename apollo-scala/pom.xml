@@ -75,11 +75,38 @@
         <version>${maven-scala-plugin-version}</version>
         <executions>
           <execution>
+            <id>compile</id>
+            <phase>compile</phase>
             <goals>
-              <goal>compile</goal>
+              <goal>cc</goal>
+            </goals>
+            <configuration>
+              <useFsc>true</useFsc>
+              <once>true</once>
+              <!-- <displayCmd>true</displayCmd> -->
+              <args>
+                <arg>-deprecation</arg>
+              </args>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>org.fusesource.jvmassert</groupId>
+                  <artifactId>jvmassert</artifactId>
+                  <version>1.2</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
+          </execution>
+          <execution>
+            <id>test</id>
+            <phase>test-compile</phase>
+            <goals>
               <goal>testCompile</goal>
             </goals>
             <configuration>
+              <mainSourceDir>${project.build.sourceDirectory}/../../test/scala</mainSourceDir>
+              <useFsc>true</useFsc>
+              <once>true</once>
+              <!-- <displayCmd>true</displayCmd> -->
               <args>
                 <arg>-deprecation</arg>
               </args>

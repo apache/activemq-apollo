@@ -21,7 +21,7 @@
 
   <parent>
     <groupId>org.apache.activemq</groupId>
-    <artifactId>apollo-scala</artifactId>
+    <artifactId>apollo-project</artifactId>
     <version>99-trunk-SNAPSHOT</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
@@ -97,6 +97,27 @@
         </executions>
       </plugin>
 
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+        <version>${maven-scala-plugin-version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <jvmArgs>
+            <jvmArg>-Xmx1024m</jvmArg>
+            <jvmArg>-Xss8m</jvmArg>
+          </jvmArgs>
+          <scalaVersion>${scala-version}</scalaVersion>
+        </configuration>
+      </plugin>
+      
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin-version}</version>
