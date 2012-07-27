@@ -17,20 +17,28 @@
 
 package org.apache.activemq.apollo.util
 
-import _root_.org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
+import org.junit.runner.RunWith
 import java.io.File
 import java.lang.String
 import collection.immutable.Map
 import org.scalatest._
 import java.util.concurrent.TimeUnit
 import FileSupport._
+import scala.Some
+import org.apache.activemq.apollo.util.FunSuiteSupport._
+import java.util.concurrent.locks.{ReentrantReadWriteLock, Lock, ReadWriteLock}
+
+object FunSuiteSupport {
+  class SkipTestException extends RuntimeException
+  val parallel_test_class_lock = new ReentrantReadWriteLock()
+}
 
 /**
  * @version $Revision : 1.1 $
  */
-@RunWith(classOf[JUnitRunner])
-abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfterAll {
+@RunWith(classOf[org.scalatest.junit.ParallelJUnitRunner])
+abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBeforeAndAfterAll {
+
   protected var _basedir = try {
     var file = new File(getClass.getProtectionDomain.getCodeSource.getLocation.getFile)
     file = (file / ".." / "..").getCanonicalFile
@@ -44,6 +52,18 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
       "."
   }
 
+  def skip(check:Boolean=true):Unit = if(check) throw new SkipTestException()
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Unit) {
+    super.test(testName, testTags:_*) {
+      try {
+        testFun
+      } catch {
+        case e:SkipTestException =>
+      }
+    }
+  }
+
   /**
    * Returns the base directory of the current project
    */
@@ -52,9 +72,22 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
   /**
    * Returns ${basedir}/target/test-data
    */
-  def test_data_dir = basedir / "target"/ "test-data"
+  def test_data_dir = basedir / "target"/ "test-data" / (getClass.getName)
+
+  /**
+   * Can this test class run in parallel with other
+   * test classes.
+   * @return
+   */
+  def is_parallel_test_class = true
 
   override protected def beforeAll(map: Map[String, Any]): Unit = {
+    if ( is_parallel_test_class ) {
+      parallel_test_class_lock.readLock().lock()
+    } else {
+      parallel_test_class_lock.writeLock().lock()
+    }
+
     _basedir = map.get("basedir") match {
       case Some(basedir) =>
         basedir.toString
@@ -67,9 +100,36 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
     super.beforeAll(map)
   }
 
+  override protected def afterAll(configMap: Map[String, Any]) {
+    try {
+      super.afterAll(configMap)
+    } finally {
+      if ( is_parallel_test_class ) {
+        parallel_test_class_lock.readLock().unlock()
+      } else {
+        parallel_test_class_lock.writeLock().unlock()
+      }
+    }
+  }
+
+
   //
   // Allows us to get the current test name.
   //
+
+  /**
+   * Defines a method (that takes a <code>configMap</code>) to be run after
+   * all of this suite's tests and nested suites have been run.
+   *
+   * <p>
+   * This trait's implementation
+   * of <code>run</code> invokes this method after executing all tests
+   * and nested suites (passing in the <code>configMap</code> passed to it), thus this
+   * method can be used to tear down a test fixture
+   * needed by the entire suite. This trait's implementation of this method invokes the
+   * overloaded form of <code>afterAll</code> that takes no <code>configMap</code>.
+   * </p>
+   */
 
   val _testName = new ThreadLocal[String]();
 
@@ -81,6 +141,7 @@ abstract class FunSuiteSupport extends FunSuite with Logging with BeforeAndAfter
       super.runTest(testName, reporter, stopper, configMap, tracker)
     } finally {
       _testName.remove
+
     }
   }
 

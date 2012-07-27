@@ -17,17 +17,20 @@
 package org.apache.activemq.apollo.stomp
 
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest._
 import java.lang.String
 import java.util.concurrent.TimeUnit._
+import scala.Some
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.atomic.AtomicLong
 import FileSupport._
 import java.nio.channels.DatagramChannel
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.dto.{TopicStatusDTO, KeyStorageDTO}
+import org.apache.activemq.apollo.dto.KeyStorageDTO
 import java.net.{SocketTimeoutException, InetSocketAddress}
+import org.junit.runner.RunWith
+import scala.Some
 
 class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
@@ -179,7 +182,8 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
 
 /**
  * These test cases check to make sure the broker stats are consistent with what
- * would be expected.
+ * would be expected.  These tests can't be run in parallell since they look at
+ * agreggate destination metrics.
  */
 class StompMetricsTest extends StompTestSupport {
 
@@ -423,16 +427,328 @@ class StompMetricsTest extends StompTestSupport {
 
 }
 
+class StompSslTest extends StompTestSupport with BrokerParallelTestExecution {
 
-class Stomp10ConnectTest extends StompTestSupport {
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
 
-  test("Stomp 1.0 CONNECT") {
-    connect("1.0")
+  val config = new KeyStorageDTO
+  config.file = basedir/"src"/"test"/"resources"/"client.ks"
+  config.password = "password"
+  config.key_password = "password"
+
+  client.key_storeage = new KeyStorage(config)
+
+  test("Connect over SSL") {
+    connect("1.1")
+  }
+}
+
+/**
+ * These tests seem to have trouble being run in Parallel
+ */
+class StompSerialTest extends StompTestSupport with BrokerParallelTestExecution {
+
+  // This is the test case for https://issues.apache.org/jira/browse/APLO-88
+  test("ACK then socket close with/without DISCONNECT, should still ACK") {
+    for(i <- 1 until 3) {
+      connect("1.1")
+
+      def send(id:Int) = {
+        client.write(
+          "SEND\n" +
+          "destination:/queue/from-seq-end\n" +
+          "message-id:id-"+i+"-"+id+"\n"+
+          "receipt:0\n"+
+          "\n")
+        wait_for_receipt("0")
+      }
+
+      def get(seq:Long) = {
+        val frame = client.receive()
+        frame should startWith("MESSAGE\n")
+        frame should include("message-id:id-"+i+"-"+seq+"\n")
+        client.write(
+          "ACK\n" +
+          "subscription:0\n" +
+          "message-id:id-"+i+"-"+seq+"\n" +
+          "\n")
+      }
+
+      send(1)
+      send(2)
+
+      client.write(
+        "SUBSCRIBE\n" +
+        "destination:/queue/from-seq-end\n" +
+        "id:0\n" +
+        "ack:client\n"+
+        "\n")
+      get(1)
+      client.write(
+        "DISCONNECT\n" +
+        "\n")
+      client.close
+
+      connect("1.1")
+      client.write(
+        "SUBSCRIBE\n" +
+        "destination:/queue/from-seq-end\n" +
+        "id:0\n" +
+        "ack:client\n"+
+        "\n")
+      get(2)
+      client.close
+    }
+  }
+
+}
+class StompSecurityTest extends StompTestSupport {
+
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
+
+  override def is_parallel_test_class: Boolean = false
+
+  override def beforeAll = {
+    try {
+      println("before: "+testName)
+      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
+      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
+    } catch {
+      case x:Throwable => x.printStackTrace
+    }
+    super.beforeAll
+  }
+
+  test("Connect with valid id password but can't connect") {
+
+    val frame = connect_request("1.1", client,
+      "login:can_not_connect\n" +
+      "passcode:can_not_connect\n")
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to connect")
+
+  }
+
+  test("Connect with no id password") {
+    val frame = connect_request("1.1", client)
+    frame should startWith("ERROR\n")
+    frame should include("message:Authentication failed.")
+  }
+
+  test("Connect with invalid id password") {
+    val frame = connect_request("1.1", client,
+      "login:foo\n" +
+      "passcode:bar\n")
+    frame should startWith("ERROR\n")
+    frame should include("message:Authentication failed.")
+
+  }
+
+  test("Connect with valid id password that can connect") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+  }
+
+  test("Connector restricted user on the right connector") {
+    connect("1.1", client,
+      "login:connector_restricted\n" +
+      "passcode:connector_restricted\n", "tcp2")
+  }
+
+  test("Connector restricted user on the wrong connector") {
+    val frame = connect_request("1.1", client,
+      "login:connector_restricted\n" +
+      "passcode:connector_restricted\n", "tcp")
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to connect to connector 'tcp'.")
+  }
+
+  test("Send not authorized") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue")
+  }
+
+  test("Send authorized but not create") {
+    connect("1.1", client,
+      "login:can_send_queue\n" +
+      "passcode:can_send_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue")
+
+  }
+
+  test("Consume authorized but not create") {
+    connect("1.1", client,
+      "login:can_consume_queue\n" +
+      "passcode:can_consume_queue\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/secure\n" +
+      "id:0\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue")
+  }
+
+  test("Send and create authorized") {
+    connect("1.1", client,
+      "login:can_send_create_queue\n" +
+      "passcode:can_send_create_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+  }
+
+  test("Send and create authorized via id_regex") {
+    connect("1.1", client,
+      "login:guest\n" +
+      "passcode:guest\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/testblah\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/notmatch\n" +
+      "receipt:1\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to create the queue")
+  }
+
+  test("Can send and once created") {
+
+    // Now try sending with the lower access id.
+    connect("1.1", client,
+      "login:can_send_queue\n" +
+      "passcode:can_send_queue\n")
+
+    client.write(
+      "SEND\n" +
+      "destination:/queue/secure\n" +
+      "receipt:0\n" +
+      "\n" +
+      "Hello Wolrd\n")
+
+    wait_for_receipt("0")
+
+  }
+
+  test("Consume not authorized") {
+    connect("1.1", client,
+      "login:can_only_connect\n" +
+      "passcode:can_only_connect\n")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/secure\n" +
+      "id:0\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Not authorized to consume from the queue")
+  }
+
+  test("Consume authorized and JMSXUserID is set on message") {
+    connect("1.1", client,
+      "login:can_send_create_consume_queue\n" +
+      "passcode:can_send_create_consume_queue\n")
+
+    subscribe("0","/queue/sendsid")
+    async_send("/queue/sendsid", "hello")
+
+    val frame = client.receive()
+    frame should startWith("MESSAGE\n")
+    frame should include("JMSXUserID:can_send_create_consume_queue\n")
+    frame should include("sender-ip:127.0.0.1\n")
+  }
+}
+class StompSslSecurityTest extends StompTestSupport {
+
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
+  override def is_parallel_test_class: Boolean = false
+
+  override def beforeAll = {
+    // System.setProperty("javax.net.debug", "all")
+    try {
+      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
+      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
+    } catch {
+      case x:Throwable => x.printStackTrace
+    }
+    super.beforeAll
+  }
+
+  def use_client_cert = {
+    val config = new KeyStorageDTO
+    config.file = basedir/"src"/"test"/"resources"/"client.ks"
+    config.password = "password"
+    config.key_password = "password"
+    client.key_storeage = new KeyStorage(config)
+  }
+
+  test("Connect with cert and no id password") {
+    use_client_cert
+    connect("1.1", client)
   }
 
 }
 
-class Stomp11ConnectTest extends StompTestSupport {
+/**
+ * These tests can be run in parallel against a single Apollo broker.
+ */
+class StompParallelTest extends StompTestSupport with BrokerParallelTestExecution {
+
+  def skip_if_using_store = skip(broker_config_uri.endsWith("-bdb.xml") || broker_config_uri.endsWith("-leveldb.xml"))
+
+  test("Stomp 1.0 CONNECT") {
+    connect("1.0")
+  }
 
   test("Stomp 1.1 CONNECT") {
     connect("1.1")
@@ -497,10 +813,6 @@ class Stomp11ConnectTest extends StompTestSupport {
     frame should include regex("""message:.+?\n""")
   }
 
-}
-
-class Stomp11HeartBeatTest extends StompTestSupport {
-
   test("Stomp 1.1 Broker sends heart-beat") {
 
     client.open("localhost", port)
@@ -559,54 +871,24 @@ class Stomp11HeartBeatTest extends StompTestSupport {
     }
   }
 
-}
-
-class StompPersistentQueueTest extends StompTestSupport {
-
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
-
-  test("(APLO-198) Apollo sometimes does not send all the messages in a queue") {
-    connect("1.1")
-    for( i <- 0 until 10000 ) {
-      async_send("/queue/BIGQUEUE", "message #"+i)
-    }
-    sync_send("/queue/BIGQUEUE", "END")
-    client.close
-    
-    var counter = 0
-    for( i <- 0 until 100 ) {
-      connect("1.1")
-      subscribe("1", "/queue/BIGQUEUE", "client", false, "", false)
-      for( j <- 0 until 100 ) {
-        assert_received("message #"+counter)(true)
-        counter+=1
-      }
-      client.write(
-        "DISCONNECT\n" +
-        "receipt:disco\n" +
-        "\n")
-      wait_for_receipt("disco", client, true)
-      client.close
-      within(2, SECONDS) {
-        val status = queue_status("BIGQUEUE")
-        status.consumers.size() should be(0)
-      }
-    }
+  test("UDP to STOMP interop") {
 
     connect("1.1")
-    subscribe("1", "/queue/BIGQUEUE", "client")
-    assert_received("END")(true)
+    subscribe("0", "/topic/udp")
 
+    val udp_port:Int = connector_port("udp").get
+    val channel = DatagramChannel.open();
+
+    val target = new InetSocketAddress("127.0.0.1", udp_port)
+    channel.send(new AsciiBuffer("Hello").toByteBuffer, target)
+
+    assert_received("Hello")
   }
 
-}
-
-/**
- * These disconnect tests assure that we don't drop message deliviers that are in flight
- * if a client disconnects before those deliveries are accepted by the target destination.
- */
-class StompDisconnectTest extends StompTestSupport {
-
+  /**
+   * These disconnect tests assure that we don't drop message deliviers that are in flight
+   * if a client disconnects before those deliveries are accepted by the target destination.
+   */
   test("Messages delivery assured to a queued once a disconnect receipt is received") {
 
     // figure out at what point a quota'ed queue stops accepting more messages.
@@ -685,9 +967,6 @@ class StompDisconnectTest extends StompTestSupport {
     }
 
   }
-}
-
-class StompDestinationTest extends StompTestSupport {
 
   test("APLO-206 - Load balance of job queues using small consumer credit windows") {
     connect("1.1")
@@ -711,6 +990,7 @@ class StompDestinationTest extends StompTestSupport {
   }
 
   test("Browsing queues does not cause AssertionError.  Reported in APLO-156") {
+    skip_if_using_store
     connect("1.1")
     subscribe("0", "/queue/TOOL.DEFAULT")
     async_send("/queue/TOOL.DEFAULT", "1")
@@ -748,60 +1028,8 @@ class StompDestinationTest extends StompTestSupport {
     assert_received(4)
   }
 
-  // This is the test case for https://issues.apache.org/jira/browse/APLO-88
-  test("ACK then socket close with/without DISCONNECT, should still ACK") {
-    for(i <- 1 until 3) {
-      connect("1.1")
-
-      def send(id:Int) = {
-        client.write(
-          "SEND\n" +
-          "destination:/queue/from-seq-end\n" +
-          "message-id:id-"+i+"-"+id+"\n"+
-          "receipt:0\n"+
-          "\n")
-        wait_for_receipt("0")
-      }
-
-      def get(seq:Long) = {
-        val frame = client.receive()
-        frame should startWith("MESSAGE\n")
-        frame should include("message-id:id-"+i+"-"+seq+"\n")
-        client.write(
-          "ACK\n" +
-          "subscription:0\n" +
-          "message-id:id-"+i+"-"+seq+"\n" +
-          "\n")
-      }
-
-      send(1)
-      send(2)
-
-      client.write(
-        "SUBSCRIBE\n" +
-        "destination:/queue/from-seq-end\n" +
-        "id:0\n" +
-        "ack:client\n"+
-        "\n")
-      get(1)
-      client.write(
-        "DISCONNECT\n" +
-        "\n")
-      client.close
-
-      connect("1.1")
-      client.write(
-        "SUBSCRIBE\n" +
-        "destination:/queue/from-seq-end\n" +
-        "id:0\n" +
-        "ack:client\n"+
-        "\n")
-      get(2)
-      client.close
-    }
-  }
-
   test("Setting `from-seq` header to -1 results in subscription starting at end of the queue.") {
+    skip_if_using_store
     connect("1.1")
 
     def send(id:Int) = {
@@ -899,6 +1127,7 @@ class StompDestinationTest extends StompTestSupport {
   }
 
   test("The `from-seq` header can be used to resume delivery from a given point in a queue.") {
+    skip_if_using_store
     connect("1.1")
 
     def send(id:Int) = {
@@ -1120,6 +1349,7 @@ class StompDestinationTest extends StompTestSupport {
   }
 
   test("Queue browsers don't consume the messages") {
+    skip_if_using_store
     connect("1.1")
 
     def put(id:Int) = {
@@ -1212,7 +1442,7 @@ class StompDestinationTest extends StompTestSupport {
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/topic/updates\n" +
+        "destination:/topic/updates1\n" +
         "\n" +
         "message:"+id+"\n")
     }
@@ -1220,7 +1450,7 @@ class StompDestinationTest extends StompTestSupport {
 
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/topic/updates\n" +
+      "destination:/topic/updates1\n" +
       "id:0\n" +
       "receipt:0\n" +
       "\n")
@@ -1247,14 +1477,14 @@ class StompDestinationTest extends StompTestSupport {
     def put(id:Int) = {
       client.write(
         "SEND\n" +
-        "destination:/topic/updates\n" +
+        "destination:/topic/updates2\n" +
         "\n" +
         "message:"+id+"\n")
     }
 
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/topic/updates\n" +
+      "destination:/topic/updates2\n" +
       "id:my-sub-name\n" +
       "persistent:true\n" +
       "receipt:0\n" +
@@ -1273,7 +1503,7 @@ class StompDestinationTest extends StompTestSupport {
 
     client.write(
       "SUBSCRIBE\n" +
-      "destination:/topic/updates\n" +
+      "destination:/topic/updates2\n" +
       "id:my-sub-name\n" +
       "persistent:true\n" +
       "\n")
@@ -1355,259 +1585,6 @@ class StompDestinationTest extends StompTestSupport {
     get(3)
   }
 
-
-}
-
-class DurableSubscriptionOnLevelDBTest extends StompTestSupport {
-
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
-
-  test("Multiple dsubs contain the same messages (Test case for APLO-210)") {
-
-    val sub_count = 3
-    val message_count = 1000
-
-    // establish 3 durable subs..
-    connect("1.1")
-    for( sub <- 1 to sub_count ) {
-      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true)
-    }
-    close()
-
-    connect("1.1")
-
-    val filler = ":"+("x"*(1024*10))
-
-    // Now send a bunch of messages....
-    for( i <- 1 to message_count ) {
-      async_send(dest="/topic/sometopic", headers="persistent:true\n", body=i+filler)
-    }
-
-    // Empty out the durable durable sub
-    for( sub <- 1 to sub_count ) {
-      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true, sync=false)
-      for( i <- 1 to message_count ) {
-        assert_received(body=i+filler, sub="sub"+sub)
-      }
-    }
-
-  }
-
-  test("Can directly send an recieve from a durable sub") {
-    connect("1.1")
-
-    // establish 2 durable subs..
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub1\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub2\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    client.close
-    connect("1.1")
-
-    // Now send a bunch of messages....
-    // Send only to sub 1
-    client.write(
-      "SEND\n" +
-      "destination:/dsub/sub1\n" +
-      "\n" +
-      "sub1 msg\n")
-
-    // Send to all subs
-    client.write(
-      "SEND\n" +
-      "destination:/topic/sometopic\n" +
-      "\n" +
-      "LAST\n")
-
-
-    // Now try to get all the previously sent messages.
-    def get(expected:String) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith("\n\n"+expected)
-    }
-
-    // Empty out the first durable sub
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/dsub/sub1\n" +
-      "id:1\n" +
-      "\n")
-
-    get("sub1 msg\n")
-    get("LAST\n")
-
-    // Empty out the 2nd durable sub
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/dsub/sub2\n" +
-      "id:2\n" +
-      "\n")
-
-    get("LAST\n")
-  }
-  test("You can connect and then unsubscribe from existing durable sub (APLO-157)") {
-    connect("1.1")
-    subscribe("APLO-157", "/topic/APLO-157", "auto", true)
-    client.close()
-
-    // Make sure the durable sub exists.
-    connect("1.1")
-    sync_send("/topic/APLO-157", "1")
-    subscribe("APLO-157", "/topic/APLO-157", "client", true)
-    assert_received("1")
-    client.close()
-
-    // Delete the durable sub..
-    connect("1.1")
-    unsubscribe("APLO-157", "persistent:true\n")
-    client.close()
-
-    // Make sure the durable sub does not exists.
-    connect("1.1")
-    subscribe("APLO-157", "/topic/APLO-157", "client", true)
-    async_send("/topic/APLO-157", "2")
-    assert_received("2")
-    unsubscribe("APLO-157", "persistent:true\n")
-
-  }
-
-  test("Can create dsubs with dots in them") {
-    connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/sometopic\n" +
-      "id:sub.1\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    client.write(
-      "SEND\n" +
-      "destination:/dsub/sub.1\n" +
-      "receipt:0\n" +
-      "\n" +
-      "content\n")
-    wait_for_receipt("0")
-
-  }
-
-  test("Duplicate SUBSCRIBE updates durable subscription bindings") {
-    connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/a\n" +
-      "id:sub1\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    def get(expected:String) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith("\n\n"+expected)
-    }
-
-    // Validate that the durable sub is bound to /topic/a
-    client.write(
-      "SEND\n" +
-      "destination:/topic/a\n" +
-      "\n" +
-      "1\n")
-    get("1\n")
-
-    client.write(
-      "UNSUBSCRIBE\n" +
-      "id:sub1\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    // Switch the durable sub to /topic/b
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/topic/b\n" +
-      "id:sub1\n" +
-      "persistent:true\n" +
-      "receipt:0\n" +
-      "\n")
-    wait_for_receipt("0")
-
-    // all these should get dropped
-    for ( i <- 1 to 500 ) {
-      client.write(
-        "SEND\n" +
-        "destination:/topic/a\n" +
-        "\n" +
-        "DROPPED\n")
-    }
-
-    // Not this one.. it's on the updated topic
-    client.write(
-      "SEND\n" +
-      "destination:/topic/b\n" +
-      "\n" +
-      "2\n")
-    get("2\n")
-
-  }
-
-  test("Direct send to a non-existant a durable sub fails") {
-    connect("1.1")
-
-    client.write(
-      "SEND\n" +
-      "destination:/dsub/doesnotexist\n" +
-      "receipt:0\n" +
-      "\n" +
-      "content\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:The destination does not exist")
-  }
-
-  test("Direct subscribe to a non-existant a durable sub fails") {
-    connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/dsub/doesnotexist\n" +
-      "id:1\n" +
-      "receipt:0\n" +
-      "\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Durable subscription does not exist")
-
-  }
-}
-
-class DurableSubscriptionOnBDBTest extends DurableSubscriptionOnLevelDBTest {
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
-}
-
-class StompMirroredQueueTest extends StompTestSupport {
-
   test("Topic gets copy of message sent to queue") {
     connect("1.1")
     subscribe("1", "/topic/mirrored.a")
@@ -1678,22 +1655,45 @@ class StompMirroredQueueTest extends StompTestSupport {
     get(2)
   }
 
+  def path_separator = "."
 
-}
+  test("Messages Expire") {
+    connect("1.1")
 
-class StompSslDestinationTest extends StompDestinationTest {
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl.xml"
+    def put(msg:String, ttl:Option[Long]=None) = {
+      val expires_header = ttl.map(t=> "expires:"+(System.currentTimeMillis()+t)+"\n").getOrElse("")
+      client.write(
+        "SEND\n" +
+        expires_header +
+        "destination:/queue/exp\n" +
+        "\n" +
+        "message:"+msg+"\n")
+    }
 
-  val config = new KeyStorageDTO
-  config.file = basedir/"src"/"test"/"resources"/"client.ks"
-  config.password = "password"
-  config.key_password = "password"
+    put("1")
+    put("2", Some(1000L))
+    put("3")
 
-  client.key_storeage = new KeyStorage(config)
+    Thread.sleep(2000)
 
-}
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/exp\n" +
+      "id:1\n" +
+      "receipt:0\n"+
+      "\n")
+    wait_for_receipt("0")
 
-class StompReceiptTest extends StompTestSupport {
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+
+    get("1")
+    get("3")
+  }
 
   test("Receipts on SEND to unconsummed topic") {
     connect("1.1")
@@ -1742,11 +1742,9 @@ class StompReceiptTest extends StompTestSupport {
     put(2)
     wait_for_receipt("1")
     wait_for_receipt("2")
-    
+
   }
-}
-class StompTransactionTest extends StompTestSupport {
-  
+
   test("Transacted commit after unsubscribe"){
     val producer = new StompClient
     val consumer = new StompClient
@@ -1872,11 +1870,6 @@ class StompTransactionTest extends StompTestSupport {
 
   }
 
-}
-
-
-class StompAckModeTest extends StompTestSupport {
-
   test("ack:client redelivers on client disconnect") {
     connect("1.1")
 
@@ -1936,8 +1929,8 @@ class StompAckModeTest extends StompTestSupport {
       "id:0\n" +
       "\n")
     get(3)
-    
-    
+
+
   }
 
 
@@ -2002,337 +1995,7 @@ class StompAckModeTest extends StompTestSupport {
     get(1)
     get(3)
 
-
   }
-
-}
-
-class StompSecurityTest extends StompTestSupport {
-
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-secure.xml"
-
-  override def beforeAll = {
-    try {
-      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
-      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
-    } catch {
-      case x:Throwable => x.printStackTrace
-    }
-    super.beforeAll
-  }
-
-  test("Connect with valid id password but can't connect") {
-
-    val frame = connect_request("1.1", client,
-      "login:can_not_connect\n" +
-      "passcode:can_not_connect\n")
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to connect")
-
-  }
-
-  test("Connect with no id password") {
-    val frame = connect_request("1.1", client)
-    frame should startWith("ERROR\n")
-    frame should include("message:Authentication failed.")
-  }
-
-  test("Connect with invalid id password") {
-    val frame = connect_request("1.1", client,
-      "login:foo\n" +
-      "passcode:bar\n")
-    frame should startWith("ERROR\n")
-    frame should include("message:Authentication failed.")
-
-  }
-
-  test("Connect with valid id password that can connect") {
-    connect("1.1", client,
-      "login:can_only_connect\n" +
-      "passcode:can_only_connect\n")
-
-  }
-
-  test("Connector restricted user on the right connector") {
-    connect("1.1", client,
-      "login:connector_restricted\n" +
-      "passcode:connector_restricted\n", "tcp2")
-  }
-
-  test("Connector restricted user on the wrong connector") {
-    val frame = connect_request("1.1", client,
-      "login:connector_restricted\n" +
-      "passcode:connector_restricted\n", "tcp")
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to connect to connector 'tcp'.")
-  }
-
-  test("Send not authorized") {
-    connect("1.1", client,
-      "login:can_only_connect\n" +
-      "passcode:can_only_connect\n")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/secure\n" +
-      "receipt:0\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue")
-  }
-
-  test("Send authorized but not create") {
-    connect("1.1", client,
-      "login:can_send_queue\n" +
-      "passcode:can_send_queue\n")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/secure\n" +
-      "receipt:0\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue")
-
-  }
-
-  test("Consume authorized but not create") {
-    connect("1.1", client,
-      "login:can_consume_queue\n" +
-      "passcode:can_consume_queue\n")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/secure\n" +
-      "id:0\n" +
-      "receipt:0\n" +
-      "\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue")
-  }
-
-  test("Send and create authorized") {
-    connect("1.1", client,
-      "login:can_send_create_queue\n" +
-      "passcode:can_send_create_queue\n")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/secure\n" +
-      "receipt:0\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    wait_for_receipt("0")
-
-  }
-
-  test("Send and create authorized via id_regex") {
-    connect("1.1", client,
-      "login:guest\n" +
-      "passcode:guest\n")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/testblah\n" +
-      "receipt:0\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    wait_for_receipt("0")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/notmatch\n" +
-      "receipt:1\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to create the queue")
-  }
-
-  test("Can send and once created") {
-
-    // Now try sending with the lower access id.
-    connect("1.1", client,
-      "login:can_send_queue\n" +
-      "passcode:can_send_queue\n")
-
-    client.write(
-      "SEND\n" +
-      "destination:/queue/secure\n" +
-      "receipt:0\n" +
-      "\n" +
-      "Hello Wolrd\n")
-
-    wait_for_receipt("0")
-
-  }
-
-  test("Consume not authorized") {
-    connect("1.1", client,
-      "login:can_only_connect\n" +
-      "passcode:can_only_connect\n")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/secure\n" +
-      "id:0\n" +
-      "receipt:0\n" +
-      "\n")
-
-    val frame = client.receive()
-    frame should startWith("ERROR\n")
-    frame should include("message:Not authorized to consume from the queue")
-  }
-
-  test("Consume authorized and JMSXUserID is set on message") {
-    connect("1.1", client,
-      "login:can_send_create_consume_queue\n" +
-      "passcode:can_send_create_consume_queue\n")
-
-    subscribe("0","/queue/sendsid")
-    async_send("/queue/sendsid", "hello")
-
-    val frame = client.receive()
-    frame should startWith("MESSAGE\n")
-    frame should include("JMSXUserID:can_send_create_consume_queue\n")
-    frame should include("sender-ip:127.0.0.1\n")
-  }
-}
-
-class StompSslSecurityTest extends StompTestSupport {
-
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-ssl-secure.xml"
-
-  override def beforeAll = {
-    // System.setProperty("javax.net.debug", "all")
-    try {
-      val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
-      System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
-    } catch {
-      case x:Throwable => x.printStackTrace
-    }
-    super.beforeAll
-  }
-
-  def use_client_cert = {
-    val config = new KeyStorageDTO
-    config.file = basedir/"src"/"test"/"resources"/"client.ks"
-    config.password = "password"
-    config.key_password = "password"
-    client.key_storeage = new KeyStorage(config)
-  }
-
-  test("Connect with cert and no id password") {
-    use_client_cert
-    connect("1.1", client)
-  }
-
-}
-
-class StompWildcardTest extends StompTestSupport {
-
-  def path_separator = "."
-
-  test("Wildcard subscription") {
-    connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/foo"+path_separator+"*\n" +
-      "id:1\n" +
-      "receipt:0\n"+
-      "\n")
-
-    wait_for_receipt("0")
-
-    def put(dest:String) = {
-      client.write(
-        "SEND\n" +
-        "destination:/queue/"+dest+"\n" +
-        "\n" +
-        "message:"+dest+"\n")
-    }
-
-    def get(dest:String) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith("\n\nmessage:%s\n".format(dest))
-    }
-
-    // We should not get this one..
-    put("bar"+path_separator+"a")
-
-    put("foo"+path_separator+"a")
-    get("foo"+path_separator+"a")
-
-    put("foo"+path_separator+"b")
-    get("foo"+path_separator+"b")
-  }
-}
-
-class CustomStompWildcardTest extends StompWildcardTest {
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
-  override def path_separator = "/"
-}
-
-class StompExpirationTest extends StompTestSupport {
-
-  def path_separator = "."
-
-  test("Messages Expire") {
-    connect("1.1")
-
-    def put(msg:String, ttl:Option[Long]=None) = {
-      val expires_header = ttl.map(t=> "expires:"+(System.currentTimeMillis()+t)+"\n").getOrElse("")
-      client.write(
-        "SEND\n" +
-        expires_header +
-        "destination:/queue/exp\n" +
-        "\n" +
-        "message:"+msg+"\n")
-    }
-
-    put("1")
-    put("2", Some(1000L))
-    put("3")
-
-    Thread.sleep(2000)
-
-    client.write(
-      "SUBSCRIBE\n" +
-      "destination:/queue/exp\n" +
-      "id:1\n" +
-      "receipt:0\n"+
-      "\n")
-    wait_for_receipt("0")
-
-
-    def get(dest:String) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith("\n\nmessage:%s\n".format(dest))
-    }
-
-    get("1")
-    get("3")
-  }
-}
-
-class StompTempDestinationTest extends StompTestSupport {
-
-  def path_separator = "."
 
   test("Temp Queue Send Receive") {
     connect("1.1")
@@ -2497,7 +2160,6 @@ class StompTempDestinationTest extends StompTestSupport {
 
   }
 
-
   test("Odd reply-to headers do not cause errors") {
     connect("1.1")
 
@@ -2519,26 +2181,6 @@ class StompTempDestinationTest extends StompTestSupport {
     frame should startWith("MESSAGE\n")
     frame should include("reply-to:sms:8139993334444\n")
   }
-}
-
-class StompUdpInteropTest extends StompTestSupport {
-
-  test("UDP to STOMP interop") {
-    
-    connect("1.1")
-    subscribe("0", "/topic/udp")
-
-    val udp_port:Int = connector_port("udp").get
-    val channel = DatagramChannel.open();
-
-    val target = new InetSocketAddress("127.0.0.1", udp_port)
-    channel.send(new AsciiBuffer("Hello").toByteBuffer, target)
-
-    assert_received("Hello")
-  }
-}
-
-class StompNackTest extends StompTestSupport {
 
   test("NACKing moves messages to DLQ (non-persistent)") {
     connect("1.1")
@@ -2569,16 +2211,12 @@ class StompNackTest extends StompTestSupport {
     // It should be sent to the DLQ after the 2nd nak
     assert_received("this msg is persistent", "dlq")
   }
-}
-
-class StompNackTestOnLevelDBTest extends StompNackTest {
-  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
   test("NACKing without DLQ consumer (persistent)"){
     connect("1.1")
-    sync_send("/queue/nacker.b", "this msg is persistent", "persistent:true\n")
+    sync_send("/queue/nacker.c", "this msg is persistent", "persistent:true\n")
 
-    subscribe("0", "/queue/nacker.b", "client", false, "", false)
+    subscribe("0", "/queue/nacker.c", "client", false, "", false)
 
     var ack = assert_received("this msg is persistent", "0")
     ack(false)
@@ -2586,9 +2224,297 @@ class StompNackTestOnLevelDBTest extends StompNackTest {
     ack(false)
     Thread.sleep(1000)
   }
+
+
+}
+class StompLevelDBParallelTest extends StompParallelTest with BrokerParallelTestExecution {
+
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+
+  test("(APLO-198) Apollo sometimes does not send all the messages in a queue") {
+    skip_if_using_store
+    connect("1.1")
+    for( i <- 0 until 10000 ) {
+      async_send("/queue/BIGQUEUE", "message #"+i)
+    }
+    sync_send("/queue/BIGQUEUE", "END")
+    client.close
+
+    var counter = 0
+    for( i <- 0 until 100 ) {
+      connect("1.1")
+      subscribe("1", "/queue/BIGQUEUE", "client", false, "", false)
+      for( j <- 0 until 100 ) {
+        assert_received("message #"+counter)(true)
+        counter+=1
+      }
+      client.write(
+        "DISCONNECT\n" +
+        "receipt:disco\n" +
+        "\n")
+      wait_for_receipt("disco", client, true)
+      client.close
+      within(2, SECONDS) {
+        val status = queue_status("BIGQUEUE")
+        status.consumers.size() should be(0)
+      }
+    }
+
+    connect("1.1")
+    subscribe("1", "/queue/BIGQUEUE", "client")
+    assert_received("END")(true)
+
+  }
+
+  test("Multiple dsubs contain the same messages (Test case for APLO-210)") {
+    skip_if_using_store
+
+    val sub_count = 3
+    val message_count = 1000
+
+    // establish 3 durable subs..
+    connect("1.1")
+    for( sub <- 1 to sub_count ) {
+      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true)
+    }
+    close()
+
+    connect("1.1")
+
+    val filler = ":"+("x"*(1024*10))
+
+    // Now send a bunch of messages....
+    for( i <- 1 to message_count ) {
+      async_send(dest="/topic/sometopic", headers="persistent:true\n", body=i+filler)
+    }
+
+    // Empty out the durable durable sub
+    for( sub <- 1 to sub_count ) {
+      subscribe(id="sub"+sub, dest="/topic/sometopic", persistent=true, sync=false)
+      for( i <- 1 to message_count ) {
+        assert_received(body=i+filler, sub="sub"+sub)
+      }
+    }
+
+  }
+
+  test("Can directly send an recieve from a durable sub") {
+    skip_if_using_store
+    connect("1.1")
+
+    // establish 2 durable subs..
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub2\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.close
+    connect("1.1")
+
+    // Now send a bunch of messages....
+    // Send only to sub 1
+    client.write(
+      "SEND\n" +
+      "destination:/dsub/sub1\n" +
+      "\n" +
+      "sub1 msg\n")
+
+    // Send to all subs
+    client.write(
+      "SEND\n" +
+      "destination:/topic/sometopic\n" +
+      "\n" +
+      "LAST\n")
+
+
+    // Now try to get all the previously sent messages.
+    def get(expected:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\n"+expected)
+    }
+
+    // Empty out the first durable sub
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/sub1\n" +
+      "id:1\n" +
+      "\n")
+
+    get("sub1 msg\n")
+    get("LAST\n")
+
+    // Empty out the 2nd durable sub
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/sub2\n" +
+      "id:2\n" +
+      "\n")
+
+    get("LAST\n")
+  }
+  test("You can connect and then unsubscribe from existing durable sub (APLO-157)") {
+    skip_if_using_store
+    connect("1.1")
+    subscribe("APLO-157", "/topic/APLO-157", "auto", true)
+    client.close()
+
+    // Make sure the durable sub exists.
+    connect("1.1")
+    sync_send("/topic/APLO-157", "1")
+    subscribe("APLO-157", "/topic/APLO-157", "client", true)
+    assert_received("1")
+    client.close()
+
+    // Delete the durable sub..
+    connect("1.1")
+    unsubscribe("APLO-157", "persistent:true\n")
+    client.close()
+
+    // Make sure the durable sub does not exists.
+    connect("1.1")
+    subscribe("APLO-157", "/topic/APLO-157", "client", true)
+    async_send("/topic/APLO-157", "2")
+    assert_received("2")
+    unsubscribe("APLO-157", "persistent:true\n")
+
+  }
+
+  test("Can create dsubs with dots in them") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/sometopic\n" +
+      "id:sub.1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    client.write(
+      "SEND\n" +
+      "destination:/dsub/sub.1\n" +
+      "receipt:0\n" +
+      "\n" +
+      "content\n")
+    wait_for_receipt("0")
+
+  }
+
+  test("Duplicate SUBSCRIBE updates durable subscription bindings") {
+    skip_if_using_store
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/a\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    def get(expected:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\n"+expected)
+    }
+
+    // Validate that the durable sub is bound to /topic/a
+    client.write(
+      "SEND\n" +
+      "destination:/topic/a\n" +
+      "\n" +
+      "1\n")
+    get("1\n")
+
+    client.write(
+      "UNSUBSCRIBE\n" +
+      "id:sub1\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    // Switch the durable sub to /topic/b
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/topic/b\n" +
+      "id:sub1\n" +
+      "persistent:true\n" +
+      "receipt:0\n" +
+      "\n")
+    wait_for_receipt("0")
+
+    // all these should get dropped
+    for ( i <- 1 to 500 ) {
+      client.write(
+        "SEND\n" +
+        "destination:/topic/a\n" +
+        "\n" +
+        "DROPPED\n")
+    }
+
+    // Not this one.. it's on the updated topic
+    client.write(
+      "SEND\n" +
+      "destination:/topic/b\n" +
+      "\n" +
+      "2\n")
+    get("2\n")
+
+  }
+
+  test("Direct send to a non-existant a durable sub fails") {
+    connect("1.1")
+
+    client.write(
+      "SEND\n" +
+      "destination:/dsub/doesnotexist\n" +
+      "receipt:0\n" +
+      "\n" +
+      "content\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:The destination does not exist")
+  }
+
+  test("Direct subscribe to a non-existant a durable sub fails") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/dsub/doesnotexist\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Durable subscription does not exist")
+
+  }
+
+}
+class StompBDBParallelTest extends StompLevelDBParallelTest {
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 }
 
-class StompDropPolicyTest extends StompTestSupport {
+class StompDropPolicyTest extends StompTestSupport with BrokerParallelTestExecution {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
@@ -2599,7 +2525,10 @@ class StompDropPolicyTest extends StompTestSupport {
       sync_send("/queue/drop.head.persistent", "%0100d".format(i))
     }
     subscribe("0", "/queue/drop.head.persistent")
-    for(i <- 446 until 1000) {
+
+    val initial = client.receive().split("\n").last.toInt
+    initial should be > ( 100 )
+    for(i <- (initial+1) until 1000) {
       assert_received("%0100d".format(i))
     }
   }
@@ -2611,7 +2540,9 @@ class StompDropPolicyTest extends StompTestSupport {
       sync_send("/queue/drop.head.non", "%0100d".format(i))
     }
     subscribe("0", "/queue/drop.head.non")
-    for(i <- 427 until 1000) {
+    val initial = client.receive().split("\n").last.toInt
+    initial should be > ( 100 )
+    for(i <- (initial+1) until 1000) {
       assert_received("%0100d".format(i))
     }
   }
@@ -2654,4 +2585,49 @@ class StompDropPolicyTest extends StompTestSupport {
     async_send("/queue/drop.tail.non", "end")
     assert_received("end")
   }
+}
+
+class StompWildcardParallelTest extends StompTestSupport with BrokerParallelTestExecution {
+
+  def path_separator = "."
+
+  test("Wildcard subscription") {
+    connect("1.1")
+
+    client.write(
+      "SUBSCRIBE\n" +
+      "destination:/queue/foo"+path_separator+"*\n" +
+      "id:1\n" +
+      "receipt:0\n"+
+      "\n")
+
+    wait_for_receipt("0")
+
+    def put(dest:String) = {
+      client.write(
+        "SEND\n" +
+        "destination:/queue/"+dest+"\n" +
+        "\n" +
+        "message:"+dest+"\n")
+    }
+
+    def get(dest:String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+
+    // We should not get this one..
+    put("bar"+path_separator+"a")
+
+    put("foo"+path_separator+"a")
+    get("foo"+path_separator+"a")
+
+    put("foo"+path_separator+"b")
+    get("foo"+path_separator+"b")
+  }
+}
+class StompWildcardCustomParallelTest extends StompWildcardParallelTest {
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-custom-dest-delimiters.xml"
+  override def path_separator = "/"
 }

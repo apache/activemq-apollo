@@ -28,6 +28,22 @@ package object util {
 
   type FutureResult[T] = Future[Result[T, Throwable]]
 
+  object FutureResult {
+
+    implicit def wrap_future_result[T](value:T):FutureResult[T] = {
+      val rc = FutureResult[T]()
+      rc.apply(Success(value))
+      rc
+    }
+
+    implicit def unwrap_future_result[T](value:FutureResult[T]):T = {
+      value.await() match {
+        case Success(value) => value
+        case Failure(value) => throw value
+      }
+    }
+  }
+
   def FutureResult[T]() = Future[Result[T, Throwable]]()
 
   def FutureResult[T](value:Result[T, Throwable]) = {
@@ -55,19 +71,6 @@ package object util {
           func(value)
         }
       }
-    }
-  }
-
-  implicit def wrap_future_result[T](value:T):FutureResult[T] = {
-    val rc = FutureResult[T]()
-    rc.apply(Success(value))
-    rc
-  }
-
-  implicit def unwrap_future_result[T](value:FutureResult[T]):T = {
-    value.await() match {
-      case Success(value) => value
-      case Failure(value) => throw value
     }
   }
 

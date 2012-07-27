@@ -28,6 +28,7 @@ import org.apache.activemq.apollo.dto._
 import javax.ws.rs.core.MediaType._
 import org.apache.activemq.apollo.broker.security.SecurityContext
 import com.wordnik.swagger.core._
+import FutureResult._
 
 @Path(          "/api/json/session")
 @Api(value =    "/api/json/session",

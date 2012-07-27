@@ -22,8 +22,12 @@ import org.apache.activemq.apollo.util._
 import FileSupport._
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
+import collection.immutable.HashMap
+import java.io.File
+import org.scalatest.{ParallelTestExecution, OneInstancePerTest}
 
 object BrokerTestSupport {
+  import FutureResult._
 
   def connector_port(broker:Broker, connector: String): Option[Int] = Option(connector).map {
     id => broker.connectors.get(id).map(_.socket_address.asInstanceOf[InetSocketAddress].getPort).getOrElse(0)
@@ -106,7 +110,21 @@ object BrokerTestSupport {
   def webadmin_uri(broker:Broker, scheme:String) = {
     Option(broker.web_server).flatMap(_.uris().find(_.getScheme == scheme)).get
   }
+
 }
+
+trait BrokerParallelTestExecution extends ParallelTestExecution {
+  self: BrokerFunSuiteSupport =>
+
+  override def newInstance = {
+    val rc = super.newInstance.asInstanceOf[BrokerFunSuiteSupport]
+    rc.broker = broker
+    rc.port = port
+    rc
+  }
+
+}
+
 /**
  * <p>
  * </p>
@@ -118,19 +136,14 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
   var port = 0
 
   def broker_config_uri = "xml:classpath:apollo.xml"
-
-  def createBroker: Broker = {
-    info("Loading broker configuration from the classpath with URI: " + broker_config_uri)
-    var broker = BrokerFactory.createBroker(broker_config_uri)
-    broker.setTmp(basedir / "target" / "tmp")
-    broker.getTmp().mkdirs()
-    broker
-  }
+  def createBroker = BrokerFactory.createBroker(broker_config_uri)
 
   override def beforeAll() = {
     super.beforeAll()
     try {
       broker = createBroker
+      broker.setTmp(test_data_dir / "tmp")
+      broker.getTmp().mkdirs()
       ServiceControl.start(broker)
       port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
     } catch {

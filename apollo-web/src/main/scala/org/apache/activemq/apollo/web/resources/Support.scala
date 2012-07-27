@@ -88,7 +88,7 @@ abstract class Resource(parent:Resource=null) {
   }
   
   def ok[T](value:FutureResult[T]):Unit = {
-    unwrap_future_result(value)
+    FutureResult.unwrap_future_result(value)
     throw new WebApplicationException(Response.ok().build)
   }
 

@@ -35,6 +35,7 @@ import org.apache.activemq.apollo.dto._
 import javax.ws.rs.core.MediaType._
 import com.wordnik.swagger.core._
 import javax.servlet.http.HttpServletResponse
+import FutureResult._
 
 @Path(          "/api/json/broker")
 @Api(value =    "/api/json/broker",

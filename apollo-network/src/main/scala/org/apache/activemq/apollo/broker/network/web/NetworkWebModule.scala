@@ -10,7 +10,8 @@ import org.apache.activemq.apollo.dto.{DestinationLoadDTO, LoadStatusDTO}
 import org.apache.activemq.apollo.broker.LocalRouter
 import org.fusesource.hawtdispatch.Future
 import scala.Predef._
-import org.apache.activemq.apollo.util.Success
+import org.apache.activemq.apollo.util.{FutureResult, Success}
+import FutureResult._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

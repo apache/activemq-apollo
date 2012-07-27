@@ -83,7 +83,7 @@ case class RawMessage(payload:Buffer) extends Message {
     } else if( toType == classOf[ByteBuffer] ) {
       toType.cast(payload.toByteBuffer)
     } else {
-      null
+      null.asInstanceOf[T]
     }
   }
 

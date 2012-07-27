@@ -45,7 +45,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
    */
 
 
-  def data_directory = basedir / "target" / "apollo-data"
+  def data_directory = test_data_dir / "store"
 
   override protected def beforeAll() = {
     super.beforeAll()

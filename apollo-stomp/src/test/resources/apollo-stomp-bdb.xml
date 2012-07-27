@@ -21,13 +21,27 @@
   <virtual_host id="default">
     <host_name>localhost</host_name>
 
+    <queue id="quota.**" quota="10k"/>
+    <topic id="quota.**" slow_consumer_policy="queue">
+      <subscription quota="10k"/>
+    </topic>
+
     <queue id="nacker.**" dlq="dlq.*" nak_limit="2"/>
     <queue id="mirrored.**" mirrored="true"/>
+    <topic id="queued.**" slow_consumer_policy="queue">
+      <subscription tail_buffer="4k"/>
+    </topic>
+
+    <queue id="drop.head.persistent" full_policy="drop head" quota="100k"/>
+    <queue id="drop.tail.persistent" full_policy="drop tail" quota="100k"/>
+    <queue id="drop.head.non" full_policy="drop head" tail_buffer="100k" persistent="false"/>
+    <queue id="drop.tail.non" full_policy="drop tail" tail_buffer="100k" persistent="false"/>
 
     <bdb_store directory="${testdatadir}"/>
   </virtual_host>
 
   <!--<web_admin bind="http://0.0.0.0:61680"/>-->
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>
+  <connector id="udp" bind="udp://0.0.0.0:0" protocol="udp"/>
 
 </broker>
