@@ -33,7 +33,11 @@
   <name>${project.artifactId}</name>
   <description>Holds the common Maven settings for Scala based modules.</description>
   
- <dependencies>
+  <properties>
+    <scala-plugin-compile-goal>compile</scala-plugin-compile-goal>
+  </properties>
+  
+  <dependencies>
 
     <!-- Scala Support: this needs to be copied into every scala project -->
     <dependency>
@@ -78,12 +82,11 @@
             <id>compile</id>
             <phase>compile</phase>
             <goals>
-              <goal>cc</goal>
+              <goal>${scala-plugin-compile-goal}</goal>
             </goals>
             <configuration>
               <useFsc>true</useFsc>
               <once>true</once>
-              <!-- <displayCmd>true</displayCmd> -->
               <args>
                 <arg>-deprecation</arg>
               </args>
@@ -98,15 +101,14 @@
           </execution>
           <execution>
             <id>test</id>
-            <phase>test-compile</phase>
+           <phase>test-compile</phase>
             <goals>
-              <goal>testCompile</goal>
+              <goal>${scala-plugin-compile-goal}</goal>
             </goals>
             <configuration>
               <mainSourceDir>${project.build.sourceDirectory}/../../test/scala</mainSourceDir>
               <useFsc>true</useFsc>
               <once>true</once>
-              <!-- <displayCmd>true</displayCmd> -->
               <args>
                 <arg>-deprecation</arg>
               </args>
@@ -149,7 +151,14 @@
 
 
   <profiles>
-
+    
+    <profile>
+      <id>fsc</id>
+      <properties>
+        <scala-plugin-compile-goal>cc</scala-plugin-compile-goal>
+      </properties>
+    </profile>
+    
     <!-- helper for the IDEA scala integration, enable this profile in IDEA -->
     <profile>
       <id>idea</id>
