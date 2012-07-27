@@ -95,7 +95,6 @@ abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBefore
         System.getProperty("basedir", _basedir)
     }
     System.setProperty("basedir", _basedir)
-    System.setProperty("testdatadir", test_data_dir.getCanonicalPath)
     test_data_dir.recursive_delete
     super.beforeAll(map)
   }

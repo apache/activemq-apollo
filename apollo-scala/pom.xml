@@ -86,7 +86,7 @@
               <goal>${scala-plugin-main-goal}</goal>
             </goals>
             <configuration>
-              <displayCmd>true</displayCmd>
+              <!-- <displayCmd>true</displayCmd> -->
               <testSourceDir>dontcompile</testSourceDir>
               <useFsc>true</useFsc>
               <once>true</once>
@@ -109,7 +109,7 @@
               <goal>${scala-plugin-test-goal}</goal>
             </goals>
             <configuration>
-              <displayCmd>true</displayCmd>
+              <!-- <displayCmd>true</displayCmd> -->
               <mainSourceDir>dontcompile</mainSourceDir>
               <useFsc>true</useFsc>
               <once>true</once>

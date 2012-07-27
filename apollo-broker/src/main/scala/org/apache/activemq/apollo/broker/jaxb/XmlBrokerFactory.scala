@@ -24,10 +24,11 @@ import org.apache.activemq.apollo.dto._
 import java.lang.String
 import XmlCodec._
 import org.apache.activemq.apollo.util._
+import java.util.Properties
 
 class XmlBrokerFactory extends BrokerFactoryTrait {
 
-  def createBroker(value: String): Broker = {
+  def createBroker(value:String, props:Properties): Broker = {
     try {
       var brokerURI = new URI(value)
 
@@ -47,7 +48,7 @@ class XmlBrokerFactory extends BrokerFactoryTrait {
       }
 
       val broker = new Broker()
-      broker.config = decode(classOf[BrokerDTO], configURL, System.getProperties)
+      broker.config = decode(classOf[BrokerDTO], configURL, props)
       return broker;
 
     } catch {

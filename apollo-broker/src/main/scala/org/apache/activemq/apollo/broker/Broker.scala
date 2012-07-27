@@ -34,12 +34,12 @@ import org.apache.activemq.apollo.dto._
 import javax.management.ObjectName
 import org.fusesource.hawtdispatch.TaskTracker._
 import java.util.concurrent.TimeUnit._
-import security.SecuredResource.BrokerKind
 import reflect.BeanProperty
 import java.net.InetSocketAddress
 import org.fusesource.hawtdispatch.util.BufferPools
 import org.apache.activemq.apollo.filter.{Filterable, XPathExpression, XalanXPathEvaluator}
 import org.xml.sax.InputSource
+import java.util
 
 /**
  * <p>
@@ -49,7 +49,7 @@ import org.xml.sax.InputSource
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 trait BrokerFactoryTrait {
-  def createBroker(brokerURI:String):Broker
+  def createBroker(brokerURI:String, props:util.Properties): Broker
 }
 
 /**
@@ -63,12 +63,13 @@ object BrokerFactory {
 
   val finder = new ClassFinder[BrokerFactoryTrait]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[BrokerFactoryTrait])
 
-  def createBroker(uri:String):Broker = {
+  def createBroker(brokerURI:String):Broker = createBroker(brokerURI, System.getProperties)
+  def createBroker(uri:String, props:util.Properties):Broker = {
     if( uri == null ) {
       return null
     }
     finder.singletons.foreach { provider=>
-      val broker = provider.createBroker(uri)
+      val broker = provider.createBroker(uri, props)
       if( broker!=null ) {
         return broker;
       }

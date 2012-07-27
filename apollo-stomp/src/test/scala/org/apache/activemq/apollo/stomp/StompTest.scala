@@ -182,8 +182,8 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
 
 /**
  * These test cases check to make sure the broker stats are consistent with what
- * would be expected.  These tests can't be run in parallell since they look at
- * agreggate destination metrics.
+ * would be expected.  These tests can't be run in parallel since they look at
+ * aggregate destination metrics.
  */
 class StompMetricsTest extends StompTestSupport {
 

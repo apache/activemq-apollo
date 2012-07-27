@@ -25,6 +25,7 @@ import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, 
 import collection.immutable.HashMap
 import java.io.File
 import org.scalatest.{ParallelTestExecution, OneInstancePerTest}
+import java.util
 
 object BrokerTestSupport {
   import FutureResult._
@@ -136,7 +137,12 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
   var port = 0
 
   def broker_config_uri = "xml:classpath:apollo.xml"
-  def createBroker = BrokerFactory.createBroker(broker_config_uri)
+
+  def createBroker = {
+    val props = new java.util.Properties(System.getProperties)
+    props.setProperty("testdatadir", test_data_dir.getCanonicalPath)
+    BrokerFactory.createBroker(broker_config_uri, props)
+  }
 
   override def beforeAll() = {
     super.beforeAll()
