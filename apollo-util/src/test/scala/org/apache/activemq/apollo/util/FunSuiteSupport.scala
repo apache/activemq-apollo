@@ -27,10 +27,12 @@ import FileSupport._
 import scala.Some
 import org.apache.activemq.apollo.util.FunSuiteSupport._
 import java.util.concurrent.locks.{ReentrantReadWriteLock, Lock, ReadWriteLock}
+import java.util.concurrent.atomic.AtomicLong
 
 object FunSuiteSupport {
   class SkipTestException extends RuntimeException
   val parallel_test_class_lock = new ReentrantReadWriteLock()
+  val id_counter = new AtomicLong()
 }
 
 /**
@@ -38,6 +40,8 @@ object FunSuiteSupport {
  */
 @RunWith(classOf[org.scalatest.junit.ParallelJUnitRunner])
 abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBeforeAndAfterAll {
+
+  def next_id(prefix:String="", suffix:String="") = prefix+id_counter.incrementAndGet()+suffix
 
   protected var _basedir = try {
     var file = new File(getClass.getProtectionDomain.getCodeSource.getLocation.getFile)

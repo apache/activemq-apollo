@@ -20,7 +20,7 @@ package org.apache.activemq.apollo.openwire.test
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
 import java.lang.String
-import javax.jms.Connection
+import javax.jms.{MessageConsumer, TextMessage, Connection}
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.{ActiveMQTopic, ActiveMQQueue}
 import org.apache.activemq.apollo.broker.BrokerFunSuiteSupport
@@ -64,5 +64,8 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
     }
     connection
   }
+
+  def receive_text(consumer:MessageConsumer) = consumer.receive().asInstanceOf[TextMessage].getText
+
 
 }

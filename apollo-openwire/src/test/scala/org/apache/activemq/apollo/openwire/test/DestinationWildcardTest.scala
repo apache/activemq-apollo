@@ -17,47 +17,50 @@
 package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{MessageConsumer, MessageProducer, TextMessage, Session}
+import org.apache.activemq.apollo.broker.BrokerParallelTestExecution
 
-class DestinationWildcardTest extends OpenwireTestSupport {
+class DestinationWildcardTest extends OpenwireTestSupport with BrokerParallelTestExecution {
 
   def path_separator = "."
 
   test("Wildcard subscription") {
     connect()
 
-    val prefix = "foo" + path_separator
+    val common_prefix = next_id()
+    val prefix = common_prefix + path_separator
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer1 = session.createProducer(queue(prefix + "A"))
     val producer2 = session.createProducer(queue(prefix + "B"))
-    val producer3 = session.createProducer(queue("bar.A"))
+    val producer3 = session.createProducer(queue(common_prefix+ "bar.A"))
     def put(producer: MessageProducer, id: Int) {
       producer.send(session.createTextMessage("message:" + id))
     }
 
-    List(1, 2, 3).foreach(put(producer1, _))
-    producer3.send(session.createTextMessage("This one shouldn't get consumed."))
-    List(1, 2, 3).foreach(put(producer2, _))
-
     val consumer = session.createConsumer(queue(prefix + "*"))
-
     def get(id: Int) {
-      val m = consumer.receive().asInstanceOf[TextMessage]
-      m.getText should equal("message:" + id)
+      receive_text(consumer) should equal("message:" + id)
     }
 
-    List(1, 2, 3).foreach(get _)
+    List(1, 2, 3).foreach(put(producer1, _))
     List(1, 2, 3).foreach(get _)
 
-    consumer.receive(1000) should be(null)
+    producer3.send(session.createTextMessage("This one shouldn't get consumed."))
+
+    List(1, 2, 3).foreach(put(producer2, _))
+    List(1, 2, 3).foreach(get _)
+
+    put(producer1, -1)
+    get(-1)
   }
 
   test("Wildcard subscription with multiple path sections") {
     connect()
 
-    val prefix1 = "foo" + path_separator + "bar" + path_separator
-    val prefix2 = "foo" + path_separator + "bar" + path_separator + "cheeze" + path_separator
-    val prefix3 = "foo" + path_separator + "bar" + path_separator + "cracker" + path_separator
+    val common_prefix = next_id()
+    val prefix1 = common_prefix+"foo" + path_separator + "bar" + path_separator
+    val prefix2 = common_prefix+"foo" + path_separator + "bar" + path_separator + "cheeze" + path_separator
+    val prefix3 = common_prefix+"foo" + path_separator + "bar" + path_separator + "cracker" + path_separator
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer1 = session.createProducer(topic(prefix1 + "A"))
@@ -67,37 +70,35 @@ class DestinationWildcardTest extends OpenwireTestSupport {
     def put(producer: MessageProducer, id: Int) {
       producer.send(session.createTextMessage("message:" + id))
     }
+    def get(consumer: MessageConsumer, id: Int) {
+      receive_text(consumer) should equal("message:" + id)
+    }
 
     val consumer1 = session.createConsumer(topic(prefix1 + "*"))
     val consumer2 = session.createConsumer(topic(prefix2 + "*"))
     val consumer3 = session.createConsumer(topic(prefix3 + "*"))
 
-    def get(consumer: MessageConsumer, id: Int) {
-      val m = consumer.receive(2000).asInstanceOf[TextMessage]
-      m should not be (null)
-      m.getText should equal("message:" + id)
-    }
 
-    // They only consumer one should see these.
-    List(1, 2, 3).foreach(put(producer1, _))
+    put(producer1, 1)
+    List(producer1, producer2, producer3).foreach(put(_, -1))
 
-    List(1, 2, 3).foreach(get(consumer1, _))
-    consumer2.receive(2000) should be(null)
-    consumer3.receive(2000) should be(null)
+    get(consumer1, 1)
+    List(consumer1, consumer2, consumer3).foreach(get(_, -1))
 
-    // They only consumer two should see these.
-    List(1, 2, 3).foreach(put(producer2, _))
 
-    List(1, 2, 3).foreach(get(consumer2, _))
-    consumer1.receive(2000) should be(null)
-    consumer3.receive(2000) should be(null)
+    put(producer2, 2)
+    List(producer1, producer2, producer3).foreach(put(_, -1))
 
-    // They only consumer two should see these.
-    List(1, 2, 3).foreach(put(producer3, _))
+    get(consumer2, 2)
+    List(consumer1, consumer2, consumer3).foreach(get(_, -1))
 
-    List(1, 2, 3).foreach(get(consumer3, _))
-    consumer1.receive(2000) should be(null)
-    consumer2.receive(2000) should be(null)
+
+    put(producer3, 3)
+    List(producer1, producer2, producer3).foreach(put(_, -1))
+
+    get(consumer3, 3)
+    List(consumer1, consumer2, consumer3).foreach(get(_, -1))
+
   }
 
 }
