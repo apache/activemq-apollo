@@ -119,8 +119,9 @@ trait BrokerParallelTestExecution extends ParallelTestExecution {
 
   override def newInstance = {
     val rc = super.newInstance.asInstanceOf[BrokerFunSuiteSupport]
-    rc.broker = broker
-    rc.port = port
+    rc.before_and_after_all_object = self
+    rc.broker = self.broker
+    rc.port = self.port
     rc
   }
 
@@ -133,6 +134,7 @@ trait BrokerParallelTestExecution extends ParallelTestExecution {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with ShouldMatchers with BeforeAndAfterEach with Logging {
+  var before_and_after_all_object:BrokerFunSuiteSupport = _
   var broker: Broker = null
   var port = 0
 
@@ -146,19 +148,26 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
 
   override def beforeAll() = {
     super.beforeAll()
-    try {
-      broker = createBroker
-      broker.setTmp(test_data_dir / "tmp")
-      broker.getTmp().mkdirs()
-      ServiceControl.start(broker)
-      port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
-    } catch {
-      case e: Throwable => e.printStackTrace
+    if( before_and_after_all_object==null ) {
+      try {
+        broker = createBroker
+        broker.setTmp(test_data_dir / "tmp")
+        broker.getTmp().mkdirs()
+        ServiceControl.start(broker)
+        port = broker.get_socket_address.asInstanceOf[InetSocketAddress].getPort
+      } catch {
+        case e: Throwable => e.printStackTrace
+      }
+    } else {
+      broker = before_and_after_all_object.broker
+      port = before_and_after_all_object.port
     }
   }
 
   override def afterAll() = {
-    ServiceControl.stop(broker)
+    if( before_and_after_all_object==null ) {
+      ServiceControl.stop(broker)
+    }
     super.afterAll()
   }
 

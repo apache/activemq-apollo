@@ -18,8 +18,11 @@
 package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{Session, JMSException, MessageProducer}
+import org.apache.activemq.apollo.broker.BrokerParallelTestExecution
 
-abstract class SecurityTest extends OpenwireTestSupport {
+class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution {
+
+  override def is_parallel_test_class = false
 
   override val broker_config_uri: String = "xml:classpath:apollo-openwire-secure.xml"
 
@@ -32,71 +35,38 @@ abstract class SecurityTest extends OpenwireTestSupport {
     }
     super.beforeAll
   }
-}
-
-class ConnectionFailureWithValidCredentials extends SecurityTest {
 
   test("Connect with valid id password but can't connect") {
-
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_not_connect", "can_not_connect")
-
     intercept[JMSException] {
-      connection.start()
+      connect(user="can_not_connect", password="can_not_connect")
     }
   }
-}
-
-class CoonectionFailsWhenNoCredentialsGiven extends SecurityTest {
 
   test("Connect with no id password") {
-
-    val factory = create_connection_factory()
-    val connection = factory.createConnection()
-
     intercept[JMSException] {
-      connection.start()
+      connect()
     }
   }
-}
-
-class ConnectionFailsWhenCredentialsAreInvlaid extends SecurityTest {
 
   test("Connect with invalid id password") {
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("foo", "bar")
-
     intercept[JMSException] {
-      connection.start()
+      connect(user="foo", password="bar")
     }
   }
-}
 
-class ConnectionSucceedsWithValidCredentials extends SecurityTest {
   test("Connect with valid id password that can connect") {
-
-    val factory = create_connection_factory("?jms.alwaysSyncSend=true")
-    val connection = factory.createConnection("can_only_connect", "can_only_connect")
-
     try {
-      connection.start()
+      connect("?jms.alwaysSyncSend=true", user="can_only_connect", password="can_only_connect")
     } catch {
-      case e => fail("Should not have thrown an exception")
+      case e =>
+        e.printStackTrace()
+        fail("Should not have thrown an exception ")
     }
 
   }
-}
 
-class SendFailsWhenNotAuthorized extends SecurityTest {
   test("Send not authorized") {
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_only_connect", "can_only_connect")
-
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+    val connection = connect(user="can_only_connect", password="can_only_connect")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(queue("secure"))
@@ -105,20 +75,10 @@ class SendFailsWhenNotAuthorized extends SecurityTest {
       producer.send(session.createTextMessage("Test Message"))
     }
   }
-}
-
-class SendFailsWhenNotAuthorizedToCreateQueues extends SecurityTest {
 
   test("Send authorized but not create") {
 
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_send_queue", "can_send_queue")
-
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+    val connection = connect(user="can_send_queue", password="can_send_queue")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(queue("secure"))
@@ -127,20 +87,10 @@ class SendFailsWhenNotAuthorizedToCreateQueues extends SecurityTest {
       producer.send(session.createTextMessage("Test Message"))
     }
   }
-}
-
-class ConsumeFailsWhenNotAuthroizedToCreateQueue extends SecurityTest {
 
   test("Consume authorized but not create") {
 
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_consume_queue", "can_consume_queue")
-
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+    val connection = connect(user="can_consume_queue", password="can_consume_queue")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
@@ -149,21 +99,17 @@ class ConsumeFailsWhenNotAuthroizedToCreateQueue extends SecurityTest {
       consumer.receive();
     }
   }
-}
 
-class SendSucceedsWhenCreateQueueAthorized extends SecurityTest {
   test("Send and create authorized") {
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_send_create_queue", "can_send_create_queue")
+    create_and_send(next_id("secure"))
+  }
 
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+
+  def create_and_send(dest:String) {
+    val connection = connect(user="can_send_create_queue", password="can_send_create_queue")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    val producer = session.createProducer(queue("secure"))
+    val producer = session.createProducer(queue(dest))
 
     try {
       producer.send(session.createTextMessage("Test Message"))
@@ -173,39 +119,35 @@ class SendSucceedsWhenCreateQueueAthorized extends SecurityTest {
   }
 
   test("Can send and once created") {
-
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_send_queue", "can_send_queue")
-
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+    val dest = next_id("secure")
+    val connection = connect(user="can_send_queue", password="can_send_queue")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    val producer = session.createProducer(queue("secure"))
+    val producer = session.createProducer(queue(dest))
+
+    try {
+      producer.send(session.createTextMessage("Test Message"))
+      fail("Should have thrown an exception since dest is not created.")
+    } catch {
+      case e =>
+    }
+
+    // Now actually create it...
+    create_and_send(dest)
 
     try {
       producer.send(session.createTextMessage("Test Message"))
     } catch {
-      case e => fail("Should not have thrown an exception")
+      case e =>
+        e.printStackTrace()
+        fail("Should not have thrown an exception since it was created")
     }
-  }
-}
 
-class SubscribeFailsForConnectionOnlyAuthorization extends SecurityTest {
+  }
 
   test("Consume not authorized") {
 
-    val factory = create_connection_factory()
-    val connection = factory.createConnection("can_only_connect", "can_only_connect")
-
-    try {
-      connection.start()
-    } catch {
-      case e => fail("Should not have thrown an exception")
-    }
+    val connection = connect(user="can_only_connect", password="can_only_connect")
 
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 

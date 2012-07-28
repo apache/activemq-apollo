@@ -23,7 +23,7 @@
 
     <queue id="mirrored.**" mirrored="true"/>
 
-    <bdb_store directory="${basedir}/target/test-data"/>
+    <bdb_store directory="${testdatadir}"/>
   </virtual_host>
 
   <web_admin bind="http://0.0.0.0:0"/>

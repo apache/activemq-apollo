@@ -37,7 +37,13 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
 
   override protected def afterEach() {
     super.afterEach()
-    connections.foreach(_.close())
+    for ( connection <- connections ) {
+      try {
+        connection.close()
+      } catch {
+        case e =>
+      }
+    }
     connections = Nil
     default_connection = null
   }
@@ -47,14 +53,16 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
 
   def create_connection_factory(uri_options: String = "") = new ActiveMQConnectionFactory(connection_uri(uri_options))
 
-  def create_connection(uri_options: String = ""): Connection = create_connection_factory(uri_options).createConnection
+  def create_connection(uri_options: String = "", user:String=null, password:String=null): Connection = {
+    create_connection_factory(uri_options).createConnection(user, password)
+  }
 
   def queue(value: String) = new ActiveMQQueue(value);
 
   def topic(value: String) = new ActiveMQTopic(value);
 
-  def connect(uri_options: String = "", start: Boolean = true) = {
-    val connection = create_connection(uri_options)
+  def connect(uri_options: String = "", start: Boolean = true, user:String=null, password:String=null) = {
+    val connection = create_connection(uri_options, user, password)
     connections ::= connection
     if (default_connection == null) {
       default_connection = connection

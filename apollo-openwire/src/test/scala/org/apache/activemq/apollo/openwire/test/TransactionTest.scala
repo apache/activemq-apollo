@@ -26,15 +26,17 @@ class TransactionTest extends OpenwireTestSupport {
 
   test("Simple JMS Transaction Test") {
     connect()
+    val dest = queue(next_id("example"))
+
     val producer_session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    val producer = producer_session.createProducer(queue("example"))
+    val producer = producer_session.createProducer(dest)
 
     val messages = List(producer_session.createTextMessage("one"), producer_session.createTextMessage("two"), producer_session.createTextMessage("three"))
 
     messages.foreach(producer.send(_))
 
     val consumer_session = default_connection.createSession(true, Session.SESSION_TRANSACTED)
-    val consumer = consumer_session.createConsumer(queue("example"))
+    val consumer = consumer_session.createConsumer(dest)
 
     val m = consumer.receive(1000).asInstanceOf[TextMessage]
     m should not be (null)
