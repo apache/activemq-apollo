@@ -25,6 +25,7 @@ import java.util.Arrays
 import org.apache.activemq.apollo.util.FileSupport._
 import org.openqa.selenium.firefox.{FirefoxDriver, FirefoxProfile}
 import java.util.concurrent.TimeUnit._
+import org.apache.activemq.apollo.stomp.test._
 
 /**
  * <p>

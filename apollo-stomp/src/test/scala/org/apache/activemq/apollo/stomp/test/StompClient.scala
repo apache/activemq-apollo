@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.stomp
+package org.apache.activemq.apollo.stomp.test
 
 import java.net.{Socket, InetSocketAddress}
 import org.fusesource.hawtbuf.AsciiBuffer
@@ -24,21 +24,22 @@ import java.io._
 import org.apache.activemq.apollo.broker.{KeyStorage, ProtocolException}
 import javax.net.ssl.{SSLSocket, SSLContext}
 import org.scalatest.matchers.ShouldMatchers
+import org.apache.activemq.apollo.stomp.Stomp
 
 /**
  * A simple Stomp client used for testing purposes
  */
 class StompClient extends ShouldMatchers {
 
-  var socket:Socket = new Socket
-  var out:OutputStream = null
-  var in:InputStream = null
-  val bufferSize = 64*1204
-  var key_storeage:KeyStorage=null
+  var socket: Socket = new Socket
+  var out: OutputStream = null
+  var in: InputStream = null
+  val bufferSize = 64 * 1204
+  var key_storeage: KeyStorage = null
 
   def open(host: String, port: Int) = {
 
-    socket = if( key_storeage!=null ) {
+    socket = if (key_storeage != null) {
       val context = SSLContext.getInstance("TLS")
       context.init(key_storeage.create_key_managers, key_storeage.create_trust_managers, null)
       context.getSocketFactory().createSocket()
@@ -49,7 +50,7 @@ class StompClient extends ShouldMatchers {
     }
     socket.connect(new InetSocketAddress(host, port))
     socket.setSoLinger(true, 1)
-    socket.setSoTimeout(30*1000)
+    socket.setSoTimeout(30 * 1000)
     out = new BufferedOutputStream(socket.getOutputStream, bufferSize)
     in = new BufferedInputStream(socket.getInputStream, bufferSize)
   }
@@ -58,24 +59,24 @@ class StompClient extends ShouldMatchers {
     socket.close
   }
 
-  def write(frame:String) = {
+  def write(frame: String) = {
     out.write(frame.getBytes("UTF-8"))
     out.write(0)
     out.write('\n')
     out.flush
   }
 
-  def write(frame:Array[Byte]) = {
+  def write(frame: Array[Byte]) = {
     out.write(frame)
     out.write(0)
     out.write('\n')
     out.flush
   }
 
-  def skip():Unit = {
+  def skip(): Unit = {
     var c = in.read
-    while( c >= 0 ) {
-      if( c==0 ) {
+    while (c >= 0) {
+      if (c == 0) {
         return
       }
       c = in.read()
@@ -83,15 +84,15 @@ class StompClient extends ShouldMatchers {
     throw new EOFException()
   }
 
-  def receive():String = {
+  def receive(): String = {
     var start = true;
     val buffer = new BAOS()
     var c = in.read
-    while( c >= 0 ) {
-      if( c==0 ) {
+    while (c >= 0) {
+      if (c == 0) {
         return new String(buffer.toByteArray, "UTF-8")
       }
-      if( !start || c!= Stomp.NEWLINE) {
+      if (!start || c != Stomp.NEWLINE) {
         start = false
         buffer.write(c)
       }
@@ -100,18 +101,18 @@ class StompClient extends ShouldMatchers {
     throw new EOFException()
   }
 
-  def wait_for_receipt(id:String): Unit = {
+  def wait_for_receipt(id: String): Unit = {
     val frame = receive()
     frame should startWith("RECEIPT\n")
-    frame should include("receipt-id:"+id+"\n")
+    frame should include("receipt-id:" + id + "\n")
   }
 
 
-  def receiveAscii():AsciiBuffer = {
+  def receiveAscii(): AsciiBuffer = {
     val buffer = new BAOS()
     var c = in.read
-    while( c >= 0 ) {
-      if( c==0 ) {
+    while (c >= 0) {
+      if (c == 0) {
         return buffer.toBuffer.ascii
       }
       buffer.write(c)
@@ -120,10 +121,10 @@ class StompClient extends ShouldMatchers {
     throw new EOFException()
   }
 
-  def receive(expect:String):String = {
+  def receive(expect: String): String = {
     val rc = receive()
-    if( !rc.startsWith(expect) ) {
-      throw new ProtocolException("Expected "+expect)
+    if (!rc.startsWith(expect)) {
+      throw new ProtocolException("Expected " + expect)
     }
     rc
   }

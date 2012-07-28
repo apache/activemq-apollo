@@ -253,8 +253,7 @@ trait DelayingStoreSupport extends Store with BaseService {
       actions.values.foreach{ a =>
         // There must either be a dequeue or a message record for a enqueue request.
         // if not, then there should be a message locator
-
-        if( locator_based && a.message_record==null) {
+        if( a.message_record==null ) {
           if(!a.dequeues.isEmpty ){
             a.dequeues.foreach { d =>
               if ( d.message_locator.get() == null ) {
@@ -270,12 +269,8 @@ trait DelayingStoreSupport extends Store with BaseService {
             }
           }
         }
-        else if( !a.enqueues.isEmpty && ( a.message_record==null && a.dequeues.isEmpty ) ) {
-          return false
-        }
-
       }
-      true  
+      true
     }
 
     override def dispose = this.synchronized {
@@ -501,7 +496,7 @@ trait DelayingStoreSupport extends Store with BaseService {
         None
       } else {
         uow.state = UowFlushing
-        assert( uow.have_locators )
+        assert( !locator_based || uow.have_locators )
         // It will not be possible to cancel the UOW anymore..
         uow.actions.foreach { case (_, action) =>
           action.enqueues.foreach { queue_entry=>
