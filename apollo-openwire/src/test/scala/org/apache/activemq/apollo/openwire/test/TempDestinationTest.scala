@@ -1,4 +1,4 @@
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms._
 
@@ -10,7 +10,7 @@ import javax.jms._
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,14 +21,14 @@ import javax.jms._
 class TempDestinationTest extends OpenwireTestSupport {
 
   test("Temp Queue Destinations") {
-    test_temp_destination((session:Session) => session.createTemporaryQueue())
+    test_temp_destination((session: Session) => session.createTemporaryQueue())
   }
 
   test("Temp Topic Destinations") {
-    test_temp_destination((session:Session) => session.createTemporaryTopic())
+    test_temp_destination((session: Session) => session.createTemporaryTopic())
   }
 
-  def test_temp_destination(func:(Session)=>Destination) = {
+  def test_temp_destination(func: (Session) => Destination) = {
     connect()
 
     val connection2 = connect("", true)
@@ -40,30 +40,30 @@ class TempDestinationTest extends OpenwireTestSupport {
 
     val producer2 = session2.createProducer(dest)
 
-    def put(id:Int) = producer2.send(session.createTextMessage("message:"+id))
-    def get(id:Int) = {
+    def put(id: Int) = producer2.send(session.createTextMessage("message:" + id))
+    def get(id: Int) = {
       val m = consumer.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(dest)
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
     Thread.sleep(1000);
-    List(1,2,3).foreach(put _)
-    List(1,2,3).foreach(get _)
+    List(1, 2, 3).foreach(put _)
+    List(1, 2, 3).foreach(get _)
 
     // A different connection should not be able to consume from it.
     try {
       session2.createConsumer(dest)
       fail("expected jms exception")
     } catch {
-      case e:JMSException => println(e)
+      case e: JMSException => println(e)
     }
 
     // delete the temporary destination.
     consumer.close()
     dest match {
-      case dest:TemporaryQueue=> dest.delete()
-      case dest:TemporaryTopic=> dest.delete()
+      case dest: TemporaryQueue => dest.delete()
+      case dest: TemporaryTopic => dest.delete()
     }
 
     // The producer should no longer be able to send to it.
@@ -72,7 +72,7 @@ class TempDestinationTest extends OpenwireTestSupport {
       put(4)
       fail("expected jms exception")
     } catch {
-      case e:JMSException => println(e)
+      case e: JMSException => println(e)
     }
 
   }

@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{DeliveryMode, Message, TextMessage, Session}
 
@@ -30,22 +30,22 @@ class BDBQueueTest extends OpenwireTestSupport {
     val session = default_connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
     val producer = session.createProducer(queue("prefetch"))
     producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT)
-    def put(id:Int) {
+    def put(id: Int) {
       val msg = session.createBytesMessage()
-      msg.writeBytes(new Array[Byte](1024*4))
+      msg.writeBytes(new Array[Byte](1024 * 4))
       producer.send(msg)
     }
 
-    for(i <- 1 to 1000) {
+    for (i <- 1 to 1000) {
       put(i)
     }
 
     val consumer = session.createConsumer(queue("prefetch"))
-    def get(id:Int) {
+    def get(id: Int) {
       val m = consumer.receive()
-      expect(true, "Did not get message: "+id)(m!=null)
+      expect(true, "Did not get message: " + id)(m != null)
     }
-    for(i <- 1 to 1000) {
+    for (i <- 1 to 1000) {
       get(i)
     }
     default_connection.close()
@@ -56,11 +56,11 @@ class BDBQueueTest extends OpenwireTestSupport {
     connect()
     val session2 = default_connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
     val consumer2 = session2.createConsumer(queue("prefetch"))
-    def get2(id:Int) {
+    def get2(id: Int) {
       val m = consumer2.receive()
-      expect(true, "Did not get message: "+id)(m!=null)
+      expect(true, "Did not get message: " + id)(m != null)
     }
-    for(i <- 1 to 1000) {
+    for (i <- 1 to 1000) {
       get2(i)
     }
 
@@ -69,28 +69,28 @@ class BDBQueueTest extends OpenwireTestSupport {
 }
 
 class QueueTest extends OpenwireTestSupport {
-  
+
   test("Queue Message Cached") {
 
     connect("?wireFormat.cacheEnabled=false&wireFormat.tightEncodingEnabled=false")
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(queue("example"))
-    def put(id:Int) {
-      producer.send(session.createTextMessage("message:"+id))
+    def put(id: Int) {
+      producer.send(session.createTextMessage("message:" + id))
     }
 
-    List(1,2,3).foreach(put _)
+    List(1, 2, 3).foreach(put _)
 
     val consumer = session.createConsumer(queue("example"))
 
-    def get(id:Int) {
+    def get(id: Int) {
       val m = consumer.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(queue("example"))
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
-    List(1,2,3).foreach(get _)
+    List(1, 2, 3).foreach(get _)
   }
 
   test("Queue order preserved") {
@@ -99,21 +99,21 @@ class QueueTest extends OpenwireTestSupport {
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(queue("example"))
-    def put(id:Int) {
-      producer.send(session.createTextMessage("message:"+id))
+    def put(id: Int) {
+      producer.send(session.createTextMessage("message:" + id))
     }
 
-    List(1,2,3).foreach(put _)
+    List(1, 2, 3).foreach(put _)
 
     val consumer = session.createConsumer(queue("example"))
 
-    def get(id:Int) {
+    def get(id: Int) {
       val m = consumer.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(queue("example"))
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
-    List(1,2,3).foreach(get _)
+    List(1, 2, 3).foreach(get _)
   }
 
   test("Test that messages are consumed ") {
@@ -128,7 +128,7 @@ class QueueTest extends OpenwireTestSupport {
     // Consume the message...
     var consumer = session.createConsumer(queue)
     var msg = consumer.receive(1000)
-    msg should not be(null)
+    msg should not be (null)
 
     Thread.sleep(1000)
 
@@ -146,7 +146,7 @@ class QueueTest extends OpenwireTestSupport {
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(queue("example"))
 
-    def put(id:Int, color:String) {
+    def put(id: Int, color: String) {
       val message = session.createTextMessage("message:" + id)
       message.setStringProperty("color", color)
       producer.send(message)
@@ -158,10 +158,10 @@ class QueueTest extends OpenwireTestSupport {
 
     val consumer = session.createConsumer(queue("example"), "color='red'")
 
-    def get(id:Int) {
+    def get(id: Int) {
       val m = consumer.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(queue("example"))
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
     get(1)
@@ -177,8 +177,8 @@ class QueueTest extends OpenwireTestSupport {
     var consumer = session.createConsumer(queue("BROWSER.TEST.RB"))
 
     val outbound = List(session.createTextMessage("First Message"),
-                        session.createTextMessage("Second Message"),
-                        session.createTextMessage("Third Message"))
+      session.createTextMessage("Second Message"),
+      session.createTextMessage("Third Message"))
 
     // lets consume any outstanding messages from previous test runs
     while (consumer.receive(1000) != null) {
@@ -206,8 +206,8 @@ class QueueTest extends OpenwireTestSupport {
     // There should be no more.
     var tooMany = false;
     while (enumeration.hasMoreElements) {
-        debug("Got extra message: %s", enumeration.nextElement());
-        tooMany = true;
+      debug("Got extra message: %s", enumeration.nextElement());
+      tooMany = true;
     }
     tooMany should be(false)
     browser.close()
@@ -229,8 +229,8 @@ class QueueTest extends OpenwireTestSupport {
     val producer = session.createProducer(queue("BROWSER.TEST.BR"))
 
     val outbound = List(session.createTextMessage("First Message"),
-                        session.createTextMessage("Second Message"),
-                        session.createTextMessage("Third Message"))
+      session.createTextMessage("Second Message"),
+      session.createTextMessage("Third Message"))
 
     producer.send(outbound(0))
 
@@ -249,59 +249,59 @@ class QueueTest extends OpenwireTestSupport {
     consumer.receive(100) should be(outbound(0))
   }
 
-//  test("Queue Browser With 2 Consumers") {
-//    val numMessages = 1000;
-//
-//    connect()
-//
-//    default_connection.setAlwaysSyncSend(false);
-//
-//    val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-//
-//    val destination = queue("BROWSER.TEST")
-//
-//    val destinationPrefetch10 = queue("TEST?jms.prefetchSize=10")
-//    val destinationPrefetch1 = queue("TEST?jms.prefetchsize=1")
-//
-//    val connection2 = create_connection
-//    connection2.start()
-//    connections.add(connection2)
-//    val session2 = connection2.createSession(false, Session.AUTO_ACKNOWLEDGE)
-//
-//    val producer = session.createProducer(destination)
-//    val consumer = session.createConsumer(destinationPrefetch10)
-//
-//    for (i <- 1 to 10) {
-//        val message = session.createTextMessage("Message: " + i)
-//        producer.send(message)
-//    }
-//
-//    val browser = session2.createBrowser(destinationPrefetch1)
-//    val browserView = browser.getEnumeration()
-//
-//    val messages = List[Message]
-//    for (i <- 0toInt numMessages) {
-//      val m1 = consumer.receive(5000)
-//      m1 shoulld not be(null)
-//      messages += m1
-//    }
-//
-//    val i = 0;
-//    for (;i < numMessages && browserView.hasMoreElements(); i++) {
-//        Message m1 = messages.get(i);
-//        Message m2 = browserView.nextElement();
-//        assertNotNull("m2 is null for index: " + i, m2);
-//        assertEquals(m1.getJMSMessageID(), m2.getJMSMessageID());
-//    }
-//
-//    // currently browse max page size is ignored for a queue browser consumer
-//    // only guarantee is a page size - but a snapshot of pagedinpending is
-//    // used so it is most likely more
-//    assertTrue("got at least our expected minimum in the browser: ", i > BaseDestination.MAX_PAGE_SIZE);
-//
-//    assertFalse("nothing left in the browser", browserView.hasMoreElements());
-//    assertNull("consumer finished", consumer.receiveNoWait());
-//  }
+  //  test("Queue Browser With 2 Consumers") {
+  //    val numMessages = 1000;
+  //
+  //    connect()
+  //
+  //    default_connection.setAlwaysSyncSend(false);
+  //
+  //    val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+  //
+  //    val destination = queue("BROWSER.TEST")
+  //
+  //    val destinationPrefetch10 = queue("TEST?jms.prefetchSize=10")
+  //    val destinationPrefetch1 = queue("TEST?jms.prefetchsize=1")
+  //
+  //    val connection2 = create_connection
+  //    connection2.start()
+  //    connections.add(connection2)
+  //    val session2 = connection2.createSession(false, Session.AUTO_ACKNOWLEDGE)
+  //
+  //    val producer = session.createProducer(destination)
+  //    val consumer = session.createConsumer(destinationPrefetch10)
+  //
+  //    for (i <- 1 to 10) {
+  //        val message = session.createTextMessage("Message: " + i)
+  //        producer.send(message)
+  //    }
+  //
+  //    val browser = session2.createBrowser(destinationPrefetch1)
+  //    val browserView = browser.getEnumeration()
+  //
+  //    val messages = List[Message]
+  //    for (i <- 0toInt numMessages) {
+  //      val m1 = consumer.receive(5000)
+  //      m1 shoulld not be(null)
+  //      messages += m1
+  //    }
+  //
+  //    val i = 0;
+  //    for (;i < numMessages && browserView.hasMoreElements(); i++) {
+  //        Message m1 = messages.get(i);
+  //        Message m2 = browserView.nextElement();
+  //        assertNotNull("m2 is null for index: " + i, m2);
+  //        assertEquals(m1.getJMSMessageID(), m2.getJMSMessageID());
+  //    }
+  //
+  //    // currently browse max page size is ignored for a queue browser consumer
+  //    // only guarantee is a page size - but a snapshot of pagedinpending is
+  //    // used so it is most likely more
+  //    assertTrue("got at least our expected minimum in the browser: ", i > BaseDestination.MAX_PAGE_SIZE);
+  //
+  //    assertFalse("nothing left in the browser", browserView.hasMoreElements());
+  //    assertNull("consumer finished", consumer.receiveNoWait());
+  //  }
 
   test("Browse Close") {
     connect()
@@ -309,8 +309,8 @@ class QueueTest extends OpenwireTestSupport {
     val destination = queue("BROWSER.TEST.BC")
 
     val outbound = List(session.createTextMessage("First Message"),
-                        session.createTextMessage("Second Message"),
-                        session.createTextMessage("Third Message"))
+      session.createTextMessage("Second Message"),
+      session.createTextMessage("Third Message"))
 
     val producer = session.createProducer(destination)
     producer.send(outbound(0))

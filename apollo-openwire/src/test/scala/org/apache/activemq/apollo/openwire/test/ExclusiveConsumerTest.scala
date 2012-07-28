@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{TextMessage, Session}
 
@@ -41,7 +41,7 @@ class ExclusiveConsumerSelectedWhenCreatedFirst extends ExclusiveConsumerTest {
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be(null)
+    exclusiveConsumer.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 }
@@ -65,7 +65,7 @@ class ExclusiveConsumerSelectedWhenCreatedAfterNonExclusive extends ExclusiveCon
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be(null)
+    exclusiveConsumer.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 }
@@ -91,7 +91,7 @@ class FailoverToAnotherExclusiveConsumerCreateFirst extends ExclusiveConsumerTes
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer1.receive(100) should not be(null)
+    exclusiveConsumer1.receive(100) should not be (null)
     exclusiveConsumer2.receive(100) should be(null)
     fallbackConsumer.receive(100) should be(null)
 
@@ -102,7 +102,7 @@ class FailoverToAnotherExclusiveConsumerCreateFirst extends ExclusiveConsumerTes
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 2"))
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 3"))
 
-    exclusiveConsumer2.receive(100) should not be(null)
+    exclusiveConsumer2.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 }
@@ -128,7 +128,7 @@ class FailoverToAnotherExclusiveConsumerCreateAfterNonExclusive extends Exclusiv
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer1.receive(100) should not be(null)
+    exclusiveConsumer1.receive(100) should not be (null)
     exclusiveConsumer2.receive(100) should be(null)
     fallbackConsumer.receive(100) should be(null)
 
@@ -139,7 +139,7 @@ class FailoverToAnotherExclusiveConsumerCreateAfterNonExclusive extends Exclusiv
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 2"))
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 3"))
 
-    exclusiveConsumer2.receive(100) should not be(null)
+    exclusiveConsumer2.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 }
@@ -165,7 +165,7 @@ class FailoverToNonExclusiveConsumer extends ExclusiveConsumerTest {
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be(null)
+    exclusiveConsumer.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
 
     // Close the exclusive consumer to verify the non-exclusive consumer
@@ -173,7 +173,7 @@ class FailoverToNonExclusiveConsumer extends ExclusiveConsumerTest {
     exclusiveConsumer.close()
 
     producer.send(senderSession.createTextMessage("Failover To NonExclusive Consumer - 2"))
-    fallbackConsumer.receive(100) should not be(null)
+    fallbackConsumer.receive(100) should not be (null)
     fallbackConsumer.close()
   }
 }
@@ -196,7 +196,7 @@ class FallbackToAnotherExclusiveConsumer extends ExclusiveConsumerTest {
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(200) should not be(null)
+    exclusiveConsumer.receive(200) should not be (null)
     fallbackConsumer.receive(200) should be(null)
 
     Thread.sleep(100)
@@ -206,7 +206,7 @@ class FallbackToAnotherExclusiveConsumer extends ExclusiveConsumerTest {
     exclusiveConsumer.close()
 
     producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 2"))
-    fallbackConsumer.receive(100) should not be(null)
+    fallbackConsumer.receive(100) should not be (null)
 
     // Create exclusive consumer to determine if it will start receiving
     // the messages.
@@ -215,7 +215,7 @@ class FallbackToAnotherExclusiveConsumer extends ExclusiveConsumerTest {
     producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 3"))
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be(null)
+    exclusiveConsumer.receive(100) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 

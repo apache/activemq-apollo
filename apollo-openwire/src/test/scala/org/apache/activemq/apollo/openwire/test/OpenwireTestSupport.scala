@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfterEach
@@ -28,10 +28,11 @@ import org.apache.activemq.apollo.broker.BrokerFunSuiteSupport
 class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with BeforeAndAfterEach {
 
   override def broker_config_uri = "xml:classpath:apollo-openwire.xml"
+
   val transport_scheme = "tcp"
   val transport_host = "localhost"
 
-  var default_connection:Connection = _
+  var default_connection: Connection = _
   var connections = List[Connection]()
 
   override protected def afterEach() {
@@ -41,20 +42,24 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
     default_connection = null
   }
 
-//  def connection_uri = transportScheme + "://localhost:%d?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000".format(port)
-  def connection_uri(uri_options:String="") = (transport_scheme + "://" + transport_host + ":%d" + uri_options).format(port)
-  def create_connection_factory(uri_options:String="") = new ActiveMQConnectionFactory(connection_uri(uri_options))
-  def create_connection(uri_options:String=""): Connection = create_connection_factory(uri_options).createConnection
-  def queue(value:String) = new ActiveMQQueue(value);
-  def topic(value:String) = new ActiveMQTopic(value);
+  //  def connection_uri = transportScheme + "://localhost:%d?wireFormat.maxInactivityDuration=1000000&wireFormat.maxInactivityDurationInitalDelay=1000000".format(port)
+  def connection_uri(uri_options: String = "") = (transport_scheme + "://" + transport_host + ":%d" + uri_options).format(port)
 
-  def connect(uri_options:String="", start:Boolean=true) = {
+  def create_connection_factory(uri_options: String = "") = new ActiveMQConnectionFactory(connection_uri(uri_options))
+
+  def create_connection(uri_options: String = ""): Connection = create_connection_factory(uri_options).createConnection
+
+  def queue(value: String) = new ActiveMQQueue(value);
+
+  def topic(value: String) = new ActiveMQTopic(value);
+
+  def connect(uri_options: String = "", start: Boolean = true) = {
     val connection = create_connection(uri_options)
     connections ::= connection
-    if(default_connection==null) {
+    if (default_connection == null) {
       default_connection = connection
     }
-    if( start ) {
+    if (start) {
       connection.start()
     }
     connection

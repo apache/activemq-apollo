@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{TextMessage, Session}
 
@@ -43,21 +43,21 @@ class DurableSubscriberTest extends OpenwireTestSupport {
     default_connection.start()
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(topic("example"))
-    def put(id:Int) {
-      producer.send(session.createTextMessage("message:"+id))
+    def put(id: Int) {
+      producer.send(session.createTextMessage("message:" + id))
     }
 
-    List(1,2,3).foreach(put _)
+    List(1, 2, 3).foreach(put _)
 
     val subscriber = session.createDurableSubscriber(topic("example"), "test")
 
-    def get(id:Int) {
+    def get(id: Int) {
       val m = subscriber.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(topic("example"))
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
-    List(1,2,3).foreach(get _)
+    List(1, 2, 3).foreach(get _)
   }
 
 }

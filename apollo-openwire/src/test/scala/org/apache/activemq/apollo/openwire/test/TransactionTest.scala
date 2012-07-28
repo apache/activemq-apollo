@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{TextMessage, Message, MessageListener, Session}
 
@@ -23,7 +23,7 @@ import javax.jms.{TextMessage, Message, MessageListener, Session}
  *
  */
 class TransactionTest extends OpenwireTestSupport {
-  
+
   test("Simple JMS Transaction Test") {
     connect()
     val producer_session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
@@ -38,22 +38,22 @@ class TransactionTest extends OpenwireTestSupport {
 
     val m = consumer.receive(1000).asInstanceOf[TextMessage]
     m should not be (null)
-    m.getText should equal (messages(0).getText)
+    m.getText should equal(messages(0).getText)
     consumer_session.commit
 
     var m2 = consumer.receive(1000).asInstanceOf[TextMessage]
     m2 should not be (null)
-    m2.getText should equal (messages(1).getText)
+    m2.getText should equal(messages(1).getText)
     consumer_session.rollback
 
     m2 = consumer.receive(2000).asInstanceOf[TextMessage]
     m2 should not be (null)
-    m2.getText should equal (messages(1).getText)
+    m2.getText should equal(messages(1).getText)
     consumer_session.commit
 
     val m3 = consumer.receive(1000).asInstanceOf[TextMessage]
     m3 should not be (null)
-    m3.getText should equal (messages(2).getText)
+    m3.getText should equal(messages(2).getText)
     consumer_session.commit
   }
 

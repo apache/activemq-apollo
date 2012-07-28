@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
 import javax.jms.{TextMessage, Session}
 
@@ -36,7 +36,7 @@ class SslSecurityTest extends OpenwireTestSupport {
       System.setProperty("javax.net.ssl.keyStorePassword", "password");
       System.setProperty("javax.net.ssl.keyStoreType", "jks");
     } catch {
-      case x:Throwable => x.printStackTrace
+      case x: Throwable => x.printStackTrace
     }
     super.beforeAll
   }
@@ -47,8 +47,8 @@ class SslSecurityTest extends OpenwireTestSupport {
 
     val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val producer = session.createProducer(topic("example"))
-    def put(id:Int) {
-      producer.send(session.createTextMessage("message:"+id))
+    def put(id: Int) {
+      producer.send(session.createTextMessage("message:" + id))
     }
 
     put(1)
@@ -58,13 +58,13 @@ class SslSecurityTest extends OpenwireTestSupport {
     put(2)
     put(3)
 
-    def get(id:Int) {
+    def get(id: Int) {
       val m = consumer.receive().asInstanceOf[TextMessage]
       m.getJMSDestination should equal(topic("example"))
-      m.getText should equal ("message:"+id)
+      m.getText should equal("message:" + id)
     }
 
-    List(2,3).foreach(get _)
+    List(2, 3).foreach(get _)
 
   }
 

@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.openwire
+package org.apache.activemq.apollo.openwire.test
 
-import javax.jms.{Session,JMSException,MessageProducer}
+import javax.jms.{Session, JMSException, MessageProducer}
 
 abstract class SecurityTest extends OpenwireTestSupport {
 
@@ -28,7 +28,7 @@ abstract class SecurityTest extends OpenwireTestSupport {
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
       System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
     } catch {
-      case x:Throwable => x.printStackTrace
+      case x: Throwable => x.printStackTrace
     }
     super.beforeAll
   }
@@ -212,6 +212,6 @@ class SubscribeFailsForConnectionOnlyAuthorization extends SecurityTest {
     intercept[JMSException] {
       val consumer = session.createConsumer(queue("secure"))
       consumer.receive();
-    }    
+    }
   }
 }
