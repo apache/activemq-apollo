@@ -128,7 +128,9 @@ object ParallelJUnitRunner {
     val value = this.synchronized {
       useCounter+=1
       if( executor == null) {
-        executor = Executors.newFixedThreadPool(Integer.getInteger("test.threads", Runtime.getRuntime.availableProcessors));
+        var threads = Integer.getInteger("test.threads", Runtime.getRuntime.availableProcessors*2)
+        println("ParallelJUnitRunner using up to "+threads+" threads to execute parallel tests.")
+        executor = Executors.newFixedThreadPool(threads);
       }
       executor
     }
