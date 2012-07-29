@@ -972,6 +972,7 @@ class StompProtocolHandler extends ProtocolHandler {
       var connected_headers = ListBuffer((VERSION, protocol_version))
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
+      connected_headers += HOST_ID->encode_header(host.id)
       connected_headers += SESSION->encode_header(session_id.get)
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
