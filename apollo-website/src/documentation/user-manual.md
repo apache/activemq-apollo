@@ -1219,9 +1219,9 @@ Example STOMP frame to connect to the broker:
     
     ^@
 
-STOMP 1.0 clients do specify which virtual host they are connecting to so
+STOMP 1.0 clients don't specify which virtual host they are connecting to so
 the broker connects those clients to the first virtual host defined in
-it's configuration.  STOMP 1.1 clients do specify a virtual host when they
+it's configuration.  STOMP 1.1 clients must specify a virtual host when they
 connect.  If no configured virtual host `host_name` matches the client's 
 requested host, the connection is terminated with an ERROR.  Therefore,
 it is critical that the virtual hosts configuration define all the 
