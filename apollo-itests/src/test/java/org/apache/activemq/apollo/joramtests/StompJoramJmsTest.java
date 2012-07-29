@@ -28,9 +28,11 @@ import org.objectweb.jtests.jms.conform.message.headers.MessageHeaderTest;
 import org.objectweb.jtests.jms.conform.message.properties.MessagePropertyConversionTest;
 import org.objectweb.jtests.jms.conform.message.properties.MessagePropertyTest;
 import org.objectweb.jtests.jms.conform.queue.QueueBrowserTest;
+import org.objectweb.jtests.jms.conform.queue.TemporaryQueueTest;
 import org.objectweb.jtests.jms.conform.selector.SelectorTest;
 import org.objectweb.jtests.jms.conform.session.SessionTest;
 import org.objectweb.jtests.jms.conform.session.UnifiedSessionTest;
+import org.objectweb.jtests.jms.conform.topic.TemporaryTopicTest;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -73,6 +75,8 @@ public class StompJoramJmsTest extends TestCase {
         suite.addTestSuite(TopicConnectionTest.class);
         suite.addTestSuite(ConnectionTest.class);
         suite.addTestSuite(MessageBodyTest.class);
+        suite.addTestSuite(TemporaryQueueTest.class);
+        suite.addTestSuite(TemporaryTopicTest.class);
 
 // The following tests should work once the stompjms client starts validating selector syntax.
 //        suite.addTestSuite(SelectorSyntaxTest.class);
@@ -80,8 +84,6 @@ public class StompJoramJmsTest extends TestCase {
 //        suite.addTestSuite(QueueSessionTest.class);
 
 // Temp destinations only work right when created and used from the same connection :(
-//        suite.addTestSuite(TemporaryQueueTest.class);
-//        suite.addTestSuite(TemporaryTopicTest.class);
 
 //        This test is not supported since we don't support JMSXGroupId stuff.
 //        suite.addTestSuite(JMSXPropertyTest.class);
