@@ -56,8 +56,8 @@ object OpenwireProtocolHandler extends Log {
   DEFAULT_WIREFORMAT_SETTINGS.setCacheEnabled(true);
   DEFAULT_WIREFORMAT_SETTINGS.setTightEncodingEnabled(true);
   DEFAULT_WIREFORMAT_SETTINGS.setSizePrefixDisabled(false);
-  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDuration(30 * 1000 * 1000);
-  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDurationInitalDelay(10 * 1000 * 1000);
+  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDuration(30 * 1000);
+  DEFAULT_WIREFORMAT_SETTINGS.setMaxInactivityDurationInitalDelay(10 * 1000);
   DEFAULT_WIREFORMAT_SETTINGS.setCacheSize(1024);
   DEFAULT_WIREFORMAT_SETTINGS.setMaxFrameSize(OpenWireFormat.DEFAULT_MAX_FRAME_SIZE);
 
