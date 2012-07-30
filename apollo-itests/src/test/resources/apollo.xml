@@ -20,6 +20,7 @@
 
   <virtual_host id="default" purge_on_startup="true" auto_create_queues="true">
     <host_name>localhost</host_name>
+    <topic slow_consumer_policy="queue"/>
     <queue id="mirrored.**" mirrored="true"/>
 
     <queue id="quota-1.**" quota="1"/>
