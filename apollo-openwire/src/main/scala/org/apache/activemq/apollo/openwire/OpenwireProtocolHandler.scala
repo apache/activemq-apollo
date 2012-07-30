@@ -387,12 +387,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     wire_format = connection.transport.getProtocolCodec.asInstanceOf[OpenwireCodec].format
     wire_format.renegotiateWireFormat(info, preferred_wireformat_settings)
 
-    connection.transport match {
-      case x: TcpTransport =>
-        x.getSocketChannel.socket.setTcpNoDelay(wire_format.isTcpNoDelayEnabled())
-      case _ =>
-    }
-
     val inactive_time = preferred_wireformat_settings.getMaxInactivityDuration().min(info.getMaxInactivityDuration())
     val initial_delay = preferred_wireformat_settings.getMaxInactivityDurationInitalDelay().min(info.getMaxInactivityDurationInitalDelay())
 

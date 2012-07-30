@@ -18,7 +18,6 @@ package org.apache.activemq.apollo;
 
 import junit.framework.Test;
 import org.apache.activemq.apollo.test.JmsResourceProvider;
-import org.fusesource.stomp.jms.StompJmsSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,10 +170,6 @@ public class JmsQueueTransactionTest extends JmsTransactionTestSupport {
      * @throws Exception
      */
     public void testReceiveBrowseReceive() throws Exception {
-        if (session instanceof StompJmsSession) {
-            // browsing not supported by stomp
-            return;
-        }
         Message[] outbound = new Message[] {session.createTextMessage("First Message"), session.createTextMessage("Second Message"), session.createTextMessage("Third Message")};
 
         // lets consume any outstanding messages from previous test runs

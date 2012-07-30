@@ -37,13 +37,6 @@ public class JMSUsecaseTest extends JmsTestBase {
         junit.textui.TestRunner.run(suite());
     }
 
-    // this method can be removed once https://issues.apache.org/jira/browse/APLO-224 is resolved.
-    public void initCombos() {
-        super.initCombos();
-        setCombinationValues("protocol", new Object[]{new OpenwireBrokerProtocol()});
-//        setCombinationValues("protocol", new Object[]{new StompBrokerProtocol()});
-    }
-
     public void initCombosForTestQueueBrowser() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT), Integer.valueOf(DeliveryMode.PERSISTENT)});
         addCombinationValues("destinationType", new Object[] {DestinationType.QUEUE_TYPE, DestinationType.TEMP_QUEUE_TYPE});

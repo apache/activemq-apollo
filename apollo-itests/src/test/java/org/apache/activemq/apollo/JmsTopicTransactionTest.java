@@ -42,10 +42,6 @@ public class JmsTopicTransactionTest extends JmsTransactionTestSupport {
 
     @Override
     public void runBare() throws Throwable {
-        if (protocol instanceof StompBrokerProtocol) {
-            // TODO - seem to have a broker hang on some of these tests when STOMP is used
-            return;
-        }
         super.runBare();    //To change body of overridden methods use File | Settings | File Templates.
     }
 
