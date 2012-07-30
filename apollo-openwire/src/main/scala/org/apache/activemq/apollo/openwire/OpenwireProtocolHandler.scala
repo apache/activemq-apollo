@@ -202,7 +202,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     sink_manager = new SinkMux[Command]( connection.transport_sink.map {x=>
       x.setCommandId(next_command_id)
-      debug("sending openwire command: %s", x)
+      trace("sending: %s", x)
       x
     })
     connection_session = new OverflowSink(sink_manager.open());
@@ -958,8 +958,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
               // session is full so use an overflow sink so to hold the message,
               // and then trigger closing the session once it empties out.
               val sink = new OverflowSink(downstream)
+              var disposed = false
               sink.refiller = ^{
-                dispose
+                // refiller could get triggered multiple times. only care about the first one.
+                if( !disposed ) {
+                  disposed = true
+                  dispose
+                }
               }
               sink.offer(delivery)
             } else {

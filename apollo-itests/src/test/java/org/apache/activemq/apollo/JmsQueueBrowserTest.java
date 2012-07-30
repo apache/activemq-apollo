@@ -48,7 +48,7 @@ public class JmsQueueBrowserTest extends JmsTestBase {
      *
      * @throws Exception
      */
-    public void ignoreReceiveBrowseReceive() throws Exception {
+    public void testReceiveBrowseReceive() throws Exception {
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         ActiveMQQueue destination = new ActiveMQQueue("TEST");
         MessageProducer producer = session.createProducer(destination);
@@ -136,7 +136,7 @@ public class JmsQueueBrowserTest extends JmsTestBase {
     }
 
     // Re-enable once https://issues.apache.org/jira/browse/APLO-226 is fixed.
-    public void ignoreQueueBrowserWith2Consumers() throws Exception {
+    public void testQueueBrowserWith2Consumers() throws Exception {
         final int numMessages = 1000;
 //        connection.setAlwaysSyncSend(false);
         Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
