@@ -183,23 +183,34 @@ public class JmsTestBase extends CombinationTestSupport {
     //
     // /////////////////////////////////////////////////////////////////
     protected Destination createDestination(Session session, DestinationType type) throws JMSException {
+        return createDestination(session, type, false);
+    }
+
+    protected Destination createDestination(Session session, DestinationType type, boolean exclusive) throws JMSException {
         String testMethod = getName();
         if( testMethod.indexOf(" ")>0 ) {
             testMethod = testMethod.substring(0, testMethod.indexOf(" "));
         }
-        String name = "TEST." + getClass().getName() + "." +testMethod+"."+TEST_COUNTER.getAndIncrement();
+        String name = "TEST." + getClass().getName() + "." + testMethod + "." + TEST_COUNTER.getAndIncrement();
         switch (type) {
         case QUEUE_TYPE:
-            return session.createQueue(name);
+            return makeExclusive(session.createQueue(name), exclusive);
         case TOPIC_TYPE:
-            return session.createTopic(name);
+            return makeExclusive(session.createTopic(name), exclusive);
         case TEMP_QUEUE_TYPE:
-            return session.createTemporaryQueue();
+            return makeExclusive(session.createTemporaryQueue(), exclusive);
         case TEMP_TOPIC_TYPE:
-            return session.createTemporaryTopic();
+            return makeExclusive(session.createTemporaryTopic(), exclusive);
         default:
             throw new IllegalArgumentException("type: " + type);
         }
+    }
+
+    private Destination makeExclusive(Destination dest, boolean exclusive) {
+        if( exclusive ) {
+            dest = protocol.addExclusiveOptions(dest);
+        }
+        return dest;
     }
 
     protected void sendMessages(Destination destination, int count) throws Exception {

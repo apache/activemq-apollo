@@ -16,9 +16,12 @@
  */
 package org.apache.activemq.apollo;
 
+import org.apache.activemq.command.ActiveMQDestination;
 import org.fusesource.stomp.jms.*;
 
 import javax.jms.*;
+
+import java.util.HashMap;
 
 import static java.lang.String.format;
 
@@ -61,4 +64,14 @@ public class StompBrokerProtocol extends BrokerProtocol {
     public void setPrefetch(Connection connection, int value) {
         ((StompJmsConnection)connection).setPrefetch(new StompJmsPrefetch(value));
     }
+
+    @Override
+    public Destination addExclusiveOptions(Destination dest) {
+        HashMap<String, String> headers = new HashMap<String, String>();
+        headers.put("exclusive", "true");
+        final StompJmsQueue copy = ((StompJmsQueue) dest).copy();
+        copy.setSubscribeHeaders(headers);
+        return copy;
+    }
+
 }

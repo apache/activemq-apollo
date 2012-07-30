@@ -110,4 +110,6 @@ abstract public class BrokerProtocol {
     public abstract Topic createTopic(String name);
 
     public abstract void setPrefetch(Connection connection, int value);
+
+    public abstract Destination addExclusiveOptions(Destination name);
 }

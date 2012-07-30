@@ -18,13 +18,13 @@ package org.apache.activemq.apollo;
 
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.command.ActiveMQDestination;
-import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.command.ActiveMQTopic;
+import org.apache.activemq.command.*;
 
 import static java.lang.String.*;
 
 import javax.jms.*;
+import java.util.HashMap;
+import java.util.Properties;
 
 /**
  * <p>
@@ -65,4 +65,40 @@ public class OpenwireBrokerProtocol extends BrokerProtocol {
     public void setPrefetch(Connection connection, int value) {
         ((ActiveMQConnection)connection).getPrefetchPolicy().setAll(value);
     }
+
+    @Override
+    public Destination addExclusiveOptions(Destination dest) {
+        final HashMap<String, String> o = new HashMap<String, String>();
+        o.put("consumer.exclusive", "true");
+        if( dest instanceof ActiveMQTempTopic ) {
+            return new ActiveMQTopic(((ActiveMQTempTopic)dest).getPhysicalName()) {
+                {
+                    options = o;
+                }
+            };
+        }
+        if( dest instanceof ActiveMQTempQueue ) {
+            return new ActiveMQTempQueue(((ActiveMQTempQueue)dest).getPhysicalName()) {
+                {
+                    options = o;
+                }
+            };
+        }
+        if( dest instanceof ActiveMQTopic ) {
+            return new ActiveMQTopic(((ActiveMQTopic)dest).getPhysicalName()) {
+                {
+                    options = o;
+                }
+            };
+        }
+        if( dest instanceof ActiveMQQueue ) {
+            return new ActiveMQQueue(((ActiveMQQueue)dest).getPhysicalName()) {
+                {
+                    options = o;
+                }
+            };
+        }
+        return dest;
+    }
+
 }

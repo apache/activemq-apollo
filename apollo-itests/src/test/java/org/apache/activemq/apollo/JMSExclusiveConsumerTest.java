@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo;
 
 import junit.framework.Test;
-import org.apache.activemq.command.ActiveMQQueue;
 
 import javax.jms.*;
 
@@ -38,12 +37,6 @@ public class JMSExclusiveConsumerTest extends JmsTestBase {
         junit.textui.TestRunner.run(suite());
     }
 
-    // TODO: add a way to use exclusive queues via stompjms
-    @Override
-    public void initCombos() {
-        setCombinationValues("protocol",  new Object[] {new OpenwireBrokerProtocol()});
-    }
-
     public void initCombosForTestRoundRobinDispatchOnNonExclusive() {
         addCombinationValues("deliveryMode", new Object[] {Integer.valueOf(DeliveryMode.NON_PERSISTENT), Integer.valueOf(DeliveryMode.PERSISTENT)});
     }
@@ -59,7 +52,7 @@ public class JMSExclusiveConsumerTest extends JmsTestBase {
         // Receive a message with the JMS API
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        ActiveMQQueue destination = new ActiveMQQueue("TEST");
+        Destination destination = createDestination(session, DestinationType.QUEUE_TYPE);
         MessageProducer producer = session.createProducer(destination);
         producer.setDeliveryMode(deliveryMode);
 
@@ -92,12 +85,12 @@ public class JMSExclusiveConsumerTest extends JmsTestBase {
      * @throws Exception
      */
     // TODO: figure out why this is failing: https://issues.apache.org/jira/browse/APLO-228
-    public void ignoreDispatchExclusive() throws Exception {
+    public void testDispatchExclusive() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        ActiveMQQueue destination = new ActiveMQQueue("TEST?consumer.exclusive=true");
+        Destination destination = createDestination(session, DestinationType.QUEUE_TYPE, true);
         MessageProducer producer = session.createProducer(destination);
         producer.setDeliveryMode(deliveryMode);
 
@@ -130,11 +123,12 @@ public class JMSExclusiveConsumerTest extends JmsTestBase {
     }
 
     public void testMixExclusiveWithNonExclusive() throws Exception {
-        ActiveMQQueue exclusiveQueue = new ActiveMQQueue("TEST.FOO?consumer.exclusive=true");
-        ActiveMQQueue nonExclusiveQueue = new ActiveMQQueue("TEST.FOO?consumer.exclusive=false");
 
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Destination nonExclusiveQueue = createDestination(session, DestinationType.QUEUE_TYPE);
+        Destination exclusiveQueue = protocol.addExclusiveOptions(nonExclusiveQueue);
 
         MessageConsumer nonExCon = session.createConsumer(nonExclusiveQueue);
         MessageConsumer exCon = session.createConsumer(exclusiveQueue);
