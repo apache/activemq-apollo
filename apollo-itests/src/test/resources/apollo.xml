@@ -31,6 +31,8 @@
   </virtual_host>
 
   <!--<web_admin bind="http://0.0.0.0:61680"/>-->
-  <connector id="tcp" bind="tcp://0.0.0.0:0"/>
+  <connector id="tcp" bind="tcp://0.0.0.0:0">
+    <stomp add_redeliveries_header="JMSXDeliveryCount"/>
+  </connector>
 
 </broker>
