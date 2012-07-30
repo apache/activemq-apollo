@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo;
 
+import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQQueue;
@@ -23,10 +24,7 @@ import org.apache.activemq.command.ActiveMQTopic;
 
 import static java.lang.String.*;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
-import javax.jms.Queue;
-import javax.jms.Topic;
+import javax.jms.*;
 
 /**
  * <p>
@@ -61,5 +59,10 @@ public class OpenwireBrokerProtocol extends BrokerProtocol {
     @Override
     public Topic createTopic(String name) {
         return new ActiveMQTopic(name);
+    }
+
+    @Override
+    public void setPrefetch(Connection connection, int value) {
+        ((ActiveMQConnection)connection).getPrefetchPolicy().setAll(value);
     }
 }

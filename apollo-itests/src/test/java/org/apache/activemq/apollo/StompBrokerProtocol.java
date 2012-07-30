@@ -16,15 +16,9 @@
  */
 package org.apache.activemq.apollo;
 
-import org.fusesource.stomp.jms.StompJmsConnectionFactory;
-import org.fusesource.stomp.jms.StompJmsDestination;
-import org.fusesource.stomp.jms.StompJmsQueue;
-import org.fusesource.stomp.jms.StompJmsTopic;
+import org.fusesource.stomp.jms.*;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
-import javax.jms.Queue;
-import javax.jms.Topic;
+import javax.jms.*;
 
 import static java.lang.String.format;
 
@@ -61,5 +55,10 @@ public class StompBrokerProtocol extends BrokerProtocol {
     @Override
     public Topic createTopic(String name) {
         return new StompJmsTopic("/topic/", name);
+    }
+
+    @Override
+    public void setPrefetch(Connection connection, int value) {
+        ((StompJmsConnection)connection).setPrefetch(new StompJmsPrefetch(value));
     }
 }

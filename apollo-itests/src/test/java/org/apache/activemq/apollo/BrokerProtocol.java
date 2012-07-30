@@ -26,10 +26,7 @@ import org.apache.activemq.apollo.util.ServiceControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
-import javax.jms.Queue;
-import javax.jms.Topic;
+import javax.jms.*;
 import java.net.InetSocketAddress;
 
 /**
@@ -111,4 +108,6 @@ abstract public class BrokerProtocol {
 
     public abstract Queue createQueue(String name);
     public abstract Topic createTopic(String name);
+
+    public abstract void setPrefetch(Connection connection, int value);
 }
