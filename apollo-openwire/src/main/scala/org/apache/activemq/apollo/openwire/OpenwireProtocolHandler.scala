@@ -813,6 +813,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       val (session, delivery) = event
       val dispatch = new MessageDispatch
       dispatch.setConsumerId(info.getConsumerId)
+      dispatch.setRedeliveryCounter(delivery.redeliveries)
       if( delivery.message eq EndOfBrowseMessage ) {
         // Then send the end of browse message.
         dispatch
