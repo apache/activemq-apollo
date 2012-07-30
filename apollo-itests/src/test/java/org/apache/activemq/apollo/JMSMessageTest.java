@@ -47,7 +47,7 @@ public class JMSMessageTest extends JmsTestBase {
         addCombinationValues("destinationType", new Object[] {DestinationType.QUEUE_TYPE});
     }
 
-    public void ignoreTextMessage() throws Exception {
+    public void testTextMessage() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
@@ -81,7 +81,7 @@ public class JMSMessageTest extends JmsTestBase {
         junit.textui.TestRunner.run(suite());
     }
 
-    public void ignoreBytesMessageLength() throws Exception {
+    public void testBytesMessageLength() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
@@ -110,7 +110,7 @@ public class JMSMessageTest extends JmsTestBase {
         assertNull(consumer.receiveNoWait());
     }
 
-    public void ignoreObjectMessage() throws Exception {
+    public void testObjectMessage() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
@@ -135,7 +135,7 @@ public class JMSMessageTest extends JmsTestBase {
         assertNull(consumer.receiveNoWait());
     }
 
-    public void ignoreBytesMessage() throws Exception {
+    public void testBytesMessage() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
@@ -167,7 +167,7 @@ public class JMSMessageTest extends JmsTestBase {
         assertNull(consumer.receiveNoWait());
     }
 
-    public void ignoreStreamMessage() throws Exception {
+    public void testStreamMessage() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
@@ -209,7 +209,7 @@ public class JMSMessageTest extends JmsTestBase {
         assertNull(consumer.receiveNoWait());
     }
 
-    public void ignoreMapMessage() throws Exception {
+    public void testMapMessage() throws Exception {
 
         // Receive a message with the JMS API
         connection.start();
