@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo;
 
 import org.apache.activemq.apollo.test.JmsResourceProvider;
-import org.fusesource.stomp.jms.StompJmsSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -296,10 +295,6 @@ public abstract class JmsTransactionTestSupport extends JmsTestBase implements M
      * @throws Exception
      */
     public void testReceiveRollback() throws Exception {
-        if (session instanceof StompJmsSession) {
-            // TODO - rollback in stompjms doesn't work the same way
-            return;
-        }
         Message[] outbound = new Message[] {session.createTextMessage("First Message"), session.createTextMessage("Second Message")};
 
         // lets consume any outstanding messages from prev test runs
@@ -351,10 +346,6 @@ public abstract class JmsTransactionTestSupport extends JmsTestBase implements M
      * @throws Exception
      */
     public void testReceiveTwoThenRollback() throws Exception {
-        if (session instanceof StompJmsSession) {
-            // TODO - rollback in stompjms doesn't work the same way
-            return;
-        }
         Message[] outbound = new Message[] {session.createTextMessage("First Message"), session.createTextMessage("Second Message")};
 
         // lets consume any outstanding messages from prev test runs
@@ -442,10 +433,6 @@ public abstract class JmsTransactionTestSupport extends JmsTestBase implements M
      * @throws Exception
      */
     public void testReceiveTwoThenRollbackManyTimes() throws Exception {
-        if (session instanceof StompJmsSession) {
-            // TODO - rollback in stompjms doesn't work the same way
-            return;
-        }
         for (int i = 0; i < 5; i++) {
             testReceiveTwoThenRollback();
         }

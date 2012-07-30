@@ -38,6 +38,7 @@ public class OpenwireBrokerProtocol extends BrokerProtocol {
     public ConnectionFactory getConnectionFactory(Object broker) {
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory();
         factory.setBrokerURL(format("tcp://localhost:%s", port(broker)));
+        factory.setNestedMapAndListEnabled(false);
         return factory;
     }
 

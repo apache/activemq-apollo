@@ -64,13 +64,13 @@ public class OpenwireJoramJmsTest extends TestCase {
         suite.addTestSuite(SelectorSyntaxTest.class);
         suite.addTestSuite(QueueSessionTest.class);
         suite.addTestSuite(SessionTest.class);
+        suite.addTestSuite(TemporaryTopicTest.class);
 // TODO: figure out why the following tests are failing..
 //        suite.addTestSuite(MessagePropertyTest.class);
 //        suite.addTestSuite(QueueBrowserTest.class);
 //        suite.addTestSuite(SelectorTest.class);
 //        suite.addTestSuite(TopicSessionTest.class);
 //        suite.addTestSuite(UnifiedSessionTest.class);
-//        suite.addTestSuite(TemporaryTopicTest.class);
         return suite;
     }
 
