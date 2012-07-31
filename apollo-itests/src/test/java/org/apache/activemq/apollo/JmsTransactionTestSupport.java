@@ -591,23 +591,6 @@ public abstract class JmsTransactionTestSupport extends JmsTestBase implements M
         consumer = resourceProvider.createConsumer(session, destination);
     }
 
-    /**
-     * Sets the prefeftch policy to one.
-     */
-    /*
-    protected void setPrefetchToOne() {
-        ActiveMQPrefetchPolicy prefetchPolicy = getPrefetchPolicy();
-        prefetchPolicy.setQueuePrefetch(1);
-        prefetchPolicy.setTopicPrefetch(1);
-        prefetchPolicy.setDurableTopicPrefetch(1);
-        prefetchPolicy.setOptimizeDurableTopicPrefetch(1);
-    }
-
-    protected ActiveMQPrefetchPolicy getPrefetchPolicy() {
-        return ((ActiveMQConnection)connection).getPrefetchPolicy();
-    }
-    */
-
     //This test won't work with xa tx so no beginTx() has been added.
     public void testMessageListener() throws Exception {
         // send messages

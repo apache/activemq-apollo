@@ -84,7 +84,6 @@ public class JMSExclusiveConsumerTest extends JmsTestBase {
      * 
      * @throws Exception
      */
-    // TODO: figure out why this is failing: https://issues.apache.org/jira/browse/APLO-228
     public void testDispatchExclusive() throws Exception {
 
         // Receive a message with the JMS API

@@ -35,23 +35,6 @@ public class JmsQueueTransactionTest extends JmsTransactionTestSupport {
         return suite(JmsQueueTransactionTest.class);
     }
 
-    public void testChangeMutableObjectInObjectMessageThenRollback() throws Exception {
-        // Disabled.. currently failing.
-        // super.testChangeMutableObjectInObjectMessageThenRollback();
-    }
-
-    @Override
-    public void testMessageListener() throws Exception {
-        // Disabled.. currently failing.
-        // super.testMessageListener();
-    }
-
-    @Override
-    public void testReceiveTwoThenRollbackManyTimes() throws Exception {
-        // Disabled.. currently failing.
-        // super.testReceiveTwoThenRollbackManyTimes();    //To change body of overridden methods use File | Settings | File Templates.
-    }
-
     /**
      * @see org.apache.activemq.apollo.JmsTransactionTestSupport#getJmsResourceProvider()
      */
