@@ -23,7 +23,7 @@
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
     <version>99-trunk-SNAPSHOT</version>
-    <relativePath>../apollo-scala</relativePath>
+    <relativePath>..</relativePath>
   </parent>
   
   <artifactId>apollo-website</artifactId>
