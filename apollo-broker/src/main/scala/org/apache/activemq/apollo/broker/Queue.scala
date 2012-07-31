@@ -408,7 +408,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         case _ =>
       }
 
-      if( sub.full ) {
+      link.waiting_on = if( sub.full ) {
         "consumer"
       } else if( sub.pos.is_tail ) {
         "producer"
