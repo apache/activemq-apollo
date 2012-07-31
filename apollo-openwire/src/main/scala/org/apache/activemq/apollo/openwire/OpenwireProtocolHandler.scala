@@ -781,16 +781,24 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   class ConsumerContext(val parent: SessionContext, val info: ConsumerInfo) extends BaseRetained with DeliveryConsumer {
 
-//  The following comes in handy if we need to debug the
-//  reference counts of the consumers.
-//    val r = new BaseRetained
+////  The following comes in handy if we need to debug the
+////  reference counts of the consumers.
+//  class ConsumerContext(val parent: SessionContext, val info: ConsumerInfo) extends Retained with DeliveryConsumer {
+//    val r = new BaseRetained {
+//      override def toString: String = info.getConsumerId.toString
+//    }
 //
-//    def setDisposer(p1: Runnable): Unit = r.setDisposer(p1)
-//    def retained: Int =r.retained
+//    var d = NOOP
+//    def setDisposer(p1: Task): Unit = d = p1
+//    r.setDisposer(^{
+//      dispose();
+//      d.run();
+//    })
+//    def retained: Int = r.retained
 //
-//    def printST(name:String) = {
+//    def printST(name:String) = System.out.synchronized {
 //      val e = new Exception
-//      println(name+": "+connection.map(_.id))
+//      println(name+": "+info.getConsumerId+" @ "+r.retained())
 //      println("  "+e.getStackTrace.drop(1).take(4).mkString("\n  "))
 //    }
 //
@@ -895,7 +903,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       host.dispatch_queue {
         val rc = host.router.bind(addresses, this, security_context)
-        this.release
         dispatchQueue {
           rc match {
             case None =>
@@ -910,6 +917,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def dettach = {
       host.dispatch_queue {
         host.router.unbind(addresses, this, false , security_context)
+        this.release
       }
       parent.consumers.remove(info.getConsumerId)
       all_consumers.remove(info.getConsumerId)
@@ -942,7 +950,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, info.getCurrentPrefetchSize.max(1), buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue, info.getCurrentPrefetchSize.max(1), Integer.MAX_VALUE)
       var closed = false
 
       def consumer = ConsumerContext.this
@@ -1059,9 +1067,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         if( messageAck.getAckType == MessageAck.INDIVIDUAL_ACK_TYPE) {
           for( (id, delivery) <- consumer_acks.find(_._1 == msgid) ) {
             if ( !delivery.credited ) {
+              delivery.credited = true;
               session_manager.delivered(delivery.session, delivery.size)
               ack_source.merge(1)
-              delivery.credited = true;
             }
           }
         } else {
@@ -1078,9 +1086,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           for( (id, delivery) <- acked ) {
             // only credit once...
             if( !delivery.credited ) {
+              delivery.credited = true;
               session_manager.delivered(delivery.session, delivery.size)
               ack_source.merge(1)
-              delivery.credited = true;
             }
           }
         }

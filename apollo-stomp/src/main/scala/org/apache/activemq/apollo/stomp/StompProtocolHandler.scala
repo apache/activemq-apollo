@@ -789,6 +789,7 @@ class StompProtocolHandler extends ProtocolHandler {
         val addresses = consumer.addresses
         host.dispatch_queue {
           host.router.unbind(addresses, consumer, false , security_context)
+          consumer.release()
         }
       }
       consumers = Map()
@@ -1358,11 +1359,11 @@ class StompProtocolHandler extends ProtocolHandler {
 
     host.dispatch_queue {
       val rc = host.router.bind(addresses, consumer, security_context)
-      consumer.release
       dispatchQueue {
         rc match {
           case Some(reason)=>
             consumers -= id
+            consumer.release
             async_die(reason)
           case None =>
             send_receipt(headers)
@@ -1414,6 +1415,7 @@ class StompProtocolHandler extends ProtocolHandler {
         consumers -= id
         host.dispatch_queue {
           host.router.unbind(consumer.addresses, consumer, persistent, security_context)
+          consumer.release()
           send_receipt(headers)
         }
     }
