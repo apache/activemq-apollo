@@ -773,6 +773,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
               "destination:/topic/updates2\n" +
               "id:my-sub-name\n" +
               "persistent:true\n" +
+              "include-seq:seq\n" +
               "receipt:0\n" +
               "\n")
     wait_for_receipt("0")
@@ -792,6 +793,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
               "destination:/topic/updates2\n" +
               "id:my-sub-name\n" +
               "persistent:true\n" +
+              "include-seq:seq\n" +
               "\n")
 
     def get(id: Int) = {
