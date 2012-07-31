@@ -22,13 +22,13 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.4</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-util</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>1.4</version>
   <!-- <packaging>bundle</packaging> -->
 
   <name>${project.artifactId}</name>

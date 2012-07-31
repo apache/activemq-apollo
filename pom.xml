@@ -25,7 +25,7 @@
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-project</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>1.4</version>
   <packaging>pom</packaging>
 
   <name>Apache ActiveMQ Apollo Project</name>
@@ -179,9 +179,9 @@
   </modules>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/activemq-apollo/trunk/</url>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/tags/apollo-project-1.4</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/tags/apollo-project-1.4</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/activemq-apollo/tags/apollo-project-1.4</url>
   </scm>
 
   <dependencyManagement>
