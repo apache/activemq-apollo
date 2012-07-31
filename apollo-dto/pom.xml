@@ -22,12 +22,12 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.4</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-dto</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>1.4</version>
   <!-- <packaging>bundle</packaging> -->
 
   <name>${project.artifactId}</name>
@@ -57,7 +57,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.4</version>
     </dependency>
 
     <!-- Testing Dependencies -->    
