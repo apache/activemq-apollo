@@ -599,9 +599,6 @@
       <properties>
         <test>false</test>
       </properties>
-      <modules>
-        <module>apollo-itests</module>
-      </modules>
       <build>
         <plugins>
           <plugin>
