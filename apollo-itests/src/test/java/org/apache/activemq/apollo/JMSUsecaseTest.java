@@ -48,7 +48,10 @@ public class JMSUsecaseTest extends JmsTestBase {
         connection.start();
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         destination = createDestination(session, destinationType);
-        sendMessages(session, destination, 5);
+        MessageProducer producer = session.createProducer(destination);
+        producer.setDeliveryMode(this.deliveryMode);
+        sendMessages(session, producer, 5);
+        producer.close();
 
         QueueBrowser browser = session.createBrowser((Queue)destination);
         Enumeration enumeration = browser.getEnumeration();
@@ -74,6 +77,7 @@ public class JMSUsecaseTest extends JmsTestBase {
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         destination = createDestination(session, destinationType);
         MessageProducer producer = session.createProducer(destination);
+        producer.setDeliveryMode(this.deliveryMode);
         MessageConsumer consumer = session.createConsumer(destination);
         producer.send(session.createMessage());
 
@@ -94,6 +98,7 @@ public class JMSUsecaseTest extends JmsTestBase {
         Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
         destination = createDestination(session, destinationType);
         MessageProducer producer = session.createProducer(destination);
+        producer.setDeliveryMode(this.deliveryMode);
         MessageConsumer consumer = session.createConsumer(destination);
         producer.send(session.createTextMessage("test"));
 

@@ -228,10 +228,14 @@ public class JmsTestBase extends CombinationTestSupport {
 
     protected void sendMessages(Session session, Destination destination, int count) throws JMSException {
         MessageProducer producer = session.createProducer(destination);
+        sendMessages(session, producer, count);
+        producer.close();
+    }
+
+    protected void sendMessages(Session session, MessageProducer producer, int count) throws JMSException {
         for (int i = 0; i < count; i++) {
             producer.send(session.createTextMessage(messageTextPrefix  + i));
         }
-        producer.close();
     }
 
 
