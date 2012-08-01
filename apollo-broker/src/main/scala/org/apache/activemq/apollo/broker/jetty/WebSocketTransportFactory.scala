@@ -153,7 +153,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           } catch {
             case ignore =>
           }
-          server = null
         }
         on_complete.run
       }
@@ -260,8 +259,11 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           inbound.notify();
         }
         connection.disconnect()
+        dispatch_queue {
+          protocolCodec = null
+          on_completed.run()
+        }
       }
-      on_completed.run()
     }
 
     def getLocalAddress = new InetSocketAddress(request.getLocalAddr, request.getLocalPort)
@@ -427,7 +429,9 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       dispatchQueue.assertExecuting
       try {
         if (!service_state.is_started) {
-          throw new IOException("Not running.")
+          // this command gets dropped since it was issued after
+          // we were stopped..
+          return true;
         }
         protocolCodec.write(command) match {
           case BufferState.FULL =>

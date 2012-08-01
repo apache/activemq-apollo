@@ -85,7 +85,9 @@ trait SinkMapper[T,X] extends Sink[T] with SinkFilter[X] {
     if( full ) {
       false
     } else {
-      downstream.offer(passing(value))
+      val accepted:Boolean = downstream.offer(passing(value))
+      assert(accepted, "The downstream sink violated it's contract, an offer was not accepted but it had told us it was not full")
+      accepted
     }
   }
   def passing(value:T):X
