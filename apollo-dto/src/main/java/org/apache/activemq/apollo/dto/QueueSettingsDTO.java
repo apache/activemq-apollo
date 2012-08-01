@@ -71,6 +71,13 @@ public class QueueSettingsDTO {
     public String quota;
 
     /**
+     * The maximum number of messages queue is allowed
+     * to grow to.  If not set then there is no limit.
+     */
+    @XmlAttribute(name="quota_messages")
+    public Long quota_messages;
+
+    /**
      * Once the queue is full, the `full_policy` controls how the
      * queue behaves when additional messages attempt to be enqueued
      * onto the queue.

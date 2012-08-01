@@ -138,7 +138,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
    *  The max memory to allow this queue to grow to.
    */
   var tune_quota = -1L
-  
+  var tune_quota_messages = -1L
+
   /**
    *  The message delivery rate (in bytes/sec) at which
    *  the queue enables a enqueue rate throttle
@@ -234,6 +235,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     tune_catchup_enqueue_rate = mem_size(update.catchup_enqueue_rate,"-1")
     tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,"-1")
     tune_quota = mem_size(update.quota,"-1")
+    tune_quota_messages = update.quota_messages.getOrElse(-1L)
 
     full_policy = Option(update.full_policy).getOrElse("block").toLowerCase match {
       case "drop head" => DropHead
@@ -568,7 +570,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
     var refiller: Task = null
 
-    def is_quota_exceeded = (tune_quota >= 0 && queue_size > tune_quota)
+    def is_quota_exceeded = (tune_quota >= 0 && queue_size > tune_quota) || (tune_quota_messages >= 0 && queue_items > tune_quota_messages)
     def is_enqueue_throttled = (enqueues_remaining!=null && enqueues_remaining.get() <= 0)
     def is_enqueue_buffer_maxed = (producer_swapped_in.size >= producer_swapped_in.size_max)
 

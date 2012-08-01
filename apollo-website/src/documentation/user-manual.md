@@ -361,6 +361,9 @@ memory.  Defaults to true.
   use settings values like: `500mb` or `1g` just plain byte count
   like `1024000`.  Once the quota is Exceeded, the producers will
   block until the usage decreases.  Defaults to no limit.
+
+* `quota_messages` : The maximum number of messages queue is allowed
+  to grow to.  If not set then there is no limit. Defaults to no limit.
   
 * `auto_delete_after`: If not set to `0` then the queue will automatically
   delete once there have been no consumers, producers or messages on it
