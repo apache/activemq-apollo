@@ -433,7 +433,7 @@ class StompProtocolHandler extends ProtocolHandler {
         var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil
         headers ::= (CONTENT_TYPE -> ascii(content_type))
         headers ::= (CONTENT_LENGTH -> ascii(body.length().toString))
-        headers ::= (DESTINATION -> encode_header(destination_parser.encode_destination(delivery.sender)))
+        headers ::= (DESTINATION -> encode_header(destination_parser.encode_destination(delivery.sender.head)))
         StompFrame(MESSAGE, headers, BufferContent(body))
       }
 
