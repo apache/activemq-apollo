@@ -22,8 +22,6 @@ AggregateDestMetricsDTO
 AuthenticationDTO
 AutoGCServiceDTO
 BrokerDTO
-LoadStatusDTO
-BrokerStatusDTO
 ConnectionStatusDTO
 ConnectorStatusDTO
 ConnectorTypeDTO
@@ -31,7 +29,6 @@ CustomServiceDTO
 DataPageDTO
 DestMetricsDTO
 DestinationDTO
-DestinationLoadDTO
 DetectDTO
 DurableSubscriptionDTO
 DurableSubscriptionDestinationDTO

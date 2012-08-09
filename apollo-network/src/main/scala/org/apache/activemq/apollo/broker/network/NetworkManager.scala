@@ -18,11 +18,11 @@ package org.apache.activemq.apollo.broker.network
 
 import org.apache.activemq.apollo.util._
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.broker.network.dto._
+import dto._
 import CollectionsSupport._
 import java.util.concurrent.TimeUnit._
 import collection.mutable.{LinkedHashMap, HashSet, ListBuffer, HashMap}
-import org.apache.activemq.apollo.dto.{LoadStatusDTO, CustomServiceDTO}
+import org.apache.activemq.apollo.dto.CustomServiceDTO
 import org.apache.activemq.apollo.broker.{AcceptingConnector, VirtualHost, Broker, CustomServiceFactory}
 import java.net.InetSocketAddress
 

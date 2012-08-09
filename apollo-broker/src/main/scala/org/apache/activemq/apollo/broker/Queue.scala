@@ -302,30 +302,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
-  def load_status = {
-    val rc = new DestinationLoadDTO
-    rc.id = this.id
-    rc.message_count = queue_size
-    rc.message_size = queue_items
-    rc.message_count_enqueue_counter = enqueue_item_counter
-    rc.message_size_enqueue_counter = enqueue_size_counter
-    rc.message_count_dequeue_counter = dequeue_item_counter
-    rc.message_size_dequeue_counter = dequeue_size_counter
-
-    for( sub <- all_subscriptions.values ) {
-      val dto = new ConsumerLoadDTO
-      dto.user = sub.consumer.user
-      dto.selector = sub.consumer.jms_selector
-      sub.ack_rates match {
-        case Some((items_per_sec, size_per_sec) ) =>
-          dto.ack_item_rate = items_per_sec
-          dto.ack_size_rate = size_per_sec
-        case _ =>
-      }
-      rc.consumers.add(dto)
-    }
-    rc
-  }
   def status(entries:Boolean=false) = {
     val rc = new QueueStatusDTO
     rc.id = this.id

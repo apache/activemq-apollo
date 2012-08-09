@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.network
 
-import org.apache.activemq.apollo.dto.LoadStatusDTO
+import dto.LoadStatusDTO
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics
 import collection.mutable.HashMap
 

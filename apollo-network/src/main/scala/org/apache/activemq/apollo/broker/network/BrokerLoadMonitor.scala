@@ -16,7 +16,8 @@
  */
 package org.apache.activemq.apollo.broker.network
 
-import org.apache.activemq.apollo.dto.{LoadStatusDTO, JsonCodec}
+import dto.LoadStatusDTO
+import org.apache.activemq.apollo.dto.JsonCodec
 import dto.ClusterMemberDTO
 import org.fusesource.hawtdispatch._
 import collection.mutable.HashMap

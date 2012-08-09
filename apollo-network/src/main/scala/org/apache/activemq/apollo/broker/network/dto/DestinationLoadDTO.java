@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.dto;
+package org.apache.activemq.apollo.broker.network.dto;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.HashSet;
+import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 
 /**
  * The
@@ -33,18 +30,29 @@ import java.util.HashSet;
 @XmlRootElement(name="destination_load")
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ConsumerLoadDTO {
+public class DestinationLoadDTO {
 
-    @XmlAttribute(name="user")
-    public String user;
+    @XmlAttribute(name="id")
+    public String id;
 
-    @XmlAttribute(name="selector")
-    public String selector;
+    @XmlAttribute(name="message_count")
+    public Long message_count;
 
-    @XmlAttribute(name="ack_item_rate")
-    public Double ack_item_rate;
+    @XmlAttribute(name="message_size")
+    public Long message_size;
 
-    @XmlAttribute(name="ack_size_rate")
-    public Double ack_size_rate;
+    @XmlAttribute(name="message_count_enqueue_counter")
+    public Long message_count_enqueue_counter;
+
+    @XmlAttribute(name="message_size_enqueue_counter")
+    public Long message_size_enqueue_counter;
+
+    @XmlAttribute(name="message_count_dequeue_counter")
+    public Long message_count_dequeue_counter;
+
+    @XmlAttribute(name="message_size_dequeue_counter")
+    public Long message_size_dequeue_counter;
+
+    public ArrayList<ConsumerLoadDTO> consumers = new ArrayList<ConsumerLoadDTO>();
 
 }

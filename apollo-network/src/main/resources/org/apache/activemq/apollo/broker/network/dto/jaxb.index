@@ -19,3 +19,4 @@ BridgeDTO
 MembershipMonitorDTO
 JVMMembershipMonitorDTO
 ZeroconfMembershipMonitorDTO
+LoadStatusDTO
