@@ -29,8 +29,11 @@ import org.objectweb.jtests.jms.conform.message.properties.MessagePropertyConver
 import org.objectweb.jtests.jms.conform.message.properties.MessagePropertyTest;
 import org.objectweb.jtests.jms.conform.queue.QueueBrowserTest;
 import org.objectweb.jtests.jms.conform.queue.TemporaryQueueTest;
+import org.objectweb.jtests.jms.conform.selector.SelectorSyntaxTest;
 import org.objectweb.jtests.jms.conform.selector.SelectorTest;
+import org.objectweb.jtests.jms.conform.session.QueueSessionTest;
 import org.objectweb.jtests.jms.conform.session.SessionTest;
+import org.objectweb.jtests.jms.conform.session.TopicSessionTest;
 import org.objectweb.jtests.jms.conform.session.UnifiedSessionTest;
 import org.objectweb.jtests.jms.conform.topic.TemporaryTopicTest;
 
@@ -77,11 +80,9 @@ public class StompJoramJmsTest extends TestCase {
         suite.addTestSuite(MessageBodyTest.class);
         suite.addTestSuite(TemporaryQueueTest.class);
         suite.addTestSuite(TemporaryTopicTest.class);
-
-// The following tests should work once the stompjms client starts validating selector syntax.
-//        suite.addTestSuite(SelectorSyntaxTest.class);
-//        suite.addTestSuite(TopicSessionTest.class);
-//        suite.addTestSuite(QueueSessionTest.class);
+        suite.addTestSuite(SelectorSyntaxTest.class);
+        suite.addTestSuite(TopicSessionTest.class);
+        suite.addTestSuite(QueueSessionTest.class);
 
 // Temp destinations only work right when created and used from the same connection :(
 
