@@ -129,6 +129,10 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     result.connected = connected.get
     result.protocol = Option(config.protocol).getOrElse("any")
     result.local_address = Option(socket_address).map(_.toString).getOrElse("any")
+
+    for( (id, connection) <- broker.connections if connection.connector eq this ) {
+      result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
+    }
     result
   }
 

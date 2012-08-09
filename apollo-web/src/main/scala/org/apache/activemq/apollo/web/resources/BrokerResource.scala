@@ -105,7 +105,7 @@ class BrokerResource() extends Resource {
 
   @GET
   @ApiOperation(value = "Returns a BrokerStatusDTO which contains summary information about the broker and the JVM")
-  def get_broker():BrokerStatusDTO = {
+  def get_broker(@QueryParam("connections") connections:Boolean):BrokerStatusDTO = {
     with_broker { broker =>
       monitoring(broker) {
         val result = new BrokerStatusDTO
@@ -117,21 +117,23 @@ class BrokerResource() extends Resource {
         result.state_since = broker.service_state.since
         result.version = Broker.version
         result.connection_counter = broker.connection_id_counter.get()
+        result.connected = broker.connections.size
         broker.virtual_hosts.values.foreach{ host=>
-          // TODO: may need to sync /w virtual host's dispatch queue
           result.virtual_hosts.add( host.id )
         }
-
         broker.connectors.values.foreach{ c=>
           result.connectors.add( c.id )
         }
 
-        broker.connections.foreach { case (id,connection) =>
-          // TODO: may need to sync /w connection's dispatch queue
-          result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
+        // only include the connection list if it was requested.
+        if( !connections ) {
+          result.connections = null;
+        } else {
+          broker.connections.foreach { case (id,connection) =>
+            result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
+          }
         }
         result
-
       }
     }
   }
@@ -685,10 +687,20 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/connectors/{id}")
   @ApiOperation(value = "Gets the status of the specified connector.")
-  def connector(@PathParam("id") id : String):ServiceStatusDTO = {
+  def connector(@PathParam("id") id : String, @QueryParam("connections") connections:Boolean):ServiceStatusDTO = {
     with_connector(id) { connector =>
       monitoring(connector.broker) {
-        connector.status
+        val rc = connector.status
+
+        // only include the connection list if it was requested.
+        rc match {
+          case rc:ConnectorStatusDTO=>
+            if( !connections ) {
+              rc.connections = null
+            }
+          case _ =>
+        }
+        rc
       }
     }
   }

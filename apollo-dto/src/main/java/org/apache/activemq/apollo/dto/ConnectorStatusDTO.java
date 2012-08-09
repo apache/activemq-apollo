@@ -56,4 +56,10 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     @XmlAttribute
     public long connected;
 
+    /**
+     * The connections that have been created via the connector.
+     */
+    @XmlElement(name="connection")
+    public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
+
 }

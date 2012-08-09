@@ -32,7 +32,16 @@ p state: #{state} #{ uptime(state_since) } ago
 
 p local address: #{local_address}
 p protocol: #{protocol}
-p currently connected: #{connected}
-p total ever connected: #{connection_counter}
 
-
+h2 Connections
+p total connections since startup : #{connection_counter}
+p currently connected : #{connected}
+p
+  - if( connections==null )
+    a(href={ id+".html?connections=true" }) Show Connections
+  - else
+    a(href={ id+".html" }) Hide Connections
+    ul
+      - for( x <- connections )
+        li
+          a(href={ path("../../connections/"+x.id+".html") }) #{x.label}

@@ -32,17 +32,24 @@ ul
       a(href={ path("virtual-hosts/"+x+".html") }) #{x}
 
 h2 Connectors
+
 ul
   - for( x <- connectors )
     li
       a(href={ path("connectors/"+x+".html") }) #{x}
 
 h2 Connections
-p total connections ever : #{connection_counter}
-ul
-  - for( x <- connections )
-    li
-      a(href={ path("connections/"+x.id+".html") }) #{x.label}
+p total connections since startup : #{connection_counter}
+p currently connected : #{connected}
+p
+  - if( connections==null )
+    a(href={ "broker.html?connections=true" }) Show Connections
+  - else
+    a(href={ "broker.html" }) Hide Connections
+    ul
+      - for( x <- connections )
+        li
+          a(href={ path("connections/"+x.id+".html") }) #{x.label}
 
 h2 Operating System
 p Name : #{jvm_metrics.os_name}

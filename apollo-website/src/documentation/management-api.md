@@ -297,10 +297,12 @@ parameter to define the order in which they are returned.  Example:
         "current_time": 1314573388707,
         "virtual_hosts": ["default"],
         "connectors": ["tls", "tcp"],
-        "connections": [],
         "connection_counter": 0
       }
       {pygmentize}
+      
+      You can the `?connections=true` query parameter to have a list of connections
+      included n the result.
       
   - route("GET", "/broker/queue-metrics.json", 200, "AggregateDestMetricsDTO")
     :markdown
@@ -656,6 +658,9 @@ parameter to define the order in which they are returned.  Example:
         "connected": 12
       }
       {pygmentize}
+      
+      You can the `?connections=true` query parameter to have a list of connections
+      included n the result.
 
   - route("POST", "/broker/connectors/{connector}/action/stop.json", 303)
     :markdown

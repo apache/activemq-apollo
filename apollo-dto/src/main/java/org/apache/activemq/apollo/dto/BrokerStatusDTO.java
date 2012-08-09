@@ -64,14 +64,20 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
     public List<String> connectors = new ArrayList<String>();
 
     /**
-     * Ids of all the connections running on the broker
-     */
-    @XmlElement(name="connection")
-    public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
-
-    /**
-     * The total number of connections accepted by the broker.
+     * The total number of connections accepted by the broker since it started.
      */
 	@XmlAttribute(name="connection_counter")
 	public long connection_counter;
+
+    /**
+     * The number of connections that this connector has currently connected.
+     */
+    @XmlAttribute
+    public long connected;
+
+    /**
+     * The connections that have been created via the connector.
+     */
+    @XmlElement(name="connection")
+    public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
 }
