@@ -40,7 +40,7 @@
 
     h1 Durable Subscription on #{id}
     - if( x.selector != null )
-      p selector: ${x.selector}
+      p selector: #{x.selector}
     p state: #{state} #{ uptime(state_since) } ago
     - if( state == "STARTED" )
       form(method="post" action={path("action/delete")})
