@@ -160,6 +160,17 @@ A `connector` element can be configured with the following attributes
 * `protocol` : Defaults to `any` which means that any of the broker's 
    supported protocols can connect via this transport.
 
+* `receive_buffer_size` : Sets the size of the internal socket receive 
+   buffer (aka setting the socket's SO_RCVBUF).  
+
+* `send_buffer_size` : Sets the size of the internal socket send buffer
+  (aka setting the socket's SO_SNDBUF).  
+
+When the `receive_buffer_size` or `send_buffer_size` attributes are not set, 
+then the broker will 'auto-tune' them to be between '64k' and '2k' based on the
+max number of connections established against the broker in the last 5 minutes 
+and the size of the JVM heap.
+
 Furthermore, the connector element may contain protocol specific
 configuration elements. For example, to have the broker set the `user_id`
 header of messages to the id of user that sent the message, you would
@@ -203,12 +214,6 @@ The TCP URI also supports several query parameters to fine tune the
 settings used on the socket.  The supported parameters are:
 
 * `backlog` : Sets the listen backlog size.  Defaults to 100.
-
-* `receive_buffer_size` : Sets the size of the internal socket receive 
-   buffer (aka setting the socket's SO_RCVBUF).  Defaults to 65536 (64k)
-
-* `send_buffer_size` : Sets the size of the internal socket send buffer
-  (aka setting the socket's SO_SNDBUF).  Defaults to 65536 (64k)
 
 * `keep_alive` : Enable or disable the SO_KEEPALIVE socket option  
    (aka setting the socket's SO_KEEPALIVE). Defaults to true.

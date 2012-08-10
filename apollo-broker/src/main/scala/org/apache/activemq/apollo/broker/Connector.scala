@@ -48,6 +48,8 @@ trait Connector extends BaseService with SecuredResource {
   def socket_address:SocketAddress
   def status:ServiceStatusDTO
   def resource_kind = SecuredResource.ConnectorKind
+  def update_buffer_settings = {}
+
 }
 
 trait ConnectorFactory {
@@ -156,6 +158,12 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       connection.transport = transport
 
       broker.connections.put(connection.id, connection)
+      broker.current_period.max_connections = broker.current_period.max_connections.max(broker.connections.size)
+      if ( broker.current_period.max_connections > broker.max_connections_in_5min ) {
+        // re-tune the buffer settings if max is getting bumped.
+        broker.tune_send_receive_buffers
+      }
+
       try {
         connection.start(NOOP)
       } catch {
@@ -192,9 +200,15 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     }
   }
 
+  var send_buffer_size:Option[Int] = None
+  var receive_buffer_size:Option[Int] = None
 
   override def _start(on_completed:Task) = {
+    def mem_size(value:String) = Option(value).map(MemoryPropertyEditor.parse(_).toInt)
+
     assert(config!=null, "Connector must be configured before it is started.")
+    send_buffer_size = mem_size(config.send_buffer_size)
+    receive_buffer_size = mem_size(config.receive_buffer_size)
 
     accepted.set(0)
     connected.set(0)
@@ -206,6 +220,10 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     transport_server match {
       case transport_server:BrokerAware =>
         transport_server.set_broker(broker)
+      case _ =>
+    }
+
+    transport_server match {
       case transport_server:SslTransportServer =>
         transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
         if( broker.key_storage!=null ) {
@@ -217,12 +235,45 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       case _ =>
     }
 
+    update_buffer_settings
+
     transport_server.start(^{
       broker.console_log.info("Accepting connections at: "+transport_server.getBoundAddress)
       on_completed.run
     })
   }
 
+  var last_receive_buffer_size = 0
+  var last_send_buffer_size = 0
+
+  //
+  // This method get call once a second to re-tune the socket buffer sizes if needed.
+  //
+  override
+  def update_buffer_settings {
+    transport_server match {
+      case transport_server: TcpTransportServer =>
+
+        val next_receive_buffer_size = receive_buffer_size.getOrElse(broker.auto_tuned_send_receiver_buffer_size)
+        if( next_receive_buffer_size!=last_receive_buffer_size ) {
+          debug("%s connector receive_buffer_size set to: %d", id, next_receive_buffer_size)
+
+          // lets avoid updating the socket settings each period.
+          transport_server.setReceiveBufferSize(next_receive_buffer_size)
+          last_receive_buffer_size = next_receive_buffer_size
+        }
+
+        val next_send_buffer_size = send_buffer_size.getOrElse(broker.auto_tuned_send_receiver_buffer_size)
+        if( next_send_buffer_size!=last_send_buffer_size ) {
+          debug("%s connector send_buffer_size set to: %d", id, next_send_buffer_size)
+          // lets avoid updating the socket settings each period.
+          transport_server.setSendBufferSize(next_send_buffer_size)
+          last_send_buffer_size = next_send_buffer_size
+        }
+
+      case _ =>
+    }
+  }
 
   override def _stop(on_completed:Task): Unit = {
     transport_server.stop(^{

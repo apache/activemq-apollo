@@ -40,6 +40,7 @@ import org.fusesource.hawtdispatch.util.BufferPools
 import org.apache.activemq.apollo.filter.{Filterable, XPathExpression, XalanXPathEvaluator}
 import org.xml.sax.InputSource
 import java.util
+import javax.management.openmbean.CompositeData
 
 /**
  * <p>
@@ -155,6 +156,15 @@ object BrokerRegistry extends Log {
 
 object Broker extends Log {
 
+  val mbean_server = ManagementFactory.getPlatformMBeanServer()
+
+  val MAX_JVM_HEAP_SIZE = try {
+    val data = mbean_server.getAttribute(new ObjectName("java.lang:type=Memory"), "HeapMemoryUsage").asInstanceOf[CompositeData]
+    data.get("max").asInstanceOf[java.lang.Long].longValue()
+  } catch {
+    case _ => 1024L * 1024 * 1024 // assume it's 1 GIG (that's the default apollo ships with)
+  }
+
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
   private val SERVICE_TIMEOUT = 1000*5;
   val buffer_pools = new BufferPools
@@ -221,7 +231,6 @@ object Broker extends Log {
     if( System.getProperty("os.name").toLowerCase().startsWith("windows") ) {
       None
     } else {
-      val mbean_server = ManagementFactory.getPlatformMBeanServer()
       mbean_server.getAttribute(new ObjectName("java.lang:type=OperatingSystem"), "MaxFileDescriptorCount") match {
         case x:java.lang.Long=> Some(x.longValue)
         case _ => None
@@ -269,6 +278,27 @@ class Broker() extends BaseService with SecuredResource {
 
   val connectors = LinkedHashMap[String, Connector]()
   val connections = LinkedHashMap[Long, BrokerConnection]()
+
+  // Each period is 1 second long..
+  object PeriodStat {
+    def apply(values:Seq[PeriodStat]) = {
+      val rc = new PeriodStat
+      for( s <- values ) {
+        rc.max_connections = rc.max_connections.max(s.max_connections)
+      }
+      rc
+    }
+  }
+
+  class PeriodStat {
+    // yeah just tracking max connections for now.. but we might add more later.
+    var max_connections = 0
+  }
+
+  var current_period:PeriodStat = new PeriodStat
+  val stats_of_5min = new CircularBuffer[PeriodStat](5*60)  // collects 5 min stats.
+  var max_connections_in_5min = 0
+  var auto_tuned_send_receiver_buffer_size = 64*1024
 
   val dispatch_queue = createQueue("broker")
 
@@ -324,6 +354,8 @@ class Broker() extends BaseService with SecuredResource {
     }
     schedule_reoccurring(1, SECONDS) {
       virtualhost_maintenance
+      roll_current_period
+      tune_send_receive_buffers
     }
 
     val tracker = new LoggingTracker("broker startup", console_log, SERVICE_TIMEOUT)
@@ -364,6 +396,44 @@ class Broker() extends BaseService with SecuredResource {
     BrokerRegistry.remove(this)
     tracker.callback(on_completed)
 
+  }
+
+  def roll_current_period = {
+    stats_of_5min.add(current_period)
+    current_period = new PeriodStat
+    current_period.max_connections = connections.size
+    max_connections_in_5min = PeriodStat(stats_of_5min).max_connections
+  }
+
+  def tune_send_receive_buffers = {
+
+    max_connections_in_5min = max_connections_in_5min.max(current_period.max_connections)
+    if ( max_connections_in_5min == 0 ) {
+      auto_tuned_send_receiver_buffer_size = 64*1024
+    } else {
+      // We start with the JVM heap.
+      var x = MAX_JVM_HEAP_SIZE
+      // Lets only use 1/8th of the heap for connection buffers.
+      x = x / 8
+      // 1/2 for send buffers, the other 1/2 for receive buffers.
+      x = x / 2
+      // Ok, how much space can we use per connection?
+      x = x / max_connections_in_5min
+      // Drop the bottom bits so that we are working /w 1k increments.
+      x = x & 0xFFFFFF00
+
+      // Constrain the result to be between a 2k and a 64k buffer.
+      auto_tuned_send_receiver_buffer_size = x.toInt.max(1024*2).min(1024*64)
+    }
+
+    // Basically this means that we will use a 64k send/receive buffer
+    // for the first 1024 connections established and then the buffer
+    // size will start getting reduced down until it gets to 2k buffers.
+    // Which will occur when you get to about 32,000 connections.
+
+    for( connector <- connectors.values ) {
+      connector.update_buffer_settings
+    }
   }
 
   def virtualhost_maintenance = {

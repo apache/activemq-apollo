@@ -34,49 +34,67 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AcceptingConnectorDTO extends ConnectorTypeDTO {
 
-  /**
-   * The transport that the connector will listen on, it includes the ip address and port that it will bind to.
-   * Transports are specified using a URI syntax.
-   */
-  @XmlAttribute
-  public String bind;
+    /**
+     * The transport that the connector will listen on, it includes the ip address and port that it will bind to.
+     * Transports are specified using a URI syntax.
+     */
+    @XmlAttribute
+    public String bind;
 
-  /**
-   * Defaults to 'any' which means that any of the broker's supported protocols can connect via this transport.
-   */
-  @XmlAttribute
-  public String protocol;
+    /**
+     * Defaults to 'any' which means that any of the broker's supported protocols can connect via this transport.
+     */
+    @XmlAttribute
+    public String protocol;
 
-  /**
-   * A broker accepts connections via it's configured connectors.
-   */
-  @XmlElementRef
-  public List<ProtocolDTO> protocols = new ArrayList<ProtocolDTO>();
+    /**
+     * Sets the size of the internal socket receive buffer (aka setting the socket's SO_RCVBUF). Defaults to 64k
+     */
+    @XmlAttribute(name="receive_buffer_size")
+    public String receive_buffer_size;
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof AcceptingConnectorDTO)) return false;
-    if (!super.equals(o)) return false;
+    /**
+     * Sets the size of the internal socket send buffer (aka setting the socket's SO_SNDBUF). Defaults to 64k
+     */
+    @XmlAttribute(name="send_buffer_size")
+    public String send_buffer_size;
 
-    AcceptingConnectorDTO that = (AcceptingConnectorDTO) o;
+    /**
+     * A broker accepts connections via it's configured connectors.
+     */
+    @XmlElementRef
+    public List<ProtocolDTO> protocols = new ArrayList<ProtocolDTO>();
 
-    if (bind != null ? !bind.equals(that.bind) : that.bind != null)
-      return false;
-    if (protocol != null ? !protocol.equals(that.protocol) : that.protocol != null)
-      return false;
-    if (protocols != null ? !protocols.equals(that.protocols) : that.protocols != null)
-      return false;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AcceptingConnectorDTO)) return false;
+        if (!super.equals(o)) return false;
 
-    return true;
-  }
+        AcceptingConnectorDTO that = (AcceptingConnectorDTO) o;
 
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    result = 31 * result + (bind != null ? bind.hashCode() : 0);
-    result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
-    result = 31 * result + (protocols != null ? protocols.hashCode() : 0);
-    return result;
-  }
+        if (bind != null ? !bind.equals(that.bind) : that.bind != null)
+            return false;
+        if (protocol != null ? !protocol.equals(that.protocol) : that.protocol != null)
+            return false;
+        if (protocols != null ? !protocols.equals(that.protocols) : that.protocols != null)
+            return false;
+        if (receive_buffer_size != null ? !receive_buffer_size.equals(that.receive_buffer_size) : that.receive_buffer_size != null)
+            return false;
+        if (send_buffer_size != null ? !send_buffer_size.equals(that.send_buffer_size) : that.send_buffer_size != null)
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (bind != null ? bind.hashCode() : 0);
+        result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
+        result = 31 * result + (receive_buffer_size != null ? receive_buffer_size.hashCode() : 0);
+        result = 31 * result + (send_buffer_size != null ? send_buffer_size.hashCode() : 0);
+        result = 31 * result + (protocols != null ? protocols.hashCode() : 0);
+        return result;
+    }
 }
