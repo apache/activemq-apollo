@@ -640,7 +640,7 @@ class StompProtocolHandler extends ProtocolHandler {
     config.die_delay.getOrElse(DEFAULT_DIE_DELAY)
   }
 
-  lazy val buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
+  lazy val buffer_size = Option(config.buffer_size).map(MemoryPropertyEditor.parse(_).toInt).getOrElse(broker.auto_tuned_send_receiver_buffer_size*10)
 
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)

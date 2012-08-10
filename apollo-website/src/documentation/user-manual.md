@@ -1142,7 +1142,8 @@ in the STOMP protocol implementation.  The `stomp` element supports the
 following configuration attributes:
 
 * `buffer_size` : How much each producer or subscription will buffer between
-   the client and the broker. Defaults to `640k`.
+   the client and the broker. If not set, it will be auto tuned between `640k`
+   and `20k` depending on the number of connections open on the broker.
 * `add_user_header` :  Name of the header which will be added to every received 
   message received.  The value of the header will be set to the id of user that 
   sent the message.  Not set by default.
