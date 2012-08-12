@@ -17,8 +17,14 @@
 package org.apache.activemq.apollo.dto;
 
 import org.junit.Test;
+import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 import java.io.InputStream;
+import java.io.StringReader;
 
 import static junit.framework.Assert.*;
 
@@ -32,6 +38,13 @@ public class XmlCodecTest {
 
     private InputStream resource(String path) {
         return getClass().getResourceAsStream(path);
+    }
+
+    @Test
+    public void validateXSD() throws SAXException {
+        SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        Schema schema = factory.newSchema(XmlCodec.class.getResource("apollo.xsd"));
+        assertNotNull(schema);
     }
 
     @Test

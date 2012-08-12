@@ -36,9 +36,9 @@ public class LoadStatusDTO {
     @XmlAttribute(name="timestamp")
     public long timestamp;
 
-    @XmlElementRef(name="queue")
+    @XmlElement(name="queue")
     public ArrayList<DestinationLoadDTO> queues = new ArrayList<DestinationLoadDTO>();
 
-    @XmlElementRef(name="topic")
+    @XmlElement(name="topic")
     public ArrayList<DestinationLoadDTO> topics = new ArrayList<DestinationLoadDTO>();
 }

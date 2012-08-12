@@ -53,6 +53,7 @@ public class DestinationLoadDTO {
     @XmlAttribute(name="message_size_dequeue_counter")
     public Long message_size_dequeue_counter;
 
+    @XmlElement(name="consumer")
     public ArrayList<ConsumerLoadDTO> consumers = new ArrayList<ConsumerLoadDTO>();
 
 }
