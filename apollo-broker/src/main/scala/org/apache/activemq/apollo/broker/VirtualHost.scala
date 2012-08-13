@@ -297,7 +297,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
     }
   }
 
-  def get_topic_metrics:FutureResult[AggregateDestMetricsDTO] = {
+  def get_topic_metrics:FutureResult[AggregateDestMetricsDTO] = sync(this) {
     val topics:Iterable[Topic] = local_router.local_topic_domain.destinations
     val metrics: Future[Iterable[Result[DestMetricsDTO, Throwable]]] = Future.all {
       topics.map(_.status.map(_.map_success(_.metrics)))
@@ -311,7 +311,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   
   import FutureResult._
 
-  def get_queue_metrics:FutureResult[AggregateDestMetricsDTO] = {
+  def get_queue_metrics:FutureResult[AggregateDestMetricsDTO] = sync(this) {
     val queues:Iterable[Queue] = local_router.local_queue_domain.destinations
     val metrics = sync_all (queues) { queue =>
       queue.get_queue_metrics
