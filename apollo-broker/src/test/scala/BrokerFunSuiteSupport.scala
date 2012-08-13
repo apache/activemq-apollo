@@ -21,7 +21,7 @@ import java.net.InetSocketAddress
 import org.apache.activemq.apollo.util._
 import FileSupport._
 import org.fusesource.hawtdispatch._
-import org.apache.activemq.apollo.dto.{AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
+import org.apache.activemq.apollo.dto.{DestMetricsDTO, AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
 import collection.immutable.HashMap
 import java.io.File
 import org.scalatest.{ParallelTestExecution, OneInstancePerTest}
@@ -69,24 +69,19 @@ object BrokerTestSupport {
   }
 
   def get_queue_metrics(broker:Broker): AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_queue_metrics
-    }
+    unwrap_future_result(broker.default_virtual_host.get_queue_metrics)
   }
 
   def get_topic_metrics(broker:Broker): AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_topic_metrics
-    }
+    unwrap_future_result(broker.default_virtual_host.get_topic_metrics)
   }
 
   def get_dsub_metrics(broker:Broker): AggregateDestMetricsDTO = {
-    val host = broker.default_virtual_host
-    sync(host) {
-      host.get_dsub_metrics
-    }
+    unwrap_future_result(broker.default_virtual_host.get_dsub_metrics)
+  }
+
+  def get_dest_metrics(broker:Broker):AggregateDestMetricsDTO = {
+    unwrap_future_result(broker.default_virtual_host.get_dest_metrics)
   }
 
   def queue_status(broker:Broker, name: String): QueueStatusDTO = {
@@ -179,6 +174,7 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
   def get_queue_metrics = BrokerTestSupport.get_queue_metrics(broker)
   def get_topic_metrics = BrokerTestSupport.get_topic_metrics(broker)
   def get_dsub_metrics = BrokerTestSupport.get_dsub_metrics(broker)
+  def get_dest_metrics = BrokerTestSupport.get_dest_metrics(broker)
   def queue_status(name: String) = BrokerTestSupport.queue_status(broker, name)
   def dsub_status(name: String) = BrokerTestSupport.dsub_status(broker, name)
   def webadmin_uri(scheme:String = "http") = BrokerTestSupport.webadmin_uri(broker, scheme)

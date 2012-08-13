@@ -385,7 +385,11 @@ class BrokerResource() extends Resource {
   @GET @Path("/virtual-hosts/{id}/dest-metrics")
   @ApiOperation(value = "Aggregates the messaging metrics for all the destinations")
   def virtual_host_dest_metrics(@PathParam("id") id : String): AggregateDestMetricsDTO = {
-    aggregate(virtual_host_queue_metrics(id), virtual_host_topic_metrics(id), virtual_host_dsub_metrics(id))
+    with_virtual_host(id) { host =>
+      monitoring(host) {
+        host.get_dest_metrics
+      }
+    }
   }
 
 
