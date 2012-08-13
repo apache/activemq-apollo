@@ -62,4 +62,32 @@ public class ConnectorStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="connection")
     public List<LongIdLabeledDTO> connections = new ArrayList<LongIdLabeledDTO>();
 
+    /**
+     * The number of messages that have been sent to connections created
+     * by this connector.
+     */
+	@XmlAttribute(name="messages_sent")
+	public long messages_sent;
+
+    /**
+     * The number of messages that have been received from connections created
+     * by this connector.
+     */
+	@XmlAttribute(name="messages_received")
+	public long messages_received;
+
+    /**
+     * The number of bytes that have been read from the connections created by this
+     * connector.
+     */
+	@XmlAttribute(name="read_counter")
+	public long read_counter;
+
+    /**
+     * The number of bytes that have been written to the connections created by this
+     * connector.
+     */
+	@XmlAttribute(name="write_counter")
+	public long write_counter;
+
 }

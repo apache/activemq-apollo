@@ -122,6 +122,11 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
   def socket_address = Option(transport_server).map(_.getSocketAddress).getOrElse(null)
 
+  var dead_messages_sent:Long = 0
+  var dead_messages_received:Long = 0
+  var dead_read_counter:Long = 0
+  var dead_write_counter:Long = 0
+
   def status = {
     val result = new ConnectorStatusDTO
     result.id = id.toString
@@ -132,8 +137,20 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     result.protocol = Option(config.protocol).getOrElse("any")
     result.local_address = Option(socket_address).map(_.toString).getOrElse("any")
 
+    result.messages_sent = dead_messages_sent
+    result.messages_received = dead_messages_received
+    result.read_counter = dead_read_counter
+    result.write_counter = dead_write_counter
+
     for( (id, connection) <- broker.connections if connection.connector eq this ) {
       result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
+      val status = connection.get_connection_status
+      if( status!=null ) {
+        result.messages_sent += status.messages_sent
+        result.messages_received += status.messages_received
+        result.read_counter += status.read_counter
+        result.write_counter += status.write_counter
+      }
     }
     result
   }
@@ -292,6 +309,13 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     val at_limit = at_connection_limit
     if( broker.connections.remove(connection.id).isDefined ) {
       connected.decrementAndGet()
+      val status = connection.get_connection_status
+      if( status!=null ) {
+        dead_messages_sent += status.messages_sent
+        dead_messages_received += status.messages_received
+        dead_read_counter += status.read_counter
+        dead_write_counter += status.write_counter
+      }
       if( at_limit ) {
         transport_server.resume
       }

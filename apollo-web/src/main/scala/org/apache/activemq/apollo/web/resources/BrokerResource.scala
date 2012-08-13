@@ -121,8 +121,17 @@ class BrokerResource() extends Resource {
         broker.virtual_hosts.values.foreach{ host=>
           result.virtual_hosts.add( host.id )
         }
+
         broker.connectors.values.foreach{ c=>
           result.connectors.add( c.id )
+          val status = c.status
+          status match {
+            case status:ConnectorStatusDTO =>
+              result.messages_sent += status.messages_sent
+              result.messages_received += status.messages_received
+              result.read_counter += status.read_counter
+              result.write_counter += status.write_counter
+          }
         }
 
         // only include the connection list if it was requested.
