@@ -1323,9 +1323,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
         queue.binding.unbind(this, queue)
 
-        for ( aggreator <-queue.address match {
-          case d:DurableSubscriptionDestinationDTO => Some(virtual_host.dead_dsub_metrics)
-          case t:TopicDestinationDTO => None
+        for ( aggreator <- queue.binding match {
+          case d:DurableSubscriptionQueueBinding => Some(virtual_host.dead_dsub_metrics)
+          case t:TempQueueBinding => None
           case _ => Some(virtual_host.dead_queue_metrics)
         }) {
 

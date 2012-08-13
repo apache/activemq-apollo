@@ -158,9 +158,12 @@ class StompMetricsTest extends StompTestSupport {
   }
 
   test("Topic slow_consumer_policy='queue' Stats") {
-    connect("1.1")
+    // Also look at the aggregatee metrics..
+    val get_dest_metrics1 = get_dest_metrics
 
+    connect("1.1")
     sync_send("/topic/queued.stats", 1)
+
     val stat1 = topic_status("queued.stats")
     stat1.producers.size() should be(1)
     stat1.consumers.size() should be(0)
@@ -196,10 +199,17 @@ class StompMetricsTest extends StompTestSupport {
       stat3.metrics.enqueue_item_counter should be(3)
       stat3.metrics.dequeue_item_counter should be(2)
       stat3.metrics.queue_items should be(0)
+
+      val get_dest_metrics2 = get_dest_metrics
+
+      get_dest_metrics2.enqueue_item_counter should be( get_dest_metrics1.enqueue_item_counter+3 )
+      get_dest_metrics2.dequeue_item_counter should be( get_dest_metrics1.dequeue_item_counter+2 )
+      get_dest_metrics2.queue_items should be( get_dest_metrics1.queue_items )
     }
 
     unsubscribe("0")
     client.close()
+
     within(1, SECONDS) {
       val stat4 = topic_status("queued.stats")
       stat4.producers.size() should be(0)
@@ -208,6 +218,12 @@ class StompMetricsTest extends StompTestSupport {
       stat4.metrics.enqueue_item_counter should be(3)
       stat4.metrics.dequeue_item_counter should be(2)
       stat4.metrics.queue_items should be(0)
+
+      val get_dest_metrics2 = get_dest_metrics
+
+      get_dest_metrics2.enqueue_item_counter should be( get_dest_metrics1.enqueue_item_counter+3 )
+      get_dest_metrics2.dequeue_item_counter should be( get_dest_metrics1.dequeue_item_counter+2 )
+      get_dest_metrics2.queue_items should be( get_dest_metrics1.queue_items )
     }
   }
 
