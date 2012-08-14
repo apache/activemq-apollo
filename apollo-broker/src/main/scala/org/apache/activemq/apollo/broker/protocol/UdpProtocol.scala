@@ -79,86 +79,156 @@ class UdpProtocolCodec extends ProtocolCodec {
 
 object UdpProtocolHandler extends Log
 
-class UdpMessage {
+trait DecodedUdpMessage {
 
+  /**
+   * @return The virtual host the message should get routed to.
+   * return null to route to the default virtual host
+   */
+  def host:VirtualHost
+
+  /**
+   * @return The destination name to route the message to.
+   */
+  def address:AsciiBuffer
+
+  /**
+   * @return The delivery to route.
+   */
+  def delivery:Delivery
+
+  /**
+   * @return The original UdpMesasge that the DecodedUdpMessage was
+   * constructed from.
+   */
+  def message: UdpMessage
+
+  /**
+   * @return The SecurityContext to authenticate and authorize against. Return
+   *         null if you want to bypass authentication and authorization.
+   */
+  def security_context:SecurityContext
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class UdpProtocolHandler extends ProtocolHandler {
+abstract class UdpProtocolHandler extends ProtocolHandler {
   import UdpProtocolHandler._
 
   def protocol = "udp"
   def session_id = None
 
-  var buffer_size = 0
-  var host:VirtualHost = _
+  var buffer_size = 64*1024
   var connection_log:Log = _
   var config:UdpDTO = _
+  var messages_received = 0L
+  var waiting_on = "client request"
 
   def broker = connection.connector.broker
   def queue = connection.dispatch_queue
+
+  override def create_connection_status = {
+    var rc = super.create_connection_status
+    rc.waiting_on = waiting_on
+    rc.messages_received = messages_received
+    rc
+  }
+
+  def configure(config:UdpDTO) = {
+    this.config = config
+    buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
+  }
 
   override def on_transport_connected = {
     connection.transport.resumeRead
     import collection.JavaConversions._
 
-    config = (connection.connector.config match {
+    configure((connection.connector.config match {
       case connector_config:AcceptingConnectorDTO =>
         connector_config.protocols.flatMap{ _ match {
           case x:UdpDTO => Some(x)
           case _ => None
         }}.headOption
       case _ => None
-    }).getOrElse(new UdpDTO)
-
-    buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
-    decoder.init(this)
-
-    broker.dispatch_queue {
-      var host = broker.get_default_virtual_host
-      queue {
-        this.host = host
-        connection_log = this.host.connection_log
-        connection.transport.resumeRead()
-        if(host==null) {
-          warn("Could not find default virtual host")
-          connection.stop(NOOP)
-        }
-      }
-    }
-    
+    }).getOrElse(new UdpDTO) )
   }
 
-  var producerRoutes = new LRUCache[AsciiBuffer, StompProducerRoute](1000) {
-    override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
-      host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+  def suspend_read(reason: String) = {
+    waiting_on = reason
+    connection.transport.suspendRead
+  }
+
+  def resume_read() = {
+    waiting_on = "client request"
+    connection.transport.resumeRead
+  }
+
+
+  var producerRoutes = new LRUCache[(VirtualHost, AsciiBuffer, SecurityContext#Key), UdpProducerRoute](1000) {
+    override def onCacheEviction(eldest: Entry[(VirtualHost, AsciiBuffer, SecurityContext#Key), UdpProducerRoute]) = {
+      val (host, address, key) = eldest.getKey
+      val route = eldest.getValue
+      host.dispatch_queue {
+        host.router.disconnect(route.addresses, route)
+      }
     }
   }
 
   override def on_transport_command(command: AnyRef) = {
-    val msg = command.asInstanceOf[UdpMessage]
-    val address = decoder.address(msg)
-    var route = producerRoutes.get(address);
-    if( route == null ) {
-      route = new StompProducerRoute(address)
-      producerRoutes.put(address, route)
-      val security_context = new SecurityContext
-      security_context.connector_id = connection.connector.id
-      security_context.local_address = connection.transport.getLocalAddress
-      host.dispatch_queue {
-        val rc = host.router.connect(route.addresses, route, security_context)
-        if( rc.isDefined ) {
-
+    decode(command.asInstanceOf[UdpMessage]) match {
+      case Some(msg) =>
+        messages_received += 1
+        val address = msg.address
+        var host = msg.host
+        if( host == null ) {
+          host = broker.default_virtual_host
         }
-      }
+        val security_context = msg.security_context
+        var sc_key = if( security_context!=null) security_context.to_key else null
+        var route = producerRoutes.get((host, address, sc_key));
+        if( route == null ) {
+          route = new UdpProducerRoute(host, address)
+          producerRoutes.put((host, address, sc_key), route)
+
+          def fail_connect = {
+            // Just drop messages..
+            route.sink_switch.downstream = Some(BlackHoleSink())
+          }
+
+          def continue_connect = host.dispatch_queue {
+            host.router.connect(route.addresses, route, security_context) match {
+              case Some(error) => queue {
+                fail_connect
+              }
+              case None =>
+            }
+          }
+
+          if( security_context!=null && host.authenticator!=null &&  host.authorizer!=null ) {
+            suspend_read("authenticating")
+            host.authenticator.authenticate(security_context) { auth_failure=>
+              queue {
+                resume_read
+                auth_failure match {
+                  case null=> continue_connect
+                  case auth_failure=> fail_connect
+                }
+              }
+            }
+          } else {
+            continue_connect
+          }
+        }
+
+        route.send(msg)
+
+      case None =>
     }
-    route.send(msg);
   }
 
-  class StompProducerRoute(dest: AsciiBuffer) extends DeliveryProducerRoute(host.router) {
-    val addresses = decoder.decode_addresses(dest)
+  class UdpProducerRoute(host:VirtualHost, dest: AsciiBuffer) extends DeliveryProducerRoute(host.router) {
+    val addresses = decode_address(dest.toString)
     val key = addresses.toList
     
     override def send_buffer_size = buffer_size
@@ -179,20 +249,20 @@ class UdpProtocolHandler extends ProtocolHandler {
       sink_switch.downstream = Some(this)
     }
 
-    def send(frame:UdpMessage) = {
+    def send(frame:DecodedUdpMessage) = {
       // Drop older entries to make room for this new one..
       while( inbound_queue_size >= buffer_size ) {
         inbound_queue.removeFirst
       }
       
-      val delivery = decode_delivery(frame)
+      val delivery = frame.delivery
       inbound_queue_size += delivery.size
       inbound_queue.offer(delivery)
     }
   }
 
-
-  abstract def decode_delivery(message: UdpMessage):Delivery
+  def decode(message: UdpMessage):Option[DecodedUdpMessage]
+  def decode_address(address:String):Array[SimpleAddress]
 }
 
 /**
@@ -202,29 +272,40 @@ class UdpProtocolHandler extends ProtocolHandler {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class UdpProtocol extends Protocol {
+class UdpProtocol extends BaseProtocol {
 
   def id = "udp"
   def createProtocolCodec:ProtocolCodec = new UdpProtocolCodec()
+
   def createProtocolHandler:ProtocolHandler = new UdpProtocolHandler {
 
+    var default_host:VirtualHost = _
     var topic_address:AsciiBuffer = _
-    var topic_address_decoded:Array[SimpleAddress] = _
 
-    def init(handler:UdpProtocolHandler) = {
-      val topic_name = Option(handler.config.topic).getOrElse("udp")
-      topic_address_decoded = LocalRouter.destination_parser.decode_multi_destination(topic_name, (name)=> LocalRouter.destination_parser.decode_single_destination("topic:"+name, null))
+    override def configure(config: UdpDTO) {
+      super.configure(config)
+      val topic_address_decoded = decode_address(Option(config.topic).getOrElse("udp"))
       topic_address = new AsciiBuffer(LocalRouter.destination_parser.encode_destination(topic_address_decoded))
+      default_host = broker.default_virtual_host
     }
 
-    def address(message: UdpMessage) = topic_address
-    def decode_addresses(value: AsciiBuffer) = topic_address_decoded
-    def decode_delivery(message: UdpMessage) = {
-      val delivery = new Delivery
-      delivery.size = message.buffer.remaining()
-      delivery.message = RawMessage(new Buffer(message.buffer))
-      delivery
+    def decode_address(address:String):Array[SimpleAddress] = {
+      LocalRouter.destination_parser.decode_multi_destination(address, (name)=> LocalRouter.destination_parser.decode_single_destination("topic:"+name, null))
     }
+
+    def decode(udp: UdpMessage) = Some(new DecodedUdpMessage {
+      def message = udp
+      def host = null
+      def security_context = null
+      def address = topic_address
+
+      def delivery = {
+        val delivery = new Delivery
+        delivery.size = message.buffer.remaining()
+        delivery.message = RawMessage(new Buffer(message.buffer))
+        delivery
+      }
+    })
 
   }
 }

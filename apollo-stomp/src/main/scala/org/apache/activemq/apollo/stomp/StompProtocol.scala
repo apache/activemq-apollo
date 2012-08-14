@@ -18,10 +18,8 @@ package org.apache.activemq.apollo.stomp
 
 import _root_.org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.broker._
-import java.lang.String
-import protocol.{ProtocolCodecFactory, ProtocolFactory, Protocol}
+import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, MessageCodec, ProtocolCodecFactory, Protocol}
 import Stomp._
-import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.broker.store._
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -51,24 +49,23 @@ class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   }
 }
 
-class StompProtocolFactory extends ProtocolFactory {
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object StompProtocol extends StompProtocolCodecFactory with Protocol {
+  def createProtocolHandler = new StompProtocolHandler
+}
 
-  def create() = StompProtocol
-
-  def create(config: String) = if(config == "stomp") {
-    StompProtocol
-  } else {
-    null
-  }
-
+object StompMessageCodecFactory extends MessageCodecFactory.Provider {
+  def create = Array[MessageCodec](StompMessageCodec)
 }
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object StompProtocol extends StompProtocolCodecFactory with Protocol {
+object StompMessageCodec extends MessageCodec{
 
-  def createProtocolHandler = new StompProtocolHandler
+  def id = "stomp"
 
   def encode(message: Message):MessageRecord = {
     StompCodec.encode(message.asInstanceOf[StompFrameMessage])
@@ -79,5 +76,7 @@ object StompProtocol extends StompProtocolCodecFactory with Protocol {
   }
 
 }
+
+
 
 

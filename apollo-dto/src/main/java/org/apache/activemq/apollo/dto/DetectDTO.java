@@ -39,6 +39,9 @@ public class DetectDTO extends ProtocolDTO {
     @XmlAttribute(name="timeout")
     public Long timeout;
 
+    @XmlAttribute(name="protocols")
+    public String protocols;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

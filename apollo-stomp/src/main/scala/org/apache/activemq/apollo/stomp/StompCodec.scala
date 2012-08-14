@@ -40,7 +40,7 @@ object StompCodec extends Log {
     val frame = message.frame
 
     val rc = new MessageRecord
-    rc.protocol = PROTOCOL
+    rc.codec = PROTOCOL
 
     if( frame.content.isInstanceOf[ZeroCopyContent] ) {
       rc.direct_buffer = frame.content.asInstanceOf[ZeroCopyContent].zero_copy_buffer

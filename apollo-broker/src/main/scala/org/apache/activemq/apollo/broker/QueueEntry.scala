@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
-import protocol.ProtocolFactory
+import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, ProtocolFactory, Protocol}
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
@@ -732,7 +732,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.swapping_in_size -= size
 
         val delivery = to_delivery
-        delivery.message = ProtocolFactory.get(messageRecord.protocol.toString).get.decode(messageRecord)
+        delivery.message = MessageCodecFactory(messageRecord.codec.toString).get.decode(messageRecord)
 
         space += delivery
 

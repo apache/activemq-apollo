@@ -36,7 +36,7 @@ object AmqpCodec extends Log {
     message match {
       case message:AMQPMessage =>
         val rc = new MessageRecord
-        rc.protocol = PROTOCOL_ID
+        rc.codec = PROTOCOL_ID
         rc.buffer = message.payload
         rc
       case _ => throw new RuntimeException("Invalid message type");

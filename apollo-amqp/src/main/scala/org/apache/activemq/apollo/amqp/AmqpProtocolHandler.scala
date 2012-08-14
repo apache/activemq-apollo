@@ -54,7 +54,7 @@ object AMQPMessage {
 
 case class AMQPMessage(payload:Buffer) extends org.apache.activemq.apollo.broker.Message {
   import AmqpProtocolHandler._
-  def protocol = AmqpProtocol
+  def codec = AmqpMessageCodec
 
   var _annotated:Envelope = _
   def annotated = {
@@ -518,7 +518,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 //          frame = frame.append_headers((include_seq.get, ascii(delivery.seq.toString))::Nil)
 //        }
 
-        var annotated = if( message.protocol eq AmqpProtocol ) {
+        var annotated = if( message.codec eq AmqpMessageCodec ) {
           val original = message.asInstanceOf[AMQPMessage].annotated
           var annotated = new Envelope
           annotated.setHeader(header)
@@ -530,8 +530,8 @@ class AmqpProtocolHandler extends ProtocolHandler {
         } else {
           
           val (body, content_type) =  protocol_convert match{
-            case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.protocol.id()+";conv=body")
-            case _ => (message.encoded, "protocol/"+message.protocol.id())
+            case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.codec.id+";conv=body")
+            case _ => (message.encoded, "protocol/"+message.codec.id)
           }
           
           val bare = new types.Message

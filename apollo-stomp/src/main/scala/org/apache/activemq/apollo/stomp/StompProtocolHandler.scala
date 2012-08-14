@@ -422,12 +422,12 @@ class StompProtocolHandler extends ProtocolHandler {
       val (_, delivery) = event
 
       val message = delivery.message
-      var frame = if( message.protocol eq StompProtocol ) {
+      var frame = if( message.codec eq StompMessageCodec ) {
         message.asInstanceOf[StompFrameMessage].frame
       } else {
         val (body, content_type) =  protocol_convert match{
-          case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.protocol.id()+";conv=body")
-          case _ => (message.encoded, "protocol/"+message.protocol.id())
+          case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.codec.id+";conv=body")
+          case _ => (message.encoded, "protocol/"+message.codec.id())
         }
         message_id_counter += 1
         var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil

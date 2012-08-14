@@ -35,61 +35,20 @@ import transport.{Transport, TransportAware, ProtocolCodec}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class AnyProtocolFactory extends ProtocolFactory {
-
-  def all_protocols: Array[Protocol] = ((ProtocolFactory.finder.singletons.map(_.create())).filter(_.isIdentifiable)).toArray
-
-  def create() = {
-    new AnyProtocol(()=>all_protocols)
-  }
-
-  def create(config: String): Protocol = {
-    val MULTI = "any"
-    val MULTI_PREFIXED = "any:"
-
-    if (config == MULTI) {
-      return new AnyProtocol(()=>all_protocols)
-    } else if (config.startsWith(MULTI_PREFIXED)) {
-      var names: Array[String] = config.substring(MULTI_PREFIXED.length).split(',')
-      var protocols: Array[Protocol] = (names.flatMap {x => ProtocolFactory.get(x.trim)}).toArray
-      return new AnyProtocol(()=>protocols)
-    }
-    return null
-  }
-
-}
-
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class AnyProtocol(val func: ()=>Array[Protocol]) extends Protocol {
-
-  lazy val protocols: Array[Protocol] = func()
+class AnyProtocol() extends BaseProtocol {
 
   def id = "any"
 
-  def createProtocolCodec = new AnyProtocolCodec(protocols)
+  def createProtocolCodec = new AnyProtocolCodec()
 
   def createProtocolHandler = new AnyProtocolHandler
-
-  def encode(message: Message) = throw new UnsupportedOperationException
-
-  def decode(message: MessageRecord) = throw new UnsupportedOperationException
-
-  def isIdentifiable = false
-
-  def maxIdentificaionLength = throw new UnsupportedOperationException()
-
-  def matchesIdentification(buffer: Buffer) = throw new UnsupportedOperationException()
-
 }
 
 case class ProtocolDetected(id:String, codec:ProtocolCodec)
 
-class AnyProtocolCodec(val protocols: Array[Protocol]) extends ProtocolCodec with TransportAware {
+class AnyProtocolCodec() extends ProtocolCodec with TransportAware {
+
+  var protocols =  ProtocolFactory.protocols.filter(_.isIdentifiable)
 
   if (protocols.isEmpty) {
     throw new IllegalArgumentException("No protocol configured for identification.")
@@ -190,13 +149,20 @@ class AnyProtocolHandler extends ProtocolHandler {
     connection.transport.resumeRead
     import OptionSupport._
     import collection.JavaConversions._
-    
+
+    var codec = connection.transport.getProtocolCodec().asInstanceOf[AnyProtocolCodec]
+
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.flatMap{ _ match {
       case x:DetectDTO => Some(x)
       case _ => None
     }}.headOption.getOrElse(new DetectDTO)
-    
+
+    if( config.protocols!=null ) {
+      val protocols = Set(config.protocols.split("\\s+").filter( _.length!=0 ):_*)
+      codec.protocols = codec.protocols.filter(x=> protocols.contains(x.id))
+    }
+
     val timeout = config.timeout.getOrElse(5000L)
   
     // Make sure client connects eventually...

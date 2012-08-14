@@ -842,7 +842,7 @@ class LevelDBClient(store: LevelDBStore) {
                       if (message_record != null) {
 
                         val pb = new MessagePB.Bean
-                        pb.setProtocol(message_record.protocol)
+                        pb.setCodec(message_record.codec)
 
                         val body = if(message_record.compressed!=null) {
                           pb.setCompression(1)
@@ -1344,7 +1344,7 @@ class LevelDBClient(store: LevelDBStore) {
 
               case record: MessagePB.Buffer =>
                 val pb = new MessagePB.Bean
-                pb.setProtocol(record.getProtocol)
+                pb.setCodec(record.getCodec)
                 val body = if(snappy_compress_logs) {
                   val compressed = Snappy.compress(record.getValue)
                   if (compressed.length < record.getValue.length) {

@@ -30,7 +30,7 @@ object PBSupport {
   implicit def to_pb(v: MessageRecord):MessagePB.Bean = {
     val pb = new MessagePB.Bean
     pb.setMessageKey(v.key)
-    pb.setProtocol(v.protocol)
+    pb.setCodec(v.codec)
     pb.setValue(v.buffer)
     pb
   }
@@ -38,7 +38,7 @@ object PBSupport {
   implicit def from_pb(pb: MessagePB.Getter):MessageRecord = {
     val rc = new MessageRecord
     rc.key = pb.getMessageKey
-    rc.protocol = pb.getProtocol
+    rc.codec = pb.getCodec
     rc.buffer = pb.getValue
     rc
   }

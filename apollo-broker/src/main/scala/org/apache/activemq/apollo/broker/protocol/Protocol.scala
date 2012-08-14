@@ -22,12 +22,17 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
 import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
 import org.apache.activemq.apollo.dto.{SimpleProtocolFilterDTO, ProtocolFilterDTO, ConnectionStatusDTO}
+import org.fusesource.hawtbuf.Buffer
+import scala.collection.mutable.ListBuffer
 
-trait Protocol {
-  def id:String
+trait Protocol extends ProtocolCodecFactory.Provider {
   def createProtocolHandler:ProtocolHandler
-  def encode(message:Message):MessageRecord
-  def decode(message:MessageRecord):Message
+}
+
+abstract class BaseProtocol extends Protocol {
+  def isIdentifiable = false
+  def maxIdentificaionLength = throw new UnsupportedOperationException()
+  def matchesIdentification(buffer: Buffer) = throw new UnsupportedOperationException()
 }
 
 /**
@@ -36,15 +41,37 @@ trait Protocol {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-object Protocol {
+object ProtocolFactory {
 
-  val finder = new ClassFinder[Protocol]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index",classOf[Protocol])
+  private def finder = new ClassFinder[Protocol]("META-INF/services/org.apache.activemq.apollo/protocol-factory.index", classOf[Protocol])
+  val protocols:Array[Protocol] = finder.singletons.toArray
+  val protocols_by_id = Map(protocols.map(x=> (x.id, x)): _*)
+  def get(name:String):Option[Protocol] = protocols_by_id.get(name)
 
-  val protocols = Map((for( provider <- finder.singletons ) {
-    yield (provider.id, provider)
-  }): _*)
+}
 
-  def get(name:String):Option[Protocol] = protocols.get(name)
+trait MessageCodec {
+  def id():String
+  def encode(message:Message):MessageRecord
+  def decode(message:MessageRecord):Message
+}
+
+object MessageCodecFactory {
+
+  trait Provider {
+    def create:Array[MessageCodec]
+  }
+
+  val codecs:Array[MessageCodec] = {
+    val finder = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/message-codec-factory.index", classOf[Provider])
+    val rc = ListBuffer[MessageCodec]()
+    for( provider <- finder.singletons; codec <- provider.create ) {
+      rc += codec
+    }
+    rc.toArray
+  }
+  val codecs_by_id = Map(codecs.map(x=> (x.id, x)): _*)
+  def apply(id:String) = codecs_by_id.get(id)
 }
 
 object ProtocolHandler extends Log

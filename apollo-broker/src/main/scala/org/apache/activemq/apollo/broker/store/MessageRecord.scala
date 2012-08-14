@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
 class MessageRecord {
 
   var key = -1L
-  var protocol: AsciiBuffer = _
+  var codec: AsciiBuffer = _
   var buffer: Buffer = _
   var compressed: Buffer = _
   var direct_buffer: DirectBuffer = _

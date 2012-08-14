@@ -23,6 +23,7 @@ import java.net.SocketAddress
 import org.apache.activemq.apollo.broker.Broker.BLOCKABLE_THREAD_POOL
 import org.fusesource.hawtdispatch._
 import javax.security.auth.login.LoginContext
+import scala.collection.mutable.ListBuffer
 
 /**
  * <p>
@@ -41,6 +42,17 @@ class SecurityContext {
   var remote_address:SocketAddress = _
   var login_context:LoginContext = _
   var session_id:Option[String] = None
+
+  case class Key(user:String,
+    password:String,
+    sso_token:String,
+    certificates:ListBuffer[X509Certificate],
+    connector_id:String,
+    local_address:SocketAddress,
+    remote_address:SocketAddress)
+
+  def to_key = Key(user, password, sso_token, if(certificates==null) ListBuffer() else ListBuffer(certificates : _*),
+    connector_id, local_address, remote_address)
 
   def credential_dump = {
     var rc = List[String]()
@@ -66,7 +78,6 @@ class SecurityContext {
   }
 
   private var _subject:Subject = _
-
   def subject = _subject
 
   private var _principals = Set[Principal]()

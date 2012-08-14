@@ -935,7 +935,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     override def receive_buffer_size = buffer_size
 
     def matches(delivery:Delivery) = {
-      if( delivery.message.protocol eq OpenwireProtocol ) {
+      if( delivery.message.codec eq OpenwireMessageCodec ) {
         if( selector_expression!=null ) {
           selector_expression.matches(delivery.message)
         } else {

@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker
 
 import org.fusesource.hawtdispatch._
-import protocol.{ProtocolFactory, Protocol}
+import org.apache.activemq.apollo.broker.protocol.{ProtocolFactory, Protocol}
 import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.OptionSupport._

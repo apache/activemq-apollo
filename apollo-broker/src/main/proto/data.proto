@@ -24,7 +24,7 @@ option java_multiple_files = true;
 
 message MessagePB {
   required int64 messageKey=1;
-  required bytes protocol = 2 [java_override_type = "AsciiBuffer"];
+  required bytes codec = 2 [java_override_type = "AsciiBuffer"];
   optional int32 size = 3;
   optional bytes value = 4;
   optional sint64 expiration = 5;

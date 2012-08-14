@@ -14,6 +14,5 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-org.apache.activemq.apollo.broker.protocol.AnyProtocolFactory
-org.apache.activemq.apollo.broker.protocol.UdpProtocolFactory
-org.apache.activemq.apollo.broker.protocol.RawProtocolFactory
+org.apache.activemq.apollo.broker.protocol.AnyProtocol
+org.apache.activemq.apollo.broker.protocol.UdpProtocol

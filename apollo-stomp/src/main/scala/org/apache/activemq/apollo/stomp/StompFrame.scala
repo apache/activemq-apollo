@@ -37,7 +37,7 @@ import Stomp._
  */
 case class StompFrameMessage(frame:StompFrame) extends Message {
   
-  def protocol = StompProtocol
+  def codec = StompMessageCodec
 
   /**
    * the globally unique id of the message

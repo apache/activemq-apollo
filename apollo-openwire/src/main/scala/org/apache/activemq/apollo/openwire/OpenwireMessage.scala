@@ -39,7 +39,7 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   def getLocalConnectionId = message.getProducerId.getConnectionId
 
-  def protocol = OpenwireProtocol
+  def codec = OpenwireMessageCodec
 
   def getBodyAs[T](toType : Class[T]) = {
     (message match {
@@ -78,7 +78,7 @@ object EndOfBrowseMessage extends Message {
   def retained(): Int = 0
   def retain() {}
   def release() {}
-  def protocol: Protocol = null
+  def codec = null
   def priority: Byte = 0
   def persistent: Boolean = false
   def expiration: Long = 0L

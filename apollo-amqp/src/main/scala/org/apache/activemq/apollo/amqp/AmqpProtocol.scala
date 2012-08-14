@@ -18,8 +18,7 @@ package org.apache.activemq.apollo.amqp
 
 import _root_.org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.broker._
-import java.lang.String
-import protocol.{ProtocolCodecFactory, ProtocolFactory, Protocol}
+import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, MessageCodec, ProtocolCodecFactory, Protocol}
 import org.apache.activemq.apollo.broker.store._
 import AmqpCodec._
 import org.fusesource.amqp.codec.AMQPProtocolCodec
@@ -51,27 +50,24 @@ class AmqpProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   }
 }
 
-class AmqpProtocolFactory extends ProtocolFactory {
-
-  def create() = AmqpProtocol
-
-  def create(config: String) = if(config == PROTOCOL) {
-    AmqpProtocol
-  } else {
-    null
-  }
-
-}
-
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object AmqpProtocol extends AmqpProtocolCodecFactory with Protocol {
-
   def createProtocolHandler = new AmqpProtocolHandler
+}
+
+object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
+  def create = Array[MessageCodec](AmqpMessageCodec)
+}
+
+  /**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+object AmqpMessageCodec extends MessageCodec {
+  def id = PROTOCOL
   def encode(message: Message) = AmqpCodec.encode(message)
   def decode(message: MessageRecord) = AmqpCodec.decode(message)
-
 }
 
 

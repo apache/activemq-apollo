@@ -24,6 +24,10 @@ import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import org.fusesource.hawtdispatch.transport.ProtocolCodec
 
+object RawMessageCodecFactory extends MessageCodecFactory.Provider {
+  def create = Array[MessageCodec](RawMessageCodec)
+}
+
 /**
  * <p>
  * </p>
@@ -35,7 +39,7 @@ object RawMessageCodec extends MessageCodec {
   val PROTOCOL_ID = new AsciiBuffer(id)
   def id = "raw"
 
-  override def encode(message: Message):MessageRecord = {
+  def encode(message: Message):MessageRecord = {
     message match {
       case message:RawMessage =>
         val rc = new MessageRecord
@@ -46,13 +50,10 @@ object RawMessageCodec extends MessageCodec {
     }
   }
 
-  override def decode(message: MessageRecord) = {
+  def decode(message: MessageRecord) = {
     assert( message.codec == PROTOCOL_ID )
     RawMessage(message.buffer)
   }
-
-  def createProtocolHandler = throw new UnsupportedOperationException
-  def createProtocolCodec = throw new UnsupportedOperationException
 }
 
 case class RawMessage(payload:Buffer) extends Message {

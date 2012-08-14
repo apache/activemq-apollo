@@ -272,9 +272,17 @@ class Broker() extends BaseService with SecuredResource {
     rc
   })
 
+  @volatile
   var default_virtual_host: VirtualHost = null
   val virtual_hosts = LinkedHashMap[AsciiBuffer, VirtualHost]()
   val virtual_hosts_by_hostname = new LinkedHashMap[AsciiBuffer, VirtualHost]()
+
+  /**
+   * This is a copy of the virtual_hosts_by_hostname variable which
+   * can be accessed by any thread.
+   */
+  @volatile
+  var cow_virtual_hosts_by_hostname = Map[AsciiBuffer, VirtualHost]()
 
   val connectors = LinkedHashMap[String, Connector]()
   val connections = LinkedHashMap[Long, BrokerConnection]()
@@ -389,6 +397,7 @@ class Broker() extends BaseService with SecuredResource {
     )
     virtual_hosts.clear()
     virtual_hosts_by_hostname.clear()
+    cow_virtual_hosts_by_hostname = Map()
 
     Option(web_server).foreach(tracker.stop(_))
     web_server = null
@@ -540,6 +549,8 @@ class Broker() extends BaseService with SecuredResource {
         }
       }
     }
+
+    cow_virtual_hosts_by_hostname = virtual_hosts_by_hostname.toMap
 
     // first defined host is the default virtual host
     config.virtual_hosts.headOption.map(x=>ascii(x.id)).foreach { id =>

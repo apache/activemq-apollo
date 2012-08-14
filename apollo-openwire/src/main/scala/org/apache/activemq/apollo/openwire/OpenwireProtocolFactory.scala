@@ -20,27 +20,9 @@ package org.apache.activemq.apollo.openwire
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.apache.activemq.apollo.broker.Message
 import OpenwireConstants._
-import org.apache.activemq.apollo.broker.protocol.{ProtocolCodecFactory, Protocol, ProtocolFactory}
+import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, MessageCodec, ProtocolCodecFactory, Protocol}
 import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.util.Log
-
-/**
- * <p>
- * </p>
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object OpenwireProtocolFactory extends ProtocolFactory {
-
-  def create() = OpenwireProtocol
-
-  def create(config: String) = if(config == PROTOCOL) {
-    OpenwireProtocol
-  } else {
-    null
-  }
-
-}
 
 /**
  * <p>
@@ -52,18 +34,27 @@ object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol with 
 
   def createProtocolHandler = new OpenwireProtocolHandler
 
-  def encode(message: Message):MessageRecord = {
-    OpenwireCodec.encode(message)
-  }
-
-  def decode(message: MessageRecord) = {
-    OpenwireCodec.decode(message)
-  }
-
   lazy val log_exerimental_warning = {
     warn("The OpenWire protocol implementation is still experimental and not recommended for production use.  Production users should use ActiveMQ instead.")
     null
   }
+}
+
+object OpenwireMessageCodecFactory extends MessageCodecFactory.Provider {
+  def create = Array[MessageCodec](OpenwireMessageCodec)
+}
+
+object OpenwireMessageCodec extends MessageCodec {
+
+  def id = "openwire"
+
+  def encode(message: Message):MessageRecord = {
+    OpenwireCodec.encode(message)
+  }
+  def decode(message: MessageRecord) = {
+    OpenwireCodec.decode(message)
+  }
+
 }
 
 /**

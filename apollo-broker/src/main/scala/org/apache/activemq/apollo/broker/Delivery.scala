@@ -23,7 +23,7 @@ import org.apache.activemq.apollo.broker.store.StoreUOW
 import org.apache.activemq.apollo.util.Log
 import java.util.concurrent.atomic.{AtomicReference, AtomicLong}
 import org.apache.activemq.apollo.dto.DestinationDTO
-import org.apache.activemq.apollo.broker.protocol.{ProtocolFactory, Protocol}
+import org.apache.activemq.apollo.broker.protocol.{MessageCodec, Protocol, ProtocolFactory}
 import scala.Array
 
 object DeliveryProducer extends Log
@@ -99,11 +99,11 @@ trait DeliverySession extends SessionSink[Delivery] {
 trait Message extends Filterable with Retained {
 
   /**
-   * The protocol of the message
+   * The encoder/decoder of the message
    */
-  def protocol:Protocol
+  def codec:MessageCodec
 
-  def encoded:Buffer = protocol.encode(this).buffer
+  def encoded:Buffer = codec.encode(this).buffer
   
 }
 
@@ -243,7 +243,7 @@ class Delivery {
   }
 
   def createMessageRecord() = {
-    val record = message.protocol.encode(message)
+    val record = message.codec.encode(message)
     record.locator = storeLocator
     record
   }

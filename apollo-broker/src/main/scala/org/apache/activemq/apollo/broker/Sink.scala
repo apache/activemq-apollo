@@ -70,7 +70,12 @@ abstract class Sink[T] {
       }
     }
   }
+}
 
+case class BlackHoleSink[T]() extends Sink[T] {
+  var refiller:Task = null
+  def full = false
+  def offer(value: T) = true
 }
 
 trait SinkFilter[T] {
