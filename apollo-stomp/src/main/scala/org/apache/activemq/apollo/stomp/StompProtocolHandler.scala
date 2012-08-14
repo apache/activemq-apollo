@@ -74,18 +74,20 @@ object StompProtocolHandler extends Log {
     def size(value: (Session[Delivery], Delivery)) = Delivery.size(value._2)
   }
 
-}
+  def get(headers:HeaderMap, name:AsciiBuffer):Option[AsciiBuffer] = {
+    val i = headers.iterator
+    while( i.hasNext ) {
+      val entry = i.next
+      if( entry._1 == name ) {
+        return Some(entry._2)
+      }
+    }
+    None
+  }
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class StompProtocolHandler extends ProtocolHandler {
-  import StompProtocolHandler._
-
-  var connection_log:Log = StompProtocolHandler
-
-  def protocol = "stomp"
-  def broker = connection.connector.broker
+  def get(headers:HeaderMap, names:List[AsciiBuffer]):List[Option[AsciiBuffer]] = {
+    names.map(x=>get(headers, x))
+  }
 
   def decode_header(value:Buffer):String = {
     var rc = new ByteArrayOutputStream(value.length)
@@ -109,7 +111,7 @@ class StompProtocolHandler extends ProtocolHandler {
     new String(rc.toByteArray, "UTF-8")
   }
 
-  def encode_header(value:String) = {
+  def encode_header(value:String, protocol_version:AsciiBuffer=V1_1):AsciiBuffer = {
     protocol_version match {
       case null => utf8(value).ascii
       case V1_0 => utf8(value).ascii
@@ -127,6 +129,21 @@ class StompProtocolHandler extends ProtocolHandler {
         rc.toBuffer.ascii
     }
   }
+
+}
+
+/**
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
+class StompProtocolHandler extends ProtocolHandler {
+  import StompProtocolHandler._
+
+  var connection_log:Log = StompProtocolHandler
+
+  def encode_header(value:String):AsciiBuffer = StompProtocolHandler.encode_header(value, protocol_version)
+
+  def protocol = "stomp"
+  def broker = connection.connector.broker
 
   protected def dispatchQueue:DispatchQueue = connection.dispatch_queue
   
@@ -1033,21 +1050,6 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def get(headers:HeaderMap, names:List[AsciiBuffer]):List[Option[AsciiBuffer]] = {
-    names.map(x=>get(headers, x))
-  }
-
-  def get(headers:HeaderMap, name:AsciiBuffer):Option[AsciiBuffer] = {
-    val i = headers.iterator
-    while( i.hasNext ) {
-      val entry = i.next
-      if( entry._1 == name ) {
-        return Some(entry._2)
-      }
-    }
-    None
-  }
-
   def on_stomp_send(frame:StompFrame) = {
     messages_received += 1
 
@@ -1119,7 +1121,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  var message_id_counter = 0;
+  var message_id_counter = 0L
 
   def encode_address(value: Array[_ <: DestinationAddress]): String = {
     destination_parser.encode_destination(value)

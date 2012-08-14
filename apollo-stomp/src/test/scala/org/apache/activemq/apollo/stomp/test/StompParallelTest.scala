@@ -169,6 +169,27 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     assert_received("Hello")
   }
 
+  test("STOMP UDP to STOMP interop") {
+
+    connect("1.1")
+    subscribe("0", "/topic/some-other-udp")
+
+    val udp_port: Int = connector_port("stomp-udp").get
+    val channel = DatagramChannel.open();
+    println("The UDP port is: "+udp_port)
+
+    val target = new InetSocketAddress("127.0.0.1", udp_port)
+    channel.send(new AsciiBuffer(
+      "SEND\n" +
+      "destination:/topic/some-other-udp\n" +
+      "login:admin\n" +
+      "passcode:password\n" +
+      "\n" +
+      "Hello STOMP-UDP").toByteBuffer, target)
+
+    assert_received("Hello STOMP-UDP")
+  }
+
   /**
    * These disconnect tests assure that we don't drop message deliviers that are in flight
    * if a client disconnects before those deliveries are accepted by the target destination.

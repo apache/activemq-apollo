@@ -26,7 +26,7 @@ import java.io.{DataOutput, IOException}
 import org.fusesource.hawtdispatch.transport._
 import _root_.org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.util._
-import org.apache.activemq.apollo.broker.store.MessageRecord
+import org.apache.activemq.apollo.broker.store.{DirectBuffer, MessageRecord}
 import java.lang.ThreadLocal
 import java.util.ArrayList
 import collection.mutable.{ListBuffer, HashMap}
@@ -88,8 +88,10 @@ object StompCodec extends Log {
   }
 
   def decode(message: MessageRecord):StompFrameMessage = {
+    new StompFrameMessage(decode_frame(message.buffer, message.direct_buffer))
+  }
 
-    val buffer = message.buffer.buffer
+  def decode_frame(buffer: Buffer, direct_buffer:DirectBuffer=null):StompFrame = {
     def read_line = {
       val pos = buffer.indexOf('\n'.toByte)
       if( pos<0 ) {
@@ -124,10 +126,10 @@ object StompCodec extends Log {
       line = read_line
     }
 
-    if( message.direct_buffer==null ) {
-      new StompFrameMessage(new StompFrame(action, headers.toList, BufferContent(buffer)))
+    if( direct_buffer==null ) {
+      new StompFrame(action, headers.toList, BufferContent(buffer))
     } else {
-      new StompFrameMessage(new StompFrame(action, headers.toList, ZeroCopyContent(message.direct_buffer)))
+      new StompFrame(action, headers.toList, ZeroCopyContent(direct_buffer))
     }
   }
 

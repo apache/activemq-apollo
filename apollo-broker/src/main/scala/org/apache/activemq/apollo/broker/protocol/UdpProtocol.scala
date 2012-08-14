@@ -16,18 +16,19 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtdispatch.transport.ProtocolCodec
 import java.nio.ByteBuffer
 import org.fusesource.hawtdispatch._
 import java.nio.channels.{DatagramChannel, WritableByteChannel, ReadableByteChannel}
 import java.net.SocketAddress
-import org.apache.activemq.apollo.dto.{UdpDTO, AcceptingConnectorDTO}
+import org.apache.activemq.apollo.dto.{ProtocolDTO, UdpDTO, AcceptingConnectorDTO}
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import java.util.Map.Entry
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.broker.security.SecurityContext
+import scala.Some
+import org.apache.activemq.apollo.broker.BlackHoleSink
 
 
 case class UdpMessage(from:SocketAddress, buffer:ByteBuffer)
@@ -108,6 +109,9 @@ trait DecodedUdpMessage {
    *         null if you want to bypass authentication and authorization.
    */
   def security_context:SecurityContext
+
+  def size = message.buffer.remaining()
+
 }
 
 /**
@@ -115,13 +119,12 @@ trait DecodedUdpMessage {
  */
 abstract class UdpProtocolHandler extends ProtocolHandler {
   import UdpProtocolHandler._
-
+  type ConfigTypeDTO <: ProtocolDTO
   def protocol = "udp"
-  def session_id = None
+  var session_id:Option[String] = None
 
-  var buffer_size = 64*1024
+  var buffer_size = 640*1024
   var connection_log:Log = _
-  var config:UdpDTO = _
   var messages_received = 0L
   var waiting_on = "client request"
 
@@ -135,23 +138,21 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
     rc
   }
 
-  def configure(config:UdpDTO) = {
-    this.config = config
-    buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
-  }
+  def configure(config:Option[ConfigTypeDTO]) = {}
 
   override def on_transport_connected = {
     connection.transport.resumeRead
     import collection.JavaConversions._
+    session_id = Some("%s-%x".format(broker.default_virtual_host.config.id, broker.default_virtual_host.session_counter.incrementAndGet))
 
-    configure((connection.connector.config match {
+    configure(connection.connector.config match {
       case connector_config:AcceptingConnectorDTO =>
         connector_config.protocols.flatMap{ _ match {
-          case x:UdpDTO => Some(x)
+          case x:ConfigTypeDTO => Some(x)
           case _ => None
         }}.headOption
       case _ => None
-    }).getOrElse(new UdpDTO) )
+    })
   }
 
   def suspend_read(reason: String) = {
@@ -175,7 +176,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
     }
   }
 
-  override def on_transport_command(command: AnyRef) = {
+  override def on_transport_command(command: AnyRef):Unit = {
     decode(command.asInstanceOf[UdpMessage]) match {
       case Some(msg) =>
         messages_received += 1
@@ -188,7 +189,14 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
         var sc_key = if( security_context!=null) security_context.to_key else null
         var route = producerRoutes.get((host, address, sc_key));
         if( route == null ) {
-          route = new UdpProducerRoute(host, address)
+          try {
+            route = new UdpProducerRoute(host, address)
+          } catch {
+            case e =>
+              // We could run into a error like the address not parsing
+              debug(e, "Could not create the producer route")
+              return
+          }
           producerRoutes.put((host, address, sc_key), route)
 
           def fail_connect = {
@@ -199,6 +207,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
           def continue_connect = host.dispatch_queue {
             host.router.connect(route.addresses, route, security_context) match {
               case Some(error) => queue {
+                debug("Could not connect the producer route: "+error)
                 fail_connect
               }
               case None =>
@@ -212,7 +221,9 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
                 resume_read
                 auth_failure match {
                   case null=> continue_connect
-                  case auth_failure=> fail_connect
+                  case auth_failure=>
+                    debug("Producer route failed authentication: "+auth_failure)
+                    fail_connect
                 }
               }
             }
@@ -239,8 +250,8 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
 
     val sink_switch = new MutableSink[Delivery]()
 
-    val inbound_queue = new OverflowSink[Delivery](sink_switch) {
-      override protected def onDelivered(value: Delivery) = {
+    val inbound_queue = new OverflowSink[DecodedUdpMessage](sink_switch.map(_.delivery)) {
+      override protected def onDelivered(value: DecodedUdpMessage) = {
         inbound_queue_size -= value.size
       }
     }
@@ -255,9 +266,8 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
         inbound_queue.removeFirst
       }
       
-      val delivery = frame.delivery
-      inbound_queue_size += delivery.size
-      inbound_queue.offer(delivery)
+      inbound_queue_size += frame.size
+      inbound_queue.offer(frame)
     }
   }
 
@@ -278,12 +288,14 @@ class UdpProtocol extends BaseProtocol {
   def createProtocolCodec:ProtocolCodec = new UdpProtocolCodec()
 
   def createProtocolHandler:ProtocolHandler = new UdpProtocolHandler {
+    type ConfigTypeDTO = UdpDTO
 
     var default_host:VirtualHost = _
     var topic_address:AsciiBuffer = _
 
-    override def configure(config: UdpDTO) {
-      super.configure(config)
+    override def configure(c: Option[ConfigTypeDTO]) = {
+      val config = c.getOrElse(new ConfigTypeDTO)
+      buffer_size = MemoryPropertyEditor.parse(Option(config.buffer_size).getOrElse("640k")).toInt
       val topic_address_decoded = decode_address(Option(config.topic).getOrElse("udp"))
       topic_address = new AsciiBuffer(LocalRouter.destination_parser.encode_destination(topic_address_decoded))
       default_host = broker.default_virtual_host
