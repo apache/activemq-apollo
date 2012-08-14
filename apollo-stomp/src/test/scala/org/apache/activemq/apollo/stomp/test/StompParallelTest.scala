@@ -487,44 +487,18 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     var sub_id = 0;
     def test_selector(selector: String, headers: List[String], expected_matches: List[Int]) = {
-
-      client.write(
-        "SUBSCRIBE\n" +
-                "destination:/topic/selected\n" +
-                "selector:" + selector + "\n" +
-                "receipt:0\n" +
-                "id:" + sub_id + "\n" +
-                "\n")
-      wait_for_receipt("0")
-
+      subscribe(""+sub_id, "/topic/selected-"+sub_id, headers="selector:" + selector + "\n")
       var id = 1;
-
-      headers.foreach {
-        header =>
-          client.write(
-            "SEND\n" +
-                    "destination:/topic/selected\n" +
-                    header + "\n" +
-                    "\n" +
-                    "message:" + id + "\n")
-          id += 1;
+      for( header <- headers) {
+        async_send("/topic/selected-"+sub_id, "message:%d:%d\n".format(sub_id, id), header + "\n")
+        id += 1;
       }
-
-      expected_matches.foreach {
-        id =>
+      for( id <- expected_matches) {
           val frame = client.receive()
           frame should startWith("MESSAGE\n")
-          frame should endWith regex ("\n\nmessage:" + id + "\n")
+          frame should endWith("\n\nmessage:%d:%d\n".format(sub_id, id))
       }
-
-      client.write(
-        "UNSUBSCRIBE\n" +
-                "id:" + sub_id + "\n" +
-                "receipt:0\n" +
-                "\n")
-
-      wait_for_receipt("0")
-
+      unsubscribe(""+sub_id)
       sub_id += 1
     }
 
@@ -759,53 +733,23 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   test("Topic /w Durable sub retains messages.") {
     connect("1.1")
-
-    def put(id: Int) = {
-      client.write(
-        "SEND\n" +
-                "destination:/topic/updates2\n" +
-                "\n" +
-                "message:" + id + "\n")
-    }
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/topic/updates2\n" +
-              "id:my-sub-name\n" +
-              "persistent:true\n" +
-              "include-seq:seq\n" +
-              "receipt:0\n" +
-              "\n")
-    wait_for_receipt("0")
+    val dest = next_id("/topic/dsub_test_")
+    subscribe("my-sub-name", dest, persistent=true)
     client.close
 
     // Close him out.. since persistent:true then
     // the topic subscription will be persistent accross client
     // connections.
-
     connect("1.1")
-    put(1)
-    put(2)
-    put(3)
+    async_send(dest, 1)
+    async_send(dest, 2)
+    async_send(dest, 3)
 
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/topic/updates2\n" +
-              "id:my-sub-name\n" +
-              "persistent:true\n" +
-              "include-seq:seq\n" +
-              "\n")
+    subscribe("my-sub-name", dest, persistent=true)
 
-    def get(id: Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should include("subscription:my-sub-name\n")
-      frame should endWith regex ("\n\nmessage:" + id + "\n")
-    }
-
-    get(1)
-    get(2)
-    get(3)
+    assert_received(1, "my-sub-name")
+    assert_received(2, "my-sub-name")
+    assert_received(3, "my-sub-name")
   }
 
   test("Queue and a selector") {
