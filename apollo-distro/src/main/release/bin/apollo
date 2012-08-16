@@ -153,6 +153,12 @@ if [ ! -z "$APOLLO_BASE" ] ; then
 fi
 
 # Attempt to bump up the ulimit 
-ulimit -n 100000 > /dev/null 2> /dev/null
+target=100000
+limit=`ulimit -n 2>/dev/null`
+case $limit in
+    unlimited) ;;
+    [0-9]*) [ $limit -lt 10000 ] && ulimit -n $target >/dev/null 2>/dev/null ;;
+    *) ulimit -n $target >/dev/null 2>/dev/null ;;
+esac
 
 ${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.boot.Apollo ${BOOTDIRS} org.apache.activemq.apollo.cli.Apollo $@
