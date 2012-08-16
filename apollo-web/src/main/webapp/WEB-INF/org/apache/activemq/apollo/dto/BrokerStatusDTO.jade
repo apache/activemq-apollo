@@ -39,8 +39,8 @@ ul
       a(href={ path("connectors/"+x+".html") }) #{x}
 
 h2 Connections
-p total connections since startup : #{connection_counter}
 p currently connected : #{connected}
+p total connections since startup : #{connection_counter}
 p messages received from connections: #{messages_received}
 p messages sent to connections: #{messages_sent}
 p bytes read from connections: #{memory(read_counter)}
