@@ -25,44 +25,59 @@ import java.{lang=>jl}
  */
 object OptionSupport {
 
-  implicit def apply(value:jl.Boolean):Option[Boolean] = value match {
+  def apply(value:jl.Boolean):Option[Boolean] = value match {
     case null => None
     case x => Some(x.booleanValue)
   }
 
-  implicit def apply(value:jl.Character):Option[Char] = value match {
+  implicit def BooleanToOption(value:jl.Boolean) = apply(value)
+
+  def apply(value:jl.Character):Option[Char] = value match {
     case null => None
     case x => Some(x.charValue)
   }
 
-  implicit def apply(value:jl.Short):Option[Short] = value match {
+  implicit def CharacterToOption(value:jl.Character) = apply(value)
+
+  def apply(value:jl.Short):Option[Short] = value match {
     case null => None
     case x => Some(x.shortValue)
   }
 
-  implicit def apply(value:jl.Integer):Option[Int] = value match {
+  implicit def ShortToOption(value:jl.Short) = apply(value)
+
+  def apply(value:jl.Integer):Option[Int] = value match {
     case null => None
     case x => Some(x.intValue)
   }
 
-  implicit def apply(value:jl.Long):Option[Long] = value match {
+  implicit def IntegerToOption(value:jl.Integer) = apply(value)
+
+  def apply(value:jl.Long):Option[Long] = value match {
     case null => None
     case x => Some(x.longValue)
   }
 
-  implicit def apply(value:jl.Double):Option[Double] = value match {
+  implicit def LongToOption(value:jl.Long) = apply(value)
+
+  def apply(value:jl.Double):Option[Double] = value match {
     case null => None
     case x => Some(x.doubleValue)
   }
 
-  implicit def apply(value:jl.Float):Option[Float] = value match {
+  implicit def DoubleToOption(value:jl.Double) = apply(value)
+
+  def apply(value:jl.Float):Option[Float] = value match {
     case null => None
     case x => Some(x.floatValue)
   }
 
-  implicit def apply[T](value:T):Option[T] = value match {
+  implicit def FloatToOption(value:jl.Float) = apply(value)
+
+  def apply[T](value:T):Option[T] = value match {
     case null => None
     case x => Some(x)
   }
 
+  implicit def AnyToOption[T](value:T) = apply(value)
 }

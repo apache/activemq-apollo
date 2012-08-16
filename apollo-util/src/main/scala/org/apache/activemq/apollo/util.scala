@@ -19,7 +19,6 @@ package org.apache.activemq.apollo
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtdispatch.Future
 import java.util.concurrent.CountDownLatch
-import java.util
 
 /**
  *

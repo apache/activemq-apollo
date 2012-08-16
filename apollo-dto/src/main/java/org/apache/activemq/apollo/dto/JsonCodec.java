@@ -34,7 +34,7 @@ import java.io.IOException;
 public class JsonCodec {
     final public static ObjectMapper mapper = new ObjectMapper();
     static {
-        mapper.getSerializationConfig().setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
+        mapper.setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
     }
 
     static public <T> T decode(Buffer buffer, Class<T> type) throws IOException {
