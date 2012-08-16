@@ -232,6 +232,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     protocol = ProtocolFactory.get(config.protocol.getOrElse("any")).get
     transport_server = TransportFactory.bind( config.bind )
     transport_server.setDispatchQueue(dispatch_queue)
+    transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
     transport_server.setTransportServerListener(BrokerAcceptListener)
 
     transport_server match {
@@ -242,7 +243,6 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
     transport_server match {
       case transport_server:SslTransportServer =>
-        transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
         if( broker.key_storage!=null ) {
           transport_server.setTrustManagers(broker.key_storage.create_trust_managers)
           transport_server.setKeyManagers(broker.key_storage.create_key_managers)
