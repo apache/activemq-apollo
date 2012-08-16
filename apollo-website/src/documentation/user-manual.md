@@ -295,6 +295,45 @@ the broker over WebSockets:
 The Apollo distribution include a simple WebSocket based chat example
 in the `examples/websocket` directory.
 
+##### UDP Transports
+
+The UDP transport uses the `udp://` URI scheme.  It uses the URI host
+and port to determine to which local interfaces to bind.  For example:
+
+* `udp://0.0.0.0:61615` binds to all IPv4 interfaces on port 61615
+* `udp://[::]:61615` binds to all IPv4 and IPv6 interfaces on port 61615
+* `udp://127.0.0.1:0` binds to the loopback interface on a dynamic port
+
+The UDP transport MUST be configured to use a UDP specific protocol
+handler.  That is done by setting the `protocol` attribute on the 
+`connector` element.
+
+Example:
+
+{pygmentize:: xml}
+<connector id="udp" bind="udp://0.0.0.0:61615" protocol="udp"/>
+{pygmentize}
+
+The supported protocols that can be used with the udp transport are:
+
+* `udp` : Takes the all the data in a received UDP datagram
+  and forwards it as a binary message to a configured topic.
+  This protocol can be configured by nesting a `udp` element
+  within the `connector` element.  The supported options on
+  the `udp` element are:
+  
+    * `topic` : The name of the topic to send messages.  Defaults
+      to `udp`.
+    * `buffer_size` : The amount of memory to use to buffer between the
+      socket and topic endpoint.  Defaults to `640k`. 
+  
+* `stomp-udp` : Expects the received UDP datagram to contain a
+  STOMP frame.  The STOMP frame is processed and routed just like any
+  STOMP frame that would be received on a TCP transport.  This protocol can 
+  be configured by nesting a `stomp` element within the `connector` element. 
+  See the [Stomp Protocol Options section](#Stomp_Protocol_Options) for more
+  details.
+
 #### Virtual Hosts
 
 A virtual hosts allows ${project_name} to support multi tenant style
