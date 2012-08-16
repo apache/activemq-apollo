@@ -53,6 +53,7 @@
         <!-- for the webapp -->
         <include>org.eclipse.jetty.aggregate:jetty-all-server</include>
         <include>javax.servlet:servlet-api</include>
+        <include>javax.servlet.jsp:jsp-api</include>
         <include>com.sun.jersey:jersey-server</include>
         <include>com.sun.jersey:jersey-core</include>
         <include>asm:asm</include>
