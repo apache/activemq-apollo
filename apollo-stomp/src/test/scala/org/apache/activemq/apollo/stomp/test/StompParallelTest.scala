@@ -1136,64 +1136,22 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
   test("ack:client redelivers on client disconnect") {
     connect("1.1")
 
-    def put(id: Int) = {
-      client.write(
-        "SEND\n" +
-                "destination:/queue/ackmode-client\n" +
-                "\n" +
-                "message:" + id + "\n")
-    }
-    put(1)
-    put(2)
-    put(3)
+    async_send("/queue/ackmode-client", 1)
+    async_send("/queue/ackmode-client", 2)
+    async_send("/queue/ackmode-client", 3)
 
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/queue/ackmode-client\n" +
-              "ack:client\n" +
-              "id:0\n" +
-              "\n")
+    subscribe("0", "/queue/ackmode-client", "client")
 
-    def get(id: Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should include("subscription:0\n")
-      frame should include regex ("message-id:.+?\n")
-      frame should endWith regex ("\n\nmessage:" + id + "\n")
+    val ack1 = assert_received(1, "0")
+    val ack2 = assert_received(2, "0")
+    val ack3 = assert_received(3, "0")
 
-      val p = """(?s).*?\nmessage-id:(.+?)\n.*""".r
-      frame match {
-        case p(x) => x
-        case _ => null
-      }
-    }
-
-    get(1)
-    val mid = get(2)
-    get(3)
-
-    // Ack the first 2 messages..
-    client.write(
-      "ACK\n" +
-              "subscription:0\n" +
-              "message-id:" + mid + "\n" +
-              "receipt:0\n" +
-              "\n")
-
-    wait_for_receipt("0")
-    client.close
+    ack2(true)
+    disconnect()
 
     connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/queue/ackmode-client\n" +
-              "ack:client\n" +
-              "id:0\n" +
-              "\n")
-    get(3)
-
-
+    subscribe("0", "/queue/ackmode-client", "client")
+    assert_received(3, "0")
   }
 
 
