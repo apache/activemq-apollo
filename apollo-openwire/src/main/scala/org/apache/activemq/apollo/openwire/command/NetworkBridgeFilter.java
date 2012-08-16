@@ -21,8 +21,6 @@ import java.util.Arrays;
 import org.apache.activemq.apollo.filter.BooleanExpression;
 import org.apache.activemq.apollo.filter.FilterException;
 import org.apache.activemq.apollo.filter.Filterable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * @openwire:marshaller code="91"
@@ -31,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 public class NetworkBridgeFilter implements DataStructure, BooleanExpression {
 
     public static final byte DATA_STRUCTURE_TYPE = CommandTypes.NETWORK_BRIDGE_FILTER;
-    static final Log LOG = LogFactory.getLog(NetworkBridgeFilter.class);
 
     private BrokerId networkBrokerId;
     private int networkTTL;
@@ -63,20 +60,12 @@ public class NetworkBridgeFilter implements DataStructure, BooleanExpression {
     protected boolean matchesForwardingFilter(Message message) {
 
         if (contains(message.getBrokerPath(), networkBrokerId)) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("Message all ready routed once through this broker ("
-                        + networkBrokerId + "), path: "
-                        + Arrays.toString(message.getBrokerPath()) + " - ignoring: " + message);
-            }
             return false;
         }
 
         int hops = message.getBrokerPath() == null ? 0 : message.getBrokerPath().length;
 
         if (hops >= networkTTL) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("Message restricted to " + networkTTL + " network hops ignoring: " + message);
-            }
             return false;
         }
 
@@ -85,9 +74,6 @@ public class NetworkBridgeFilter implements DataStructure, BooleanExpression {
             ConsumerInfo info = (ConsumerInfo)message.getDataStructure();
             hops = info.getBrokerPath() == null ? 0 : info.getBrokerPath().length;
             if (hops >= networkTTL) {
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace("ConsumerInfo advisory restricted to " + networkTTL + " network hops ignoring: " + message);
-                }
                 return false;
             }
         }
