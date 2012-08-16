@@ -1404,7 +1404,7 @@ The `credit` header value is expected to use the
    the TCP socket which is typically 65536 bytes.
 
 If the `credit` header is not specified it has the same effect
-as if it had been set to `credit:1,65536`.  This setting allows the broker
+as if it had been set to `credit:655360,655360`.  This setting allows the broker
 to optimally stream many small messages to the client or without overloading
 the clients processing buffers.
 
