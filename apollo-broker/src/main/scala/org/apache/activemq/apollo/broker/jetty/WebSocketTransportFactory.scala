@@ -202,8 +202,11 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     // Transport interface methods.
     /////////////////////////////////////////////////////////////////////////
     
-    @BeanProperty
-    var blockingExecutor:Executor = _
+    def blockingExecutor:Executor = server.blockingExecutor
+
+    def getBlockingExecutor = blockingExecutor
+    def setBlockingExecutor(value: Executor) {
+    }
 
     var dispatchQueue = createQueue()
 
