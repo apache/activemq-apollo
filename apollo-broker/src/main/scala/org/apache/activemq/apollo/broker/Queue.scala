@@ -881,8 +881,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   }
 
-  var delivery_rate = 0L
   def swapped_out_size = queue_size - (producer_swapped_in.size + consumer_swapped_in.size)
+
+  var delivery_rate = 0
 
   def queue_maintenance:Unit = {
     var elapsed = System.currentTimeMillis-now
@@ -891,8 +892,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     consumers_keeping_up_historically = consumers_keeping_up_counter!=0
     consumers_keeping_up_counter = 0
 
-    delivery_rate = 0L
-
+    delivery_rate = 0
     var consumer_stall_ms = 0L
     var load_stall_ms = 0L
 
@@ -906,18 +906,23 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
 
     val rate_adjustment = elapsed.toFloat / 1000.toFloat
-    delivery_rate  = (delivery_rate / rate_adjustment).toLong
+    delivery_rate  = (delivery_rate / rate_adjustment).toInt
 
     val stall_ratio = ((consumer_stall_ms*100)+1).toFloat / ((load_stall_ms*100)+1).toFloat
 
     // Figure out what the max enqueue rate should be.
     max_enqueue_rate = Int.MaxValue
-    if( tune_fast_delivery_rate>=0 && tune_catchup_enqueue_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 1.0 ) {
-      max_enqueue_rate = tune_catchup_enqueue_rate
+    if( tune_fast_delivery_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 10.0 ) {
+      if( tune_catchup_enqueue_rate >= 0 ) {
+        max_enqueue_rate = tune_catchup_enqueue_rate
+      } else {
+        max_enqueue_rate = delivery_rate / 2;
+      }
     }
     if(tune_max_enqueue_rate >=0 ) {
       max_enqueue_rate = max_enqueue_rate.min(tune_max_enqueue_rate)
     }
+
     if( max_enqueue_rate < Int.MaxValue ) {
       if(enqueues_remaining==null) {
         enqueues_remaining = new LongCounter()

@@ -46,7 +46,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   var acquired_size = 0L
   def acquired_count = acquired.size()
 
-  var enqueue_size_per_interval = 0L
+  var enqueue_size_per_interval = 0
   var enqueue_size_at_last_interval = 0L
 
   var consumer_stall_ms = 0L
@@ -238,7 +238,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   }
 
   def adjust_prefetch_size = {
-    enqueue_size_per_interval = session.enqueue_size_counter - enqueue_size_at_last_interval
+    enqueue_size_per_interval = (session.enqueue_size_counter - enqueue_size_at_last_interval).toInt
     enqueue_size_at_last_interval = session.enqueue_size_counter
 
     if(consumer_stall_start !=0) {

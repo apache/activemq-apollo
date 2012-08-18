@@ -418,12 +418,10 @@ memory.  Defaults to true.
   rate to match the consumption rate if the consumers are at the 
   tail of the queue.  Defaults to `1M`           
   
-* `catchup_enqueue_rate`:  If set, and the the current delivery
-   rate is exceeding the configured value of `fast_delivery_rate` and 
-   the consumers are spending more time loading from the store than 
-   delivering, then the enqueue rate will be throttled to the
-   specified value so that the consumers can catch up and reach the 
-   tail of the queue.
+* `catchup_enqueue_rate`:  The rate that producers will be throttled to
+   when queue consumers are considered to be fast.  This allows consumers 
+   to catch up and reach the tail of the queue.  If not set, then it is
+   computed to be 1/2 the current consumer delivery rate.
 
 * `max_enqueue_rate`: The maximum enqueue rate of the queue.  Producers
   will be flow controlled once this enqueue rate is reached.  If not set
