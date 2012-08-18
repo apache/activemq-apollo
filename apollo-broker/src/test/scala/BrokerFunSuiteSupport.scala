@@ -64,7 +64,7 @@ object BrokerTestSupport {
     val host = broker.default_virtual_host
     sync(host) {
       val router = host.router.asInstanceOf[LocalRouter]
-      router.local_topic_domain.destination_by_id.get(name).get.status
+      router.local_topic_domain.destination_by_id.get(name).get.status(true, true)
     }
   }
 

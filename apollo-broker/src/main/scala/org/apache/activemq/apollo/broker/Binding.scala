@@ -255,14 +255,14 @@ object TempQueueBinding {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class TempQueueBinding(key:AnyRef, address:DestinationAddress, settings:QueueSettingsDTO) extends Binding {
+case class TempQueueBinding(topic:String, key:AnyRef, address:DestinationAddress, settings:QueueSettingsDTO) extends Binding {
   import TempQueueBinding._
 
   def binding_kind = TEMP_KIND
   def binding_data = TEMP_DATA
 
 
-  override def dto: DestinationDTO = null
+  override def dto: DestinationDTO = new TopicDestinationDTO(topic)
   def dto_class = null
 
   def unbind(router: LocalRouter, queue: Queue) = {}

@@ -447,7 +447,12 @@ parameter to define the order in which they are returned.  Example:
     :markdown
       Gets metrics and details about the `{dest}` queue on the `{host}` virtual host. Example:
       
-      `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/queues/example-5.json`
+      You can the `?producers=true` query parameter to have a list of producers
+      included n the result.
+      You can the `?consumers=true` query parameter to have a list of consumers
+      included n the result.
+      
+      `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/queues/example-5.json?producers=true&consumers=true`
       {pygmentize:: js}
       {
         "id": "example-5",
@@ -550,8 +555,13 @@ parameter to define the order in which they are returned.  Example:
   - route("GET", "/broker/virtual-hosts/{host}/topics/{dest}.json", 200, "TopicStatusDTO")
     :markdown
       Gets metrics and details about the `{dest}` topic on the `{host}` virtual host.  Example:
+
+      You can the `?producers=true` query parameter to have a list of producers
+      included n the result.
+      You can the `?consumers=true` query parameter to have a list of consumers
+      included n the result.
       
-      `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/topics/example-2.json`
+      `curl -u "admin:password" http://localhost:61680/broker/virtual-hosts/default/topics/example-2.json?producers=true&consumers=true`
       {pygmentize:: js}
       {
         "id": "example-2",

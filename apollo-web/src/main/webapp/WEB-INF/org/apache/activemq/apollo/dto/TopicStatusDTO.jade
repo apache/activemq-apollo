@@ -36,32 +36,44 @@ p enqueued: #{metrics.enqueue_item_counter} messages (#{memory(metrics.enqueue_s
 p dequeued: #{metrics.dequeue_item_counter} messages (#{memory(metrics.dequeue_size_counter)}), #{uptime(metrics.dequeue_ts)} ago
 
 h4 Producers
+p producers: #{metrics.producer_count}
 p total producers ever : #{metrics.producer_counter}
-ul
-  - for( x <- producers )
-    li.producer
-      - x.kind match
-        - case "queue" =>
-          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
-        - case "connection" =>
-          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
-        - case _ =>
-      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
+p
+  - if ( producers == null )
+    a(href={ id+".html?producers=true" }) (Show Producers)
+  - else
+    a(href={ id+".html" }) (Hide Producers)
+    ul
+      - for( x <- producers )
+        li.producer
+          - x.kind match
+            - case "queue" =>
+              a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+            - case "connection" =>
+              a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
+            - case _ =>
+          p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 h4 Consumers
+p consumers: #{metrics.consumer_count}
 p total consumers ever : #{metrics.consumer_counter}
-ul
-  - for( x <- consumers )
-    li.consumer
-      - x.kind match
-        - case "topic-queue" =>
-          a(href={ path("../../topic-queues/"+id+"/"+x.id+".html") }) #{x.label}
-        - case "queue" =>
-          a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
-        - case "connection" =>
-          a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
-        - case _ =>
-      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
+p
+  - if ( consumers == null )
+    a(href={ id+".html?consumers=true" }) (Show Consumers)
+  - else
+    a(href={ id+".html" }) (Hide Consumers)
+    ul
+      - for( x <- consumers )
+        li.consumer
+          - x.kind match
+            - case "topic-queue" =>
+              a(href={ path("../../topic-queues/"+id+"/"+x.id+".html") }) #{x.label}
+            - case "queue" =>
+              a(href={ path("../../queues/"+x.id+".html") }) #{x.label}
+            - case "connection" =>
+              a(href={ path("../../../../connections/"+x.id+".html") }) #{x.label}
+            - case _ =>
+          p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 h4 Durable Subscribers
 ul

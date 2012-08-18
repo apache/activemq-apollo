@@ -302,13 +302,21 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
-  def status(entries:Boolean=false) = {
+  def status(entries:Boolean=false, include_producers:Boolean=false, include_consumers:Boolean=false) = {
     val rc = new QueueStatusDTO
     rc.id = this.id
+    binding match {
+      case binding:TempQueueBinding =>
+        rc.id = store_id.toString
+      case _ =>
+    }
     rc.state = this.service_state.toString
     rc.state_since = this.service_state.since
     rc.binding = this.binding.dto
     rc.config = this.config
+    if( max_enqueue_rate < Int.MaxValue ) {
+      rc.max_enqueue_rate = new Integer(max_enqueue_rate)
+    }
     rc.metrics = this.get_queue_metrics
     rc.metrics.current_time = now
 
@@ -332,61 +340,71 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           cur.nextOrTail
         }
       }
+    } else {
+      rc.entries = null
     }
 
-    this.inbound_sessions.foreach { session:DeliverySession =>
-      val link = new LinkDTO()
-      session.producer.connection match {
-        case Some(connection) =>
-          link.kind = "connection"
-          link.id = connection.id.toString
-          link.label = connection.transport.getRemoteAddress.toString
-        case _ =>
-          link.kind = "unknown"
-          link.label = "unknown"
+    if( include_producers ) {
+      for ( session <- this.inbound_sessions ) {
+        val link = new LinkDTO()
+        session.producer.connection match {
+          case Some(connection) =>
+            link.kind = "connection"
+            link.id = connection.id.toString
+            link.label = connection.transport.getRemoteAddress.toString
+          case _ =>
+            link.kind = "unknown"
+            link.label = "unknown"
+        }
+        link.enqueue_item_counter = session.enqueue_item_counter
+        link.enqueue_size_counter = session.enqueue_size_counter
+        link.enqueue_ts = session.enqueue_ts
+        rc.producers.add(link)
       }
-      link.enqueue_item_counter = session.enqueue_item_counter
-      link.enqueue_size_counter = session.enqueue_size_counter
-      link.enqueue_ts = session.enqueue_ts
-      rc.producers.add(link)
+    } else {
+      rc.producers = null
     }
 
-    this.all_subscriptions.valuesIterator.toSeq.foreach{ sub =>
-      val link = new QueueConsumerLinkDTO
-      sub.consumer.connection match {
-        case Some(connection) =>
-          link.kind = "connection"
-          link.id = connection.id.toString
-          link.label = connection.transport.getRemoteAddress.toString
-        case _ =>
-          link.kind = "unknown"
-          link.label = "unknown"
-      }
-      link.position = sub.pos.seq
-      link.enqueue_item_counter = sub.session.enqueue_item_counter
-      link.enqueue_size_counter = sub.session.enqueue_size_counter
-      link.enqueue_ts = sub.session.enqueue_ts
-      link.total_ack_count = sub.total_ack_count
-      link.total_nack_count = sub.total_nack_count
-      link.acquired_size = sub.acquired_size
-      link.acquired_count = sub.acquired_count
-      sub.ack_rates match {
-        case Some((items_per_sec, size_per_sec) ) =>
-          link.ack_item_rate = items_per_sec
-          link.ack_size_rate = size_per_sec
-        case _ =>
-      }
+    if( include_consumers ) {
+      for( sub <- this.all_subscriptions.values ) {
+        val link = new QueueConsumerLinkDTO
+        sub.consumer.connection match {
+          case Some(connection) =>
+            link.kind = "connection"
+            link.id = connection.id.toString
+            link.label = connection.transport.getRemoteAddress.toString
+          case _ =>
+            link.kind = "unknown"
+            link.label = "unknown"
+        }
+        link.position = sub.pos.seq
+        link.enqueue_item_counter = sub.session.enqueue_item_counter
+        link.enqueue_size_counter = sub.session.enqueue_size_counter
+        link.enqueue_ts = sub.session.enqueue_ts
+        link.total_ack_count = sub.total_ack_count
+        link.total_nack_count = sub.total_nack_count
+        link.acquired_size = sub.acquired_size
+        link.acquired_count = sub.acquired_count
+        sub.ack_rates match {
+          case Some((items_per_sec, size_per_sec) ) =>
+            link.ack_item_rate = items_per_sec
+            link.ack_size_rate = size_per_sec
+          case _ =>
+        }
 
-      link.waiting_on = if( sub.full ) {
-        "consumer"
-      } else if( sub.pos.is_tail ) {
-        "producer"
-      } else if( !sub.pos.is_loaded ) {
-        "load"
-      } else {
-        "dispatch"
+        link.waiting_on = if( sub.full ) {
+          "consumer"
+        } else if( sub.pos.is_tail ) {
+          "producer"
+        } else if( !sub.pos.is_loaded ) {
+          "load"
+        } else {
+          "dispatch"
+        }
+        rc.consumers.add(link)
       }
-      rc.consumers.add(link)
+    } else {
+      rc.consumers = null
     }
     rc
   }

@@ -60,4 +60,6 @@ public class QueueStatusDTO extends ServiceStatusDTO {
     @XmlElement(name="consumer")
     public List<QueueConsumerLinkDTO> consumers = new ArrayList<QueueConsumerLinkDTO>();
 
+    @XmlAttribute(name="max_enqueue_rate")
+    public Integer max_enqueue_rate;
 }

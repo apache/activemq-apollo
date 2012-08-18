@@ -192,15 +192,15 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
 
   def slow_consumer_policy = config.slow_consumer_policy.getOrElse("block")
 
-  def status: FutureResult[TopicStatusDTO] = {
+  def status(show_producers:Boolean, show_consumers:Boolean): FutureResult[TopicStatusDTO] = {
     val rc = FutureResult[TopicStatusDTO]()
-    status(x => rc.set(Success(x)))
+    status(show_producers, show_consumers, x => rc.set(Success(x)))
     rc
   }
 
   var state = "STARTED"
 
-  def status(on_complete:(TopicStatusDTO)=>Unit) = {
+  def status(show_producers:Boolean, show_consumers:Boolean, on_complete:(TopicStatusDTO)=>Unit):Unit = {
     dispatch_queue.assertExecuting()
 
     val rc = new TopicStatusDTO
@@ -260,6 +260,13 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     DestinationMetricsSupport.add_destination_metrics(rc.metrics, topic_metrics)
     producer_links.values.foreach { link =>
       add_enqueue_counters(rc.metrics, link)
+    }
+
+    if( !show_producers ) {
+      rc.producers = null
+    }
+    if( !show_consumers ) {
+      rc.consumers = null
     }
 
     var futures = List[Future[(TopicStatusDTO)=>Unit]]()
@@ -361,7 +368,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(new TempQueueBinding(consumer, address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
+            val queue = router._create_queue(new TempQueueBinding(id, consumer, address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
             queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
             queue.bind(List(consumer))
             consumer_queues += consumer->queue

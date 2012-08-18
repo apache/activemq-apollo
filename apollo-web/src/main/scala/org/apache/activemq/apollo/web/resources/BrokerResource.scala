@@ -505,7 +505,7 @@ class BrokerResource() extends Resource {
       val records = Future.all {
         router.local_topic_domain.destination_by_id.values.map { value  =>
           monitoring(value) {
-            value.status
+            value.status(false, false)
           }
         }
       }
@@ -516,12 +516,14 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/virtual-hosts/{id}/topics/{name:.*}")
   @ApiOperation(value = "Gets the status of the named topic.")
-  def topic(@PathParam("id") id : String, @PathParam("name") name : String):TopicStatusDTO = {
+  def topic(@PathParam("id") id : String, @PathParam("name") name : String,
+            @QueryParam("producers") producers:Boolean,
+            @QueryParam("consumers") consumers:Boolean):TopicStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       monitoring(node) {
-        node.status
+        node.status(producers, consumers)
       }
     }
   }
@@ -549,14 +551,17 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/virtual-hosts/{id}/topic-queues/{name:.*}/{qid}")
   @ApiOperation(value = "Gets the status of a topic consumer queue.")
-  def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
+  def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long,
+            @QueryParam("entries") entries:Boolean,
+            @QueryParam("producers") producers:Boolean,
+            @QueryParam("consumers") consumers:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
       monitoring(node) {
         sync(queue) {
-          queue.status(entries)
+          queue.status(entries, producers, consumers)
         }
       }
     }
@@ -572,7 +577,7 @@ class BrokerResource() extends Resource {
       val values: Iterable[Queue] = router.local_queue_domain.destination_by_id.values
 
       val records = sync_all(values) { value =>
-        status(value, false)
+        status(value, false, false , false)
       }
 
       val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps, o))
@@ -582,12 +587,15 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/virtual-hosts/{id}/queues/{name:.*}")
   @ApiOperation(value = "Gets the status of the named queue.")
-  def queue(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean ):QueueStatusDTO = {
+  def queue(@PathParam("id") id : String, @PathParam("name") name : String,
+            @QueryParam("entries") entries:Boolean,
+            @QueryParam("producers") producers:Boolean,
+            @QueryParam("consumers") consumers:Boolean ):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router: LocalRouter = host
       val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       sync(node) {
-        status(node, entries)
+        status(node, entries, producers, consumers)
       }
     }
   }
@@ -625,7 +633,7 @@ class BrokerResource() extends Resource {
       val values: Iterable[Queue] = router.local_dsub_domain.destination_by_id.values
 
       val records = sync_all(values) { value =>
-        status(value, false)
+        status(value, false, false, false)
       }
 
       val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[QueueStatusDTO], _, f, q, p, ps, o))
@@ -635,12 +643,15 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/virtual-hosts/{id}/dsubs/{name:.*}")
   @ApiOperation(value = "Gets the status of the named durable subscription.")
-  def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String, @QueryParam("entries") entries:Boolean):QueueStatusDTO = {
+  def durable_subscription(@PathParam("id") id : String, @PathParam("name") name : String,
+                           @QueryParam("entries") entries:Boolean,
+                           @QueryParam("producers") producers:Boolean,
+                           @QueryParam("consumers") consumers:Boolean):QueueStatusDTO = {
     with_virtual_host(id) { host =>
       val router:LocalRouter = host
       val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       sync(node) {
-        status(node, entries)
+        status(node, entries, producers, consumers)
       }
     }
   }
@@ -678,8 +689,8 @@ class BrokerResource() extends Resource {
     }
   }
 
-  def status(q:Queue, entries:Boolean=false) = monitoring(q) {
-    q.status(entries)
+  def status(q:Queue, entries:Boolean=false, producers:Boolean, consumers:Boolean) = monitoring(q) {
+    q.status(entries, producers, consumers)
   }
 
   @GET @Path("/connectors")

@@ -46,13 +46,12 @@
       form(method="post" action={path("action/delete")})
         input(type="submit" value="delete")
 
-  - case _ =>
-    - vhost_path = "../.."
+  - case x:TopicDestinationDTO =>
+    - vhost_path = "../../topics/"+x.name
     .breadcumbs
       a(href={strip_resolve(vhost_path)+".html"}) Back
     h1 Temporary Queue
     p state: #{state} #{ uptime(state_since) } ago
-
 
 h2 Current Size
 
@@ -69,6 +68,13 @@ p nacked: #{metrics.nack_item_counter} messages (#{memory(metrics.nack_size_coun
 
 p expired: #{metrics.expired_item_counter} messages (#{memory(metrics.expired_size_counter)}), #{uptime(metrics.expired_ts)} ago
 
+p
+  | enqueue rate throttle:
+  - if (max_enqueue_rate==null)
+    | none
+  - else
+    | #{max_enqueue_rate} messages/sec
+
 h2 Swap Metrics
 
 p swapped in: #{metrics.swapped_in_items} messages #{memory(metrics.swapped_in_size)}
@@ -83,49 +89,59 @@ p swapping in: #{memory(metrics.swapping_in_size)}
 p total swap outs : #{metrics.swap_out_item_counter} messages (#{memory(metrics.swap_out_size_counter)})
 p total swap ins : #{metrics.swap_in_item_counter} messages (#{memory(metrics.swap_in_size_counter)})
 
-h3 Producers
+h2 Producers
+p producers: #{metrics.producer_count}
 p total producers ever : #{metrics.producer_counter}
-ul
-  - for( x <- producers )
-    li.producer
-      - x.kind match
-        - case "queue" =>
-          a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
-        - case "connection" =>
-          a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
-        - case _ =>
-      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
+p
+  - if ( producers == null )
+    a(href={ id+".html?producers=true" }) (Show Producers)
+  - else
+    a(href={ id+".html" }) (Hide Producers)
+    ul
+      - for( x <- producers )
+        li.producer
+          - x.kind match
+            - case "queue" =>
+              a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
+            - case "connection" =>
+              a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
+            - case _ =>
+          p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
 
 
-h3 Consumers
+h2 Consumers
+p consumers: #{metrics.consumer_count}
 p total consumers ever : #{metrics.consumer_counter}
-ul
-  - for( x <- consumers )
-    li.consumer
-      - x.kind match
-        - case "queue" =>
-          a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
-        - case "connection" =>
-          a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
-        - case _ =>
-      p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
-      p next message seq: #{x.position}
-      p acquired: #{x.acquired_count} messages (#{memory(x.acquired_size)})
-      p acks: #{x.total_ack_count} messages
-      p naks: #{x.total_nack_count} messages
-      p waiting on: #{x.waiting_on}
-      p acks per second: #{x.ack_item_rate}
-      p bytes acked per second: #{x.ack_size_rate}
+p
+  - if ( consumers == null )
+    a(href={ id+".html?consumers=true" }) (Show Consumers)
+  - else
+    a(href={ id+".html" }) (Hide Consumers)
+    ul
+      - for( x <- consumers )
+        li.consumer
+          - x.kind match
+            - case "queue" =>
+              a(href={ path(vhost_path+"/../queues/"+x.id+".html") }) #{x.label}
+            - case "connection" =>
+              a(href={ path(vhost_path+"/../../../connections/"+x.id+".html") }) #{x.label}
+            - case _ =>
+          p dispatched: #{x.enqueue_item_counter} messages (#{memory(x.enqueue_size_counter)}), #{uptime(x.enqueue_ts)} ago
+          p next message seq: #{x.position}
+          p acquired: #{x.acquired_count} messages (#{memory(x.acquired_size)})
+          p acks: #{x.total_ack_count} messages
+          p naks: #{x.total_nack_count} messages
+          p waiting on: #{x.waiting_on}
+          p acks per second: #{x.ack_item_rate}
+          p bytes acked per second: #{x.ack_size_rate}
 
-
-
-- if ( entries.isEmpty )
+- if ( entries == null )
   h2
-    Entries Dump
+    | Entries Dump
     a(href={ id+".html?entries=true" }) (Show)
 - else
   h2
-    Entries Dump
+    | Entries Dump
     a(href={ id+".html" })  (Hide)
   table.queue-entries
     tr
