@@ -19,7 +19,8 @@ package org.apache.activemq.apollo.broker
 import org.fusesource.hawtdispatch._
 import java.util.LinkedList
 import org.fusesource.hawtdispatch.transport.Transport
-import collection.mutable.HashSet
+import collection.mutable.{ListBuffer, HashSet}
+import org.apache.activemq.apollo.util.list.{LinkedNodeList, LinkedNode}
 
 /**
  * <p>
@@ -343,31 +344,14 @@ trait SessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
 class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue:DispatchQueue, val sizer:Sizer[T]) {
 
   var sessions = HashSet[Session[T]]()
-  val overflow = new OverflowSink[(Session[T],T)](downstream)
-
-  def delivered(session:Session[Delivery], size:Int) = {
-    consumer_queue.assertExecuting()
-    session.credit_adder.merge((1, size));
-  }
-
-  // use a event aggregating source to coalesce multiple events from the same thread.
-  // all the sessions send to the same source.
-  val source = createSource(new ListEventAggregator[(Session[T],T)](), consumer_queue)
-  source.setEventHandler(^{drain_source});
-  source.resume
-
-  def drain_source = {
-    source.getData.foreach { event =>
-      // overflow sinks can always accept more values.
-      val f1 = overflow.full
-      overflow.offer(event)
-    }
-  }
+  var overflowed_sessions = new LinkedNodeList[SessionLinkedNode[T]]()
+  var overflow_size = 0L
+  var high_overflow_size = 64*1024
 
   def open(producer_queue:DispatchQueue, delivery_credits:Int, size_credits:Int):SessionSink[T] = {
     val session = new Session[T](this, producer_queue)
     consumer_queue <<| ^{
-      session.credit_adder.merge((delivery_credits, size_credits));
+      session.credit(delivery_credits, size_credits);
       sessions += session
     }
     session
@@ -378,25 +362,81 @@ class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue
       session match {
         case s:Session[T] =>
           sessions -= s
-          s.producer_queue {
-            s.close(rejection_handler)
-          }
+          s.close(rejection_handler)
       }
     }
   }
 
   def time_stamp = 0L
+
+  downstream.refiller = ^{ drain_overflow }
+
+  def drain_overflow:Unit = {
+    while( !overflowed_sessions.isEmpty) {
+      val session = overflowed_sessions.getHead.session
+      val value = session.overflow.getFirst()
+      if( downstream.offer((session, value)) ) {
+        session.overflow.removeFirst()
+        overflow_size -= sizer.size(value)
+        if( session.overflow.isEmpty ) {
+          session.overflow_node.unlink()
+          session.on_overflow_drain()
+          if( session.pending_delivery_credits!=0 || session.pending_size_credits!=0 ) {
+            session.credit(session.pending_delivery_credits, session.pending_size_credits)
+            session.pending_delivery_credits = 0
+            session.pending_size_credits = 0
+          }
+        } else {
+          // to fairly consume values from all sessions.
+          overflowed_sessions.rotate()
+        }
+      } else {
+        return
+      }
+    }
+  }
+
+  def delivered(session:Session[Delivery], size:Int) = {
+    if( overflow_size >= high_overflow_size && !session.overflow.isEmpty) {
+      session.pending_delivery_credits += 1
+      session.pending_size_credits += size
+    } else {
+      session.credit(1, size)
+    }
+  }
+
 }
+
+case class SessionLinkedNode[T](session:Session[T]) extends LinkedNode[SessionLinkedNode[T]]
 
 /**
  * tracks one producer to consumer session / credit window.
  */
 class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extends SessionSink[T] {
 
+  val overflow = new LinkedList[T]()
+  var pending_delivery_credits = 0
+  var pending_size_credits = 0
+
+  // use a event aggregating source to coalesce multiple events from the same thread.
+  val overflow_source = createSource(new ListEventAggregator[T](), mux.consumer_queue)
+  overflow_source.setEventHandler(^{
+    for( value <- overflow_source.getData ) {
+      if( overflow.isEmpty ) {
+        mux.overflowed_sessions.addLast(overflow_node);
+      }
+      overflow.add(value)
+      mux.overflow_size += sizer.size(value)
+    }
+    mux.drain_overflow
+  });
+  overflow_source.resume
+
   var refiller:Task = NOOP
+  var rejection_handler: (T)=>Unit = _
+  val overflow_node = SessionLinkedNode[T](this)
 
   private def sizer = mux.sizer
-  private def downstream = mux.source
   var delivery_credits = 0
   var size_credits = 0
 
@@ -406,6 +446,11 @@ class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extend
   var enqueue_size_counter = 0L
   @volatile
   var enqueue_ts = mux.time_stamp
+
+  def credit(delivery_credits:Int, size_credits:Int) = {
+    mux.consumer_queue.assertExecuting()
+    credit_adder.merge((delivery_credits, size_credits))
+  }
 
   // create a source to coalesce credit events back to the producer side...
   val credit_adder = createSource(new EventAggregator[(Int, Int), (Int, Int)] {
@@ -428,8 +473,7 @@ class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extend
   }
   credit_adder.resume
 
-  private var rejection_handler: (T)=>Unit = _
-  
+
   private def add_credits(count:Int, size:Int) = {
     delivery_credits += count
     size_credits += size
@@ -464,17 +508,19 @@ class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extend
         enqueue_ts = mux.time_stamp
   
         add_credits(-1, -size)
-        downstream.merge((this, value))
+        overflow_source.merge(value)
       }
       true
     }
   }
 
+  var on_overflow_drain = ()=>{}
+
   def close(rejection_handler:(T)=>Unit) = {
-    producer_queue.assertExecuting()
-    assert(this.rejection_handler==null)
-    this.rejection_handler=rejection_handler
-    refiller.run
+    producer_queue {
+      this.rejection_handler=rejection_handler
+      refiller.run
+    }
   }
 
 }

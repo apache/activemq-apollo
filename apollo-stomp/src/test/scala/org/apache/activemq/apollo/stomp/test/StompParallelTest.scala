@@ -201,8 +201,9 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     client.socket.setSoTimeout(1 * 1000)
     var block_count = 0
     try {
+      receipt_counter.set(0L)
       while (true) {
-        sync_send("/queue/quota.assured1", "%01024d".format(block_count))
+        sync_send("/queue/quota.assured1", "%01024d".format(block_count), "message-id:"+block_count+"\n")
         block_count += 1
       }
     } catch {
@@ -213,9 +214,11 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     // Send 5 more messages which do not fit in the queue, they will be
     // held in the producer connection's delivery session buffer..
     connect("1.1")
-    for (i <- 0 until (block_count + 5)) {
-      async_send("/queue/quota.assured2", "%01024d".format(i))
+    receipt_counter.set(0L)
+    for (i <- 0 until (block_count-1)) {
+      sync_send("/queue/quota.assured2", "%01024d".format(i), "message-id:"+i+"\n")
     }
+    async_send("/queue/quota.assured2", "%01024d".format(block_count-1))
 
     // Even though we disconnect, those 5 that did not fit should still
     // get delivered once the queue unblocks..
@@ -224,7 +227,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     // Lets make sure non of the messages were dropped.
     connect("1.1")
     subscribe("0", "/queue/quota.assured2")
-    for (i <- 0 until (block_count + 5)) {
+    for (i <- 0 until block_count) {
       assert_received("%01024d".format(i))
     }
 
@@ -242,8 +245,9 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     client.socket.setSoTimeout(1 * 1000)
     var block_count = 0
     try {
+      receipt_counter.set(0L)
       while (true) {
-        sync_send("/topic/quota.assured1", "%01024d".format(block_count))
+        sync_send("/topic/quota.assured1", "%01024d".format(block_count), "message-id:"+block_count+"\n")
         block_count += 1
       }
     } catch {
@@ -253,21 +257,23 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     close(consumer)
 
     connect("1.1", consumer)
-    subscribe("0", "/topic/quota.assured2", "client", headers = "credit:1,0\n", c = consumer)
+    subscribe("1", "/topic/quota.assured2", "client", headers = "credit:1,0\n", c = consumer)
 
     // Send 5 more messages which do not fit in the consumer buffer, they will be
     // held in the producer connection's delivery session buffer..
     connect("1.1")
-    for (i <- 0 until (block_count + 5)) {
-      async_send("/topic/quota.assured2", "%01024d".format(i))
+    receipt_counter.set(0L)
+    for (i <- 0 until (block_count-1)) {
+      sync_send("/topic/quota.assured2", "%01024d".format(i), "message-id:"+i+"\n")
     }
+    async_send("/topic/quota.assured2", "%01024d".format(block_count-1))
 
     // Even though we disconnect, those 5 that did not fit should still
     // get delivered once the queue unblocks..
     disconnect()
 
     // Lets make sure non of the messages were dropped.
-    for (i <- 0 until (block_count + 5)) {
+    for (i <- 0 until block_count) {
       assert_received("%01024d".format(i), c = consumer)(true)
     }
 
