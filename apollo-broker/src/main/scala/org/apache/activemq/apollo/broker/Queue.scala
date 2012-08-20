@@ -919,7 +919,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       consumer_stall_ms += cs
       load_stall_ms += ls
       if(!sub.browser) {
-        delivery_rate += sub.enqueue_size_per_interval
+        delivery_rate += sub.avg_enqueue_size_per_interval
       }
     }
 

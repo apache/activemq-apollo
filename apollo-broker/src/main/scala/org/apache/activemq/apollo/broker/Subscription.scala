@@ -21,6 +21,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
+
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -46,7 +47,20 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   var acquired_size = 0L
   def acquired_count = acquired.size()
 
-  var enqueue_size_per_interval = 0
+  var enqueue_size_per_interval = new CircularBuffer[Int](15)
+
+  def avg_enqueue_size_per_interval = {
+    var rc = 0
+    if( enqueue_size_per_interval.size > 0 ) {
+      for( x <- enqueue_size_per_interval ) {
+        rc += x
+      }
+      rc = rc/ enqueue_size_per_interval.size
+    }
+    rc
+  }
+
+
   var enqueue_size_at_last_interval = 0L
 
   var consumer_stall_ms = 0L
@@ -238,7 +252,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   }
 
   def adjust_prefetch_size = {
-    enqueue_size_per_interval = (session.enqueue_size_counter - enqueue_size_at_last_interval).toInt
+    enqueue_size_per_interval += (session.enqueue_size_counter - enqueue_size_at_last_interval).toInt
     enqueue_size_at_last_interval = session.enqueue_size_counter
 
     if(consumer_stall_start !=0) {
