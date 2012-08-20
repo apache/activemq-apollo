@@ -2,6 +2,8 @@ package org.apache.activemq.apollo.broker.store
 
 import java.io.{OutputStream, InputStream}
 import org.fusesource.hawtbuf.Buffer
+import org.apache.activemq.apollo.broker.DestinationAddress
+import collection.mutable.ListBuffer
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -90,8 +92,8 @@ object PBSupport {
     }
     pb
   }
-  val EMPTY_BUFFER_ARRAY = Array[Buffer]()
   implicit def from_pb(pb: QueueEntryPB.Getter):QueueEntryRecord = {
+    import collection.JavaConversions._
     val rc = new QueueEntryRecord
     rc.queue_key = pb.getQueueKey
     rc.entry_seq = pb.getQueueSeq
@@ -102,9 +104,9 @@ object PBSupport {
     rc.redeliveries = pb.getRedeliveries.toShort
     var senderList = pb.getSenderList
     if( senderList!=null ) {
-      rc.sender = senderList.toArray(new Array[Buffer](senderList.size()))
+      rc.sender = senderList.toList
     } else {
-      rc.sender = EMPTY_BUFFER_ARRAY
+      rc.sender = List()
     }
     rc
   }

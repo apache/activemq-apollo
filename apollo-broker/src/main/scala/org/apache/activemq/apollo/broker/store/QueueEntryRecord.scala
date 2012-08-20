@@ -21,6 +21,7 @@ package org.apache.activemq.apollo.broker.store
 
 import org.fusesource.hawtbuf.Buffer
 import java.util.concurrent.atomic.AtomicReference
+import collection.mutable.ListBuffer
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -35,6 +36,6 @@ class QueueEntryRecord {
   var size = 0
   var expiration = 0L
   var redeliveries:Short = 0
-  var sender:Array[Buffer] = _
+  var sender:List[Buffer] = _
 
 }

@@ -45,7 +45,7 @@ class DestinationParser extends PathParser {
     this
   }
 
-  def encode_destination(addresses: Array[_ <: DestinationAddress]): String = {
+  def encode_destination(addresses: Seq[_ <: DestinationAddress]): String = {
     if (addresses == null) {
       null
     } else {

@@ -85,11 +85,4 @@ package object util {
     rc.get
   }
 
-  def append[T](src:Array[T], value:T)(implicit m: scala.reflect.Manifest[T]) = {
-    val rc = new Array[T](src.length+1)
-    System.arraycopy(rc, 0, src, 0, src.length)
-    rc(src.length) = value
-    rc
-  }
-
 }

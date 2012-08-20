@@ -78,7 +78,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(qer:QueueEntryRecord):QueueEntry = {
-    val sender = qer.sender.map[DestinationAddress, Array[DestinationAddress]](x=> SimpleAddress(x.utf8().toString))
+    val sender = qer.sender.map(x=> SimpleAddress(x.utf8().toString))
     state = new Swapped(qer.message_key, qer.message_locator, qer.size, qer.expiration, qer.redeliveries, null, sender)
     this
   }
@@ -254,7 +254,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     def message_locator: AtomicReference[Object] = null
 
-    def sender: Array[DestinationAddress] = Delivery.NO_SENDER
+    def sender = List[DestinationAddress]()
 
     /**
      * Attempts to dispatch the current entry to the subscriptions position at the entry.
@@ -547,8 +547,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         if( _browser_copy==null ) {
           _browser_copy = delivery.copy
           // TODO: perhaps only avoid adding the address in the durable sub case..
-          if( _browser_copy.sender.length == 0 ) {
-            _browser_copy.sender = append(_browser_copy.sender, queue.address)
+          if( _browser_copy.sender == Nil ) {
+            _browser_copy.sender ::= queue.address
           }
         }
         _browser_copy
@@ -600,8 +600,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
                   val acquiredQueueEntry = sub.acquire(entry)
                   val acquiredDelivery = delivery.copy
-                  if( acquiredDelivery.sender.length == 0 ) {
-                    acquiredDelivery.sender = append(acquiredDelivery.sender, queue.address)
+                  if( acquiredDelivery.sender == Nil) {
+                    acquiredDelivery.sender ::= queue.address
                   }
 
                   acquiredDelivery.ack = (consumed, uow)=> {
@@ -653,7 +653,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription, override  val sender:Array[DestinationAddress]) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription, override  val sender:List[DestinationAddress]) extends EntryState {
 
     queue.individual_swapped_items += 1
 
