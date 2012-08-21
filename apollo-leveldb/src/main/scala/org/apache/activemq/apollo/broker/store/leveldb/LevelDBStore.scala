@@ -101,13 +101,19 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
           rc
         }
       })
-      poll_stats
+      schedule_reoccurring(1, TimeUnit.SECONDS) {
+        poll_stats
+      }
+      schedule_reoccurring(10, TimeUnit.SECONDS) {
+        write_executor {
+          client.gc
+        }
+      }
       write_executor {
         try {
           client.start()
           next_msg_key.set(client.getLastMessageKey + 1)
           next_queue_key.set(client.get_last_queue_key + 1)
-          poll_gc
           on_completed.run
         } catch {
           case e: Throwable =>
@@ -141,19 +147,6 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
   private def keep_polling = {
     val ss = service_state
     ss.is_starting || ss.is_started
-  }
-
-  def poll_gc: Unit = dispatch_queue.after(10, TimeUnit.SECONDS) {
-    if (keep_polling) {
-      gc {
-        poll_gc
-      }
-    }
-  }
-
-  def gc(onComplete: => Unit) = write_executor {
-    client.gc
-    onComplete
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -263,23 +256,12 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
   }
 
   def poll_stats: Unit = {
-    def displayStats = {
-      if (service_state.is_started) {
-
-        flush_latency = flush_latency_counter(true)
-        message_load_latency = message_load_latency_counter(true)
-        //        client.metric_journal_append = client.metric_journal_append_counter(true)
-        //        client.metric_index_update = client.metric_index_update_counter(true)
-        close_latency = close_latency_counter(true)
-        message_load_batch_size = message_load_batch_size_counter(true)
-
-        poll_stats
-      }
-    }
-
-    dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^ {
-      displayStats
-    })
+    flush_latency = flush_latency_counter(true)
+    message_load_latency = message_load_latency_counter(true)
+    //        client.metric_journal_append = client.metric_journal_append_counter(true)
+    //        client.metric_index_update = client.metric_index_update_counter(true)
+    close_latency = close_latency_counter(true)
+    message_load_batch_size = message_load_batch_size_counter(true)
   }
 
   def get_store_status(callback: (StoreStatusDTO) => Unit) = dispatch_queue {
