@@ -20,14 +20,12 @@ package org.apache.activemq.apollo.broker.store.leveldb
 import java.{lang => jl}
 import java.{util => ju}
 
-import org.fusesource.hawtbuf.proto.PBMessageFactory
-
+import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.store._
 import java.io._
 import java.util.concurrent.TimeUnit
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.locks.ReentrantReadWriteLock
-import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{TreeMap => ApolloTreeMap}
 import collection.immutable.TreeMap
 import org.fusesource.leveldbjni.internal.Util
@@ -39,8 +37,7 @@ import org.iq80.leveldb._
 import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
 import org.apache.activemq.apollo.broker.store.PBSupport
 import java.util.concurrent.atomic.AtomicReference
-import org.apache.activemq.apollo.broker.store.leveldb.HelperTrait.encode_key
-import org.fusesource.hawtbuf.{DataByteArrayInputStream, AsciiBuffer, Buffer, AbstractVarIntSupport}
+import org.fusesource.hawtbuf.{DataByteArrayInputStream, Buffer}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -232,7 +229,8 @@ class LevelDBClient(store: LevelDBStore) {
     import OptionSupport._
     directory.mkdirs()
 
-    val factory_names = Option(config.index_factory).getOrElse("org.fusesource.leveldbjni.JniDBFactory, org.iq80.leveldb.impl.Iq80DBFactory")
+    val factory_names = Option(config.index_factory).getOrElse("org.iq80.leveldb.impl.Iq80DBFactory")
+//    val factory_names = Option(config.index_factory).getOrElse("org.fusesource.leveldbjni.JniDBFactory, org.iq80.leveldb.impl.Iq80DBFactory")
     factory = factory_names.split("""(,|\s)+""").map(_.trim()).flatMap {
       name =>
         try {
@@ -469,6 +467,13 @@ class LevelDBClient(store: LevelDBStore) {
         if (showing_progress) {
           System.out.println("Replaying recovery log: done. %d operations recovered in %s".format(replay_operations, log_replay_duration.toDouble / TimeUnit.SECONDS.toNanos(1)));
         }
+
+        // Access the last queue just to see if we need to compact the index (checks for slow access).
+        for( queue <- list_queues.lastOption ) {
+          listQueueEntryGroups(queue, 100000)
+        }
+        // delete obsolete files..
+        gc
 
       } catch {
         case e: Throwable =>
@@ -1135,7 +1140,11 @@ class LevelDBClient(store: LevelDBStore) {
     // Perhaps we should snapshot_index if the current snapshot is old.
     //
     import collection.JavaConversions._
-    last_index_snapshot_pos
+
+    // Lets compact the leveldb index if it looks like we need to.
+    if( index.compact_needed ) {
+      index.compact
+    }
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 
     // We don't want to delete any journals that the index has not snapshot'ed or

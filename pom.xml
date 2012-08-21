@@ -104,7 +104,7 @@
 
     <leveldb-api-version>0.2</leveldb-api-version>
     <leveldb-version>0.2</leveldb-version>
-    <leveldbjni-version>1.2</leveldbjni-version>
+    <leveldbjni-version>99-master-SNAPSHOT</leveldbjni-version>
 
     <jasypt-version>1.6</jasypt-version>
 

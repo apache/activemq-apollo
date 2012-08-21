@@ -20,6 +20,7 @@ package org.apache.activemq.apollo.broker.store.leveldb
 import org.fusesource.hawtbuf._
 import org.iq80.leveldb._
 import java.io.DataOutput
+import org.fusesource.leveldbjni.internal.JniDB
 
 object HelperTrait {
 
@@ -127,7 +128,7 @@ object HelperTrait {
       try {
 
         val rc = Some(func(updates))
-        db.write(updates, wo)
+        might_trigger_compaction(db.write(updates, wo))
         return rc.get
       } finally {
         updates.close();
@@ -155,9 +156,38 @@ object HelperTrait {
       }
     }
 
+    def compact = {
+      compact_needed = false
+      db match {
+        case db:JniDB =>
+          db.compactRange(null, null)
+//        case db:DbImpl =>
+//          val start = new Slice(Array[Byte]('a'.toByte))
+//          val end = new Slice(Array[Byte]('z'.toByte))
+//          db.compactRange(2, start, end)
+        case _ =>
+      }
+    }
+
+    private def might_trigger_compaction[T](func: => T): T = {
+      val start = System.nanoTime()
+      try {
+        func
+      } finally {
+        val duration = System.nanoTime() - start
+        // If it takes longer than 50 ms..
+        if( duration > 1000000*50 ) {
+          compact_needed = true
+        }
+      }
+    }
+
+    @volatile
+    var compact_needed = false
+
     def cursor_keys_prefixed(prefix: Array[Byte], ro: ReadOptions = new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
       val iterator = db.iterator(ro)
-      iterator.seek(prefix);
+      might_trigger_compaction(iterator.seek(prefix))
       try {
         def check(key: Array[Byte]) = {
           key.startsWith(prefix) && func(key)
@@ -172,7 +202,7 @@ object HelperTrait {
 
     def cursor_prefixed(prefix: Array[Byte], ro: ReadOptions = new ReadOptions)(func: (Array[Byte], Array[Byte]) => Boolean): Unit = {
       val iterator = db.iterator(ro)
-      iterator.seek(prefix);
+      might_trigger_compaction( iterator.seek(prefix) )
       try {
         def check(key: Array[Byte]) = {
           key.startsWith(prefix) && func(key, iterator.peekNext.getValue)
@@ -191,7 +221,7 @@ object HelperTrait {
 
     def cursor_range_keys(start_included: Array[Byte], end_excluded: Array[Byte], ro: ReadOptions = new ReadOptions)(func: Array[Byte] => Boolean): Unit = {
       val iterator = db.iterator(ro)
-      iterator.seek(start_included);
+      might_trigger_compaction(iterator.seek(start_included))
       try {
         def check(key: Array[Byte]) = {
           if (compare(key, end_excluded) < 0) {
@@ -210,7 +240,7 @@ object HelperTrait {
 
     def cursor_range(start_included: Array[Byte], end_excluded: Array[Byte], ro: ReadOptions = new ReadOptions)(func: (Array[Byte], Array[Byte]) => Boolean): Unit = {
       val iterator = db.iterator(ro)
-      iterator.seek(start_included);
+      might_trigger_compaction(iterator.seek(start_included))
       try {
         def check(key: Array[Byte]) = {
           (compare(key, end_excluded) < 0) && func(key, iterator.peekNext.getValue)
@@ -243,7 +273,7 @@ object HelperTrait {
         val iterator = db.iterator(ro)
         try {
 
-          iterator.seek(last);
+          might_trigger_compaction(iterator.seek(last))
           if (iterator.hasPrev) {
             iterator.prev()
           } else {
