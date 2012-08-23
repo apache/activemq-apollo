@@ -73,6 +73,16 @@
       <artifactId>leveldbjni-linux64</artifactId>
       <version>${leveldbjni-version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.fusesource.leveldbjni</groupId>
+      <artifactId>leveldbjni-win32</artifactId>
+      <version>${leveldbjni-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.fusesource.leveldbjni</groupId>
+      <artifactId>leveldbjni-win64</artifactId>
+      <version>${leveldbjni-version}</version>
+    </dependency>
 
     <!-- For Optional Snappy Compression -->
     <dependency>
