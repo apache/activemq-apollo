@@ -95,70 +95,68 @@ object LevelDBClient extends Log {
   }
 
   val on_windows = System.getProperty("os.name").toLowerCase().startsWith("windows")
-  var link_strategy = 0
+  var link = (source:File, target:File) => jniLinkStrategy(source, target)
 
-  def link(source: File, target: File): Unit = {
-    link_strategy match {
-      case 0 =>
-        // We first try to link via a native system call. Fails if
-        // we cannot load the JNI module.
-        try {
-          Util.link(source, target)
-        } catch {
-          case e: IOException => throw e
-          case e: Throwable =>
-            // Fallback.. to a slower impl..
-            debug("Native link system call not available")
-            link_strategy = 2
-            link(source, target)
-        }
-
-      // TODO: consider implementing a case which does the native system call using JNA
-      case 2 =>
-        // Next try JNA (might not be in classpath)
-        try {
-          IOHelper.hardlink(source, target)
-        } catch {
-          case e: IOException => throw e
-          case e: Throwable =>
-            // Fallback.. to a slower impl..
-            debug("JNA based hard link system call not available")
-            link_strategy = 5
-            link(source, target)
-        }
-
-      case 5 =>
-        // Next we try to do the link by executing an
-        // operating system shell command
-        try {
-          if (on_windows) {
-            system("fsutil", "hardlink", "create", target.getCanonicalPath, source.getCanonicalPath) match {
-              case (0, _, _) => // Success
-              case (_, out, err) =>
-                // TODO: we might want to look at the out/err to see why it failed
-                // to avoid falling back to the slower strategy.
-                debug("fsutil OS command not available either")
-                link_strategy = 10
-                link(source, target)
-            }
-          } else {
-            system("ln", source.getCanonicalPath, target.getCanonicalPath) match {
-              case (0, _, _) => // Success
-              case (_, out, err) => None
-              // TODO: we might want to look at the out/err to see why it failed
-              // to avoid falling back to the slower strategy.
-              debug("ln OS command not available either")
-              link_strategy = 10
-              link(source, target)
-            }
-          }
-        } catch {
-          case e: Throwable =>
-        }
-      case _ =>
-        // this final strategy is slow but sure to work.
-        source.copy_to(target)
+  def jniLinkStrategy(source: File, target: File) {
+    // We first try to link via a native system call.
+    try {
+      Util.link(source, target)
+    } catch {
+      case e: IOException => throw e
+      case e: Throwable =>
+        // Fallback.. to a slower impl..
+        debug("Native link system call not available")
+        link = (source:File, target:File) => jnaLinkStrategy(source, target)
+        link(source, target)
     }
+  }
+
+  def jnaLinkStrategy(source: File, target: File) {
+    // Next try JNA (might not be in classpath)
+    try {
+      IOHelper.hardlink(source, target)
+    } catch {
+      case e: IOException => throw e
+      case e: Throwable =>
+        // Fallback.. to a slower impl..
+        debug("JNA based hard link system call not available")
+        link = if( on_windows ) {
+          (source:File, target:File) => windowsCliLinkStrategy(source, target)
+        } else {
+          (source:File, target:File) => unixCliLinkStrategy(source, target)
+        }
+        link(source, target)
+    }
+  }
+
+  def unixCliLinkStrategy(source: File, target: File) {
+    system("ln", source.getCanonicalPath, target.getCanonicalPath) match {
+      case (0, _, _) => // Success
+      case (_, out, err) => None
+      // TODO: we might want to look at the out/err to see why it failed
+      // to avoid falling back to the slower strategy.
+      debug("ln OS command not available either")
+      link = (source:File, target:File) => copyLinkStrategy(source, target)
+      link(source, target)
+    }
+  }
+
+  def windowsCliLinkStrategy(source: File, target: File) {
+    // Next try JNA (might not be in classpath)
+    system("fsutil", "hardlink", "create", target.getCanonicalPath, source.getCanonicalPath) match {
+      case (0, _, _) => // Success
+      case (_, out, err) =>
+        // TODO: we might want to look at the out/err to see why it failed
+        // to avoid falling back to the slower strategy.
+        debug("fsutil OS command not available either")
+        link = (source:File, target:File) => copyLinkStrategy(source, target)
+        link(source, target)
+    }
+  }
+
+  def copyLinkStrategy(source: File, target: File) {
+    // this final strategy is slow but sure to work.
+    source.copy_to(target)
   }
 
 }
