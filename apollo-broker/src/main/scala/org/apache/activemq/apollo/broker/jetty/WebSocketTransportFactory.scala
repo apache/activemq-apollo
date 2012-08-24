@@ -233,14 +233,12 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def setProtocolCodec(protocolCodec: ProtocolCodec) = {
       this.protocolCodec = protocolCodec
       if( this.protocolCodec!=null ) {
-        this.protocolCodec.setReadableByteChannel(this)
-        this.protocolCodec.setWritableByteChannel(this)
-        this.protocolCodec match {
-          case protocolCodec:TransportAware => protocolCodec.setTransport(this);
-          case _ =>
-        }
+        this.protocolCodec.setTransport(this)
       }
     }
+
+    def getReadChannel: ReadableByteChannel = this
+    def getWriteChannel: WritableByteChannel = this
 
     def dispatch_queue = dispatchQueue
 
@@ -343,6 +341,11 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       }
     }
 
+    def drainInbound = {
+      inbound_dispatch_queue {
+        drain_inbound
+      }
+    }
 
     def close() {}
 

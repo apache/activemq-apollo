@@ -164,7 +164,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
     def onAccept(transport: Transport): Unit = {
       if( protocol!=null ) {
-        transport.setProtocolCodec(protocol.createProtocolCodec)
+        transport.setProtocolCodec(protocol.createProtocolCodec(AcceptingConnector.this))
       }
 
       accepted.incrementAndGet

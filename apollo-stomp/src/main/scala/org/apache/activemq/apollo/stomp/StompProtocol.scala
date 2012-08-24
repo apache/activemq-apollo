@@ -34,7 +34,7 @@ class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
   def id = PROTOCOL
 
-  def createProtocolCodec() = new StompCodec();
+  def createProtocolCodec(connector:Connector) = new StompCodec();
 
   def isIdentifiable() = true
 

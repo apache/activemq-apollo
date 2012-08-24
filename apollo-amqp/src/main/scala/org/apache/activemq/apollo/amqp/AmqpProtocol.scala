@@ -35,7 +35,7 @@ import org.fusesource.amqp.codec.AMQPProtocolCodec
 class AmqpProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   def id = PROTOCOL
 
-  def createProtocolCodec() = new AMQPProtocolCodec();
+  def createProtocolCodec(connector:Connector) = new AMQPProtocolCodec();
 
   def isIdentifiable() = true
 

@@ -145,7 +145,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     super.set_connection(connection)
     import collection.JavaConversions._
 
-    codec = connection.transport.getProtocolCodec.asInstanceOf[OpenwireCodec]
+    codec = connection.protocol_codec(classOf[OpenwireCodec])
     var connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find( _.isInstanceOf[OpenwireDTO]).map(_.asInstanceOf[OpenwireDTO]).getOrElse(new OpenwireDTO)
 
@@ -384,7 +384,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       die("Remote wire format (%s) is lower the minimum version required (%s)".format(info.getVersion(), minimum_protocol_version))
     }
 
-    wire_format = connection.transport.getProtocolCodec.asInstanceOf[OpenwireCodec].format
+    wire_format = connection.protocol_codec(classOf[OpenwireCodec]).format
     wire_format.renegotiateWireFormat(info, preferred_wireformat_settings)
 
     val inactive_time = preferred_wireformat_settings.getMaxInactivityDuration().min(info.getMaxInactivityDuration())

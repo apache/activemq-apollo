@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.broker.protocol
 
-import org.fusesource.hawtdispatch.transport.ProtocolCodec
+import org.fusesource.hawtdispatch.transport.{Transport, ProtocolCodec}
 import java.nio.ByteBuffer
 import org.fusesource.hawtdispatch._
 import java.nio.channels.{DatagramChannel, WritableByteChannel, ReadableByteChannel}
@@ -38,8 +38,10 @@ class UdpProtocolCodec extends ProtocolCodec {
   def protocol = "udp"
 
   var channel: DatagramChannel = null
-  def setReadableByteChannel(channel: ReadableByteChannel) = {
-    this.channel = channel.asInstanceOf[DatagramChannel]
+
+
+  def setTransport(transport: Transport) {
+    this.channel = transport.getReadChannel.asInstanceOf[DatagramChannel]
   }
 
   var read_counter = 0L
@@ -68,7 +70,6 @@ class UdpProtocolCodec extends ProtocolCodec {
   def unread(buffer: Array[Byte]) = throw new UnsupportedOperationException()
 
   // This protocol only supports receiving..
-  def setWritableByteChannel(channel: WritableByteChannel) = {}
   def write(value: AnyRef) = ProtocolCodec.BufferState.FULL
   def full: Boolean = true
   def flush = ProtocolCodec.BufferState.FULL
@@ -285,7 +286,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
 class UdpProtocol extends BaseProtocol {
 
   def id = "udp"
-  def createProtocolCodec:ProtocolCodec = new UdpProtocolCodec()
+  def createProtocolCodec(connector:Connector):ProtocolCodec = new UdpProtocolCodec()
 
   def createProtocolHandler:ProtocolHandler = new UdpProtocolHandler {
     type ConfigTypeDTO = UdpDTO

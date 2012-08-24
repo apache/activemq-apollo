@@ -16,3 +16,4 @@
 ## ---------------------------------------------------------------------------
 org.apache.activemq.apollo.broker.protocol.AnyProtocol
 org.apache.activemq.apollo.broker.protocol.UdpProtocol
+org.apache.activemq.apollo.broker.protocol.SSLProtocol

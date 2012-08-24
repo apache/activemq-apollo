@@ -17,17 +17,16 @@
 package org.apache.activemq.apollo.broker.protocol
 
 import org.fusesource.hawtbuf.Buffer
-import org.apache.activemq.apollo.broker.store.MessageRecord
-import java.nio.channels.{WritableByteChannel, ReadableByteChannel}
+import java.nio.channels.ReadableByteChannel
 import java.nio.ByteBuffer
 import java.io.IOException
 import java.lang.String
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.OptionSupport
-import org.apache.activemq.apollo.broker.{Message, ProtocolException}
+import org.apache.activemq.apollo.broker.{Connector, ProtocolException}
 import org.apache.activemq.apollo.dto.{DetectDTO, AcceptingConnectorDTO}
-import transport.{Transport, TransportAware, ProtocolCodec}
+import org.fusesource.hawtdispatch.transport.{WrappingProtocolCodec, Transport, ProtocolCodec}
 
 /**
  * <p>
@@ -35,18 +34,37 @@ import transport.{Transport, TransportAware, ProtocolCodec}
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class AnyProtocol() extends BaseProtocol {
+object AnyProtocol extends BaseProtocol {
 
   def id = "any"
 
-  def createProtocolCodec = new AnyProtocolCodec()
+  def createProtocolCodec(connector:Connector) = new AnyProtocolCodec(connector)
 
   def createProtocolHandler = new AnyProtocolHandler
+
+  def change_protocol_codec(transport:Transport, codec:ProtocolCodec) = {
+    var current = transport.getProtocolCodec
+    var wrapper:WrappingProtocolCodec = null
+    while( current!=null ) {
+      current = current match {
+        case current:WrappingProtocolCodec =>
+          wrapper = current
+          current.getNext
+        case _ => null
+      }
+    }
+    if( wrapper!=null ) {
+      wrapper.setNext(codec)
+    } else {
+      transport.setProtocolCodec(codec)
+    }
+  }
+
 }
 
 case class ProtocolDetected(id:String, codec:ProtocolCodec)
 
-class AnyProtocolCodec() extends ProtocolCodec with TransportAware {
+class AnyProtocolCodec(val connector:Connector) extends ProtocolCodec {
 
   var protocols =  ProtocolFactory.protocols.filter(_.isIdentifiable)
 
@@ -54,15 +72,17 @@ class AnyProtocolCodec() extends ProtocolCodec with TransportAware {
     throw new IllegalArgumentException("No protocol configured for identification.")
   }
   val buffer = ByteBuffer.allocate(protocols.foldLeft(0) {(a, b) => a.max(b.maxIdentificaionLength)})
-  var channel: ReadableByteChannel = null
-
-  def setReadableByteChannel(channel: ReadableByteChannel) = {this.channel = channel}
+  def channel = transport.getReadChannel
 
   var transport:Transport = _
-  def setTransport(t: Transport) = transport = t
+  def setTransport(t: Transport) =  transport = t
+
+  var next:ProtocolCodec = _
+
+
 
   def read: AnyRef = {
-    if (channel == null) {
+    if (next != null) {
       throw new IllegalStateException
     }
 
@@ -70,14 +90,13 @@ class AnyProtocolCodec() extends ProtocolCodec with TransportAware {
     val buff = new Buffer(buffer.array(), 0, buffer.position())
     protocols.foreach {protocol =>
       if (protocol.matchesIdentification(buff)) {
-        val protocolCodec = protocol.createProtocolCodec()
-        transport.setProtocolCodec(protocolCodec)
-        protocolCodec.unread(buff.toByteArray)
-        return ProtocolDetected(protocol.id, protocolCodec)
+        next = protocol.createProtocolCodec(connector)
+        AnyProtocol.change_protocol_codec(transport, next)
+        next.unread(buff.toByteArray)
+        return ProtocolDetected(protocol.id, next)
       }
     }
     if (buffer.position() == buffer.capacity) {
-      channel = null
       throw new IOException("Could not identify the protocol.")
     }
     return null
@@ -86,8 +105,6 @@ class AnyProtocolCodec() extends ProtocolCodec with TransportAware {
   def getReadCounter = buffer.position()
 
   def unread(buffer: Array[Byte]) = throw new UnsupportedOperationException()
-
-  def setWritableByteChannel(channel: WritableByteChannel) = {}
 
   def write(value: Any) = ProtocolCodec.BufferState.FULL
 
@@ -150,7 +167,7 @@ class AnyProtocolHandler extends ProtocolHandler {
     import OptionSupport._
     import collection.JavaConversions._
 
-    var codec = connection.transport.getProtocolCodec().asInstanceOf[AnyProtocolCodec]
+    var codec = connection.protocol_codec(classOf[AnyProtocolCodec])
 
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.flatMap{ _ match {

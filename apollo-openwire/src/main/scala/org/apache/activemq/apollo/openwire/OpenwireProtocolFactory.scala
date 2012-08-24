@@ -18,7 +18,7 @@
 package org.apache.activemq.apollo.openwire
 
 import org.apache.activemq.apollo.broker.store.MessageRecord
-import org.apache.activemq.apollo.broker.Message
+import org.apache.activemq.apollo.broker.{Connector, Message}
 import OpenwireConstants._
 import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, MessageCodec, ProtocolCodecFactory, Protocol}
 import org.fusesource.hawtbuf.Buffer
@@ -68,7 +68,7 @@ class OpenwireProtocolCodecFactory extends ProtocolCodecFactory.Provider {
 
   def id = PROTOCOL
 
-  def createProtocolCodec() = {
+  def createProtocolCodec(connector:Connector) = {
     OpenwireProtocol.log_exerimental_warning
     new OpenwireCodec();
   }

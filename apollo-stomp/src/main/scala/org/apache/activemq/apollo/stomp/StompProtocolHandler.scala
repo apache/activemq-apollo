@@ -663,7 +663,7 @@ class StompProtocolHandler extends ProtocolHandler {
     super.set_connection(connection)
     import collection.JavaConversions._
 
-    codec = connection.transport.getProtocolCodec.asInstanceOf[StompCodec]
+    codec = connection.protocol_codec(classOf[StompCodec])
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
@@ -949,7 +949,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     if( protocol_version != V1_0 ) {
       // disable trimming...
-      connection.transport.getProtocolCodec.asInstanceOf[StompCodec].trim = false
+      codec.trim = false
     }
 
     val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEART_BEAT)

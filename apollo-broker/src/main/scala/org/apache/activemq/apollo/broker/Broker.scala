@@ -41,6 +41,7 @@ import org.apache.activemq.apollo.filter.{Filterable, XPathExpression, XalanXPat
 import org.xml.sax.InputSource
 import java.util
 import javax.management.openmbean.CompositeData
+import javax.net.ssl.SSLContext
 
 /**
  * <p>
@@ -697,5 +698,15 @@ class Broker() extends BaseService with SecuredResource {
   }
 
   def first_accepting_connector = connectors.values.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])
+
+  def ssl_context(protocol:String) = {
+    val rc = SSLContext.getInstance(protocol);
+    if( key_storage!=null ) {
+      rc.init(key_storage.create_key_managers, key_storage.create_trust_managers, null);
+    } else {
+      rc.init(null, null, null);
+    }
+    rc
+  }
 
 }

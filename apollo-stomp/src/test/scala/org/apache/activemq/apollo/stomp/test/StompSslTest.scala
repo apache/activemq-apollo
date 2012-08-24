@@ -36,4 +36,8 @@ class StompSslTest extends StompTestSupport with BrokerParallelTestExecution {
   test("Connect over SSL") {
     connect("1.1")
   }
+
+  test("Detect SSL on TCP port") {
+    connect("1.1", connector="tcp")
+  }
 }

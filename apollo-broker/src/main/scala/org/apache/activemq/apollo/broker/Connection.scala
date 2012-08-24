@@ -21,7 +21,7 @@ import _root_.java.lang.{String}
 import org.fusesource.hawtdispatch._
 import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.filter.BooleanExpression
-import org.fusesource.hawtdispatch.transport.{TransportListener, DefaultTransportListener, Transport}
+import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.dto.{DestinationDTO, ConnectionStatusDTO}
 import org.apache.activemq.apollo.util.{Dispatched, Log, BaseService}
 
@@ -166,6 +166,20 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
       result.last_write_size = wf.getLastWriteSize
     }
     result
+  }
+
+  def protocol_codec[T<:ProtocolCodec](clazz:Class[T]):T = {
+    var rc = transport.getProtocolCodec
+    while( rc !=null ) {
+      if( clazz.isInstance(rc) ) {
+        return clazz.cast(rc);
+      }
+      rc = rc match {
+        case rc:WrappingProtocolCodec => rc.getNext
+        case _ => null
+      }
+    }
+    return null.asInstanceOf[T]
   }
 }
 

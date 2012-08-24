@@ -24,5 +24,6 @@
 
     <key_storage file="${basedir}/src/test/resources/apollo.ks" password="password" key_password="password"/>
     <connector id="ssl" bind="ssl://0.0.0.0:0" />
+    <connector id="tcp" bind="tcp://0.0.0.0:0" />
 
 </broker>
