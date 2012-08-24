@@ -87,6 +87,18 @@ public class Apollo {
            }
        }
 
+       String tempdir = System.getProperty("apollo.tempdir");
+       if( tempdir == null ) {
+           String base = System.getProperty("apollo.base");
+           if( base !=null ) {
+               tempdir = new File(base, "tmp").getCanonicalPath();
+           }
+       }
+
+       if( tempdir != null ) {
+           System.setProperty("java.io.tmpdir", tempdir);
+       }
+
        // Now setup our classloader..
        URLClassLoader loader = new URLClassLoader(urls.toArray(new URL[urls.size()]));
        Class<?> clazz = loader.loadClass(mainClass);
