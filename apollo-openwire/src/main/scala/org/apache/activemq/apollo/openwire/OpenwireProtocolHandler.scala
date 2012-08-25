@@ -431,12 +431,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     if (connection_context==null) {
       new ConnectionContext(info).attach
 
-      connection.transport match {
-        case t:SecureTransport=>
-          security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
-        case _ =>
-      }
-
+      security_context.certificates = connection.certificates
       security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
       security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
       security_context.session_id = Some(info.getConnectionId.toString)

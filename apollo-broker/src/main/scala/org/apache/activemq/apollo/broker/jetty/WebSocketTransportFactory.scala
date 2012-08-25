@@ -196,7 +196,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
    *
    */
   case class WebSocketTransport(server: WsTransportServer, request: HttpServletRequest, protocol: String) 
-          extends BaseService with WebSocket.OnTextMessage with WebSocket.OnBinaryMessage with SecureTransport with ScatteringByteChannel with GatheringByteChannel {
+          extends BaseService with WebSocket.OnTextMessage with WebSocket.OnBinaryMessage with Transport with SecuredSession with ScatteringByteChannel with GatheringByteChannel {
 
     /////////////////////////////////////////////////////////////////////////
     // Transport interface methods.

@@ -50,6 +50,17 @@ trait Connector extends BaseService with SecuredResource {
   def resource_kind = SecuredResource.ConnectorKind
   def update_buffer_settings = {}
 
+  def protocol_codec_config[T<:ProtocolDTO](clazz:Class[T]):Option[T] = {
+    import collection.JavaConversions._
+    val connector_config = config.asInstanceOf[AcceptingConnectorDTO]
+    for( x <- connector_config.protocols ) {
+      if( clazz.isInstance(x) ) {
+        return Some(clazz.cast(x))
+      }
+    }
+    return None
+  }
+
 }
 
 trait ConnectorFactory {

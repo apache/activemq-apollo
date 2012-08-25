@@ -22,8 +22,10 @@ import org.fusesource.hawtdispatch._
 import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.filter.BooleanExpression
 import org.fusesource.hawtdispatch.transport._
-import org.apache.activemq.apollo.dto.{DestinationDTO, ConnectionStatusDTO}
+import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.util.{Dispatched, Log, BaseService}
+import scala.Some
+import java.security.cert.X509Certificate
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -168,7 +170,7 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
     result
   }
 
-  def protocol_codec[T<:ProtocolCodec](clazz:Class[T]):T = {
+  def protocol_codec[T<:AnyRef](clazz:Class[T]):T = {
     var rc = transport.getProtocolCodec
     while( rc !=null ) {
       if( clazz.isInstance(rc) ) {
@@ -180,6 +182,18 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
       }
     }
     return null.asInstanceOf[T]
+  }
+
+  def certificates = {
+    (transport match {
+      case ttransport:SecuredSession=>
+        Option(ttransport.getPeerX509Certificates)
+      case _ =>
+        protocol_codec(classOf[SecuredSession]) match {
+          case null => None
+          case protocol_codec=> Option(protocol_codec.getPeerX509Certificates)
+        }
+    }).getOrElse(Array[X509Certificate]())
   }
 }
 

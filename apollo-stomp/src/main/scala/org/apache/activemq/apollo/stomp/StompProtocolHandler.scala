@@ -36,7 +36,7 @@ import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.dto._
-import org.fusesource.hawtdispatch.transport.{SecureTransport, HeartBeatMonitor, SslTransport}
+import org.fusesource.hawtdispatch.transport.{SecuredSession, HeartBeatMonitor, SslTransport}
 import path.{LiteralPart, Path, PathParser}
 
 
@@ -925,12 +925,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def on_stomp_connect(headers:HeaderMap):Unit = {
 
-    connection.transport match {
-      case t:SecureTransport=>
-        security_context.certificates = Option(t.getPeerX509Certificates).getOrElse(Array[X509Certificate]())
-      case _ =>
-    }
-
+    security_context.certificates = connection.certificates
     security_context.local_address = connection.transport.getLocalAddress
     security_context.remote_address = connection.transport.getRemoteAddress
     security_context.user = get(headers, LOGIN).map(decode_header _).getOrElse(null)

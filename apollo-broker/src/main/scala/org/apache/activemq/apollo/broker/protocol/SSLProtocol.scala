@@ -18,6 +18,8 @@ package org.apache.activemq.apollo.broker.protocol
 import org.fusesource.hawtdispatch.transport.SSLProtocolCodec
 import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.Connector
+import org.apache.activemq.apollo.dto.SslDTO
+import org.fusesource.hawtdispatch.transport.SSLProtocolCodec.ClientAuth
 
 /**
  */
@@ -26,6 +28,7 @@ class SSLProtocol extends Protocol {
 
   override def isIdentifiable = true
   override def maxIdentificaionLength = 5
+
   override def matchesIdentification(buffer: Buffer):Boolean = {
     if( buffer.length >= 5 ) {
 
@@ -52,9 +55,22 @@ class SSLProtocol extends Protocol {
   }
 
   def createProtocolCodec(connector:Connector) = {
+    val config = connector.protocol_codec_config(classOf[SslDTO]).getOrElse(new SslDTO)
+    val client_auth =  if( config.client_auth!=null ) {
+      ClientAuth.valueOf(config.client_auth.toUpperCase());
+    } else {
+      ClientAuth.WANT
+    }
+
+    val version = if( config.version!=null ) {
+      config.version;
+    } else {
+      "SSL"
+    }
+
     val rc = new SSLProtocolCodec()
-    rc.setSSLContext(connector.broker.ssl_context("SSL"))
-    rc.server(SSLProtocolCodec.ClientAuth.NONE)
+    rc.setSSLContext(connector.broker.ssl_context(version))
+    rc.server(client_auth);
     rc.setNext(new AnyProtocolCodec(connector))
     rc
   }
