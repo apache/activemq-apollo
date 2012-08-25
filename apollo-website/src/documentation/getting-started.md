@@ -42,6 +42,14 @@ jar -xvf apache-apollo-${project_version}-windows-distro.zip
 The distribution will be extracted into a directory called, `apache-apollo-${project_version}`.
 The rest of dis document will refer the full path to this directory as `${APOLLO_HOME}`.
 
+### Optional Windows Prerequisites
+
+If your on Windows Vista, Server 2008, or later you should install the MS VC++ 2010 Redistributable
+package so that Apollo can use the JNI implementation of LevelDB.  
+
+* If your running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
+* If your running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
+
 ### Creating a Broker Instance
 
 A broker instance is the directory containing all the configuration and runtime

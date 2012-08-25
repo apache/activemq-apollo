@@ -567,9 +567,7 @@ implementations currently supported are:
 
 * [LevelDB Store](#LevelDB_Store) : is a file based message store implemented using the 
   [Google's LevelDB](http://en.wikipedia.org/wiki/LevelDB) library to maintain indexes into 
-  log files holding the messages.  This the default implementation used.  It uses a JNI
-  driver on Linux, OS X, and Windows but falls back to an expermental pure Java driver
-  on other platforms.
+  log files holding the messages.  This the default implementation used.
 * [BDB Store](#BDB_Store) : is a file based message store implemented using the 
   [Sleepycat BDB](http://en.wikipedia.org/wiki/Berkeley_DB) library.
   This implemenation should work equally well on all platforms since it's a pure
@@ -628,6 +626,17 @@ A `leveldb_store` element may be configured with the following attributes:
    Can be `snappy` or `none`. The value defaults to `snappy`.
 * `log_compression` : The type of compression to apply to the log records.  
    Can be `snappy` or `none`. The value defaults to `snappy`.
+
+### Support Platforms
+
+The LevelDB store uses a JNI driver on Linux, OS X, and supported Windows versions, 
+but falls back to an experimental pure Java driver on other platforms.
+  
+The supported Windows versions are Vista, Server 2008 and later that have the 
+MS VC++ 2010 Redistributable package installed:
+
+* If your running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
+* If your running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
 
 ###### BDB Store
 
