@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 package org.apache.activemq.apollo.broker.protocol
-import org.fusesource.hawtdispatch.transport.SSLProtocolCodec
+import org.fusesource.hawtdispatch.transport.SslProtocolCodec
 import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.Connector
 import org.apache.activemq.apollo.dto.SslDTO
-import org.fusesource.hawtdispatch.transport.SSLProtocolCodec.ClientAuth
+import org.fusesource.hawtdispatch.transport.SslProtocolCodec.ClientAuth
 
 /**
  */
-class SSLProtocol extends Protocol {
+class SslProtocol extends Protocol {
   def id(): String = "ssl"
 
   override def isIdentifiable = true
@@ -68,7 +68,7 @@ class SSLProtocol extends Protocol {
       "SSL"
     }
 
-    val rc = new SSLProtocolCodec()
+    val rc = new SslProtocolCodec()
     rc.setSSLContext(connector.broker.ssl_context(version))
     rc.server(client_auth);
     rc.setNext(new AnyProtocolCodec(connector))
