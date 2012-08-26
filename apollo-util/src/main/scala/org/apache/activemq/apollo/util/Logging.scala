@@ -25,6 +25,7 @@ import collection.mutable.ListBuffer
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object Log {
+  val stack_trace_log = LoggerFactory.getLogger("stacktrace")
 
   def apply(clazz:Class[_]):Log = apply(clazz.getName.stripSuffix("$"))
 
@@ -47,25 +48,6 @@ trait Log {
   import Log._
   val log = LoggerFactory.getLogger(getClass.getName.stripSuffix("$"))
 
-  private def with_throwable(e:Throwable)(func: =>Unit) = {
-    if( e!=null ) {
-      val stack_ref = if( log.isDebugEnabled ) {
-        val id = next_exception_id
-        MDC.put("stackref", id.toString);
-        Some(id)
-      } else {
-        None
-      }
-      func
-      stack_ref.foreach { id=>
-        log.debug(e.toString, e)
-        MDC.remove("stackref")
-      }
-    } else {
-      func
-    }
-  }
-
   private def format(message:String, args:Seq[Any]) = {
     if( args.isEmpty ) {
       message
@@ -81,18 +63,24 @@ trait Log {
   }
 
   def error(e: Throwable, m: => String, args:Any*): Unit = {
-    with_throwable(e) {
-      if( log.isErrorEnabled ) {
+    if( log.isErrorEnabled ) {
+      if( e!=null ) {
+        MDC.put("stackref", next_exception_id.toString);
+        log.error(format(m, args.toSeq))
+        stack_trace_log.error(e.toString, e)
+        MDC.remove("stackref")
+      } else {
         log.error(format(m, args.toSeq))
       }
     }
   }
 
   def error(e: Throwable): Unit = {
-    with_throwable(e) {
-      if( log.isErrorEnabled ) {
-        log.error(e.getMessage)
-      }
+    if( e!=null && log.isErrorEnabled ) {
+      MDC.put("stackref", next_exception_id.toString);
+      log.error(e.toString)
+      stack_trace_log.error(e.toString, e)
+      MDC.remove("stackref")
     }
   }
 
@@ -103,18 +91,24 @@ trait Log {
   }
 
   def warn(e: Throwable, m: => String, args:Any*): Unit = {
-    with_throwable(e) {
-      if( log.isWarnEnabled ) {
+    if( log.isWarnEnabled ) {
+      if( e!=null ) {
+        MDC.put("stackref", next_exception_id.toString);
+        log.warn(format(m, args.toSeq))
+        stack_trace_log.warn(e.toString, e)
+        MDC.remove("stackref")
+      } else {
         log.warn(format(m, args.toSeq))
       }
     }
   }
 
   def warn(e: Throwable): Unit = {
-    with_throwable(e) {
-      if( log.isWarnEnabled ) {
-        log.warn(e.toString)
-      }
+    if( e!=null && log.isWarnEnabled ) {
+      MDC.put("stackref", next_exception_id.toString);
+      log.warn(e.toString)
+      stack_trace_log.warn(e.toString, e)
+      MDC.remove("stackref")
     }
   }
 
@@ -125,18 +119,24 @@ trait Log {
   }
 
   def info(e: Throwable, m: => String, args:Any*): Unit = {
-    with_throwable(e) {
-      if( log.isInfoEnabled ) {
+    if( log.isInfoEnabled ) {
+      if( e!=null ) {
+        MDC.put("stackref", next_exception_id.toString);
+        log.info(format(m, args.toSeq))
+        stack_trace_log.info(e.toString, e)
+        MDC.remove("stackref")
+      } else {
         log.info(format(m, args.toSeq))
       }
     }
   }
 
   def info(e: Throwable): Unit = {
-    with_throwable(e) {
-      if( log.isInfoEnabled ) {
-        log.info(e.toString)
-      }
+    if( e!=null && log.isInfoEnabled ) {
+      MDC.put("stackref", next_exception_id.toString);
+      log.info(e.toString)
+      stack_trace_log.info(e.toString, e)
+      MDC.remove("stackref")
     }
   }
 
@@ -149,13 +149,23 @@ trait Log {
 
   def debug(e: Throwable, m: => String, args:Any*): Unit = {
     if( log.isDebugEnabled ) {
-      log.debug(format(m, args.toSeq), e)
+      if( e!=null ) {
+        MDC.put("stackref", next_exception_id.toString);
+        log.debug(format(m, args.toSeq))
+        stack_trace_log.debug(e.toString, e)
+        MDC.remove("stackref")
+      } else {
+        log.debug(format(m, args.toSeq))
+      }
     }
   }
 
   def debug(e: Throwable): Unit = {
-    if( log.isDebugEnabled ) {
-      log.debug(e.toString, e)
+    if( e!=null && log.isDebugEnabled ) {
+      MDC.put("stackref", next_exception_id.toString);
+      log.debug(e.toString)
+      stack_trace_log.debug(e.toString, e)
+      MDC.remove("stackref")
     }
   }
 
@@ -167,13 +177,23 @@ trait Log {
 
   def trace(e: Throwable, m: => String, args:Any*): Unit = {
     if( log.isTraceEnabled ) {
-      log.trace(format(m, args.toSeq), e)
+      if( e!=null ) {
+        MDC.put("stackref", next_exception_id.toString);
+        log.trace(format(m, args.toSeq))
+        stack_trace_log.trace(e.toString, e)
+        MDC.remove("stackref")
+      } else {
+        log.trace(format(m, args.toSeq))
+      }
     }
   }
 
   def trace(e: Throwable): Unit = {
-    if( log.isTraceEnabled ) {
-      log.trace(e.toString, e)
+    if( e!=null && log.isTraceEnabled ) {
+      MDC.put("stackref", next_exception_id.toString);
+      log.trace(e.toString)
+      stack_trace_log.trace(e.toString, e)
+      MDC.remove("stackref")
     }
   }
 

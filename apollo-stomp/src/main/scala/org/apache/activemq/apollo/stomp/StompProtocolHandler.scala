@@ -1480,7 +1480,7 @@ class StompProtocolHandler extends ProtocolHandler {
   override def on_transport_failure(error: IOException) = {
     if( !connection.stopped ) {
       suspend_read("shutdown")
-      connection_log.info(error, "Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
+      connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       super.on_transport_failure(error);
     }
   }
