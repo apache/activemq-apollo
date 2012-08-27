@@ -96,6 +96,7 @@ class StompUdpProtocol extends UdpProtocol {
       val sc = new SecurityContext
       sc.connector_id = connection.connector.id
       sc.local_address = connection.transport.getLocalAddress
+      sc.remote_address = udp.from
       sc.session_id = session_id
       if( login.isDefined || passcode.isDefined ) {
         val sc = new SecurityContext

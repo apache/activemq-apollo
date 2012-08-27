@@ -85,7 +85,9 @@ class GuestLoginModule extends LoginModule {
     try {
       val callback = new PasswordCallback("Password: ", false)
       callback_handler.handle(Array(callback))
-      return false;
+      if( callback.getPassword!=null && callback.getPassword.size>=0 ) {
+        return false;
+      }
     } catch {
       case ioe: IOException =>
         throw new LoginException(ioe.getMessage())
@@ -103,11 +105,7 @@ class GuestLoginModule extends LoginModule {
   }
 
   def commit: Boolean = {
-    if( subject.getPrincipals().isEmpty ) {
-      subject.getPrincipals().addAll(principals)
-    } else {
-      principals.clear
-    }
+    subject.getPrincipals().addAll(principals)
     debug("commit")
     return true
   }

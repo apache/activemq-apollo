@@ -91,7 +91,7 @@ class JaasAuthenticator(val config: AuthenticationDTO, val log:Log) extends Auth
             callback =>
               callback match {
                 case x: NameCallback => x.setName(security_ctx.user)
-                case x: PasswordCallback => x.setPassword(Option(security_ctx.password).getOrElse("").toCharArray)
+                case x: PasswordCallback => x.setPassword(Option(security_ctx.password).map(_.toCharArray).getOrElse(null))
                 case x: CertificateCallback => x.setCertificates(security_ctx.certificates)
                 case x: SocketAddressCallback =>
                   x.local = security_ctx.local_address
