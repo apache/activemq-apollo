@@ -32,12 +32,13 @@ import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
-import java.security.cert.X509Certificate
 import collection.mutable.{ListBuffer, HashMap}
 import java.io.IOException
 import org.apache.activemq.apollo.dto._
-import org.fusesource.hawtdispatch.transport.{SecuredSession, HeartBeatMonitor, SslTransport}
+import org.fusesource.hawtdispatch.transport.HeartBeatMonitor
 import path.{LiteralPart, Path, PathParser}
+import scala.Some
+import org.apache.activemq.apollo.broker.SubscriptionAddress
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -1183,21 +1184,25 @@ class StompProtocolHandler extends ProtocolHandler {
     if( host.authenticator!=null ) {
       if( config.add_user_header!=null ) {
         host.authenticator.user_name(security_context).foreach{ name=>
-          rc ::= (encode_header(config.add_user_header), encode_header(name))
+          val value = host.authenticator.user_name(security_context).getOrElse("")
+          rc ::= (encode_header(config.add_user_header), encode_header(value))
         }
       }
       if( !config.add_user_headers.isEmpty ){
         import collection.JavaConversions._
         config.add_user_headers.foreach { h =>
           val matches = security_context.principals(Option(h.kind).getOrElse("*"))
-          if( !matches.isEmpty ) {
+          val value = if( !matches.isEmpty ) {
             h.separator match {
               case null=>
-                rc ::= (encode_header(h.name.trim), encode_header(matches.head.getName))
+                matches.head.getName
               case separator =>
-                rc ::= (encode_header(h.name.trim), encode_header(matches.map(_.getName).mkString(separator)))
+                matches.map(_.getName).mkString(separator)
             }
+          } else {
+            ""
           }
+          rc ::= (encode_header(h.name.trim), encode_header(value))
         }
       }
     }

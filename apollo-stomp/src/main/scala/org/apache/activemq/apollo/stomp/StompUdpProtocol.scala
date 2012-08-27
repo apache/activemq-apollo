@@ -198,21 +198,23 @@ class StompUdpProtocol extends UdpProtocol {
       // Do we need to add the user id?
       if( host.authenticator!=null ) {
         if( config.add_user_header!=null ) {
-          host.authenticator.user_name(security_context).foreach{ name=>
-            rc ::= (encode_header(config.add_user_header), encode_header(name))
-          }
+          val value = host.authenticator.user_name(security_context).getOrElse("")
+          rc ::= (encode_header(config.add_user_header), encode_header(value))
         }
         if( !config.add_user_headers.isEmpty ){
           config.add_user_headers.foreach { h =>
             val matches = security_context.principals(Option(h.kind).getOrElse("*"))
-            if( !matches.isEmpty ) {
+            val value = if( !matches.isEmpty ) {
               h.separator match {
                 case null=>
-                  rc ::= (encode_header(h.name.trim), encode_header(matches.head.getName))
+                  matches.head.getName
                 case separator =>
-                  rc ::= (encode_header(h.name.trim), encode_header(matches.map(_.getName).mkString(separator)))
+                  matches.map(_.getName).mkString(separator)
               }
+            } else {
+              ""
             }
+            rc ::= (encode_header(h.name.trim), encode_header(value))
           }
         }
       }
