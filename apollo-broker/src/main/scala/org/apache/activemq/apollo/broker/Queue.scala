@@ -66,6 +66,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   val resource_kind = binding match {
     case x:DurableSubscriptionQueueBinding=> DurableSubKind
     case x:QueueDomainQueueBinding=> QueueKind
+    case x:TempQueueBinding => TopicQueueKind
     case _ => OtherKind
   }
 
@@ -551,6 +552,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     consumer_swapped_in.size_max += amount
   }
 
+
+  def is_topic_queue = resource_kind eq TopicQueueKind
+
   object messages extends Sink[(Session[Delivery], Delivery)] {
 
     var refiller: Task = null
@@ -581,7 +585,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         // We may need to drop this enqueue or head entries due
         // to the drop policy.
         var drop = false
-        if( full_policy ne Block ) {
+
+        if( is_topic_queue && all_subscriptions.isEmpty ) {
+          // no need to queue it..
+          drop = true
+        } else if( full_policy ne Block ) {
 
           def eval_drop(entry:QueueEntry) = entry.state match {
             case state: entry.Loaded =>
@@ -685,14 +693,17 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           entry.dispatch
         }
 
-        if( !consumers_keeping_up_historically  ) {
-          entry.swap(true)
-        } else if( entry.as_loaded.is_acquired && persisted) {
-          // If the message as dispatched and it's marked to get persisted anyways,
-          // then it's ok if it falls out of memory since we won't need to load it again.
-          entry.swap(false)
+        // entry might get dispatched and removed.
+        if( entry.isLinked ) {
+          if( !consumers_keeping_up_historically  ) {
+            entry.swap(true)
+          } else if( entry.as_loaded.is_acquired && persisted) {
+            // If the message as dispatched and it's marked to get persisted anyways,
+            // then it's ok if it falls out of memory since we won't need to load it again.
+            entry.swap(false)
+          }
         }
-        
+
         // release the store batch...
         if (persisted) {
           queue_delivery.uow.release

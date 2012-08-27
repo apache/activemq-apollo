@@ -74,6 +74,25 @@ trait DeliveryConsumer extends Retained {
   def is_persistent:Boolean
 }
 
+class DeliveryConsumerFilter(val next:DeliveryConsumer) extends DeliveryConsumer {
+  override def browser: Boolean = next.browser
+  override def close_on_drain: Boolean = next.close_on_drain
+  override def connection: Option[BrokerConnection] = next.connection
+  override def exclusive: Boolean = next.exclusive
+  override def jms_selector: String = next.jms_selector
+  override def receive_buffer_size: Int = next.receive_buffer_size
+  override def set_starting_seq(seq: Long) { next.set_starting_seq(seq)  }
+  override def start_from_tail: Boolean = next.start_from_tail
+  override def user: String = next.user
+  def connect(producer: DeliveryProducer): DeliverySession = next.connect(producer)
+  def dispatch_queue: DispatchQueue = next.dispatch_queue
+  def is_persistent: Boolean = next.is_persistent
+  def matches(message: Delivery): Boolean = next.matches(message)
+  def release() { next.release() }
+  def retain() { next.retain() }
+  def retained(): Int = next.retained()
+}
+
 /**
  * Before a delivery producer can send Delivery objects to a delivery
  * consumer, it creates a Delivery session which it uses to send

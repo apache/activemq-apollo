@@ -57,6 +57,10 @@ object SecuredResource {
     val id = "topic"
     val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE)
   }
+  object TopicQueueKind extends ResourceKind{
+    val id = "topic-queue"
+    val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE)
+  }
   object QueueKind extends ResourceKind{
     val id = "queue"
     val actions = Set(ADMIN, MONITOR, CONFIG, CREATE, DESTROY, SEND, RECEIVE, CONSUME)

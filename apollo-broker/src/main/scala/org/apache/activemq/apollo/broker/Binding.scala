@@ -255,7 +255,7 @@ object TempQueueBinding {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-case class TempQueueBinding(topic:String, key:AnyRef, address:DestinationAddress, settings:QueueSettingsDTO) extends Binding {
+case class TempQueueBinding(topic:String, address:DestinationAddress, settings:QueueSettingsDTO) extends Binding {
   import TempQueueBinding._
 
   def binding_kind = TEMP_KIND
@@ -268,14 +268,14 @@ case class TempQueueBinding(topic:String, key:AnyRef, address:DestinationAddress
   def unbind(router: LocalRouter, queue: Queue) = {}
   def bind(router: LocalRouter, queue: Queue) = {}
 
-  override def hashCode = if(key==null) 0 else key.hashCode
+  override def hashCode = if(topic==null) 0 else topic.hashCode
 
   def config(host: VirtualHost) = settings
 
   override def equals(o:Any):Boolean = o match {
-    case x: TempQueueBinding => x.key == key
+    case x: TempQueueBinding => x.topic == topic
     case _ => false
   }
 
-  override def toString = super.toString+":"+key
+  override def toString = super.toString+":"+topic
 }

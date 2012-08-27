@@ -40,6 +40,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
 
   val resource_kind =SecuredResource.TopicKind
   var proxy_sessions = new HashSet[DeliverySession]()
+  var topic_queue_consumers = new HashMap[DeliveryConsumer, DeliveryConsumer]()
 
   @transient
   var retained_message: Delivery = _
@@ -157,23 +158,15 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
   }
 
-  case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO, registered:DeliveryConsumer) extends DeliveryConsumer {
-
-    def retained() = consumer.retained()
-    def retain() = consumer.retain()
-    def release() = consumer.release()
-    def matches(message: Delivery) = consumer.matches(message)
-    def is_persistent = consumer.is_persistent
-    def dispatch_queue = consumer.dispatch_queue
-    def connect(producer: DeliveryProducer) = {
-      new ProxyConsumerSession(this, consumer.connect(producer))
+  case class ProxyDeliveryConsumer(consumer:DeliveryConsumer, link:LinkDTO, registered:DeliveryConsumer) extends DeliveryConsumerFilter(consumer) {
+    override def connect(producer: DeliveryProducer) = {
+      new ProxyConsumerSession(this, next.connect(producer))
     }
   }
 
   val producers = HashMap[BindableDeliveryProducer, LinkDTO]()
   val consumers = HashMap[DeliveryConsumer, ProxyDeliveryConsumer]()
   var durable_subscriptions = ListBuffer[Queue]()
-  var consumer_queues = HashMap[DeliveryConsumer, Queue]()
   var idled_at = 0L
   val created_at = now
   var auto_delete_after = 0
@@ -240,6 +233,15 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       rc.consumers.add(o)
     }
 
+    if( topic_queue !=null ) {
+      val link = new LinkDTO()
+      link.kind = "topic-queue"
+      link.id = topic_queue.store_id.toString()
+      link.label = "shared queue"
+      link.enqueue_ts = now
+      rc.consumers.add(link)
+    }
+
     // Add in the counters from the live sessions..
     proxy_sessions.foreach{ session =>
       val stats = from_session(session)
@@ -270,6 +272,24 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
 
     var futures = List[Future[(TopicStatusDTO)=>Unit]]()
+
+    if ( topic_queue!=null ) {
+      val future = Future[(TopicStatusDTO)=>Unit]()
+      futures ::= future
+      topic_queue.dispatch_queue {
+        val metrics = topic_queue.get_queue_metrics
+        metrics.enqueue_item_counter = 0
+        metrics.enqueue_size_counter = 0
+        metrics.enqueue_ts = 0
+        metrics.producer_counter = 0
+        metrics.producer_count = 0
+//        metrics.consumer_counter = 0
+//        metrics.consumer_count = 0
+        future.set((rc)=>{
+          DestinationMetricsSupport.add_destination_metrics(rc.metrics, metrics)
+        })
+      }
+    }
 
     consumers_links.foreach { case (consumer, link) =>
       consumer match {
@@ -357,7 +377,30 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
   }
 
-  def bind(address: BindAddress, consumer:DeliveryConsumer) = {
+  var topic_queue:Queue = null
+
+  def bind(address: BindAddress, consumer:DeliveryConsumer):Unit = {
+
+    def send_retained = {
+      val r = retained_message
+      if (r != null) {
+        val copy = r.copy()
+        copy.sender ::= address
+
+        val producer = new  DeliveryProducerRoute(router) {
+          refiller = NOOP
+          val dispatch_queue = createQueue()
+          override protected def on_connected = {
+            copy.ack = (d,x) => consumer.dispatch_queue {
+              unbind(consumer :: Nil)
+            }
+            offer(copy) // producer supports 1 message overflow.
+          }
+        }
+        producer.bind(consumer :: Nil)
+        producer.connected()
+      }
+    }
 
     val target = address.domain match {
       case "queue" | "dsub"=>
@@ -368,11 +411,23 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           case "queue" =>
 
             // create a temp queue so that it can spool
-            val queue = router._create_queue(new TempQueueBinding(id, consumer, address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
-            queue.dispatch_queue.setTargetQueue(consumer.dispatch_queue)
-            queue.bind(List(consumer))
-            consumer_queues += consumer->queue
-            queue
+            if ( topic_queue==null ) {
+              topic_queue = router._create_queue(new TempQueueBinding(id, Topic.this.address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
+              producers.keys.foreach({ r=>
+                r.bind(List(topic_queue))
+              })
+            }
+            val proxy = new DeliveryConsumerFilter(consumer) {
+              // Make this consumer act like a continuous queue browser
+              override def browser = true
+              override def start_from_tail = true
+              override def close_on_drain = false
+              override def exclusive = false
+            }
+            topic_queue_consumers.put(consumer, proxy)
+            topic_queue.bind(List(proxy))
+            send_retained
+            return
 
           case "block" =>
             // just have dispatcher dispatch directly to them..
@@ -390,13 +445,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           case x:TempQueueBinding =>
             link.kind = "topic-queue"
             link.id = queue.store_id.toString()
-            x.key match {
-              case target:DeliveryConsumer=>
-                for(connection <- target.connection) {
-                  link.label = connection.transport.getRemoteAddress.toString
-                }
-              case _ =>
-            }
+            link.label = "shared queue"
           case x:QueueDomainQueueBinding =>
             link.kind = "queue"
             link.id = queue.id
@@ -414,25 +463,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
         }
     }
 
-    val r = retained_message
-    if (r != null) {
-      val copy = r.copy()
-      copy.sender ::= address
-
-      val producer = new  DeliveryProducerRoute(router) {
-        refiller = NOOP
-        val dispatch_queue = createQueue()
-        override protected def on_connected = {
-          copy.ack = (d,x) => consumer.dispatch_queue {
-            unbind(consumer :: Nil)
-          }
-          offer(copy) // producer supports 1 message overflow.
-        }
-      }
-      producer.bind(consumer :: Nil)
-      producer.connected()
-    }
-    
+    send_retained
     val proxy = ProxyDeliveryConsumer(target, link, consumer)
     consumers.put(consumer, proxy)
     topic_metrics.consumer_counter += 1
@@ -444,39 +475,47 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   }
 
   def unbind (consumer:DeliveryConsumer, persistent:Boolean) = {
+    val list = topic_queue_consumers.remove(consumer) match {
+      case Some(consumer)=>
+        topic_queue.unbind(List(consumer))
 
-    for(proxy <- consumers.remove(consumer)) {
-      val list = consumer_queues.remove(consumer) match {
-        case Some(queue) =>
-          queue.unbind(List(consumer))
-          queue.binding match {
-            case x:TempQueueBinding =>
-              queue.dispatch_queue {
-                val metrics = queue.get_queue_metrics
-                router.dispatch_queue {
-                  router._destroy_queue(queue)
-                }
-                dispatch_queue {
-                  topic_metrics.dequeue_item_counter += metrics.dequeue_item_counter
-                  topic_metrics.dequeue_size_counter += metrics.dequeue_size_counter
-                  topic_metrics.dequeue_ts = topic_metrics.dequeue_ts max metrics.dequeue_ts
-                  topic_metrics.nack_item_counter += metrics.nack_item_counter
-                  topic_metrics.nack_size_counter += metrics.nack_size_counter
-                  topic_metrics.nack_ts  = topic_metrics.nack_ts max metrics.nack_ts
-                  topic_metrics.expired_item_counter += metrics.expired_item_counter
-                  topic_metrics.expired_size_counter += metrics.expired_size_counter
-                  topic_metrics.expired_ts  = topic_metrics.expired_ts max metrics.expired_ts
-                }
+        // Once we don't have any subscribers.. delete the queue.
+        if( topic_queue_consumers.isEmpty ) {
+          val queue = topic_queue
+          topic_queue = null
+
+          queue.dispatch_queue {
+            if( queue.all_subscriptions.isEmpty ) {
+              val metrics = queue.get_queue_metrics
+              router.dispatch_queue {
+                router._destroy_queue(queue)
               }
+              dispatch_queue {
+                topic_metrics.dequeue_item_counter += metrics.dequeue_item_counter
+                topic_metrics.dequeue_size_counter += metrics.dequeue_size_counter
+                topic_metrics.dequeue_ts = topic_metrics.dequeue_ts max metrics.dequeue_ts
+                topic_metrics.nack_item_counter += metrics.nack_item_counter
+                topic_metrics.nack_size_counter += metrics.nack_size_counter
+                topic_metrics.nack_ts  = topic_metrics.nack_ts max metrics.nack_ts
+                topic_metrics.expired_item_counter += metrics.expired_item_counter
+                topic_metrics.expired_size_counter += metrics.expired_size_counter
+                topic_metrics.expired_ts  = topic_metrics.expired_ts max metrics.expired_ts
+              }
+            }
           }
-          List(queue)
-        case None =>
-          add_dequeue_counters(topic_metrics, proxy.link)
-          List(consumer)
-      }
-      producers.keys.foreach({ r=>
-        r.unbind(list)
-      })
+        }
+        List()
+      case None =>
+        consumers.remove(consumer) match {
+          case Some(consumer)=>
+            add_dequeue_counters(topic_metrics, consumer.link)
+            List(consumer)
+          case None =>
+            List()
+        }
+    }
+    for( producer <- producers.keys ) {
+     producer.unbind(list)
     }
     check_idle
   }
@@ -510,7 +549,11 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
     producers.put(producer, link)
     topic_metrics.producer_counter += 1
-    producer.bind(producer_tracker::consumers.values.toList )
+    var targets:List[DeliveryConsumer] = producer_tracker :: consumers.values.toList
+    if( topic_queue !=null ) {
+      targets ::= topic_queue
+    }
+    producer.bind(targets )
     check_idle
   }
 

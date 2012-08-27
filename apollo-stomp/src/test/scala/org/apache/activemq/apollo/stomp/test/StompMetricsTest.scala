@@ -94,8 +94,8 @@ class StompMetricsTest extends StompTestSupport {
     stat2.producer_count should be(stat1.producer_count)
     stat2.consumer_count should be(stat1.consumer_count)
     stat2.enqueue_item_counter should be(stat1.enqueue_item_counter + 2)
-    stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 0)
-    stat2.queue_items should be(stat1.queue_items + 2)
+    stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 2)
+    stat2.queue_items should be(stat1.queue_items)
 
     // Close the subscription.
     unsubscribe("0")
@@ -105,8 +105,8 @@ class StompMetricsTest extends StompTestSupport {
       stat3.producer_count should be(stat1.producer_count)
       stat3.consumer_count should be(stat1.consumer_count - 1)
       stat3.enqueue_item_counter should be(stat1.enqueue_item_counter + 2)
-      stat3.dequeue_item_counter should be(stat1.dequeue_item_counter + 0)
-      stat3.queue_items should be(stat1.queue_items - 1)
+      stat3.dequeue_item_counter should be(stat1.dequeue_item_counter + 2)
+      stat3.queue_items should be(stat1.queue_items)
     }
   }
 
@@ -184,8 +184,8 @@ class StompMetricsTest extends StompTestSupport {
     stat2.consumers.size() should be(1)
     stat2.dsubs.size() should be(0)
     stat2.metrics.enqueue_item_counter should be(3)
-    stat2.metrics.dequeue_item_counter should be(0)
-    stat2.metrics.queue_items should be(2)
+    stat2.metrics.dequeue_item_counter should be(2)
+    stat2.metrics.queue_items should be(0)
 
     // Ack now..
     ack2(true);

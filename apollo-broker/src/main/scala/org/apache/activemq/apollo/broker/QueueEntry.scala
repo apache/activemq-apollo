@@ -636,12 +636,19 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         // the advancing subs move on to the next entry...
         advance(advancing)
 
-//        // swap this entry out if it's not going to be needed soon.
-//        if( !hasSubs && prefetch_flags==0 ) {
-//          // then swap out to make space...
-//          var asap = !acquired
-//          flush(asap)
-//        }
+        // We can drop after dispatch in some cases.
+        if( queue.is_topic_queue  && parked.isEmpty && getPrevious.is_head ) {
+          if (messageKey != -1) {
+            val storeBatch = queue.virtual_host.store.create_uow
+            storeBatch.dequeue(toQueueEntryRecord)
+            storeBatch.release
+          }
+          queue.dequeue_item_counter += 1
+          queue.dequeue_size_counter += size
+          queue.dequeue_ts = queue.now
+          remove
+        }
+
         queue.trigger_swap
         return true
       }
