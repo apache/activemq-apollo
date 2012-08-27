@@ -93,11 +93,12 @@ class StompUdpProtocol extends UdpProtocol {
       var headers = frame.headers
       val login = get(headers, LOGIN)
       val passcode = get(headers, PASSCODE)
+      val sc = new SecurityContext
+      sc.connector_id = connection.connector.id
+      sc.local_address = connection.transport.getLocalAddress
+      sc.session_id = session_id
       if( login.isDefined || passcode.isDefined ) {
         val sc = new SecurityContext
-        sc.connector_id = connection.connector.id
-        sc.local_address = connection.transport.getLocalAddress
-        sc.session_id = session_id
         for( value <- login ) {
           sc.user = value.toString
           headers = headers.filterNot( _._1 == LOGIN)
@@ -108,7 +109,7 @@ class StompUdpProtocol extends UdpProtocol {
         }
         (sc, frame.copy(headers=headers))
       } else {
-        (null, frame)
+        (sc, frame)
       }
     }
 
