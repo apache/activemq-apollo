@@ -1005,43 +1005,41 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     if( config.dlq==null ) {
       removeFunc(original_uow)
     } else {
-      val delivery:Delivery = entry.state match {
+
+      def complete(delivery:Delivery) = {
+        delivery.uow = original_uow
+        delivery.ack = (result, uow) => {
+          removeFunc(uow)
+        }
+
+        if( dql_route==null ) {
+          val dlq = config.dlq.replaceAll(Pattern.quote("*"), id)
+          dql_route = new DlqProducerRoute(Array(SimpleAddress("queue:"+dlq)))
+          router.virtual_host.dispatch_queue {
+            val rc = router.connect(dql_route.addresses, dql_route, null)
+            assert( rc == None ) // Not expecting this to ever fail.
+            dql_route.dispatch_queue {
+              dql_route.offer(delivery)
+            }
+          }
+        } else {
+          dql_route.offer(delivery)
+        }
+      }
+
+      entry.state match {
         case x:entry.Loaded=>
-          x.delivery.copy()
+          if( x.swapping_out ) {
+            x.on_swap_out ::=( ()=> {
+              complete(entry.state.asInstanceOf[entry.Swapped].to_delivery)
+            })
+          } else {
+            complete(x.delivery.copy())
+          }
         case x:entry.Swapped=>
-          x.to_delivery
+          complete(x.to_delivery)
         case _ =>
           throw new Exception("Invalid queue entry state, it cannot be DQLed.")
-      }
-
-      delivery.uow = original_uow
-
-//      delivery.uow = if( tune_persistent ) {
-//        if(original_uow!=null ) {
-//          original_uow
-//        } else {
-//          virtual_host.store.create_uow()
-//        }
-//      } else {
-//        null
-//      }
-
-      delivery.ack = (result, uow) => {
-        removeFunc(uow)
-      }
-
-      if( dql_route==null ) {
-        val dlq = config.dlq.replaceAll(Pattern.quote("*"), id)
-        dql_route = new DlqProducerRoute(Array(SimpleAddress("queue:"+dlq)))
-        router.virtual_host.dispatch_queue {
-          val rc = router.connect(dql_route.addresses, dql_route, null)
-          assert( rc == None ) // Not expecting this to ever fail.
-          dql_route.dispatch_queue {
-            dql_route.offer(delivery)
-          }
-        }
-      } else {
-        dql_route.offer(delivery)
       }
 
     }

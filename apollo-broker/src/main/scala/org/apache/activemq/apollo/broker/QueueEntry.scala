@@ -469,6 +469,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
+    var on_swap_out = List[()=>Unit]()
+
     def swapped_out(store_wrote_to_disk:Boolean) = {
       assert( state == this )
       storing = false
@@ -493,6 +495,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           queue.loaded_items -= 1
           queue.loaded_size -= size
         }
+
+        val on_swap_out_copy = on_swap_out
+        on_swap_out = Nil
+        for ( task <- on_swap_out_copy ) {
+          task()
+        }
+
       } else {
         if( remove_pending ) {
           delivery.message.release
