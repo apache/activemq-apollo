@@ -105,7 +105,7 @@ CLASSPATH="${APOLLO_HOME}/lib/apollo-boot.jar"
 
 BOOTDIRS="${APOLLO_HOME}/lib"
 if [ ! -z "$APOLLO_BASE" ] ; then
-  BOOTDIRS="${APOLLO_BASE}/lib:${BOOTDIRS}"
+  BOOTDIRS="${APOLLO_BASE}/lib\;${BOOTDIRS}"
 fi
 
 # For Cygwin, switch paths to Windows format before running java

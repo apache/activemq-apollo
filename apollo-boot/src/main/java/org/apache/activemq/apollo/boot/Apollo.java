@@ -37,15 +37,15 @@ public class Apollo {
    public static void main(String[] args) throws Throwable, NoSuchMethodException, IllegalAccessException {
        LinkedList<String> argList = new LinkedList<String>(Arrays.asList(args));
        if( argList.isEmpty() ) {
-           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
+           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(;<bootdir>)* <main-class> <arg>*");
            System.err.println();
            System.err.println("Mising <bootdir>");
            System.exit(2);
        }
-       String[] bootdirs = argList.removeFirst().split(":");
+       String[] bootdirs = resolveBootDirs(argList);
 
        if( argList.isEmpty() ) {
-           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(:<bootdir>)* <main-class> <arg>*");
+           System.err.println("Usage "+Apollo.class.getName()+" <bootdir>(;<bootdir>)* <main-class> <arg>*");
            System.err.println();
            System.err.println("Mising <main-class>");
            System.exit(2);
@@ -109,6 +109,10 @@ public class Apollo {
            throw e.getTargetException();
        }
 
+   }
+
+   protected static String[] resolveBootDirs(LinkedList<String> argList) {
+       return argList.removeFirst().split(";");
    }
 
    static private void add(ArrayList<URL> urls, File file) {

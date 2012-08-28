@@ -89,7 +89,7 @@
     <dependency>
       <groupId>com.sun.winsw</groupId>
       <artifactId>winsw</artifactId>
-      <version>1.8</version>
+      <version>1.9</version>
       <classifier>bin</classifier>
       <type>exe</type>
       <scope>test</scope>
@@ -230,7 +230,7 @@
                 <artifactItem>
                   <groupId>com.sun.winsw</groupId>
                   <artifactId>winsw</artifactId>
-                  <version>1.8</version>
+                  <version>1.9</version>
                   <classifier>bin</classifier>
                   <type>exe</type>
                   <outputDirectory>${basedir}/target/classes/org/apache/activemq/apollo/cli/commands/bin</outputDirectory>
