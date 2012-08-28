@@ -88,10 +88,10 @@ object StompCodec extends Log {
   }
 
   def decode(message: MessageRecord):StompFrameMessage = {
-    new StompFrameMessage(decode_frame(message.buffer, message.direct_buffer))
+    new StompFrameMessage(decode_frame(message.buffer, message.direct_buffer, false))
   }
 
-  def decode_frame(buffer: Buffer, direct_buffer:DirectBuffer=null):StompFrame = {
+  def decode_frame(buffer: Buffer, direct_buffer:DirectBuffer=null, end_check:Boolean=true):StompFrame = {
     def read_line = {
       val pos = buffer.indexOf('\n'.toByte)
       if( pos<0 ) {
@@ -108,6 +108,7 @@ object StompCodec extends Log {
     val action = read_line
 
     val headers = new HeaderMapBuffer()
+    var contentLength:AsciiBuffer = null
 
     var line = read_line
     while( line.length() > 0 ) {
@@ -119,11 +120,35 @@ object StompCodec extends Log {
           var name = line.slice(0, seperatorIndex)
           var value = line.slice(seperatorIndex + 1, line.length)
           headers.add((name, value))
+          if (end_check && contentLength==null && name == CONTENT_LENGTH ) {
+            contentLength = value
+          }
       } catch {
           case e:Exception=>
             throw new IOException("Unable to parser header line [" + line + "]")
       }
       line = read_line
+    }
+
+    if ( end_check ) {
+      buffer.length = if (contentLength != null) {
+        val length = try {
+          contentLength.toString.toInt
+        } catch {
+          case e: NumberFormatException =>
+            throw new IOException("Specified content-length is not a valid integer")
+        }
+        if( length > buffer.length ) {
+          throw new IOException("Frame did not contain enough bytes to satisfy the content-length")
+        }
+        length
+      } else {
+        val pos = buffer.indexOf(0.toByte)
+        if( pos < 0 ) {
+          throw new IOException("Frame is not null terminated")
+        }
+        pos
+      }
     }
 
     if( direct_buffer==null ) {
@@ -241,7 +266,7 @@ class StompCodec extends AbstractProtocolCodec {
               value = value.trim
             }
             var entry = (name.ascii, value.ascii)
-            if (entry._1 == CONTENT_LENGTH && contentLength==null) {
+            if (contentLength==null && entry._1 == CONTENT_LENGTH) {
               contentLength = entry._2
             }
             headers.add(entry)

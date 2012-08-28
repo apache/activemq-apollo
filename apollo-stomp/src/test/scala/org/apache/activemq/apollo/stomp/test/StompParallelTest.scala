@@ -167,6 +167,8 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     channel.send(new AsciiBuffer("Hello").toByteBuffer, target)
 
     assert_received("Hello")
+    channel.send(new AsciiBuffer("World").toByteBuffer, target)
+    assert_received("World")
   }
 
   test("STOMP UDP to STOMP interop") {
@@ -185,9 +187,17 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       "login:admin\n" +
       "passcode:password\n" +
       "\n" +
-      "Hello STOMP-UDP").toByteBuffer, target)
+      "Hello\u0000\n").toByteBuffer, target)
+    assert_received("Hello")
 
-    assert_received("Hello STOMP-UDP")
+    channel.send(new AsciiBuffer(
+      "SEND\n" +
+      "destination:/topic/some-other-udp\n" +
+      "login:admin\n" +
+      "passcode:password\n" +
+      "\n" +
+      "World\u0000\n").toByteBuffer, target)
+    assert_received("World")
   }
 
   /**
