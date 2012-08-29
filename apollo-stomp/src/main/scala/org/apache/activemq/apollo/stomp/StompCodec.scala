@@ -125,7 +125,7 @@ object StompCodec extends Log {
           }
       } catch {
           case e:Exception=>
-            throw new IOException("Unable to parser header line [" + line + "]")
+            throw new IOException("Unable to parse header line [" + Log.escape(line) + "]")
       }
       line = read_line
     }
@@ -255,7 +255,7 @@ class StompCodec extends AbstractProtocolCodec {
           try {
             var seperatorIndex: Int = line.indexOf(COLON)
             if (seperatorIndex < 0) {
-              throw new IOException("Header line missing seperator [" + line.ascii + "]")
+              throw new IOException("Header line missing seperator [" +  Log.escape(line.ascii) + "]")
             }
             var name: Buffer = line.slice(0, seperatorIndex)
             if (trim) {
@@ -272,7 +272,7 @@ class StompCodec extends AbstractProtocolCodec {
             headers.add(entry)
           } catch {
             case e: Exception => {
-              throw new IOException("Unable to parser header line [" + line + "]")
+              throw new IOException("Unable to parser header line [" +  Log.escape(line.ascii) + "]")
             }
           }
         } else {

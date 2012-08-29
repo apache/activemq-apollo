@@ -39,6 +39,32 @@ object Log {
 
   val exception_id_generator = new AtomicLong(System.currentTimeMillis)
   def next_exception_id = exception_id_generator.incrementAndGet.toHexString
+
+  def escape(o:AnyRef):AnyRef = {
+    o match {
+      case null => null
+      case o:java.lang.Boolean => o
+      case o:java.lang.Byte => o
+      case o:java.lang.Character => o
+      case o:java.lang.Short => o
+      case o:java.lang.Integer => o
+      case o:java.lang.Long => o
+      case o:java.lang.Float => o
+      case o:java.lang.Double => o
+      case _=>
+        val value = o.toString
+        val rc = new StringBuilder(value.length)
+        for(char <- value.toCharArray) {
+          if( (31 < char && char < 127) || Character.isLetterOrDigit(char) ) {
+            rc.append(char)
+          } else {
+            rc.append("\\u%04d".format(char.toInt))
+          }
+        }
+        rc.toString()
+    }
+  }
+
 }
 
 /**
