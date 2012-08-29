@@ -105,7 +105,10 @@ class GuestLoginModule extends LoginModule {
   }
 
   def commit: Boolean = {
-    subject.getPrincipals().addAll(principals)
+    val p = subject.getPrincipals()
+    if( p.isEmpty || (p.size()==1 && p.iterator().next().isInstanceOf[SourceAddressPrincipal]) ) {
+      subject.getPrincipals().addAll(principals)
+    }
     debug("commit")
     return true
   }
