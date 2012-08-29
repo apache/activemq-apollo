@@ -99,7 +99,6 @@ class StompUdpProtocol extends UdpProtocol {
       sc.remote_address = udp.from
       sc.session_id = session_id
       if( login.isDefined || passcode.isDefined ) {
-        val sc = new SecurityContext
         for( value <- login ) {
           sc.user = value.toString
           headers = headers.filterNot( _._1 == LOGIN)

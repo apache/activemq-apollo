@@ -17,6 +17,9 @@
 package org.apache.activemq.apollo.stomp.test
 
 import java.lang.String
+import java.nio.channels.DatagramChannel
+import java.net.InetSocketAddress
+import org.fusesource.hawtbuf.AsciiBuffer
 
 class StompSecurityTest extends StompTestSupport {
 
@@ -222,5 +225,32 @@ class StompSecurityTest extends StompTestSupport {
     frame should startWith("MESSAGE\n")
     frame should include("JMSXUserID:can_send_create_consume_queue\n")
     frame should include("sender-ip:127.0.0.1\n")
+  }
+
+  test("STOMP UDP to STOMP interop /w Security") {
+
+    connect("1.1", headers=
+            "login:can_recieve_topic\n" +
+            "passcode:can_recieve_topic\n")
+    subscribe("0", "/topic/some-other-udp")
+
+    val udp_port: Int = connector_port("stomp-udp").get
+    val channel = DatagramChannel.open();
+    println("The UDP port is: "+udp_port)
+
+    val target = new InetSocketAddress("127.0.0.1", udp_port)
+    channel.send(new AsciiBuffer(
+      "SEND\n" +
+      "destination:/topic/some-other-udp\n" +
+      "login:can_send_topic\n" +
+      "passcode:can_send_topic\n" +
+      "\n" +
+      "Hello\u0000\n").toByteBuffer, target)
+
+    var frame = client.receive()
+    println(frame)
+    frame should startWith("MESSAGE\n")
+    frame should include regex("\nsender-ip:.+\n")
+    frame should endWith("\n\nHello")
   }
 }

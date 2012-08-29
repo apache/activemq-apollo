@@ -26,10 +26,10 @@
   <access_rule allow="can_consume_queue"     kind="queue" action="consume"/>
   <access_rule allow="can_send_create_topic" kind="topic" action="send create"/>
   <access_rule allow="can_send_topic"        kind="topic" action="send"/>
-  <access_rule allow="can_recieve_topic"     kind="topic" action="receive"/>
+  <access_rule allow="can_recieve_topic"     kind="topic" action="receive create"/>
   <access_rule allow="can_consume_create_ds" kind="dsub"  action="consume create"/>
   <access_rule allow="can_consume_ds"        kind="dsub"  action="consume"/>
-  <access_rule allow="can_recieve_topic"     kind="dsub"  action="receive"/>
+  <access_rule allow="can_recieve_topic"     kind="dsub"  action="receive create"/>
 
   <access_rule allow="guest" action="connect"/>
   <access_rule allow="guest" action="create destroy send receive consume" kind="topic queue dsub" id_regex="test.*"/>
@@ -49,6 +49,11 @@
     </stomp>
   </connector>
   <connector id="tcp2" bind="tcp://0.0.0.0:0">
+  </connector>
+  <connector id="stomp-udp" bind="udp://0.0.0.0:0" protocol="stomp-udp">
+    <stomp>
+      <add_user_header kind="org.apache.activemq.apollo.broker.security.SourceAddressPrincipal">sender-ip</add_user_header>
+    </stomp>
   </connector>
 
 </broker>
