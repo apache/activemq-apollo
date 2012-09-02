@@ -258,22 +258,24 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
 
 
   override protected def _stop(on_completed:Task):Unit = {
-
     val tracker = new LoggingTracker("virtual host shutdown", console_log)
     tracker.stop(router);
-    if( store!=null ) {
-      val task = tracker.task("store session counter")
-      session_counter.disconnect{
-        tracker.stop(store);
-        task.run()
+    tracker.callback(^{
+      val tracker = new LoggingTracker("virtual host shutdown", console_log)
+      if( store!=null ) {
+        val task = tracker.task("store session counter")
+        session_counter.disconnect{
+          tracker.stop(store);
+          task.run()
+        }
       }
-    }
-    tracker.callback(dispatch_queue.runnable {
-      if( direct_buffer_allocator !=null ) {
-        direct_buffer_allocator.close
-        direct_buffer_allocator
-      }
-      on_completed.run()
+      tracker.callback(dispatch_queue.runnable {
+        if( direct_buffer_allocator !=null ) {
+          direct_buffer_allocator.close
+          direct_buffer_allocator
+        }
+        on_completed.run()
+      })
     })
   }
 
