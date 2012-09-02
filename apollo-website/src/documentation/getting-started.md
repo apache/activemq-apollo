@@ -66,7 +66,7 @@ the `/var/lib` directory.  For example, to create an instance at '/var/lib/mybro
 A broker instance directory will contain the following sub directories:
 
  * `bin`: holds execution scripts associated with this instance.
- * `etc`; hold the instance configuration files
+ * `etc`: hold the instance configuration files
  * `data`: holds the data files used for storing persistent messages
  * `log`: holds rotating log files
  * `tmp`: holds temporary files that are safe to delete between broker runs
