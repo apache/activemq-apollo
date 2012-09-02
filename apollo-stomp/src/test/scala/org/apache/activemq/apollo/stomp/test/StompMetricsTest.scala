@@ -281,3 +281,47 @@ class StompMetricsTest extends StompTestSupport {
   }
 
 }
+
+class StompLevelDBMetricsTest extends StompMetricsTest {
+
+  override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+
+  test("slow_consumer_policy='queue' /w 1 slow and 1 fast consumer.") {
+    var dest_name = next_id("queued.metrics")
+    val dest = "/topic/"+dest_name
+
+    val fast = new StompClient
+    connect("1.1", fast)
+    subscribe("fast", dest, "auto", c=fast);
+
+    val slow = new StompClient
+    connect("1.1", slow)
+    subscribe("fast", dest, "client", c=slow);
+
+    connect("1.1")
+    for( i <- 1 to 1000 ) {
+      async_send(dest, "%01204d".format(i))
+    }
+
+    for( i <- 1 to 1000 ) {
+      assert_received("%01204d".format(i),c=fast)
+    }
+
+    within(3, SECONDS) {
+      val stat = topic_status(dest_name).metrics
+      stat.queue_items should be >= (0L)
+      stat.swapped_in_items should be <= ( stat.queue_items ) // some of it swapped.
+      stat.enqueue_item_counter should be(1000L)
+    }
+
+    slow.close()
+
+    within(3, SECONDS) {
+      val stat = topic_status(dest_name).metrics
+      stat.queue_items should be (0L)
+      stat.swapped_in_items should be(0L)
+      stat.enqueue_item_counter should be(1000L)
+    }
+  }
+
+}
