@@ -70,7 +70,7 @@ trait BaseService extends Service with Dispatched {
 
   private val pending_actions = ListBuffer[Task]()
 
-  final def start(on_completed:Task):Unit = {
+  def start(on_completed:Task):Unit = {
     def start_task:Task = ^{
       def done = {
         pending_actions.foreach(dispatch_queue.execute _)
@@ -118,7 +118,7 @@ trait BaseService extends Service with Dispatched {
     start_task >>: dispatch_queue
   }
 
-  final def stop(on_completed:Task):Unit = {
+  def stop(on_completed:Task):Unit = {
     def stop_task:Task = ^{
       def done = {
         val tmp = pending_actions.toArray

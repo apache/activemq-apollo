@@ -336,10 +336,17 @@ class Broker() extends BaseService with SecuredResource {
 
   def resource_kind = SecuredResource.BrokerKind
 
+  // Also provide Runnable based interfaces so that it's easier to use from Java.
+  def update(config: BrokerDTO, on_completed:Runnable):Unit = update(config, new TaskWrapper(on_completed))
+  def start(on_completed:Runnable):Unit = super.start(new TaskWrapper(on_completed))
+  def stop(on_completed:Runnable):Unit = super.stop(new TaskWrapper(on_completed))
+  override def start(on_completed:Task):Unit = super.start(on_completed)
+  override def stop(on_completed:Task):Unit = super.stop(on_completed)
+
   /**
    * Validates and then applies the configuration.
    */
-  def update(config: BrokerDTO, on_completed:Task) = dispatch_queue {
+  def update(config: BrokerDTO, on_completed:Task):Unit = dispatch_queue {
     dispatch_queue.assertExecuting()
     this.config = config
 
