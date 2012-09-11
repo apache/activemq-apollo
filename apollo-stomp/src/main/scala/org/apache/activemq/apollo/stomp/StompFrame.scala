@@ -326,11 +326,14 @@ object Stomp {
   val END_OF_FRAME_BUFFER = new Buffer(Array(NULL, NEWLINE))
   val COLON: Byte = ':'
   val COLON_BUFFER = new Buffer(Array(COLON))
+  val CR: Byte = '\r'
+  val CR_BUFFER = new Buffer(Array(CR))
   val ESCAPE:Byte = '\\'
 
   val ESCAPE_ESCAPE_SEQ = ascii("""\\""")
   val COLON_ESCAPE_SEQ = ascii("""\c""")
   val NEWLINE_ESCAPE_SEQ = ascii("""\n""")
+  val CR_ESCAPE_SEQ = ascii("""\r""")
 
 
   ///////////////////////////////////////////////////////////////////
@@ -432,11 +435,12 @@ object Stomp {
 
   val V1_0 = ascii("1.0")
   val V1_1 = ascii("1.1")
+  val V1_2 = ascii("1.2")
   val DEFAULT_HEART_BEAT = ascii("0,0")
 
   val EMPTY = EMPTY_BUFFER.ascii()
 
-  val SUPPORTED_PROTOCOL_VERSIONS = List(V1_1, V1_0)
+  val SUPPORTED_PROTOCOL_VERSIONS = List(V1_2, V1_1, V1_0)
 
   val TEXT_PLAIN = ascii("text/plain")
 

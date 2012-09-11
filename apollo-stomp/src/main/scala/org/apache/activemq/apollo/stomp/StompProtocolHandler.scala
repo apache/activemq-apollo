@@ -104,6 +104,9 @@ object StompProtocolHandler extends Log {
       } else if( pos.startsWith(NEWLINE_ESCAPE_SEQ) ) {
         rc.write(NEWLINE)
         pos.moveHead(2)
+      } else if( pos.startsWith(CR_ESCAPE_SEQ) ) {
+        rc.write(CR)
+        pos.moveHead(2)
       } else {
         rc.write(pos.data(pos.offset))
         pos.moveHead(1)
@@ -116,6 +119,17 @@ object StompProtocolHandler extends Log {
     protocol_version match {
       case null => utf8(value).ascii
       case V1_0 => utf8(value).ascii
+      case V1_1 =>
+        val data = value.getBytes("UTF-8")
+        var rc = new ByteArrayOutputStream(data.length)
+        data.foreach {
+          case ESCAPE  => rc.write(ESCAPE_ESCAPE_SEQ)
+          case COLON   => rc.write(COLON_ESCAPE_SEQ)
+          case NEWLINE => rc.write(COLON_ESCAPE_SEQ)
+          case c       => rc.write(c)
+        }
+        rc.toBuffer.ascii
+
       case _ =>
 
         val data = value.getBytes("UTF-8")
@@ -124,8 +138,8 @@ object StompProtocolHandler extends Log {
           case ESCAPE  => rc.write(ESCAPE_ESCAPE_SEQ)
           case COLON   => rc.write(COLON_ESCAPE_SEQ)
           case NEWLINE => rc.write(COLON_ESCAPE_SEQ)
+          case CR      => rc.write(CR_ESCAPE_SEQ)
           case c       => rc.write(c)
-
         }
         rc.toBuffer.ascii
     }
@@ -946,6 +960,10 @@ class StompProtocolHandler extends ProtocolHandler {
     if( protocol_version != V1_0 ) {
       // disable trimming...
       codec.trim = false
+      if( protocol_version != V1_1 ) {
+        // enable \r triming
+        codec.trim_cr = true
+      }
     }
 
     val heart_beat = get(headers, HEART_BEAT).getOrElse(DEFAULT_HEART_BEAT)

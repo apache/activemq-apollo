@@ -1464,5 +1464,33 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     Thread.sleep(1000)
   }
 
+  test("Sending as a Telnet client"){
+    client.open("localhost", port)
+
+    client.out.write("CONNECT\r\n".getBytes)
+    client.out.write("accept-version:1.2\r\n".getBytes)
+    client.out.write("login:admin\r\n".getBytes)
+    client.out.write("passcode:password\r\n".getBytes)
+    client.out.write("\r\n".getBytes)
+    client.out.write("\u0000\r\n".getBytes)
+    client.out.flush
+
+    val frame = client.receive()
+    frame should startWith("CONNECTED\n")
+    frame should include regex ("""session:.+?\n""")
+
+    client.out.write((
+      "SUBSCRIBE\r\n" +
+      "id:0\r\n" +
+      "destination:/queue/somedest\r\n" +
+      "receipt:0\r\n" +
+      "\r\n"+
+      "\u0000\r\n"
+    ).getBytes)
+
+    client.out.flush
+    wait_for_receipt("0")
+
+  }
 
 }

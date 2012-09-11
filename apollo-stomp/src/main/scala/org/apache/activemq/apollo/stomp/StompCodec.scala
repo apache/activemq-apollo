@@ -166,6 +166,7 @@ class StompCodec extends AbstractProtocolCodec {
   var max_headers: Int = 1000
   var max_data_length: Int = 1024 * 1024 * 100
   var trim = true
+  var trim_cr = false
 
   protected def encode(command: AnyRef) = command match {
     case buffer:Buffer=> buffer.writeTo(nextWriteBuffer.asInstanceOf[DataOutput])
@@ -230,6 +231,8 @@ class StompCodec extends AbstractProtocolCodec {
         var action = line.moveTail(-1)
         if (trim) {
           action = action.trim
+        } else if( trim_cr && action.length > 0 && action.get(action.length-1)=='\r'.toByte ) {
+          action.moveTail(-1)
         }
         if (action.length > 0) {
           nextDecodeAction = read_headers(action.ascii)
@@ -247,7 +250,14 @@ class StompCodec extends AbstractProtocolCodec {
     def apply: AnyRef = {
       var line = readUntil(NEWLINE, max_header_length, "The maximum header length was exceeded")
       if (line != null) {
-        line = line.moveTail(-1)
+
+        // Strip off the \n
+        line.moveTail(-1)
+        // 1.0 and 1.2 spec trims off the \r
+        if ( (trim || trim_cr) && line.length > 0 && line.get(line.length-1)=='\r'.toByte ) {
+          line.moveTail(-1)
+        }
+
         if (line.length > 0) {
           if (max_headers != -1 && headers.size > max_headers) {
             throw new IOException("The maximum number of headers was exceeded")
