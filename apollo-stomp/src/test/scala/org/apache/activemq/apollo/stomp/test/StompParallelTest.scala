@@ -208,12 +208,13 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     // figure out at what point a quota'ed queue stops accepting more messages.
     connect("1.1")
+    var dest = next_id("/queue/quota.assured")
     client.socket.setSoTimeout(1 * 1000)
     var block_count = 0
     try {
       receipt_counter.set(0L)
       while (true) {
-        sync_send("/queue/quota.assured1", "%01024d".format(block_count), "message-id:"+block_count+"\n")
+        sync_send(dest, "%01024d".format(block_count), "message-id:"+block_count+"\n")
         block_count += 1
       }
     } catch {
@@ -221,14 +222,16 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     }
     close()
 
+    dest = next_id("/queue/quota.assured")
+
     // Send 5 more messages which do not fit in the queue, they will be
     // held in the producer connection's delivery session buffer..
     connect("1.1")
     receipt_counter.set(0L)
     for (i <- 0 until (block_count-1)) {
-      sync_send("/queue/quota.assured2", "%01024d".format(i), "message-id:"+i+"\n")
+      sync_send(dest, "%01024d".format(i), "message-id:"+i+"\n")
     }
-    async_send("/queue/quota.assured2", "%01024d".format(block_count-1))
+    async_send(dest, "%01024d".format(block_count-1))
 
     // Even though we disconnect, those 5 that did not fit should still
     // get delivered once the queue unblocks..
@@ -236,11 +239,11 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     // Lets make sure non of the messages were dropped.
     connect("1.1")
-    subscribe("0", "/queue/quota.assured2")
+    subscribe("0", dest)
     for (i <- 0 until block_count) {
       assert_received("%01024d".format(i))
     }
-
+    disconnect()
   }
 
   test("Messages delivery assured to a topic once a disconnect receipt is received") {
@@ -248,7 +251,8 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     //setup a subscription which will block quickly..
     var consumer = new StompClient
     connect("1.1", consumer)
-    subscribe("0", "/topic/quota.assured1", "client", headers = "credit:1,0\n", c = consumer)
+    var dest = next_id("/topic/quota.assured")
+    subscribe("0", dest, "client", headers = "credit:1,0\n", c = consumer)
 
     // figure out at what point a quota'ed consumer stops accepting more messages.
     connect("1.1")
@@ -257,7 +261,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     try {
       receipt_counter.set(0L)
       while (true) {
-        sync_send("/topic/quota.assured1", "%01024d".format(block_count), "message-id:"+block_count+"\n")
+        sync_send(dest, "%01024d".format(block_count), "message-id:"+block_count+"\n")
         block_count += 1
       }
     } catch {
@@ -266,17 +270,19 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     close()
     close(consumer)
 
+    dest = next_id("/topic/quota.assured")
+
     connect("1.1", consumer)
-    subscribe("1", "/topic/quota.assured2", "client", headers = "credit:1,0\n", c = consumer)
+    subscribe("1", dest, "client", headers = "credit:1,0\n", c = consumer)
 
     // Send 5 more messages which do not fit in the consumer buffer, they will be
     // held in the producer connection's delivery session buffer..
     connect("1.1")
     receipt_counter.set(0L)
     for (i <- 0 until (block_count-1)) {
-      sync_send("/topic/quota.assured2", "%01024d".format(i), "message-id:"+i+"\n")
+      sync_send(dest, "%01024d".format(i), "message-id:"+i+"\n")
     }
-    async_send("/topic/quota.assured2", "%01024d".format(block_count-1))
+    async_send(dest, "%01024d".format(block_count-1))
 
     // Even though we disconnect, those 5 that did not fit should still
     // get delivered once the queue unblocks..
