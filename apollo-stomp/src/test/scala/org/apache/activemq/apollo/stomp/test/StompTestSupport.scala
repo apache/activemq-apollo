@@ -67,7 +67,7 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
 
   def disconnect(c: StompClient = client) = {
     val rid = receipt_counter.incrementAndGet()
-    client.write(
+    c.write(
       "DISCONNECT\n" +
               "receipt:" + rid + "\n" +
               "\n")
