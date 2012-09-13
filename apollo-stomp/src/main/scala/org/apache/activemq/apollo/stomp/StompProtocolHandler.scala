@@ -797,6 +797,14 @@ class StompProtocolHandler extends ProtocolHandler {
     resume_read
   }
 
+  override def on_transport_failure(error: IOException) = {
+    if( !closed ) {
+      suspend_read("shutdown")
+      connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
+    }
+    connection.stop(NOOP)
+  }
+
   override def on_transport_disconnected() = {
     if( !closed ) {
       heart_beat_monitor.stop
@@ -1498,16 +1506,6 @@ class StompProtocolHandler extends ProtocolHandler {
       send_receipt(headers)
     }
   }
-
-
-  override def on_transport_failure(error: IOException) = {
-    if( !connection.stopped ) {
-      suspend_read("shutdown")
-      connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
-      super.on_transport_failure(error);
-    }
-  }
-
 
   def require_transaction_header[T](headers:HeaderMap):AsciiBuffer = {
     get(headers, TRANSACTION).getOrElse(die("transaction header not set"))
