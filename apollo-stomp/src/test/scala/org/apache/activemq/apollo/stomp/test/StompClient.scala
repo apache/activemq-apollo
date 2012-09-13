@@ -36,9 +36,10 @@ class StompClient extends ShouldMatchers {
   var in: InputStream = null
   val bufferSize = 64 * 1204
   var key_storeage: KeyStorage = null
+  var bytes_written = 0L
 
   def open(host: String, port: Int) = {
-
+    bytes_written = 0
     socket = if (key_storeage != null) {
       val context = SSLContext.getInstance("TLS")
       context.init(key_storeage.create_key_managers, key_storeage.create_trust_managers, null)
@@ -59,17 +60,15 @@ class StompClient extends ShouldMatchers {
     socket.close
   }
 
-  def write(frame: String) = {
-    out.write(frame.getBytes("UTF-8"))
-    out.write(0)
-    out.write('\n')
-    out.flush
-  }
+  def write(frame: String):Unit = write(frame.getBytes("UTF-8"))
 
-  def write(frame: Array[Byte]) = {
+  def write(frame: Array[Byte]):Unit = {
     out.write(frame)
+    bytes_written += frame.length
     out.write(0)
+    bytes_written += 1
     out.write('\n')
+    bytes_written += 1
     out.flush
   }
 
