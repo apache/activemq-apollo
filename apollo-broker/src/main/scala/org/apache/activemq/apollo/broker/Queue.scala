@@ -323,7 +323,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc.binding = this.binding.dto
     rc.config = this.config
     if( max_enqueue_rate < Int.MaxValue ) {
-      rc.max_enqueue_rate = new Integer(max_enqueue_rate)
+      rc.max_enqueue_rate = new java.lang.Integer(max_enqueue_rate)
     }
     rc.metrics = this.get_queue_metrics
     rc.metrics.current_time = now
