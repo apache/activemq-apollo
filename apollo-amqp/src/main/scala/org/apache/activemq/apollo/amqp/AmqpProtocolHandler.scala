@@ -572,7 +572,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    val session_manager = new SessionSinkMux[Delivery](sink, queue, Delivery) {
+    val session_manager = new SessionSinkMux[Delivery](sink, queue, Delivery, 1, buffer_size) {
       override def time_stamp = broker.now
     }
 
@@ -580,7 +580,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
       def producer = p
       def consumer = AMQPConsumer.this
-      val downstream = session_manager.open(producer.dispatch_queue, 1, buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue)
 
       // Delegate all the flow control stuff to the session
       override def full = {

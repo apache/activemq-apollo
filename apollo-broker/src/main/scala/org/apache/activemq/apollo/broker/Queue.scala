@@ -92,7 +92,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery) {
+  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery, Integer.MAX_VALUE, virtual_host.broker.auto_tuned_send_receiver_buffer_size) {
     override def time_stamp = now
   }
 
@@ -554,9 +554,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  def change_producer_capacity(amount:Int) = might_unfill {
-    // producer_swapped_in.size_max += amount
-  }
   def change_consumer_capacity(amount:Int) = might_unfill {
     consumer_swapped_in.size_max += amount
   }
@@ -1101,13 +1098,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     override def toString = Queue.this.toString
     override def consumer = Queue.this
 
-    val session_max = producer.send_buffer_size
-    val downstream = session_manager.open(producer.dispatch_queue, Integer.MAX_VALUE, session_max)
+    val downstream = session_manager.open(producer.dispatch_queue)
 
     dispatch_queue {
       inbound_sessions += this
       producer_counter += 1
-      change_producer_capacity( session_max )
     }
 
     def close = dispatch_queue {
@@ -1117,7 +1112,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           delivery.ack(Undelivered, delivery.uow)
         }
       })
-      change_producer_capacity( -session_max )
       inbound_sessions -= this
       release
     }

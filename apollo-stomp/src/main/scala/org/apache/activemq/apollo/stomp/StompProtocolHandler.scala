@@ -486,7 +486,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     credit_window_filter.credit(initial_credit_window.count, initial_credit_window.size)
 
-    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery) {
+    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery, initial_credit_window.count.max(1), buffer_size) {
       override def time_stamp = broker.now
     }
 
@@ -538,7 +538,7 @@ class StompProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      val downstream = session_manager.open(producer.dispatch_queue, initial_credit_window.count.max(1), buffer_size)
+      val downstream = session_manager.open(producer.dispatch_queue)
 
       override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
 
