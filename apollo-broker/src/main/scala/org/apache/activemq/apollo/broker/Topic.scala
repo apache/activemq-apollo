@@ -509,7 +509,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
         consumers.remove(consumer) match {
           case Some(consumer)=>
             add_dequeue_counters(topic_metrics, consumer.link)
-            List(consumer)
+            List(consumer.consumer)
           case None =>
             List()
         }
