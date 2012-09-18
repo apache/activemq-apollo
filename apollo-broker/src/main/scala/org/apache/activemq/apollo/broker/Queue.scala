@@ -439,7 +439,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           // Have we been idle that whole time?
           if( idled_at == idled_at_start ) {
             virtual_host.dispatch_queue {
-              router._destroy_queue(this)
+              if( virtual_host.service_state.is_started ) {
+                router._destroy_queue(this)
+              }
             }
           }
         }

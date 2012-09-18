@@ -1316,6 +1316,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   }
 
   def _destroy_queue(queue: Queue) {
+    assert(service_state.is_starting_or_started, "Can't destroy.. allready stopped")
     on_queue_destroy_start
     queue.stop(^{
       var metrics = queue.get_queue_metrics
@@ -1336,11 +1337,9 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
         queues_by_store_id.remove(queue.store_id)
         if (queue.tune_persistent) {
-          queue.dispatch_queue {
-            virtual_host.store.remove_queue(queue.store_id) { x =>
-              dispatch_queue {
-                on_queue_destroy_end
-              }
+          virtual_host.store.remove_queue(queue.store_id) { x =>
+            dispatch_queue {
+              on_queue_destroy_end
             }
           }
         } else {

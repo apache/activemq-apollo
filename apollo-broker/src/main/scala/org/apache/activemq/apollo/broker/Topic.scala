@@ -488,7 +488,9 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             if( queue.all_subscriptions.isEmpty ) {
               val metrics = queue.get_queue_metrics
               router.dispatch_queue {
-                router._destroy_queue(queue)
+                if(router.service_state.is_started) {
+                  router._destroy_queue(queue)
+                }
               }
               dispatch_queue {
                 topic_metrics.dequeue_item_counter += metrics.dequeue_item_counter
