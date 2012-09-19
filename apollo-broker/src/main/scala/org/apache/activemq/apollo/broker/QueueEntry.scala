@@ -64,25 +64,15 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def init(delivery:Delivery):QueueEntry = {
-
     if( delivery.message == null ) {
       // This must be a swapped out message which has been previously persisted in
       // another queue.  We need to enqueue it to this queue..
       queue.swap_out_size_counter += delivery.size
       queue.swap_out_item_counter += 1
       state = new Swapped(delivery.storeKey, delivery.storeLocator, delivery.size, delivery.expiration, 0, null, delivery.sender)
-      // store it..
-      if( delivery.uow != null ) {
-        delivery.uow.enqueue(toQueueEntryRecord)
-      }
     } else {
       queue.producer_swapped_in += delivery
-      val loaded: QueueEntry.this.type#Loaded = new Loaded(delivery, false, queue.producer_swapped_in)
-      state = loaded
-      // store it..
-      if( delivery.uow != null ) {
-        loaded.store
-      }
+      state = new Loaded(delivery, false, queue.producer_swapped_in)
     }
     this
   }
@@ -205,7 +195,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   // These methods may cause a change in the current state.
   def swap(asap:Boolean) = state.swap_out(asap)
   def load(space:MemorySpace) = state.swap_in(space)
-  def dequeue(uow:StoreUOW) = state.dequeue(uow)
   def remove = state.remove
 
   def swapped_range = state.swap_range
@@ -301,48 +290,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Removes the entry from the queue's linked list of entries.  This gets called
      * as a result of an acquired ack.
      */
-    def dequeue(uow:StoreUOW):Unit = {
-      if (messageKey != -1) {
-        val localuow = if( uow == null ) {
-          queue.virtual_host.store.create_uow
-        } else {
-          uow
-        }
-        localuow.dequeue(entry.toQueueEntryRecord)
-        remove()
-        queue.in_flight_removes.add(seq)
-        localuow.on_complete {
-          queue.dispatch_queue {
-            queue.in_flight_removes.remove(seq)
-            queue.might_unfill {
-              queue.dequeue_item_counter += 1
-              queue.dequeue_size_counter += size
-              queue.dequeue_ts = queue.now
-            }
-          }
-        }
-        if( uow == null ) {
-          localuow.release
-        }
-      } else {
-        queue.might_unfill {
-          remove()
-          queue.dequeue_item_counter += 1
-          queue.dequeue_size_counter += size
-          queue.dequeue_ts = queue.now
-        }
-      }
-    }
-
-    def remove():Unit = {
+    def remove:Unit = {
       // advance subscriptions that were on this entry..
-      if( !parked.isEmpty ) {
-        advance(parked)
-        parked = Nil
-      }
+      advance(parked)
+      parked = Nil
 
       // take the entry of the entries list..
       unlink
+      //TODO: perhaps refill subscriptions.
     }
 
     /**
@@ -382,7 +337,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
-    override def dequeue(uow:StoreUOW) = throw new AssertionError("Head entry cannot be removed")
+    override def remove = throw new AssertionError("Head entry cannot be removed")
     override def swap_in(space:MemorySpace) = throw new AssertionError("Head entry cannot be loaded")
     override def swap_out(asap:Boolean) = throw new AssertionError("Head entry cannot be swapped")
   }
@@ -398,7 +353,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override  def toString = "tail"
     override def as_tail:Tail = this
 
-    override def dequeue(uow:StoreUOW) = throw new AssertionError("Tail entry cannot be removed")
+    override def remove = throw new AssertionError("Tail entry cannot be removed")
     override def swap_in(space:MemorySpace) = throw new AssertionError("Tail entry cannot be loaded")
     override def swap_out(asap:Boolean) = throw new AssertionError("Tail entry cannot be swapped")
 
@@ -446,7 +401,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def redelivered = delivery.redeliveries = ((delivery.redeliveries+1).min(Short.MaxValue)).toShort
 
-    var remove_pending:Option[StoreUOW] = None
+    var remove_pending = false
 
     override def is_swapped_or_swapping_out = {
       swapping_out
@@ -534,11 +489,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         if( can_combine_with_prev ) {
           getPrevious.as_swapped_range.combineNext
         }
-        queue.loaded_items -= 1
-        queue.loaded_size -= size
-
-        if( remove_pending.isDefined ) {
-          state.dequeue(remove_pending.get)
+        if( remove_pending ) {
+          state.remove
+        } else {
+          queue.loaded_items -= 1
+          queue.loaded_size -= size
         }
 
         val on_swap_out_copy = on_swap_out
@@ -548,10 +503,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         }
 
       } else {
-        if( remove_pending.isDefined ) {
+        if( remove_pending ) {
           delivery.message.release
           space -= delivery
-          super.dequeue(remove_pending.get)
+          super.remove
         }
       }
     }
@@ -565,20 +520,16 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       swapping_out = false
     }
 
-    override def dequeue(uow:StoreUOW) = {
-      if( storing | remove_pending.isDefined ) {
-        remove_pending = Some(uow)
-      } else {
-        super.dequeue(uow)
-      }
-    }
-
-    override def remove() = {
+    override def remove = {
       queue.loaded_items -= 1
       queue.loaded_size -= size
-      delivery.message.release
-      space -= delivery
-      super.remove()
+      if( storing | remove_pending ) {
+        remove_pending = true
+      } else {
+        delivery.message.release
+        space -= delivery
+        super.remove
+      }
     }
 
     override def dispatch():Boolean = {
@@ -587,6 +538,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
         queue.expired(entry)
+        remove
         return true
       }
 
@@ -695,7 +647,15 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
         // We can drop after dispatch in some cases.
         if( queue.is_topic_queue  && parked.isEmpty && getPrevious.is_head ) {
-          dequeue(null)
+          if (messageKey != -1) {
+            val storeBatch = queue.virtual_host.store.create_uow
+            storeBatch.dequeue(toQueueEntryRecord)
+            storeBatch.release
+          }
+          queue.dequeue_item_counter += 1
+          queue.dequeue_size_counter += size
+          queue.dequeue_ts = queue.now
+          remove
         }
 
         queue.trigger_swap
@@ -803,18 +763,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
-    override def dequeue(uow:StoreUOW) = {
+
+    override def remove = {
       if( space!=null ) {
         space = null
         queue.swapping_in_size -= size
       }
-      super.dequeue(uow)
-    }
-
-
-    override def remove() {
       queue.individual_swapped_items -= 1
-      super.remove()
+      super.remove
     }
 
     override def swap_range = {
@@ -833,6 +789,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
         queue.expired(entry)
+        remove
         return true
       }
 
@@ -934,11 +891,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             val tmpList = new LinkedNodeList[QueueEntry]()
             records.foreach { record =>
               val entry = new QueueEntry(queue, record.entry_seq).init(record)
-              if( !queue.in_flight_removes.contains(entry.seq) ) {
-                tmpList.addLast(entry)
-                item_count += 1
-                size_count += record.size
-              }
+              tmpList.addLast(entry)
+              item_count += 1
+              size_count += record.size
             }
 
             // we may need to adjust the enqueue count if entries

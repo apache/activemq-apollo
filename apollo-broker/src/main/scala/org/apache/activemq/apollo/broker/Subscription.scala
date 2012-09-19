@@ -322,11 +322,21 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       total_ack_count += 1
       total_ack_size += entry.size
-      remove()
-      entry.dequeue(uow) // entry size changes to 0
-    }
+      if (entry.messageKey != -1) {
+        val storeBatch = if( uow == null ) {
+          queue.virtual_host.store.create_uow
+        } else {
+          uow
+        }
+        storeBatch.dequeue(entry.toQueueEntryRecord)
+        if( uow == null ) {
+          storeBatch.release
+        }
+      }
+      queue.dequeue_item_counter += 1
+      queue.dequeue_size_counter += entry.size
+      queue.dequeue_ts = queue.now
 
-    def remove():Unit = {
       // removes this entry from the acquired list.
       unlink()
       if( acquired.isEmpty ) {
@@ -337,9 +347,12 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       acquired_size -= entry.size
 
       val next = entry.nextOrTail
+      entry.remove // entry size changes to 0
+
       queue.trigger_swap
       next.task.run
       check_finish_close
+
     }
 
     def increment_nack = total_nack_count += 1

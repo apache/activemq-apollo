@@ -30,7 +30,6 @@ import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
 import java.util.regex.Pattern
 import collection.mutable.ListBuffer
-import java.util
 
 object Queue extends Log {
   val subcsription_counter = new AtomicInteger(0)
@@ -118,12 +117,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
    * no consumers need the message?
    */
   var tune_swap = true
-
-  /**
-   * Todo.. see if we can remove this collection.  Don't think it's
-   * actually need.
-   */
-  val in_flight_removes = new util.HashSet[Long]()
 
   /**
    * The number max number of swapped queue entries to load
@@ -605,13 +598,19 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             case state: entry.Loaded =>
               var next = entry.getNext
               if (!entry.is_acquired) {
-                entry.dequeue(null)
+                dequeue_item_counter += 1
+                dequeue_size_counter += entry.size
+                dequeue_ts = now
+                entry.remove
               }
               next
             case state: entry.Swapped =>
               var next = entry.getNext
               if (!entry.is_acquired) {
-                entry.dequeue(null)
+                dequeue_item_counter += 1
+                dequeue_size_counter += entry.size
+                dequeue_ts = now
+                entry.remove
               }
               next
             case state: entry.SwappedRange =>
@@ -669,12 +668,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         tail_entry = new QueueEntry(Queue.this, next_message_seq)
         val queue_delivery = delivery.copy
         queue_delivery.seq = entry.seq
-
+        entry.init(queue_delivery)
+        
         if( tune_persistent ) {
           queue_delivery.uow = delivery.uow
         }
-
-        entry.init(queue_delivery)
 
         entries.addLast(entry)
         enqueue_item_counter += 1
@@ -683,6 +681,15 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
         // To decrease the enqueue throttle.
         enqueue_remaining_take(entry.size)
+
+        // Do we need to do a persistent enqueue???
+        val persisted = queue_delivery.uow != null
+        if (persisted) {
+          entry.state match {
+            case state:entry.Loaded => state.store
+            case state:entry.Swapped => delivery.uow.enqueue(entry.toQueueEntryRecord)
+          }
+        }
 
         if( entry.hasSubs ) {
           // try to dispatch it directly...
@@ -693,7 +700,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         if( entry.isLinked ) {
           if( !consumers_keeping_up_historically  ) {
             entry.swap(true)
-          } else if( entry.as_loaded.is_acquired && queue_delivery.uow != null) {
+          } else if( entry.as_loaded.is_acquired && persisted) {
             // If the message as dispatched and it's marked to get persisted anyways,
             // then it's ok if it falls out of memory since we won't need to load it again.
             entry.swap(false)
@@ -701,7 +708,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         }
 
         // release the store batch...
-        if (queue_delivery.uow != null) {
+        if (persisted) {
           queue_delivery.uow.release
           queue_delivery.uow = null
         }
@@ -722,10 +729,17 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   }
 
   def expired(entry:QueueEntry, dequeue:Boolean=true):Unit = {
+    if(dequeue) {
+      might_unfill {
+        dequeue_item_counter += 1
+        dequeue_size_counter += entry.size
+        dequeue_ts = now
+      }
+    }
+
     expired_ts = now
     expired_item_counter += 1
     expired_size_counter += entry.size
-    entry.dequeue(null)
   }
 
   def display_stats: Unit = {
@@ -795,12 +809,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // acquired.
             if( !x.is_acquired ) {
               expired(cur)
+              x.remove
             }
           case x:QueueEntry#Loaded =>
             // remove the expired message if it has not been
             // acquired.
             if( !x.is_acquired ) {
               expired(cur)
+              x.remove
             }
           case _ =>
         }
@@ -820,51 +836,36 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
 
     // swap out messages.
-    cur = entries.getHead.getNext
-    var dropping_head_entries = is_topic_queue
+    cur = entries.getHead
     while( cur!=null ) {
       val next = cur.getNext
-      if ( dropping_head_entries ) {
-        if( cur.parked.isEmpty ) {
-          if( cur.is_swapped_range ) {
-            cur.load(producer_swapped_in)
-            dropping_head_entries=false
-          } else {
-            cur.dequeue(null)
-          }
-        } else {
-          cur.load(consumer_swapped_in)
-          dropping_head_entries = false
-        }
+      if( cur.prefetched ) {
+        // Prefteched entries need to get loaded..
+        cur.load(consumer_swapped_in)
       } else {
-        if( cur.prefetched ) {
-          // Prefteched entries need to get loaded..
-          cur.load(consumer_swapped_in)
-        } else {
-          // This is a non-prefetched entry.. entires ahead and behind the
-          // consumer subscriptions.
-          val loaded = cur.as_loaded
-          if( loaded!=null ) {
-            // It's in memory.. perhaps we need to swap it out..
-            if(!consumers_keeping_up_historically) {
-              // Swap out ASAP if consumers are not keeping up..
-              cur.swap(true)
-            } else {
-              // Consumers seem to be keeping up.. so we have to be more selective
-              // about what gets swapped out..
+        // This is a non-prefetched entry.. entires ahead and behind the
+        // consumer subscriptions.
+        val loaded = cur.as_loaded
+        if( loaded!=null ) {
+          // It's in memory.. perhaps we need to swap it out..
+          if(!consumers_keeping_up_historically) {
+            // Swap out ASAP if consumers are not keeping up..
+            cur.swap(true)
+          } else {
+            // Consumers seem to be keeping up.. so we have to be more selective
+            // about what gets swapped out..
 
-              if (cur.memory_space eq producer_swapped_in ) {
-                // Entry will be used soon..
-                cur.load(producer_swapped_in)
-              } else if ( cur.is_acquired ) {
-                // Entry was just used...
-                cur.load(consumer_swapped_in)
-  //              cur.swap(false)
-              } else {
-                // Does not look to be anywhere close to the consumer.. so get
-                // rid of it asap.
-                cur.swap(true)
-              }
+            if (cur.memory_space eq producer_swapped_in ) {
+              // Entry will be used soon..
+              cur.load(producer_swapped_in)
+            } else if ( cur.is_acquired ) {
+              // Entry was just used...
+              cur.load(consumer_swapped_in)
+//              cur.swap(false)
+            } else {
+              // Does not look to be anywhere close to the consumer.. so get
+              // rid of it asap.
+              cur.swap(true)
             }
           }
         }
@@ -1054,11 +1055,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       case (entry, consumed, uow) =>
         consumed match {
           case Consumed =>
+//            debug("ack consumed: ("+store_id+","+entry.entry.seq+")")
             entry.ack(uow)
           case Expired=>
 //            debug("ack expired: ("+store_id+","+entry.entry.seq+")")
             entry.entry.queue.expired(entry.entry, false)
-            entry.remove()
+            entry.ack(uow)
           case Delivered =>
             entry.increment_nack
             entry.entry.redelivered

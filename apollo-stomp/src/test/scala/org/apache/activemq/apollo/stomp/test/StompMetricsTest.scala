@@ -286,7 +286,7 @@ class StompLevelDBMetricsTest extends StompMetricsTest {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
 
-  test("slow_consumer_policy='queue' /w 1 slow and 1 fast consumer.") {
+  ignore("slow_consumer_policy='queue' /w 1 slow and 1 fast consumer.") {
     var dest_name = next_id("queued.metrics")
     val dest = "/topic/"+dest_name
 
