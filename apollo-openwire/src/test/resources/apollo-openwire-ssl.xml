@@ -24,7 +24,7 @@
 
   <key_storage file="${basedir}/src/test/resources/apollo.ks" password="password" key_password="password"/>
 
-  <web_admin bind="http://0.0.0.0:0"/>
+  <!--<web_admin bind="http://0.0.0.0:61680"/>-->
   <connector id="ssl" bind="ssl://0.0.0.0:0" />
 
 </broker>

@@ -832,7 +832,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     credit_window_filter.credit(info.getPrefetchSize, 0)
 
-    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery, info.getCurrentPrefetchSize.max(1), Integer.MAX_VALUE) {
+    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, dispatchQueue, Delivery, info.getCurrentPrefetchSize.max(1), Integer.MAX_VALUE/2) {
       override def time_stamp = broker.now
     }
 
