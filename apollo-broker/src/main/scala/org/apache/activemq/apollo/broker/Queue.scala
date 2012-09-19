@@ -92,7 +92,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   ack_source.setEventHandler(^ {drain_acks});
   ack_source.resume
 
-  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery, Integer.MAX_VALUE, virtual_host.broker.auto_tuned_send_receiver_buffer_size) {
+  val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery, Integer.MAX_VALUE, 1024*640) {
     override def time_stamp = now
   }
 
@@ -223,9 +223,13 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def configure(update:QueueSettingsDTO) = {
     def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
 
-    producer_swapped_in.size_max += mem_size(update.tail_buffer, "640k") - Option(config).map{ config=>
+    var new_tail_buffer = mem_size(update.tail_buffer, "640k")
+    var old_tail_buffer = Option(config).map { config =>
       mem_size(config.tail_buffer, "640k")
     }.getOrElse(0)
+
+    producer_swapped_in.size_max += new_tail_buffer - old_tail_buffer
+    session_manager.resize(Int.MaxValue, new_tail_buffer)
 
     tune_persistent = virtual_host.store !=null && update.persistent.getOrElse(true)
     tune_swap = tune_persistent && update.swap.getOrElse(true)

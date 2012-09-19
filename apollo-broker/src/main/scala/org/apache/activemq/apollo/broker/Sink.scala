@@ -342,7 +342,7 @@ trait SessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue:DispatchQueue, val sizer:Sizer[T], delivery_credits:Int, val size_credits:Int) {
+class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue:DispatchQueue, val sizer:Sizer[T], var delivery_credits:Int, var size_credits:Int) {
 
   var sessions = HashSet[Session[T]]()
   var overflowed_sessions = new LinkedNodeList[SessionLinkedNode[T]]()
@@ -368,6 +368,18 @@ class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue
           s.close(rejection_handler)
       }
     }
+  }
+
+  def resize(new_delivery_credits:Int, new_size_credits:Int) = consumer_queue {
+    val delivery_credits_change = new_delivery_credits - delivery_credits
+    if ( delivery_credits_change!=0 ) {
+      for ( session <- sessions ) {
+        session.credit(delivery_credits_change, 0);
+      }
+    }
+    this.delivery_credits = new_delivery_credits
+    this.size_credits = new_size_credits
+    schedual_rebalance
   }
 
   def time_stamp = 0L
