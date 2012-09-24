@@ -322,20 +322,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       total_ack_count += 1
       total_ack_size += entry.size
-      if (entry.messageKey != -1) {
-        val storeBatch = if( uow == null ) {
-          queue.virtual_host.store.create_uow
-        } else {
-          uow
-        }
-        storeBatch.dequeue(entry.toQueueEntryRecord)
-        if( uow == null ) {
-          storeBatch.release
-        }
-      }
-      queue.dequeue_item_counter += 1
-      queue.dequeue_size_counter += entry.size
-      queue.dequeue_ts = queue.now
+      entry.dequeue(uow)
 
       // removes this entry from the acquired list.
       unlink()

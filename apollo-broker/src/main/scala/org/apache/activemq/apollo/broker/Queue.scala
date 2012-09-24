@@ -598,18 +598,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             case state: entry.Loaded =>
               var next = entry.getNext
               if (!entry.is_acquired) {
-                dequeue_item_counter += 1
-                dequeue_size_counter += entry.size
-                dequeue_ts = now
+                entry.dequeue(null)
                 entry.remove
               }
               next
             case state: entry.Swapped =>
               var next = entry.getNext
               if (!entry.is_acquired) {
-                dequeue_item_counter += 1
-                dequeue_size_counter += entry.size
-                dequeue_ts = now
+                entry.dequeue(null)
                 entry.remove
               }
               next
@@ -722,21 +718,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  def expired(delivery:Delivery):Unit = {
-    expired_ts = now
-    expired_item_counter += 1
-    expired_size_counter += delivery.size
-  }
-
-  def expired(entry:QueueEntry, dequeue:Boolean=true):Unit = {
-    if(dequeue) {
-      might_unfill {
-        dequeue_item_counter += 1
-        dequeue_size_counter += entry.size
-        dequeue_ts = now
-      }
-    }
-
+  def expired(entry:QueueEntry):Unit = {
     expired_ts = now
     expired_item_counter += 1
     expired_size_counter += entry.size
@@ -809,6 +791,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // acquired.
             if( !x.is_acquired ) {
               expired(cur)
+              cur.dequeue(null)
               x.remove
             }
           case x:QueueEntry#Loaded =>
@@ -816,6 +799,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // acquired.
             if( !x.is_acquired ) {
               expired(cur)
+              cur.dequeue(null)
               x.remove
             }
           case _ =>
@@ -836,36 +820,52 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
 
     // swap out messages.
-    cur = entries.getHead
+    cur = entries.getHead.getNext
+    var dropping_head_entries = is_topic_queue
     while( cur!=null ) {
       val next = cur.getNext
-      if( cur.prefetched ) {
-        // Prefteched entries need to get loaded..
-        cur.load(consumer_swapped_in)
-      } else {
-        // This is a non-prefetched entry.. entires ahead and behind the
-        // consumer subscriptions.
-        val loaded = cur.as_loaded
-        if( loaded!=null ) {
-          // It's in memory.. perhaps we need to swap it out..
-          if(!consumers_keeping_up_historically) {
-            // Swap out ASAP if consumers are not keeping up..
-            cur.swap(true)
+      if ( dropping_head_entries ) {
+        if( cur.parked.isEmpty ) {
+          if( cur.is_swapped_range ) {
+            cur.load(producer_swapped_in)
+            dropping_head_entries=false
           } else {
-            // Consumers seem to be keeping up.. so we have to be more selective
-            // about what gets swapped out..
-
-            if (cur.memory_space eq producer_swapped_in ) {
-              // Entry will be used soon..
-              cur.load(producer_swapped_in)
-            } else if ( cur.is_acquired ) {
-              // Entry was just used...
-              cur.load(consumer_swapped_in)
-//              cur.swap(false)
-            } else {
-              // Does not look to be anywhere close to the consumer.. so get
-              // rid of it asap.
+            cur.dequeue(null)
+            cur.remove
+          }
+        } else {
+          cur.load(consumer_swapped_in)
+          dropping_head_entries = false
+        }
+      } else {
+        if( cur.prefetched ) {
+          // Prefteched entries need to get loaded..
+          cur.load(consumer_swapped_in)
+        } else {
+          // This is a non-prefetched entry.. entires ahead and behind the
+          // consumer subscriptions.
+          val loaded = cur.as_loaded
+          if( loaded!=null ) {
+            // It's in memory.. perhaps we need to swap it out..
+            if(!consumers_keeping_up_historically) {
+              // Swap out ASAP if consumers are not keeping up..
               cur.swap(true)
+            } else {
+              // Consumers seem to be keeping up.. so we have to be more selective
+              // about what gets swapped out..
+
+              if (cur.memory_space eq producer_swapped_in ) {
+                // Entry will be used soon..
+                cur.load(producer_swapped_in)
+              } else if ( cur.is_acquired ) {
+                // Entry was just used...
+                cur.load(consumer_swapped_in)
+  //              cur.swap(false)
+              } else {
+                // Does not look to be anywhere close to the consumer.. so get
+                // rid of it asap.
+                cur.swap(true)
+              }
             }
           }
         }
@@ -1059,7 +1059,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             entry.ack(uow)
           case Expired=>
 //            debug("ack expired: ("+store_id+","+entry.entry.seq+")")
-            entry.entry.queue.expired(entry.entry, false)
+            expired_ts = now
+            expired_item_counter += 1
+            expired_size_counter += entry.entry.size
             entry.ack(uow)
           case Delivered =>
             entry.increment_nack

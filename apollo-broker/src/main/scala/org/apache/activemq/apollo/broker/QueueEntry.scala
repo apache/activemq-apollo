@@ -197,6 +197,26 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def load(space:MemorySpace) = state.swap_in(space)
   def remove = state.remove
 
+  def dequeue(uow: StoreUOW) = {
+
+    if (messageKey != -1) {
+      val storeBatch = if( uow == null ) {
+        queue.virtual_host.store.create_uow
+      } else {
+        uow
+      }
+      storeBatch.dequeue(toQueueEntryRecord)
+      if( uow == null ) {
+        storeBatch.release
+      }
+    }
+
+    queue.dequeue_item_counter += 1
+    queue.dequeue_size_counter += size
+    queue.dequeue_ts = queue.now
+  }
+
+
   def swapped_range = state.swap_range
 
   def can_combine_with_prev = {
@@ -538,6 +558,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
         queue.expired(entry)
+        entry.dequeue(null)
         remove
         return true
       }
@@ -652,9 +673,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             storeBatch.dequeue(toQueueEntryRecord)
             storeBatch.release
           }
-          queue.dequeue_item_counter += 1
-          queue.dequeue_size_counter += size
-          queue.dequeue_ts = queue.now
+          dequeue(null)
           remove
         }
 
@@ -789,6 +808,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
         queue.expired(entry)
+        entry.dequeue(null)
         remove
         return true
       }
