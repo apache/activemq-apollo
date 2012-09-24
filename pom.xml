@@ -117,6 +117,8 @@
     <jersey-version>1.7</jersey-version>
     <snakeyaml-version>1.7</snakeyaml-version>
     <swagger-version>1.0.1</swagger-version>
+    
+    <selenium-version>2.25.0</selenium-version>
       
     <!-- maven plugin versions -->
     <maven-scala-plugin-version>2.15.2</maven-scala-plugin-version>
