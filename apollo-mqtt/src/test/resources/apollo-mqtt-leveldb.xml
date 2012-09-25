@@ -22,6 +22,9 @@
     <host_name>localhost</host_name>
 
     <queue name="unified.**" unified="true"/>
+    <topic id="queued.**" slow_consumer_policy="queue">
+      <subscription tail_buffer="4k"/>
+    </topic>
 
     <leveldb_store directory="${testdatadir}"/>
   </virtual_host>

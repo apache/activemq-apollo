@@ -64,7 +64,9 @@ class MqttTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Bef
     }
 
     def disconnect() = {
-      connection.disconnect()
+      if( connection!=null ) {
+        connection.disconnect()
+      }
     }
   }
 

@@ -23,6 +23,9 @@
     <host_name>127.0.0.1</host_name>
 
     <queue name="unified.**" unified="true"/>
+    <topic id="queued.**" slow_consumer_policy="queue">
+      <subscription tail_buffer="4k"/>
+    </topic>
 
   </virtual_host>
 

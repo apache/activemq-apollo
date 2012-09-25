@@ -1142,6 +1142,8 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
     val credit_window_filter = new CreditWindowFilter[(Session[Delivery], Delivery)](consumer_sink.flatMap{ event =>
       queue.assertExecuting()
       val (session, delivery) = event
+
+      session_manager.delivered(session, delivery.size)
       
       // Look up which QoS we need to send this message with..
       var topic = delivery.sender.head.simple
@@ -1222,7 +1224,7 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
     
     credit_window_filter.credit(handler.get.codec.getWriteBufferSize*2, 1)
 
-    val session_manager = new SessionSinkMux[Delivery](credit_window_filter, queue, Delivery, Integer.MAX_VALUE/2, receive_buffer_size) {
+    val session_manager:SessionSinkMux[Delivery] = new SessionSinkMux[Delivery](credit_window_filter, queue, Delivery, Integer.MAX_VALUE/2, receive_buffer_size) {
       override def time_stamp = host.broker.now
     }
 
