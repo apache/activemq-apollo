@@ -6,7 +6,6 @@ This is an example of how use the MQTT protocol with Apollo.
 
 - Install Java SDK
 - Install [Maven](http://maven.apache.org/download.html) 
-- Install the [MQTT protocol for Apollo](https://github.com/fusesource/fuse-extra/tree/master/fusemq-apollo/fusemq-apollo-mqtt)
 
 ## Building
 

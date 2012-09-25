@@ -141,6 +141,12 @@
       <version>99-trunk-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-mqtt</artifactId>
+      <version>99-trunk-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
