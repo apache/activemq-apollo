@@ -483,48 +483,59 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     val consumer_sink = sink_manager.open()
-    val credit_window_filter = new CreditWindowFilter[(Session[Delivery], Delivery)](consumer_sink.map { event =>
+    val credit_window_filter = new CreditWindowFilter[(Session[Delivery], Delivery)](consumer_sink.flatMap { event =>
       val (session, delivery) = event
-      val message = delivery.message
-      var frame = if( message.codec eq StompMessageCodec ) {
-        message.asInstanceOf[StompFrameMessage].frame
-      } else {
-        val (body, content_type) =  protocol_convert match{
-          case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.codec.id+";conv=body")
-          case _ => (message.encoded, "protocol/"+message.codec.id())
+
+      // perhaps it has expired.. no need to deliver.
+      if( delivery.expiration != 0 && delivery.expiration <= Broker.now ) {
+        session_manager.delivered(session, delivery.size)
+        if( delivery.ack != null ) {
+          delivery.ack(Expired, null)
         }
-        message_id_counter += 1
-        var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil
-        headers ::= (CONTENT_TYPE -> ascii(content_type))
-        headers ::= (CONTENT_LENGTH -> ascii(body.length().toString))
-        headers ::= (DESTINATION -> encode_header(destination_parser.encode_destination(delivery.sender.tail)))
-        StompFrame(MESSAGE, headers, BufferContent(body))
-      }
-
-      val ack_id = if( (protocol_version eq V1_0) || (protocol_version eq V1_1) ) {
-        frame.header(MESSAGE_ID)
+        None
       } else {
-        val ack_id = checkout_ack_id
-        // we need to add the ACK id.
-        frame = frame.append_headers((ACK_HEADER->ack_id)::Nil)
-        ack_id
+        val message = delivery.message
+        var frame = if( message.codec eq StompMessageCodec ) {
+          message.asInstanceOf[StompFrameMessage].frame
+        } else {
+          val (body, content_type) =  protocol_convert match{
+            case "body" => (message.getBodyAs(classOf[Buffer]), "protocol/"+message.codec.id+";conv=body")
+            case _ => (message.encoded, "protocol/"+message.codec.id())
+          }
+          message_id_counter += 1
+          var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil
+          headers ::= (CONTENT_TYPE -> ascii(content_type))
+          headers ::= (CONTENT_LENGTH -> ascii(body.length().toString))
+          headers ::= (DESTINATION -> encode_header(destination_parser.encode_destination(delivery.sender.tail)))
+          StompFrame(MESSAGE, headers, BufferContent(body))
+        }
+
+        val ack_id = if( (protocol_version eq V1_0) || (protocol_version eq V1_1) ) {
+          frame.header(MESSAGE_ID)
+        } else {
+          val ack_id = checkout_ack_id
+          // we need to add the ACK id.
+          frame = frame.append_headers((ACK_HEADER->ack_id)::Nil)
+          ack_id
+        }
+
+        ack_handler.track(session, ack_id, delivery.size, delivery.ack)
+
+        if( subscription_id != None ) {
+          frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
+        }
+        if( config.add_redeliveries_header!=null && delivery.redeliveries > 0) {
+          val header = encode_header(config.add_redeliveries_header)
+          val value = ascii(delivery.redeliveries.toString())
+          frame = frame.append_headers((header, value)::Nil)
+        }
+        if( include_seq.isDefined ) {
+          frame = frame.append_headers((include_seq.get, ascii(delivery.seq.toString))::Nil)
+        }
+        messages_sent += 1
+        Some(frame)
       }
 
-      ack_handler.track(session, ack_id, delivery.size, delivery.ack)
-
-      if( subscription_id != None ) {
-        frame = frame.append_headers((SUBSCRIPTION, subscription_id.get)::Nil)
-      }
-      if( config.add_redeliveries_header!=null && delivery.redeliveries > 0) {
-        val header = encode_header(config.add_redeliveries_header)
-        val value = ascii(delivery.redeliveries.toString())
-        frame = frame.append_headers((header, value)::Nil)
-      }
-      if( include_seq.isDefined ) {
-        frame = frame.append_headers((include_seq.get, ascii(delivery.seq.toString))::Nil)
-      }
-      messages_sent += 1
-      frame
     }, SessionDeliverySizer)
 
     credit_window_filter.credit(initial_credit_window.count, initial_credit_window.size)

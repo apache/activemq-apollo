@@ -129,18 +129,23 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
   }
 
   def assert_received(body: Any, sub: String = null, c: StompClient = client, txid: String = null): (Boolean) => Unit = {
-    val frame = c.receive()
-    frame should startWith("MESSAGE\n")
-    if (sub != null) {
-      frame should include("subscription:" + sub + "\n")
-    }
+    val (frame, ack) = receive_message(sub, c, txid)
     body match {
       case null =>
       case body: scala.util.matching.Regex => frame should endWith regex (body)
       case body => frame should endWith("\n\n" + body)
     }
+    ack
+  }
+
+  def receive_message(sub: String = null, c: StompClient = client, txid: String = null): (String, (Boolean) => Unit) = {
+    val frame = c.receive()
+    frame should startWith("MESSAGE\n")
+    if (sub != null) {
+      frame should include("subscription:" + sub + "\n")
+    }
     // return a func that can ack the message.
-    (ack: Boolean) => {
+    (frame, (ack: Boolean) => {
       if( c.version == "1.0" || c.version== "1.1" ) {
         val sub_regex = """(?s).*\nsubscription:([^\n]+)\n.*""".r
         val msgid_regex = """(?s).*\nmessage-id:([^\n]+)\n.*""".r
@@ -163,7 +168,7 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
 
                   "\n")
       }
-    }
+    })
   }
 
   def wait_for_receipt(id: String, c: StompClient = client, discard_others: Boolean = false): Unit = {

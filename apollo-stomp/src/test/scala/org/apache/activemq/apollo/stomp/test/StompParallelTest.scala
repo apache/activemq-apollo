@@ -22,6 +22,7 @@ import org.fusesource.hawtbuf.AsciiBuffer
 import org.apache.activemq.apollo.broker._
 import java.net.{SocketTimeoutException, InetSocketAddress}
 import org.apache.activemq.apollo.stomp.{Stomp, StompProtocolHandler}
+import org.fusesource.hawtdispatch._
 
 /**
  * These tests can be run in parallel against a single Apollo broker.
@@ -1540,6 +1541,47 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     assert_received(1, "my-sub-name")(true)
     assert_received(3, "my-sub-name")(true)
     disconnect()
+  }
+
+  for ( prefix<- List("queued", "block")) {
+    test("APLO-249: Message expiration does not (always) work on topics: "+prefix) {
+      val dest = next_id("/topic/"+prefix+".expiration")
+      val msg_count = 1000
+
+      connect("1.1")
+      subscribe("0", dest, "client")
+
+      Broker.BLOCKABLE_THREAD_POOL {
+        val sender = new StompClient
+        connect("1.1", sender)
+        val exp = System.currentTimeMillis()+500
+        for( i <- 1 to msg_count ) {
+          async_send(dest, "%01024d".format(i), "expires:"+exp+"\n", sender)
+        }
+        sync_send(dest, "DONE", c=sender)
+        close(sender)
+      }
+
+      var done = false
+      var received = 0
+      Thread.sleep(1000)
+      while( !done ) {
+        val (frame, ack) = receive_message()
+        val body = frame.substring(frame.indexOf("\n\n")+2)
+        if( body == "DONE" ) {
+          done = true
+        } else {
+          received +=1
+          ack(true)
+        }
+      }
+
+      val expired = (msg_count-received)
+      println("expired: "+expired)
+      expired should not be(0)
+
+    }
+
   }
 
 }
