@@ -96,6 +96,40 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     get(-1)
   }
 
+  test("Wildcard subscription recursive"){
+    connect()
+
+    val common_prefix = next_id() + path_separator
+
+    val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+
+
+    val producer1_dest = common_prefix + "A"
+    val producer1 = session.createProducer(queue(producer1_dest))
+
+    val producer2_dest = producer1_dest + path_separator + "bar"
+    val producer2 = session.createProducer(queue(producer2_dest))
+
+
+    def put(producer: MessageProducer, id: Int) {
+      producer.send(session.createTextMessage("message:" + id))
+    }
+
+    val subscribe_dest = common_prefix + "A" + path_separator + ">"
+    val consumer = session.createConsumer(queue(subscribe_dest))
+
+    def get(id: Int) {
+      receive_text(consumer) should equal("message:" + id)
+    }
+
+    // put messages onto the queues and consume them
+    List(1, 2, 3).foreach(put(producer1, _))
+    List(1, 2, 3).foreach(get _)
+
+    List(4, 5, 6).foreach(put(producer2, _))
+    List(4, 5, 6).foreach(get _)
+  }
+
   test("Wildcard subscription with multiple path sections") {
     connect()
 

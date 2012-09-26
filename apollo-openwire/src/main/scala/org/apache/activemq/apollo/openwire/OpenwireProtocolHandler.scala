@@ -156,7 +156,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     preferred_wireformat_settings.setCacheEnabled(config.cache.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
     preferred_wireformat_settings.setVersion(config.version.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getVersion))
     preferred_wireformat_settings.setStackTraceEnabled(config.stack_trace.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isStackTraceEnabled))
-    preferred_wireformat_settings.setCacheEnabled(config.cache.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isCacheEnabled))
     preferred_wireformat_settings.setTightEncodingEnabled(config.tight_encoding.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.isTightEncodingEnabled))
     preferred_wireformat_settings.setMaxInactivityDuration(config.max_inactivity_duration.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDuration))
     preferred_wireformat_settings.setMaxInactivityDurationInitalDelay(config.max_inactivity_duration_initial_delay.getOrElse(DEFAULT_WIREFORMAT_SETTINGS.getMaxInactivityDurationInitalDelay))
