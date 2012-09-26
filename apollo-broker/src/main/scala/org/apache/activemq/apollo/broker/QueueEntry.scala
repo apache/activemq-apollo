@@ -197,23 +197,26 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def load(space:MemorySpace) = state.swap_in(space)
   def remove = state.remove
 
+  var queued = true
+
   def dequeue(uow: StoreUOW) = {
-
-    if (messageKey != -1) {
-      val storeBatch = if( uow == null ) {
-        queue.virtual_host.store.create_uow
-      } else {
-        uow
+    if ( queued ) {
+      if (messageKey != -1) {
+        val storeBatch = if( uow == null ) {
+          queue.virtual_host.store.create_uow
+        } else {
+          uow
+        }
+        storeBatch.dequeue(toQueueEntryRecord)
+        if( uow == null ) {
+          storeBatch.release
+        }
       }
-      storeBatch.dequeue(toQueueEntryRecord)
-      if( uow == null ) {
-        storeBatch.release
-      }
+      queue.dequeue_item_counter += 1
+      queue.dequeue_size_counter += size
+      queue.dequeue_ts = queue.now
+      queued = false
     }
-
-    queue.dequeue_item_counter += 1
-    queue.dequeue_size_counter += size
-    queue.dequeue_ts = queue.now
   }
 
 
@@ -668,11 +671,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
         // We can drop after dispatch in some cases.
         if( queue.is_topic_queue  && parked.isEmpty && getPrevious.is_head ) {
-          if (messageKey != -1) {
-            val storeBatch = queue.virtual_host.store.create_uow
-            storeBatch.dequeue(toQueueEntryRecord)
-            storeBatch.release
-          }
           dequeue(null)
           remove
         }

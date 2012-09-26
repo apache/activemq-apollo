@@ -53,7 +53,7 @@ class MqttLoadTest extends MqttTestSupport {
   }
 }
 
-// This test is failing with: java.lang.AssertionError: assertion failed: locator_based.unary_$bang.$bar$bar(uow.have_locators)
-//class MqttLoadLevelDBTest extends MqttLoadTest {
-//  override def broker_config_uri = "xml:classpath:apollo-mqtt-leveldb.xml"
-//}
+//This test is failing with: java.lang.AssertionError: assertion failed: locator_based.unary_$bang.$bar$bar(uow.have_locators)
+class MqttLoadLevelDBTest extends MqttLoadTest {
+  override def broker_config_uri = "xml:classpath:apollo-mqtt-leveldb.xml"
+}
