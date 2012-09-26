@@ -1504,4 +1504,42 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   }
 
+
+  test("STOMP 1.2 client ack.") {
+    val dest = next_id("/queue/stomp12clientack_")
+
+    connect("1.2")
+    subscribe("my-sub-name", dest, "client")
+    async_send(dest, 1)
+    async_send(dest, 2)
+    assert_received(1, "my-sub-name")
+    assert_received(2, "my-sub-name")(true)
+    disconnect()
+
+    connect("1.2")
+    subscribe("my-sub-name", dest, "client")
+    async_send(dest, 3)
+    assert_received(3, "my-sub-name")(true)
+    disconnect()
+  }
+
+  test("STOMP 1.2 client-individual ack.") {
+    val dest = next_id("/queue/stomp12clientack_")
+
+    connect("1.2")
+    subscribe("my-sub-name", dest, "client-individual")
+    async_send(dest, 1)
+    async_send(dest, 2)
+    assert_received(1, "my-sub-name")
+    assert_received(2, "my-sub-name")(true)
+    disconnect()
+
+    connect("1.2")
+    subscribe("my-sub-name", dest, "client")
+    async_send(dest, 3)
+    assert_received(1, "my-sub-name")(true)
+    assert_received(3, "my-sub-name")(true)
+    disconnect()
+  }
+
 }

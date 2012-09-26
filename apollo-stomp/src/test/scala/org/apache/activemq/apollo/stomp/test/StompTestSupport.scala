@@ -44,20 +44,21 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
           "CONNECT\n" +
                   headers +
                   "\n")
-      case "1.1" =>
+      case "1.1" | "1.2" =>
         c.write(
           "CONNECT\n" +
-                  "accept-version:1.1\n" +
+                  "accept-version:"+version+"\n" +
                   "host:localhost\n" +
                   headers +
                   "\n")
-      case x => throw new RuntimeException("invalid version: %f".format(x))
+      case x => throw new RuntimeException("invalid version: %s".format(x))
     }
     clients ::= c
     c.receive()
   }
 
   def connect(version: String, c: StompClient = client, headers: String = "", connector: String = null) = {
+    c.version = version
     val frame = connect_request(version, c, headers, connector)
     frame should startWith("CONNECTED\n")
     frame should include regex ("""session:.+?\n""")
@@ -140,17 +141,28 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     }
     // return a func that can ack the message.
     (ack: Boolean) => {
-      val sub_regex = """(?s).*\nsubscription:([^\n]+)\n.*""".r
-      val msgid_regex = """(?s).*\nmessage-id:([^\n]+)\n.*""".r
-      val sub_regex(sub) = frame
-      val msgid_regex(msgid) = frame
-      c.write(
-        (if (ack) "ACK\n" else "NACK\n") +
-                "subscription:" + sub + "\n" +
-                "message-id:" + msgid + "\n" +
-                (if (txid != null) "transaction:" + txid + "\n" else "") +
+      if( c.version == "1.0" || c.version== "1.1" ) {
+        val sub_regex = """(?s).*\nsubscription:([^\n]+)\n.*""".r
+        val msgid_regex = """(?s).*\nmessage-id:([^\n]+)\n.*""".r
+        val sub_regex(sub) = frame
+        val msgid_regex(msgid) = frame
+        c.write(
+          (if (ack) "ACK\n" else "NACK\n") +
+                  "subscription:" + sub + "\n" +
+                  "message-id:" + msgid + "\n" +
+                  (if (txid != null) "transaction:" + txid + "\n" else "") +
 
-                "\n")
+                  "\n")
+      } else {
+        val ack_regex = """(?s).*\nack:([^\n]+)\n.*""".r
+        val ack_regex(id) = frame
+        c.write(
+          (if (ack) "ACK\n" else "NACK\n") +
+                  "id:" + id + "\n" +
+                  (if (txid != null) "transaction:" + txid + "\n" else "") +
+
+                  "\n")
+      }
     }
   }
 

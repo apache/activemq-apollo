@@ -37,6 +37,7 @@ class StompClient extends ShouldMatchers {
   val bufferSize = 64 * 1204
   var key_storeage: KeyStorage = null
   var bytes_written = 0L
+  var version:String = null
 
   def open(host: String, port: Int) = {
     bytes_written = 0

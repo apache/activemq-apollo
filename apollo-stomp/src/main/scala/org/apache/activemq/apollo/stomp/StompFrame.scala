@@ -392,7 +392,7 @@ object Stomp {
   val TIMESTAMP = ascii("timestamp")
   val SUBSCRIPTION = ascii("subscription")
 
-  val ACK_MODE = ascii("ack")
+  val ACK_HEADER = ascii("ack")
   val ID = ascii("id")
   val SELECTOR = ascii("selector")
   val CREDIT = ascii("credit")
