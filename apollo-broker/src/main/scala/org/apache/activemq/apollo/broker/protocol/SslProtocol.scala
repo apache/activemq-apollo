@@ -27,28 +27,41 @@ class SslProtocol extends Protocol {
   def id(): String = "ssl"
 
   override def isIdentifiable = true
-  override def maxIdentificaionLength = 5
+  override def maxIdentificaionLength = 6
 
   override def matchesIdentification(buffer: Buffer):Boolean = {
-    if( buffer.length >= 5 ) {
-
-      // We have variable header offset..
-      ((buffer.get(0) & 0xC0) == 0x80) && // The rest of byte 0 and 1 are holds the record length.
-      (buffer.get(2) == 1) && // Client Hello
-      (
-        (
-          (buffer.get(3) == 2) // SSLv2
-        ) || (
-          (buffer.get(3) == 3) && // SSLv3 or TLS
-          (buffer.get(4) match {  // Minor version
-            case 0 => true // SSLv3
-            case 1 => true // TLSv1
-            case 2 => true // TLSv2
-            case 3 => true // TLSv3
-            case _ => false
-          })
+    if( buffer.length >= 6 ) {
+      if( buffer.get(0) == 0x16 ) { // content type
+        (buffer.get(5) == 1) && // Client Hello
+        ( (buffer.get(1) == 2) // SSLv2
+          || (
+            (buffer.get(1) == 3) && // SSLv3 or TLS
+            (buffer.get(2) match {  // Minor version
+              case 0 => true // SSLv3
+              case 1 => true // TLSv1
+              case 2 => true // TLSv2
+              case 3 => true // TLSv3
+              case _ => false
+            })
+          )
         )
-      )
+      } else {
+        // We have variable header offset..
+        ((buffer.get(0) & 0xC0) == 0x80) && // The rest of byte 0 and 1 are holds the record length.
+          (buffer.get(2) == 1) && // Client Hello
+          ( (buffer.get(3) == 2) // SSLv2
+            || (
+              (buffer.get(3) == 3) && // SSLv3 or TLS
+              (buffer.get(4) match {  // Minor version
+                case 0 => true // SSLv3
+                case 1 => true // TLSv1
+                case 2 => true // TLSv2
+                case 3 => true // TLSv3
+                case _ => false
+              })
+            )
+          )
+      }
     } else {
       false
     }
