@@ -113,6 +113,11 @@ Download it today!
 
   Want to help stablize the latest and greatest nightly development
   build?  **Warnning**: These builds are extremely bleeding edge!
+  
+  These development builds are automatically tested and deployed by a Jenkins CI server:
+  
+    * [Checkin Build and Test Results](https://builds.apache.org/job/ActiveMQ-Apollo/)
+    * [Nightly SNAPSHOT deployment Results](https://builds.apache.org/job/ActiveMQ-Apollo-Deploy/)
 
   ### #{project_name} #{project_snapshot_version} 
   [Installation Instructions](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{project_snapshot_version}/website/documentation/index.html)
