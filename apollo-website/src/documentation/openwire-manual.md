@@ -1,8 +1,8 @@
-## Using the OpenWire Protocol
+# Apollo ${project_version} OpenWire Protocol Manual
 
 {:toc:2-5}
 
-### OpenWire
+## Using the OpenWire Protocol
 
 Clients can connect to ${project_name} using the
 [OpenWire](http://activemq.apache.org/openwire.html) protocol. OpenWire is a binary,
@@ -270,15 +270,23 @@ to the broker or to to virtual host, the broker will kill the connection.
 * Persistent Messaging
 * Message Expiration
 
-### OpenWire implementation features to come in the near future:
+### Unsupported OpenWire features:
 
+You will get bad/undefined behaviour if you try to use any of the following OpenWire features:
+
+* XA transactions
 * [Message Groups using JMSXGroupID](http://activemq.apache.org/message-groups.html)
 * [Subscription recovery/retroactive consumer](http://activemq.apache.org/retroactive-consumer.html)
+* [Exclusive Consumer with Priority](http://activemq.apache.org/exclusive-consumer.html)
+* [Virtual Destinations](http://activemq.apache.org/virtual-destinations.html)
+
+You can use Durable Subscriptions and/or [Mirrored Queues](user-manual.html#Mirrored_Queues) to get
+the same/similar behaviour that [Virtual Destinations](http://activemq.apache.org/virtual-destinations.html) provide.
+
+<!-- The following are not really OpenWire features.. but just general brokers features.
 * [Network of brokers](http://activemq.apache.org/networks-of-brokers.html)
 * [Shared-state Master/Slave](http://activemq.apache.org/shared-file-system-master-slave.html)
-* [XA transaction]()
-* [Exclusive Consumer with Priority](http://activemq.apache.org/exclusive-consumer.html)
 * [Startup Destinations](http://activemq.apache.org/configure-startup-destinations.html)
 * [Delete inactive dests](http://activemq.apache.org/delete-inactive-destinations.html)
-* [Virtual Dests](http://activemq.apache.org/virtual-destinations.html)
 * [JMX](http://activemq.apache.org/jmx.html)
+-->

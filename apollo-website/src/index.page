@@ -26,19 +26,14 @@ h1 Apollo #{project_version}
 reliable, easier to maintain messaging broker built from the foundations of
 the original [ActiveMQ]((http://activemq.apache.org). It accomplishes this
 using a radically different threading and message dispatching 
-[architecture](documentation/architecture.html). 
-
-In it’s current incarnation, Apollo only supports the STOMP protocol but just
-like the original ActiveMQ, it’s been designed to be a multi protocol broker.
-In future versions it will be adding OpenWire support so it can be compatible with
-ActiveMQ 5.x JMS clients.
+[architecture](documentation/architecture.html).  Like ActiveMQ, Apollo is a 
+multi-protocol broker and supports STOMP, Openwire, MQTT, SSL, and WebSockets.
 
 ## Features
 
-* [Stomp 1.0](http://stomp.github.com/stomp-specification-1.0.html) Protocol
-  Support
-* [Stomp 1.1](http://stomp.github.com/stomp-specification-1.1.html) Protocol
-  Support
+* [STOMP Protocol Support](documentation/stomp-manual.html) 
+* [OpenWire Protocol Support](documentation/openwire-manual.html)
+* MQTT Protocol Support
 * [Topics and Queues](documentation/user-manual.html#Destination_Types)
 * [Queue Browsers](documentation/user-manual.html#Browsing_Subscriptions)
 * [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
