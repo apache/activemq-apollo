@@ -38,7 +38,7 @@
         <module>jms-example-composite-destinations</module>
     </modules>
 
-    <name>OpenWire example</name>
+    <name>JMS / OpeWire Examples for Apollo</name>
     <description>Apollo OpenWire Java Examples</description>
 
     <properties>
@@ -63,11 +63,6 @@
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-core</artifactId>
             <version>${activemq.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.6.4</version>
         </dependency>
     </dependencies>
 

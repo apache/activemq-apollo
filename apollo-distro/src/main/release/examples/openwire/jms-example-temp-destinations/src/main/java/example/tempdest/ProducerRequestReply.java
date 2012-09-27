@@ -17,8 +17,6 @@ package example.tempdest; /**
 
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +26,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class ProducerRequestReply{
 
-    private static final Logger LOG = LoggerFactory.getLogger(ProducerRequestReply.class);
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
     private static final String BROKER_URL = String.format(BROKER_HOST, BROKER_PORT);
@@ -72,14 +69,14 @@ public class ProducerRequestReply{
             session.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }

@@ -19,8 +19,6 @@ package example.wildcard;
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import java.util.Scanner;
@@ -29,7 +27,6 @@ import java.util.Scanner;
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
 public class Client {
-    private static final Logger LOG = LoggerFactory.getLogger(Client.class);
     private static final Boolean NON_TRANSACTED = false;
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
@@ -60,10 +57,10 @@ public class Client {
                     try {
                         if (message instanceof TextMessage) {
                             String text = ((TextMessage) message).getText();
-                            LOG.info("We received a new message: " + text);
+                            System.out.println("We received a new message: " + text);
                         }
                     } catch (JMSException e) {
-                        LOG.error("Could not read the receiver's topic because of a JMSException", e);
+                        System.out.println("Could not read the receiver's topic because of a JMSException");
                     }
                 }
             });
@@ -77,16 +74,16 @@ public class Client {
             while (true) {
                 String line = inputReader.nextLine();
                 if (line == null) {
-                    LOG.info("Done!");
+                    System.out.println("Done!");
                     break;
                 } else if (line.length() > 0) {
                     try {
                         TextMessage message = senderSession.createTextMessage();
                         message.setText(line);
-                        LOG.info("Sending a message: " + message.getText());
+                        System.out.println("Sending a message: " + message.getText());
                         sender.send(message);
                     } catch (JMSException e) {
-                        LOG.error("Exception during publishing a message: ", e);
+                        System.out.println("Exception during publishing a message: ");
                     }
                 }
             }
@@ -97,13 +94,13 @@ public class Client {
             senderSession.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         } finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("When trying to close connection: ", e);
+                    System.out.println("When trying to close connection: ");
                 }
             }
         }

@@ -18,8 +18,6 @@ package example.browser;
 
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import java.util.Enumeration;
@@ -29,7 +27,6 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
 public class Browser {
-    private static final Logger LOG = LoggerFactory.getLogger(Browser.class);
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
     private static final String BROKER_URL = String.format(BROKER_HOST, BROKER_PORT);
@@ -60,14 +57,14 @@ public class Browser {
             session.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }

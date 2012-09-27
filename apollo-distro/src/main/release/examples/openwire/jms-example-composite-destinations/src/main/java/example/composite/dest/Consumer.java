@@ -18,8 +18,6 @@ package example.composite.dest;
 
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 
@@ -28,7 +26,6 @@ import javax.jms.*;
  */
 public class Consumer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Consumer.class);
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
     private static final String BROKER_URL = String.format(BROKER_HOST, BROKER_PORT);
@@ -36,7 +33,7 @@ public class Consumer {
     private static final long TIMEOUT = 20000;
 
     public static void main(String[] args) {
-        LOG.info("\nWaiting to receive messages... will timeout after " + TIMEOUT / 1000 +"s");
+        System.out.println("\nWaiting to receive messages... will timeout after " + TIMEOUT / 1000 +"s");
         ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("admin", "password", BROKER_URL);
         Connection connection = null;
 
@@ -63,7 +60,7 @@ public class Consumer {
                 if (message != null) {
                     if (message instanceof TextMessage) {
                         String text = ((TextMessage) message).getText();
-                        LOG.info("Got " + i++ + ". message on test-queue: " + text);
+                        System.out.println("Got " + i++ + ". message on test-queue: " + text);
                     }
                 } else {
                     break;
@@ -74,7 +71,7 @@ public class Consumer {
                 if (message != null) {
                     if (message instanceof TextMessage) {
                         String text = ((TextMessage) message).getText();
-                        LOG.info("Got " + i++ + ". message on test-queue-foo: " + text);
+                        System.out.println("Got " + i++ + ". message on test-queue-foo: " + text);
                     }
                 } else {
                     break;
@@ -85,7 +82,7 @@ public class Consumer {
                 if (message != null) {
                     if (message instanceof TextMessage) {
                         String text = ((TextMessage) message).getText();
-                        LOG.info("Got " + i++ + ". message on test-queue-bar: " + text);
+                        System.out.println("Got " + i++ + ". message on test-queue-bar: " + text);
                     }
                 } else {
                     break;
@@ -96,7 +93,7 @@ public class Consumer {
                 if (message != null) {
                     if (message instanceof TextMessage) {
                         String text = ((TextMessage) message).getText();
-                        LOG.info("Got " + i++ + ". message on test-topic-bar: " + text);
+                        System.out.println("Got " + i++ + ". message on test-topic-bar: " + text);
                     }
                 } else {
                     break;
@@ -108,14 +105,14 @@ public class Consumer {
             session.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }

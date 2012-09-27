@@ -18,8 +18,6 @@ package example.topic;
 
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import java.util.concurrent.CountDownLatch;
@@ -28,7 +26,6 @@ import java.util.concurrent.CountDownLatch;
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
 public class Subscriber implements MessageListener {
-    private static final Logger LOG = LoggerFactory.getLogger(Subscriber.class);
 
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
@@ -42,7 +39,7 @@ public class Subscriber implements MessageListener {
     }
 
     public static void main(String[] args) {
-        LOG.info("\nWaiting to receive messages... Either waiting for END message or press Ctrl+C to exit");
+        System.out.println("\nWaiting to receive messages... Either waiting for END message or press Ctrl+C to exit");
         ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("admin", "password", BROKER_URL);
         Connection connection = null;
         final CountDownLatch latch = new CountDownLatch(1);
@@ -63,14 +60,14 @@ public class Subscriber implements MessageListener {
             session.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }
@@ -82,15 +79,15 @@ public class Subscriber implements MessageListener {
             if (message instanceof TextMessage) {
                 String text = ((TextMessage) message).getText();
                 if ("END".equalsIgnoreCase(text)) {
-                    LOG.info("Received END message!");
+                    System.out.println("Received END message!");
                     countDownLatch.countDown();
                 }
                 else {
-                    LOG.info("Received message:" +text);
+                    System.out.println("Received message:" +text);
                 }
             }
         } catch (JMSException e) {
-            LOG.error("Got a JMS Exception!", e);
+            System.out.println("Got a JMS Exception!");
         }
     }
 }

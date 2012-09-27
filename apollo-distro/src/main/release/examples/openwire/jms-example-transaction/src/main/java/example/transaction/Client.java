@@ -19,8 +19,6 @@ package example.transaction;
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQTopic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import java.util.Scanner;
@@ -29,7 +27,6 @@ import java.util.Scanner;
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
 public class Client {
-    private static final Logger LOG = LoggerFactory.getLogger(Client.class);
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
     private static final String BROKER_URL = String.format(BROKER_HOST, BROKER_PORT);
@@ -57,9 +54,9 @@ public class Client {
                     if (message instanceof TextMessage) {
                         try {
                             String value = ((TextMessage) message).getText();
-                            LOG.info("We received a new message: " + value);
+                            System.out.println("We received a new message: " + value);
                         } catch (JMSException e) {
-                            LOG.error("Could not read the receiver's topic because of a JMSException", e);
+                            System.out.println("Could not read the receiver's topic because of a JMSException");
                         }
                     }
                 }
@@ -74,14 +71,14 @@ public class Client {
             receiverSession.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }
@@ -94,7 +91,7 @@ public class Client {
         while (true) {
             String line = inputReader.nextLine();
             if (line == null) {
-                LOG.info("Done!");
+                System.out.println("Done!");
                 break;
             } else if (line.length() > 0) {
                 if (line.trim().equals("ROLLBACK")) {

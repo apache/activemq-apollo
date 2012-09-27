@@ -18,8 +18,6 @@ package example.topic;
 
 import example.util.Util;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 
@@ -27,7 +25,6 @@ import javax.jms.*;
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
 public class Publisher {
-    private static final Logger LOG = LoggerFactory.getLogger(Publisher.class);
     private static final String BROKER_HOST = "tcp://localhost:%d";
     private static final int BROKER_PORT = Util.getBrokerPort();
     private static final String BROKER_URL = String.format(BROKER_HOST, BROKER_PORT);
@@ -51,7 +48,7 @@ public class Publisher {
 
             for (int i = 0; i < NUM_MESSAGES_TO_SEND; i++) {
                 TextMessage message = session.createTextMessage("Message #" + i);
-                LOG.info("Sending message #" + i);
+                System.out.println("Sending message #" + i);
                 producer.send(message);
                 Thread.sleep(DELAY);
             }
@@ -63,14 +60,14 @@ public class Publisher {
             session.close();
 
         } catch (Exception e) {
-            LOG.error("Caught exception!", e);
+            System.out.println("Caught exception!");
         }
         finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (JMSException e) {
-                    LOG.error("Could not close an open connection...", e);
+                    System.out.println("Could not close an open connection...");
                 }
             }
         }
