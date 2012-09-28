@@ -44,6 +44,7 @@ object ApolloIDERunner  {
       System.setProperty("apollo.base", apollo_base.getCanonicalPath)
     }
     println("apollo.base=%s".format(System.getProperty("apollo.base")));
+    System.setProperty("basedir", System.getProperty("apollo.base"))
 
 
     // Setup where the web app resources are...
