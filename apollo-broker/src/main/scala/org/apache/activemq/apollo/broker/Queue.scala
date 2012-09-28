@@ -186,9 +186,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var producer_counter = 0L
   var consumer_counter = 0L
 
-  var consumers_keeping_up = true
-  var consumers_keeping_up_counter = 0
-
   // This set to true if any consumer kept up within the
   // last second.
   var consumers_keeping_up_historically = false
@@ -227,7 +224,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     tune_persistent = virtual_host.store !=null && update.persistent.getOrElse(true)
     tune_swap = tune_persistent && update.swap.getOrElse(true)
     tune_swap_range_size = update.swap_range_size.getOrElse(10000)
-    tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,"1M")
+    tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,"512k")
     tune_catchup_enqueue_rate = mem_size(update.catchup_enqueue_rate,"-1")
     tune_max_enqueue_rate = mem_size(update.max_enqueue_rate,"-1")
     tune_quota = mem_size(update.quota,"-1")
@@ -546,6 +543,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       func
     } finally {
       if( was_full && !messages.full ) {
+        messages.stall_check
         messages.refiller.run
       }
     }
@@ -559,7 +557,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def is_topic_queue = resource_kind eq TopicQueueKind
 
   object messages extends Sink[(Session[Delivery], Delivery)] {
-
+    def stall_check = {}
     var refiller: Task = null
 
     def is_quota_exceeded = (tune_quota >= 0 && queue_size > tune_quota) || (tune_quota_messages >= 0 && queue_items > tune_quota_messages)
@@ -713,6 +711,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         if( full ) {
           trigger_swap
         }
+        stall_check
         true
       }
     }
@@ -809,14 +808,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
 
     // Set the prefetch flags
-    consumers_keeping_up = false
     all_subscriptions.valuesIterator.foreach{ x=>
       x.refill_prefetch
-    }
-    consumers_keeping_up = consumers_keeping_up && delivery_rate > tune_fast_delivery_rate
-    if( consumers_keeping_up ) {
-      consumers_keeping_up_counter += 1
-      consumers_keeping_up_historically = true
     }
 
     // swap out messages.
@@ -908,6 +901,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
     
     if(!messages.full) {
+      messages.stall_check
       messages.refiller.run
     }
 
@@ -915,36 +909,50 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   def swapped_out_size = queue_size - (producer_swapped_in.size + consumer_swapped_in.size)
 
-  var delivery_rate = 0
-
   def queue_maintenance:Unit = {
     var elapsed = System.currentTimeMillis-now
     now += elapsed
 
-    consumers_keeping_up_historically = consumers_keeping_up_counter!=0
-    consumers_keeping_up_counter = 0
-
-    delivery_rate = 0
-    var consumer_stall_ms = 0L
-    var load_stall_ms = 0L
+    var delivery_rate = 0
+    var avg_browser_delivery_rate = 0
+    var avg_sub_stall_ms = 0L
 
     all_subscriptions.values.foreach{ sub=>
-      val (cs, ls) = sub.adjust_prefetch_size
-      consumer_stall_ms += cs
-      load_stall_ms += ls
-      if(!sub.browser) {
+      sub.adjust_prefetch_size
+      avg_sub_stall_ms += sub.reset_stall_timer
+      if(sub.browser) {
+        avg_browser_delivery_rate += sub.avg_enqueue_size_per_interval
+      } else {
         delivery_rate += sub.avg_enqueue_size_per_interval
       }
     }
 
+    if ( !all_subscriptions.isEmpty ) {
+      avg_sub_stall_ms = avg_sub_stall_ms / all_subscriptions.size
+      avg_browser_delivery_rate = avg_browser_delivery_rate / all_subscriptions.size
+    }
+
+    // add the browser delivery rate in as an average.
+    delivery_rate += avg_browser_delivery_rate
+
     val rate_adjustment = elapsed.toFloat / 1000.toFloat
     delivery_rate  = (delivery_rate / rate_adjustment).toInt
 
-    val stall_ratio = ((consumer_stall_ms*100)+1).toFloat / ((load_stall_ms*100)+1).toFloat
+    consumers_keeping_up_historically = (
+      // No brainer.. we see consumers are fast..
+      ( delivery_rate > tune_fast_delivery_rate )
+      ||
+      // also if the queue size is small and there's not much
+      // much consumer stalling happening.
+      ( queue_size < delivery_rate && avg_sub_stall_ms < 200 )
+    )
+
+//    println("delivery_rate:%d, tune_fast_delivery_rate: %d, queue_size: %d, avg_consumer_stall_ms: %d, consumers_keeping_up_historically: %s".
+//            format(delivery_rate, tune_fast_delivery_rate, queue_size, avg_sub_stall_ms, consumers_keeping_up_historically))
 
     // Figure out what the max enqueue rate should be.
     max_enqueue_rate = Int.MaxValue
-    if( tune_fast_delivery_rate>=0 && delivery_rate>tune_fast_delivery_rate && swapped_out_size > 0 && stall_ratio < 10.0 ) {
+    if( consumers_keeping_up_historically && swapped_out_size > 0 ) {
       if( tune_catchup_enqueue_rate >= 0 ) {
         max_enqueue_rate = tune_catchup_enqueue_rate
       } else {

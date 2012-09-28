@@ -34,7 +34,7 @@ object Subscription extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with Dispatched {
+class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with Dispatched with StallCheckSupport {
   import Subscription._
 
   def dispatch_queue = queue.dispatch_queue
@@ -62,12 +62,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
 
   var enqueue_size_at_last_interval = 0L
-
-  var consumer_stall_ms = 0L
-  var load_stall_ms = 0L
-
-  var consumer_stall_start = 0L
-  var load_stall_start = 0L
 
   var started_at = Broker.now
   var total_ack_count = 0L
@@ -117,7 +111,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     session = consumer.connect(this)
     session.refiller = dispatch_queue.runnable {
       if(session!=null) {
-        check_consumer_stall
+        stall_check
       }
       if( pos!=null ) {
         pos.task.run
@@ -190,7 +184,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   def advance(value:QueueEntry):Unit = {
     assert(value!=null)
     pos = value
-    check_load_stall
     if( tail_parked ) {
         if(consumer.close_on_drain) {
           close
@@ -207,7 +200,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     pos -= this
     value ::= this
     pos = value
-    check_load_stall
     queue.dispatch_queue << value.task // queue up the entry to get dispatched..
   }
 
@@ -218,59 +210,23 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   def offer(delivery:Delivery) = try {
     assert(delivery.seq > 0 )
-    session.offer(delivery)
+    if( session.full ) {
+      false
+    } else {
+      val accepted = session.offer(delivery)
+      assert(accepted)
+      true
+    }
   } finally {
-    check_consumer_stall
+    stall_check
   }
 
   def acquire(entry:QueueEntry) = new AcquiredQueueEntry(entry)
 
-  def check_load_stall = {
-    if ( pos.is_swapped_or_swapped_range ) {
-      if(load_stall_start==0) {
-        load_stall_start = queue.virtual_host.broker.now
-      }
-    } else {
-      if(load_stall_start!=0) {
-        load_stall_ms += queue.virtual_host.broker.now - load_stall_start
-        load_stall_start = 0
-      }
-    }
-  }
-
-  def check_consumer_stall = {
-    if ( full ) {
-      if(consumer_stall_start==0) {
-        consumer_stall_start = queue.virtual_host.broker.now
-      }
-    } else {
-      if( consumer_stall_start!=0 ) {
-        consumer_stall_ms += queue.virtual_host.broker.now - consumer_stall_start
-        consumer_stall_start = 0
-      }
-    }
-  }
 
   def adjust_prefetch_size = {
     enqueue_size_per_interval += (session.enqueue_size_counter - enqueue_size_at_last_interval).toInt
     enqueue_size_at_last_interval = session.enqueue_size_counter
-
-    if(consumer_stall_start !=0) {
-      val now = queue.virtual_host.broker.now
-      consumer_stall_ms += now - consumer_stall_start
-      consumer_stall_start = now
-    }
-
-    if(load_stall_start !=0) {
-      val now = queue.virtual_host.broker.now
-      load_stall_ms += now - load_stall_start
-      load_stall_start = now
-    }
-
-    val rc = (consumer_stall_ms, load_stall_ms)
-    consumer_stall_ms = 0
-    load_stall_ms = 0
-    rc
   }
 
   def refill_prefetch = {
@@ -295,12 +251,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       }
       cursor = next
     }
-
-    // If we hit the tail or the producer swap in area.. let the queue know we are keeping up.
-    if( !queue.consumers_keeping_up && (cursor == null || (cursor.as_loaded!=null && (cursor.as_loaded.space eq queue.producer_swapped_in))) ) {
-      queue.consumers_keeping_up = true
-    }
-
   }
 
   class AcquiredQueueEntry(val entry:QueueEntry) extends LinkedNode[AcquiredQueueEntry] {
@@ -387,6 +337,38 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         idle_start = System.nanoTime()
       }
       check_finish_close
+    }
+  }
+
+}
+
+trait StallCheckSupport {
+  def full:Boolean
+
+  var stall_start = Broker.now
+  var stall_ms = 0L
+
+  def reset_stall_timer = {
+    if( stall_start!=0 ) {
+      val now = Broker.now
+      stall_ms += now - stall_start
+      stall_start = now
+    }
+    val rc = stall_ms
+    stall_ms = 0
+    rc
+  }
+
+  def stall_check = {
+    if ( full ) {
+      if(stall_start==0) {
+        stall_start = Broker.now
+      }
+    } else {
+      if( stall_start!=0 ) {
+        stall_ms += Broker.now - stall_start
+        stall_start = 0
+      }
     }
   }
 
