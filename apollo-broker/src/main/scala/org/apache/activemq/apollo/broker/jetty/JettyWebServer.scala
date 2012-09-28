@@ -35,6 +35,7 @@ import java.lang.String
 import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder}
 import org.apache.activemq.apollo.broker.web.{AllowAnyOriginFilter, WebServer, WebServerFactory}
 import javax.servlet._
+import org.eclipse.jetty.util.log.Slf4jLog
 
 /**
  * <p>
@@ -146,6 +147,10 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
       import OptionSupport._
       import FileSupport._
       import collection.JavaConversions._
+
+      // Explicitly set the Jetty Log impl to avoid
+      // the NPE raised at https://issues.apache.org/jira/browse/APLO-264
+      org.eclipse.jetty.util.log.Log.setLog(new Slf4jLog());
 
       val config = broker.config
 

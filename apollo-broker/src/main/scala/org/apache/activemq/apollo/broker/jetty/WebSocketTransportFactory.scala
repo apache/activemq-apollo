@@ -41,6 +41,7 @@ import java.io.{EOFException, IOException}
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.broker.web.AllowAnyOriginFilter
 import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder, ServletHolder, ServletContextHandler}
+import org.eclipse.jetty.util.log.Slf4jLog
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -89,6 +90,10 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     protected def _start(on_completed: Task) = blockingExecutor {
       this.synchronized {
+
+        // Explicitly set the Jetty Log impl to avoid
+        // the NPE raised at https://issues.apache.org/jira/browse/APLO-264
+        org.eclipse.jetty.util.log.Log.setLog(new Slf4jLog());
 
         IntrospectionSupport.setProperties(this, URISupport.parseParamters(uri));
 
