@@ -284,7 +284,7 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
           row_layout.format("Log File", "Msg Refs", "File Size") +
             client.log.log_infos.map {
               case (id, info) => id -> client.log_refs.get(id).map(_.get)
-            }.toSeq.flatMap {
+            }.toSeq.sortWith{case (a,b)=> a._1 < b._1}.flatMap {
               case (id, refs) =>
                 try {
                   val file = LevelDBClient.create_sequence_file(client.directory, id, LevelDBClient.LOG_SUFFIX)
