@@ -24,7 +24,7 @@ import javax.jms.{TextMessage, Message, MessageListener, Session}
  */
 class TransactionTest extends OpenwireTestSupport {
 
-  test("Simple JMS Transaction Test") {
+  test("Simple JMS Consumer Transaction Test") {
     connect()
     val dest = queue(next_id("example"))
 
@@ -58,5 +58,46 @@ class TransactionTest extends OpenwireTestSupport {
     m3.getText should equal(messages(2).getText)
     consumer_session.commit
   }
+
+  test("Simple JMS Producer Transaction Test"){
+    connect()
+    val dest = queue(next_id("example"))
+
+    val producer_session = default_connection.createSession(true, Session.SESSION_TRANSACTED)
+    val producer = producer_session.createProducer(dest)
+
+    val messages = List(producer_session.createTextMessage("one"), producer_session.createTextMessage("two"), producer_session.createTextMessage("three"))
+
+    producer.send(messages(0))
+
+    val consumer_session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val consumer = consumer_session.createConsumer(dest)
+
+    // should not have anything here
+    var m = consumer.receive(1000).asInstanceOf[TextMessage]
+    m should be (null)
+
+    // commit so consumer can see it
+    producer_session.commit()
+
+    m = consumer.receive(1000).asInstanceOf[TextMessage]
+    m should not be (null)
+    m.getText should equal(messages(0).getText)
+
+    producer.send(messages(1))
+    producer_session.rollback()
+    producer.send(messages(2))
+    producer_session.commit()
+
+    val m3 = consumer.receive(1000).asInstanceOf[TextMessage]
+    m3 should not be (null)
+    m3.getText should equal(messages(2).getText)
+
+  }
+
+}
+
+class OpenwireLevelDBTransactionTest extends TransactionTest {
+  override def broker_config_uri = "xml:classpath:apollo-openwire-leveldb.xml"
 
 }

@@ -1210,7 +1210,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
 
       if( uow!=null ) {
-        uow.on_complete(onComplete)
+        uow.on_complete(dispatchQueue{ onComplete })
         uow.release
       } else {
         onComplete
