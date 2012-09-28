@@ -14,6 +14,7 @@ ${project_name} supports the following versions of the STOMP specification:
 
 * [STOMP 1.0](http://stomp.github.com/stomp-specification-1.0.html)
 * [STOMP 1.1](http://stomp.github.com/stomp-specification-1.1.html)
+* [STOMP 1.2](http://stomp.github.com/stomp-specification-1.2.html)
 
 The specification is short and simple to read, it is highly recommend that users
 to get familiar with it before using one of the many available client libraries.
