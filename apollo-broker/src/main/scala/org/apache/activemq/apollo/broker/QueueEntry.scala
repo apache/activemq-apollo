@@ -223,10 +223,20 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def swapped_range = state.swap_range
 
   def can_combine_with_prev = {
-    getPrevious !=null &&
-      getPrevious.is_swapped_range &&
+    var prev = getPrevious
+    if ( prev == null ) {
+      false
+    } else {
+      val prev_range = prev.as_swapped_range
+      if ( prev_range == null ) {
+        false
+      } else {
+        (!prev_range.loading) &&
+        (!is_loading) &&
         ( (is_swapped && !is_acquired) || is_swapped_range ) &&
-          (getPrevious.count + count  < queue.tune_swap_range_size) && !is_loading
+        (prev.count + count  < queue.tune_swap_range_size)
+      }
+    }
   }
 
   trait EntryState {
