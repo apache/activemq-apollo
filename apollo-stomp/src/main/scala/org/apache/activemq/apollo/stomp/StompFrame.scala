@@ -229,7 +229,7 @@ case class ZeroCopyContent(zero_copy_buffer:DirectBuffer) extends StompContent {
  *
  * @author <a href="http://hiramchirino.com">chirino</a>
  */
-case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompContent=NilContent, updated_headers:HeaderMap=Nil) {
+case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompContent=NilContent, contiguous:Boolean=false, updated_headers:HeaderMap=Nil) {
 
   def size_of_updated_headers = {
     size_of(updated_headers)
@@ -267,17 +267,18 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompCo
           ( headers.head._1.data eq content.asInstanceOf[BufferContent].content.data )
 
   def size:Int = {
-     content match {
-       case x:BufferContent =>
-         if( (action.data eq x.content.data) && updated_headers==Nil ) {
-            return (x.content.offset-action.offset)+x.content.length
-         }
-       case _ =>
-     }
-
-     action.length + 1 +
-     size_of_updated_headers +
-     size_of_original_headers + 1 + content.length
+    if( contiguous ) {
+      content match {
+        case x:BufferContent =>
+          if( (action.data eq x.content.data) && updated_headers==Nil ) {
+             return (x.content.offset-action.offset)+x.content.length
+          }
+        case _ =>
+      }
+    }
+    action.length + 1 +
+    size_of_updated_headers +
+    size_of_original_headers + 1 + content.length
   }
 
   def header(name:AsciiBuffer) = {
@@ -286,7 +287,7 @@ case class StompFrame(action:AsciiBuffer, headers:HeaderMap=Nil, content:StompCo
     ).map(_._2).getOrElse(null)
   }
 
-  def append_headers(value:HeaderMap) = StompFrame(action, headers, content, value ::: updated_headers)
+  def append_headers(value:HeaderMap) = StompFrame(action, headers, content, contiguous, value ::: updated_headers)
 
   def retain = content.retain
   def release = content.release

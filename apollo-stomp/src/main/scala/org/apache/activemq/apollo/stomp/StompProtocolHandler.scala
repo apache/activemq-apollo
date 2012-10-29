@@ -1300,9 +1300,9 @@ class StompProtocolHandler extends ProtocolHandler {
       // We may need to add some headers..
       var message = updated_headers(addresses, frame.headers) match {
         case Nil=>
-          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content))
+          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous))
         case updated_headers =>
-          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, updated_headers))
+          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous, updated_headers))
       }
 
       val delivery = new Delivery

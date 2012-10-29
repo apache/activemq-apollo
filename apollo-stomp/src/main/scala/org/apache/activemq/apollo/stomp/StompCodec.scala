@@ -63,7 +63,7 @@ object StompCodec extends Log {
     }
 
     // we can optimize a little if the headers and content are in the same buffer..
-    if( frame.are_headers_in_content_buffer ) {
+    if( frame.are_headers_in_content_buffer && frame.contiguous ) {
 
       val offset = frame.headers.head._1.offset;
       val buffer1 = frame.headers.head._1;
@@ -152,9 +152,9 @@ object StompCodec extends Log {
     }
 
     if( direct_buffer==null ) {
-      new StompFrame(action, headers.toList, BufferContent(buffer))
+      new StompFrame(action, headers.toList, BufferContent(buffer), true)
     } else {
-      new StompFrame(action, headers.toList, ZeroCopyContent(direct_buffer))
+      new StompFrame(action, headers.toList, ZeroCopyContent(direct_buffer), true)
     }
   }
 
@@ -188,7 +188,7 @@ class StompCodec extends AbstractProtocolCodec {
     }
 
     // we can optimize a little if the headers and content are in the same buffer..
-    if( frame.are_headers_in_content_buffer ) {
+    if( frame.are_headers_in_content_buffer && frame.contiguous) {
 
       val offset = frame.headers.head._1.offset;
       val buffer1 = frame.headers.head._1;
@@ -229,13 +229,15 @@ class StompCodec extends AbstractProtocolCodec {
       var line = readUntil(NEWLINE, max_command_length, "The maximum command length was exceeded")
       if (line != null) {
         var action = line.moveTail(-1)
+        var contiguous = true
         if (trim) {
           action = action.trim
         } else if( trim_cr && action.length > 0 && action.get(action.length-1)=='\r'.toByte ) {
           action.moveTail(-1)
+          contiguous = false
         }
         if (action.length > 0) {
-          nextDecodeAction = read_headers(action.ascii)
+          nextDecodeAction = read_headers(action.ascii, contiguous)
           return nextDecodeAction();
         }
       }
@@ -243,9 +245,10 @@ class StompCodec extends AbstractProtocolCodec {
     }
   }
 
-  private def read_headers(command: AsciiBuffer): AbstractProtocolCodec.Action = new AbstractProtocolCodec.Action {
+  private def read_headers(command: AsciiBuffer, c:Boolean): AbstractProtocolCodec.Action = new AbstractProtocolCodec.Action {
     var contentLength:AsciiBuffer = _
     val headers = new ListBuffer[(AsciiBuffer, AsciiBuffer)]()
+    var contiguous = c;
 
     def apply: AnyRef = {
       var line = readUntil(NEWLINE, max_header_length, "The maximum header length was exceeded")
@@ -255,6 +258,7 @@ class StompCodec extends AbstractProtocolCodec {
         line.moveTail(-1)
         // 1.0 and 1.2 spec trims off the \r
         if ( (trim || trim_cr) && line.length > 0 && line.get(line.length-1)=='\r'.toByte ) {
+          contiguous = false
           line.moveTail(-1)
         }
 
@@ -297,9 +301,9 @@ class StompCodec extends AbstractProtocolCodec {
             if (max_data_length != -1 && length > max_data_length) {
               throw new IOException("The maximum data length was exceeded")
             }
-            nextDecodeAction = read_binary_body(command, h, length)
+            nextDecodeAction = read_binary_body(command, h, length, contiguous)
           } else {
-            nextDecodeAction = read_text_body(command, h)
+            nextDecodeAction = read_text_body(command, h, contiguous)
           }
           return nextDecodeAction.apply()
         }
@@ -308,7 +312,7 @@ class StompCodec extends AbstractProtocolCodec {
     }
   }
 
-  private def read_binary_body(command: AsciiBuffer, headers:HeaderMap, contentLength: Int): AbstractProtocolCodec.Action = {
+  private def read_binary_body(command: AsciiBuffer, headers:HeaderMap, contentLength: Int, contiguous:Boolean): AbstractProtocolCodec.Action = {
     return new AbstractProtocolCodec.Action {
       def apply: AnyRef = {
         var content = readBytes(contentLength + 1)
@@ -319,7 +323,7 @@ class StompCodec extends AbstractProtocolCodec {
           nextDecodeAction = read_action
           content.moveTail(-1)
           val body = if( content.length() == 0) NilContent else BufferContent(content)
-          return new StompFrame(command, headers, body)
+          return new StompFrame(command, headers, body, contiguous)
         }
         else {
           return null
@@ -328,7 +332,7 @@ class StompCodec extends AbstractProtocolCodec {
     }
   }
 
-  private def read_text_body(command: AsciiBuffer, headers:HeaderMap): AbstractProtocolCodec.Action = {
+  private def read_text_body(command: AsciiBuffer, headers:HeaderMap, contiguous:Boolean): AbstractProtocolCodec.Action = {
     return new AbstractProtocolCodec.Action {
       def apply: AnyRef = {
         var content: Buffer = readUntil(0.asInstanceOf[Byte])
@@ -336,7 +340,7 @@ class StompCodec extends AbstractProtocolCodec {
           nextDecodeAction = read_action
           content.moveTail(-1)
           val body = if( content.length() == 0) NilContent else BufferContent(content)
-          return new StompFrame(command, headers, body)
+          return new StompFrame(command, headers, body, contiguous)
         }
         else {
           return null
