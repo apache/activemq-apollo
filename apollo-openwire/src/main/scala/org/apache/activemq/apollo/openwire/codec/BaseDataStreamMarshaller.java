@@ -284,7 +284,12 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         if (bs.readBoolean()) {
             boolean ascii = bs.readBoolean(); // ignored for now.
             int size = dataIn.readShort();
-            return dataIn.readBuffer(size).utf8();
+            if( size== 0 ) {
+                return new UTF8Buffer("");
+            } else {
+                Buffer buffer = dataIn.readBuffer(size);
+                return buffer.utf8();
+            }
         } else {
             return null;
         }
