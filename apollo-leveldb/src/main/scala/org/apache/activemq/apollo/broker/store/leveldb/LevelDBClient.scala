@@ -604,12 +604,11 @@ class LevelDBClient(store: LevelDBStore) {
 
   def stop() = {
     // this blocks until all io completes..
-    // Suspend also deletes the index.
-    suspend()
-
-    if (log != null) {
-      log.close
-    }
+    snapshot_rw_lock.writeLock().lock()
+    store_log_refs
+    index.put(dirty_index_key, FALSE, new WriteOptions().sync(true))
+    index.close
+    log.close
     copy_dirty_index_to_snapshot
     log = null
     unlock_store
@@ -639,7 +638,7 @@ class LevelDBClient(store: LevelDBStore) {
     // Close the index so that it's files are not changed async on us.
     store_log_refs
     index.put(dirty_index_key, FALSE, new WriteOptions().sync(true))
-    index.close
+    index.db.suspendCompactions
   }
 
   /**
@@ -649,7 +648,7 @@ class LevelDBClient(store: LevelDBStore) {
   def resume() = {
     // re=open it..
     retry {
-      index = new RichDB(factory.open(dirty_index_file, index_options));
+      index.db.resumeCompactions
       index.put(dirty_index_key, TRUE)
     }
     snapshot_rw_lock.writeLock().unlock()
@@ -737,16 +736,18 @@ class LevelDBClient(store: LevelDBStore) {
   }
 
   def purge() = {
-    suspend()
+    snapshot_rw_lock.writeLock().lock()
     try {
       log.close
+      index.close
       directory.list_files.foreach(_.recursive_delete)
       log_refs.clear()
     } finally {
       retry {
+        index = new RichDB(factory.open(dirty_index_file, index_options))
         log.open
       }
-      resume()
+      snapshot_rw_lock.writeLock().unlock()
     }
   }
 

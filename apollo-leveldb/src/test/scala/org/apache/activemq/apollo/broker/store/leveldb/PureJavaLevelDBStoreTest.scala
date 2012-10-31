@@ -17,13 +17,13 @@ package org.apache.activemq.apollo.broker.store.leveldb
  * limitations under the License.
  */
 
-import org.apache.activemq.apollo.broker.store.{Store, StoreFunSuiteSupport}
+import org.apache.activemq.apollo.broker.store.{StoreTests, Store, StoreFunSuiteSupport}
 import org.apache.activemq.apollo.broker.store.leveldb.dto.LevelDBStoreDTO
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class PureJavaLevelDBStoreTest extends StoreFunSuiteSupport {
+class PureJavaLevelDBStoreTest extends StoreTests {
 
   def create_store(flushDelay: Long): Store = {
     new LevelDBStore({

@@ -175,8 +175,8 @@ object HelperTrait {
         func
       } finally {
         val duration = System.nanoTime() - start
-        // If it takes longer than 50 ms..
-        if( duration > 1000000*50 ) {
+        // If it takes longer than 100 ms..
+        if( duration > 1000000*100 ) {
           compact_needed = true
         }
       }
