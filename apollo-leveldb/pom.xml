@@ -76,12 +76,12 @@
     <dependency>
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-win32</artifactId>
-      <version>${leveldbjni-version}</version>
+      <version>1.4.1</version>
     </dependency>
     <dependency>
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-win64</artifactId>
-      <version>${leveldbjni-version}</version>
+      <version>1.4.1</version>
     </dependency>
 
     <!-- For Optional Snappy Compression -->
