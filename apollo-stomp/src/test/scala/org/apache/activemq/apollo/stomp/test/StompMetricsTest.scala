@@ -55,12 +55,14 @@ class StompMetricsTest extends StompTestSupport {
     sync_send("/queue/willdelete", 3)
 
     // not acked yet.
-    val stat2 = get_queue_metrics
-    stat2.producer_count should be(stat1.producer_count + 1)
-    stat2.consumer_count should be(stat1.consumer_count)
-    stat2.enqueue_item_counter should be(stat1.enqueue_item_counter + 3)
-    stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 0)
-    stat2.queue_items should be(stat1.queue_items + 3)
+    within(1, SECONDS) {
+      val stat2 = get_queue_metrics
+      stat2.producer_count should be(stat1.producer_count + 1)
+      stat2.consumer_count should be(stat1.consumer_count)
+      stat2.enqueue_item_counter should be(stat1.enqueue_item_counter + 3)
+      stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 0)
+      stat2.queue_items should be(stat1.queue_items + 3)
+    }
 
     // Delete the queue
     delete_queue("willdelete")
@@ -79,33 +81,35 @@ class StompMetricsTest extends StompTestSupport {
     connect("1.1")
 
     subscribe("0", "/topic/queued.test1", "client");
-    sync_send("/topic/queued.test1", 1)
-
     val stat1 = get_topic_metrics
 
+    async_send("/topic/queued.test1", 1)
     async_send("/topic/queued.test1", 2)
     async_send("/topic/queued.test1", 3)
+
     val ack1 = assert_received(1)
     val ack2 = assert_received(2)
     val ack3 = assert_received(3)
 
     // not acked yet.
-    val stat2 = get_topic_metrics
-    stat2.producer_count should be(stat1.producer_count)
-    stat2.consumer_count should be(stat1.consumer_count)
-    stat2.enqueue_item_counter should be(stat1.enqueue_item_counter + 2)
-    stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 2)
-    stat2.queue_items should be(stat1.queue_items)
+    within(1, SECONDS) {
+      val stat2 = get_topic_metrics
+      stat2.producer_count should be(stat1.producer_count+1)
+      stat2.consumer_count should be(stat1.consumer_count)
+      stat2.enqueue_item_counter should be(stat1.enqueue_item_counter + 3)
+      stat2.dequeue_item_counter should be(stat1.dequeue_item_counter + 3)
+      stat2.queue_items should be(stat1.queue_items)
+    }
 
     // Close the subscription.
     unsubscribe("0")
 
     within(1, SECONDS) {
       val stat3 = get_topic_metrics
-      stat3.producer_count should be(stat1.producer_count)
-      stat3.consumer_count should be(stat1.consumer_count - 1)
-      stat3.enqueue_item_counter should be(stat1.enqueue_item_counter + 2)
-      stat3.dequeue_item_counter should be(stat1.dequeue_item_counter + 2)
+      stat3.producer_count should be(stat1.producer_count+1)
+      stat3.consumer_count should be(stat1.consumer_count-1)
+      stat3.enqueue_item_counter should be(stat1.enqueue_item_counter + 3)
+      stat3.dequeue_item_counter should be(stat1.dequeue_item_counter + 3)
       stat3.queue_items should be(stat1.queue_items)
     }
   }
