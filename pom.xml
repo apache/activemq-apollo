@@ -541,6 +541,9 @@
                 <exclude>src/main/webapp/api/javascripts/swagger-service.js</exclude>
                 <exclude>src/main/webapp/api/javascripts/swagger-ui.js</exclude>
                 <exclude>src/main/webapp/api/stylesheets/screen.css</exclude>
+                
+                <exclude>src/test/scala/org/scalatest/ParallelBeforeAndAfterAll.scala</exclude>
+                <exclude>src/test/scala/org/scalatest/junit/ParallelJUnitRunner.scala</exclude>
 
               </excludes>
               <useDefaultExcludes>false</useDefaultExcludes>
