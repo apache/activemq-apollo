@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.5</version>
   </parent>
 
   <artifactId>apache-apollo</artifactId>
@@ -33,17 +33,17 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-boot</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-cli</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-leveldb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>org.xerial.snappy</groupId>
@@ -61,35 +61,35 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-openwire</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency> 
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-mqtt</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
     </dependency>
     
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
       <type>jar</type>
     </dependency>
     
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.5</version>
       <type>pom</type>
     </dependency>
 
