@@ -74,6 +74,13 @@ abstract class Sink[T] {
   }
 }
 
+case class FullSink[T]() extends Sink[T] {
+  def refiller:Task = null
+  def refiller_=(value:Task) = {}
+  def full = true
+  def offer(value: T) = false
+}
+
 case class BlackHoleSink[T]() extends Sink[T] {
   var refiller:Task = null
   def full = false
@@ -427,23 +434,32 @@ class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue
 
   def drain_overflow:Unit = {
     while( !overflowed_sessions.isEmpty) {
-      val session = overflowed_sessions.getHead.session
       if( !downstream.full ) {
-        val value = session.overflow.removeFirst()
-        val accepted = downstream.offer((session, value))
+        val accepted = downstream.offer(poll)
         assert(accepted)
-        if( session.stall_counter > 0 ) {
-          schedual_rebalance
-        }
-        if( session.overflow.isEmpty ) {
-          session.overflow_node.unlink()
-        } else {
-          // to fairly consume values from all sessions.
-          overflowed_sessions.rotate()
-        }
       } else {
         return
       }
+    }
+  }
+
+  def poll:(Session[T], T) = {
+    consumer_queue.assertExecuting()
+    if(overflowed_sessions.isEmpty) {
+      null
+    } else {
+      val session = overflowed_sessions.getHead.session
+      val value = session.overflow.removeFirst()
+      if( session.stall_counter > 0 ) {
+        schedual_rebalance
+      }
+      if( session.overflow.isEmpty ) {
+        session.overflow_node.unlink()
+      } else {
+        // to fairly consume values from all sessions.
+        overflowed_sessions.rotate()
+      }
+      (session, value)
     }
   }
 
