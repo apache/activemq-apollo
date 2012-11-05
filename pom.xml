@@ -40,7 +40,7 @@
     <projectName>Apache Apollo</projectName>
 
     <!-- dependencies that track scala version changes -->
-    <scala-version>2.9.1-1</scala-version>
+    <scala-version>2.9.2</scala-version>
     <scalatest-version>1.8</scalatest-version>
     
     <activemq-version>5.6.0</activemq-version>
