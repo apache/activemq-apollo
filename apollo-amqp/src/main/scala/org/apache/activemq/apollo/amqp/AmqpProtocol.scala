@@ -17,25 +17,20 @@
 package org.apache.activemq.apollo.amqp
 
 import _root_.org.fusesource.hawtbuf._
+import hawtdispatch.AmqpProtocolCodec
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.broker.protocol.{MessageCodecFactory, MessageCodec, ProtocolCodecFactory, Protocol}
-import org.apache.activemq.apollo.broker.store._
-import AmqpCodec._
-import org.fusesource.amqp.codec.AMQPProtocolCodec
+import org.apache.activemq.apollo.broker.protocol.Protocol
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-/**
- * Creates AmqpCodec objects that encode/decode the
- * <a href="http://activemq.apache.org/amqp/">Amqp</a> protocol.
- *
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-class AmqpProtocolCodecFactory extends ProtocolCodecFactory.Provider {
-  def id = PROTOCOL
+object AmqpProtocol extends Protocol {
 
-  def createProtocolCodec(connector:Connector) = new AMQPProtocolCodec();
+  def id = "amqp"
+  val PROTOCOL_ID = Buffer.ascii(id)
+  val PROTOCOL_MAGIC = new Buffer(Array[Byte]('A', 'M', 'Q', 'P'))
+
+  def createProtocolCodec(connector:Connector) = new AmqpProtocolCodec();
 
   def isIdentifiable() = true
 
@@ -48,26 +43,21 @@ class AmqpProtocolCodecFactory extends ProtocolCodecFactory.Provider {
       header.startsWith(PROTOCOL_MAGIC)
     }
   }
-}
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object AmqpProtocol extends AmqpProtocolCodecFactory with Protocol {
   def createProtocolHandler = new AmqpProtocolHandler
 }
 
-object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
-  def create = Array[MessageCodec](AmqpMessageCodec)
-}
-
-  /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- */
-object AmqpMessageCodec extends MessageCodec {
-  def id = PROTOCOL
-  def encode(message: Message) = AmqpCodec.encode(message)
-  def decode(message: MessageRecord) = AmqpCodec.decode(message)
-}
+//object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
+//  def create = Array[MessageCodec](AmqpMessageCodec)
+//}
+//
+//  /**
+// * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+// */
+//object AmqpMessageCodec extends MessageCodec {
+//  def id = AmqpProtocol.id
+//  def encode(message: Message) = AmqpCodec.encode(message)
+//  def decode(message: MessageRecord) = AmqpCodec.decode(message)
+//}
 
 

@@ -44,11 +44,10 @@
       <artifactId>apollo-broker</artifactId>
       <version>99-trunk-SNAPSHOT</version>
     </dependency>
-
     <dependency>
-      <groupId>org.fusesource.fuse-extra</groupId>
-      <artifactId>fusesource-amqp</artifactId>
-      <version>99-master-SNAPSHOT</version>
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>qpid-proton</artifactId>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
 
     <!-- Scala Support -->
@@ -102,6 +101,27 @@
       <scope>test</scope>
     </dependency>
 
+    <!--  Joram JMS conformance tests -->
+    <dependency>
+      <groupId>org.fusesource.joram-jms-tests</groupId>
+      <artifactId>joram-jms-tests</artifactId>
+      <version>1.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- qpid jms client -->
+    <dependency>
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>qpid-amqp-1-0-client-jms</artifactId>
+      <version>0.18</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jms_1.1_spec</artifactId>
+      <version>1.1.1</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>

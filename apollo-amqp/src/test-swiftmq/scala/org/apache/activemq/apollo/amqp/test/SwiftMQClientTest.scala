@@ -1,9 +1,3 @@
-package org.apache.activemq.apollo.amqp
-
-import org.fusesource.amqp.blocking.AMQP
-import org.fusesource.amqp.types._
-import org.fusesource.amqp._
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -21,65 +15,73 @@ import org.fusesource.amqp._
  * limitations under the License.
  */
 
-class FuseSourceClientTest extends AmqpTestSupport {
+package org.apache.activemq.apollo.amqp.test
+
+import com.swiftmq.amqp.AMQPContext
+import com.swiftmq.amqp.v100.client.Connection
+import com.swiftmq.amqp.v100.client.QoS
+import com.swiftmq.amqp.v100.generated.messaging.message_format.AmqpValue
+import com.swiftmq.amqp.v100.types.AMQPString
+import com.swiftmq.amqp.v100.client.ExceptionListener
+
+class SwiftMQClientTest extends AmqpTestSupport {
 
   test("broker") {
 
 //    val port = 5672
 //    val queue = "testqueue"
 
-    val queue = "/queue/fstestqueue"
+    val queue = "/queue/testqueue"
 
     val nMsgs = 1
-//    val qos = QoS.AT_MOST_ONCE
-    
+    val qos = QoS.AT_MOST_ONCE
+    val ctx = new AMQPContext(AMQPContext.CLIENT);
+
     try {
-      val connect_options = new AMQPClientOptions
-      connect_options.setHost("127.0.0.1", port)
-      connect_options.setContainerId("client")
-      connect_options.setIdleTimeout(-1)
-      connect_options.setMaxFrameSize(1024*4)
-//      connect_options.setListener(new AMQPConnection.Listener())
-      val connection = AMQP.open(connect_options);
+
+      val connection = new Connection(ctx, "127.0.0.1", port, false)
+      connection.setContainerId("client")
+      connection.setIdleTimeout(-1)
+      connection.setMaxFrameSize(1024*4)
+      connection.setExceptionListener(new ExceptionListener(){
+        def onException(e: Exception) {
+          e.printStackTrace();
+        }
+      })
+      connection.connect;
       {
         var data = "x" * 10 // 1024*20
 
         var session = connection.createSession(10, 10)
-        val sender_options = new AMQPSenderOptions
-        sender_options.setQoS(AMQPQoS.AT_MOST_ONCE)
-        sender_options.setTarget(queue);
-        var p = AMQP.createSender(sender_options)
-        p.attach(session);
-
+        var p = {
+          session.createProducer(queue, qos)
+        }
         for (i <- 0 until nMsgs) {
+          var msg = new com.swiftmq.amqp.v100.messaging.AMQPMessage
           var s = "Message #" + (i + 1)
           println("Sending " + s)
-          p.send(MessageSupport.message(s+", data: "+data))
+          msg.setAmqpValue(new AmqpValue(new AMQPString(s+", data: "+data)))
+          p.send(msg)
         }
-
         p.close()
         session.close()
       }
       {
         var session = connection.createSession(10, 10)
-
-        val receiver_options = new AMQPReceiverOptions
-        receiver_options.setQoS(AMQPQoS.AT_MOST_ONCE)
-        receiver_options.setSource(queue);
-        var c = AMQP.createReceiver(receiver_options)
-        c.attach(session);
+        val c = session.createConsumer(queue, 100, qos, true, null);
 
         // Receive messages non-transacted
-        for (i <- 0 until nMsgs) {
+        for (i <- 0 until nMsgs)
+        {
           val msg = c.receive();
           if (msg == null)
 
-          msg.getMessage().getData match {
+          msg.getAmqpValue().getValue match {
             case value:AMQPString =>
               println("Received: " + value.getValue());
           }
-//          if (!msg.isSettled())
-//            msg.accept();
+          if (!msg.isSettled())
+            msg.accept();
         }
         c.close()
         session.close()
@@ -92,5 +94,4 @@ class FuseSourceClientTest extends AmqpTestSupport {
     }
 
   }
-
 }

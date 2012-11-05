@@ -905,47 +905,63 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
     override def toString = { "swapped_range:{ swapping_in: "+loading+", count: "+count+", size: "+size+"}" }
 
-    override def swap_in(space:MemorySpace) = {
+    override def swap_in(space:MemorySpace):Unit = {
       if( !loading ) {
         loading = true
-        queue.virtual_host.store.list_queue_entries(queue.store_id, seq, last) { records =>
-          queue.dispatch_queue {
-            loading  = false
-            assert(isLinked)
 
-            var item_count=0
-            var size_count=0
+        def complete_load(attempt_counter:Int, records:Seq[QueueEntryRecord]):Unit = {
+          assert(isLinked)
 
-            val tmpList = new LinkedNodeList[QueueEntry]()
-            records.foreach { record =>
-              val entry = new QueueEntry(queue, record.entry_seq).init(record)
-              tmpList.addLast(entry)
-              item_count += 1
-              size_count += record.size
-            }
+          var item_count=0
+          var size_count=0
 
-            // we may need to adjust the enqueue count if entries
-            // were dropped at the store level
-            var item_delta = (count - item_count)
-            val size_delta: Int = size - size_count
+          val tmpList = new LinkedNodeList[QueueEntry]()
+          records.foreach { record =>
+            val entry = new QueueEntry(queue, record.entry_seq).init(record)
+            tmpList.addLast(entry)
+            item_count += 1
+            size_count += record.size
+          }
 
-            if ( item_delta!=0 || size_delta!=0 ) {
+          // we may need to adjust the enqueue count if entries
+          // were dropped at the store level
+          var item_delta = (count - item_count)
+          val size_delta: Int = size - size_count
+
+          if ( item_delta!=0 || size_delta!=0 ) {
+            if ( attempt_counter < 10) {
+              warn("Retrying "+attempt_counter+" load do to Queue '%s' detected store change in range [%d:%d]. %d message(s) and %d bytes", queue.id, seq, last, item_delta, size_delta)
+              attempt_load(attempt_counter+1)
+              return
+            } else {
               warn("Queue '%s' detected store change in range [%d:%d]. %d message(s) and %d bytes", queue.id, seq, last, item_delta, size_delta)
               queue.enqueue_item_counter += item_delta
               queue.enqueue_size_counter += size_delta
             }
+          } else if( attempt_counter > 1 ) {
+            warn("Recoved!!!! @ "+attempt_counter)
+          }
 
-            linkAfter(tmpList)
-            val next = getNext
+          loading  = false
+          linkAfter(tmpList)
+          val next = getNext
 
-            // move the subs to the first entry that we just loaded.
-            parked.foreach(_.advance(next))
-            next :::= parked
-            queue.trigger_swap
+          // move the subs to the first entry that we just loaded.
+          parked.foreach(_.advance(next))
+          next :::= parked
+          queue.trigger_swap
 
-            unlink
+          unlink
+        }
+
+        def attempt_load(attempt_counter:Int):Unit = {
+          queue.virtual_host.store.list_queue_entries(queue.store_id, seq, last) { records =>
+            queue.dispatch_queue {
+              complete_load(attempt_counter, records)
+            }
           }
         }
+        attempt_load(1)
       }
     }
 
