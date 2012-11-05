@@ -1064,41 +1064,36 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def connect(addresses: Array[_ <: ConnectAddress], producer: BindableDeliveryProducer, security: SecurityContext):Option[String] = {
     dispatch_queue.assertExecuting()
-    producer.retain
-    try {
-      if(!virtual_host.service_state.is_started) {
-        return Some("virtual host stopped.")
-      } else {
-        val actions = addresses.map { address =>
-          address.domain match {
-            case "topic" =>
-              val allowed = topic_domain.can_connect_all(address, producer, security)
-              def perform() = topic_domain.connect(address, producer, security)
-              (allowed, perform _)
-            case "queue" =>
-              val allowed = queue_domain.can_connect_all(address, producer, security)
-              def perform() = queue_domain.connect(address, producer, security)
-              (allowed, perform _)
-            case "dsub" =>
-              val allowed = dsub_domain.can_connect_all(address, producer, security)
-              def perform() = dsub_domain.connect(address, producer, security)
-              (allowed, perform _)
-            case _ => sys.error("Unknown domain: "+address.domain)
-          }
-        }
-  
-        val failures = actions.flatMap(_._1)
-        if( !failures.isEmpty ) {
-          return Some(failures.mkString("; "))
-        } else {
-          actions.foreach(_._2())
-          producer.connected()
-          producer.retain()
-          return None
+    if(!virtual_host.service_state.is_started) {
+      return Some("virtual host stopped.")
+    } else {
+      val actions = addresses.map { address =>
+        address.domain match {
+          case "topic" =>
+            val allowed = topic_domain.can_connect_all(address, producer, security)
+            def perform() = topic_domain.connect(address, producer, security)
+            (allowed, perform _)
+          case "queue" =>
+            val allowed = queue_domain.can_connect_all(address, producer, security)
+            def perform() = queue_domain.connect(address, producer, security)
+            (allowed, perform _)
+          case "dsub" =>
+            val allowed = dsub_domain.can_connect_all(address, producer, security)
+            def perform() = dsub_domain.connect(address, producer, security)
+            (allowed, perform _)
+          case _ => sys.error("Unknown domain: "+address.domain)
         }
       }
-    } finally {
-      producer.release
+
+      val failures = actions.flatMap(_._1)
+      if( !failures.isEmpty ) {
+        return Some(failures.mkString("; "))
+      } else {
+        actions.foreach(_._2())
+        producer.connected()
+        producer.retain()
+        return None
+      }
     }
   }
 
