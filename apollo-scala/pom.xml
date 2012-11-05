@@ -132,6 +132,7 @@
             <jvmArg>-Xss8m</jvmArg>
           </jvmArgs>
           <scalaVersion>${scala-version}</scalaVersion>
+          <target>jvm-1.6</target>
         </configuration>
       </plugin>
       
