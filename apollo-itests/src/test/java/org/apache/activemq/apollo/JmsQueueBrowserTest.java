@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo;
 
 import junit.framework.Test;
-import org.apache.activemq.broker.region.BaseDestination;
 import org.apache.activemq.command.ActiveMQQueue;
 
 import javax.jms.*;
@@ -179,7 +178,7 @@ public class JmsQueueBrowserTest extends JmsTestBase {
         // currently browse max page size is ignored for a queue browser consumer
         // only guarantee is a page size - but a snapshot of pagedinpending is
         // used so it is most likely more
-        assertTrue("got at least our expected minimum in the browser: ", i > BaseDestination.MAX_PAGE_SIZE);
+        assertTrue("got at least our expected minimum in the browser: ", i > 200);
 
         assertFalse("nothing left in the browser", browserView.hasMoreElements());
         assertNull("consumer finished", consumer.receiveNoWait());
