@@ -115,7 +115,6 @@ class MqttCleanSessionTest extends MqttTestSupport {
         false
       } catch {
         case e: Throwable =>
-          e.printStackTrace()
           true
       }
     }
