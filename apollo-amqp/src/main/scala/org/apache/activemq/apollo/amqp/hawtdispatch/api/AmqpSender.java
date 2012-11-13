@@ -162,12 +162,13 @@ public class AmqpSender extends AmqpLink {
     @Override
     protected void processDelivery(Delivery delivery) {
         final MessageDelivery md  = (MessageDelivery) delivery.getContext();
-        if( delivery.remotelySettled() && delivery.getTag().length > 0 ) {
-            checkinTag(delivery.getTag());
-        }
-        final DeliveryState state = delivery.getRemoteState();
-        if( state!=null ) {
-            if( state instanceof Accepted) {
+        if( delivery.remotelySettled() ) {
+            if( delivery.getTag().length > 0 ) {
+                checkinTag(delivery.getTag());
+            }
+
+            final DeliveryState state = delivery.getRemoteState();
+            if( state==null || state instanceof Accepted) {
                 if( !delivery.remotelySettled() ) {
                     delivery.disposition(new Accepted());
                 }

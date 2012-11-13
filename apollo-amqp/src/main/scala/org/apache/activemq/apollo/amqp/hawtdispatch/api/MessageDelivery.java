@@ -201,7 +201,7 @@ public abstract class MessageDelivery extends WatchBase {
         addWatch(new Watch() {
             @Override
             public boolean execute() {
-                if( delivery!=null && (delivery.isSettled() || delivery.remotelySettled()) ) {
+                if( delivery!=null && delivery.isSettled() ) {
                     cb.onSuccess(delivery.getRemoteState());
                     return true;
                 }

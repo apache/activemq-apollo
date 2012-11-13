@@ -949,6 +949,10 @@ class AmqpProtocolHandler extends ProtocolHandler {
       val state = proton_delivery.getRemoteState();
       state match {
         case null =>
+          if( !proton_delivery.remotelySettled() ) {
+              proton_delivery.disposition(new Accepted());
+          }
+          settle(proton_delivery, Consumed, false);
         case accepted:Accepted =>
           if( !proton_delivery.remotelySettled() ) {
               proton_delivery.disposition(new Accepted());
