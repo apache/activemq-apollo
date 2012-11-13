@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.amqp.hawtdispatch;
+package org.apache.activemq.apollo.amqp.hawtdispatch.impl;
 
 import org.apache.qpid.proton.codec.WritableBuffer;
 

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.amqp.hawtdispatch;
+package org.apache.activemq.apollo.amqp.hawtdispatch.impl;
 
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.transport.AbstractProtocolCodec;
@@ -28,6 +28,8 @@ import java.io.IOException;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class AmqpProtocolCodec extends AbstractProtocolCodec {
+
+    int maxFrameSize = 4*1024*1024;
 
     @Override
     protected void encode(Object object) throws IOException {
@@ -55,8 +57,12 @@ public class AmqpProtocolCodec extends AbstractProtocolCodec {
             if (sizeBytes != null) {
                 int size = sizeBytes.bigEndianEditor().readInt();
                 if (size < 8) {
-                    throw new IOException(String.format("specified frame size %d smaller than minimum frame size", size));
+                    throw new IOException(String.format("specified frame size %d is smaller than minimum frame size", size));
                 }
+                if( size > maxFrameSize ) {
+                    throw new IOException(String.format("specified frame size %d is larger than maximum frame size", size));
+                }
+
                 // TODO: check frame min and max size..
                 nextDecodeAction = readFrame(size);
                 return nextDecodeAction.apply();

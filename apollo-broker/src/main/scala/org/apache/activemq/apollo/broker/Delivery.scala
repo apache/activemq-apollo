@@ -263,4 +263,6 @@ class Delivery {
     record
   }
 
+  def redelivered = redeliveries = ((redeliveries+1).min(Short.MaxValue)).toShort
+
 }

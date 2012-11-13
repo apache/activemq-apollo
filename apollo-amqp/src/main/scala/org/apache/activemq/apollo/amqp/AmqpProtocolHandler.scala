@@ -25,17 +25,18 @@ import org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.dto._
 import org.apache.activemq.apollo.broker._
-import org.apache.activemq.apollo.util.path.{PathParser, Path, LiteralPart}
+import org.apache.activemq.apollo.util.path.{PathParser, Path}
+import path.LiteralPart
 import protocol.ProtocolHandler
 import org.apache.activemq.apollo.broker.security.SecurityContext
 import org.apache.activemq.apollo.amqp.dto._
-import hawtdispatch.{AmqpProtocolCodec, AmqpListener, AmqpConnection}
+import hawtdispatch.impl.{AmqpProtocolCodec, AmqpListener, AmqpTransport}
 import org.apache.qpid.proton.engine
-import engine.impl.{LinkImpl, TransportImpl}
-import engine.{Receiver, Sasl, Sender, Link, EndpointError, EndpointState}
+import org.apache.qpid.proton.engine.impl.{ProtocolTracer, DeliveryImpl, LinkImpl, TransportImpl}
+import org.apache.qpid.proton.engine._
 import org.fusesource.hawtbuf.Buffer._
 import org.apache.qpid.proton.`type`.transaction.{TransactionalState, Coordinator}
-import org.apache.qpid.proton.`type`.messaging.{Data, Source, Target}
+import org.apache.qpid.proton.`type`.messaging.{Accepted, Data, Source, Target, Modified}
 import org.apache.activemq.apollo.broker.Delivery
 import org.apache.activemq.apollo.filter.{FilterException, BooleanExpression}
 import org.apache.qpid.proton.`type`.{Symbol => AmqpSymbol, Binary, DescribedType}
@@ -43,8 +44,11 @@ import org.apache.activemq.apollo.selector.SelectorParser
 import org.apache.qpid.proton.`type`.transport.SenderSettleMode
 import java.util
 import java.io.IOException
+import scala.Some
 import org.apache.activemq.apollo.broker.FullSink
 import org.apache.activemq.apollo.broker.SubscriptionAddress
+import org.apache.activemq.apollo.broker.Session
+import org.apache.qpid.proton.framing.TransportFrame
 
 object AmqpProtocolHandler extends Log {
 
@@ -94,6 +98,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   var config: AmqpDTO = _
   var dead = false
   var protocol_convert = "full"
+  var prefetch = 100
 
   def session_id = security_context.session_id
 
@@ -171,11 +176,11 @@ class AmqpProtocolHandler extends ProtocolHandler {
     // heart_beat_monitor.resumeRead
   }
 
-  val amqp_connection = new AmqpConnection()
+  var amqp_connection:AmqpTransport = _
 
   def codec = connection.transport.getProtocolCodec.asInstanceOf[AmqpProtocolCodec]
 
-  def proton = amqp_connection.getProtonConnection
+  def proton = amqp_connection.connection()
 
   def pump_out = {
     queue.assertExecuting()
@@ -196,8 +201,21 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find(_.isInstanceOf[AmqpDTO]).map(_.asInstanceOf[AmqpDTO]).getOrElse(new AmqpDTO)
-    amqp_connection.bind(connection.transport)
+    amqp_connection = AmqpTransport.accept(connection.transport)
     amqp_connection.setListener(amqp_listener)
+    if( false ) {
+      amqp_connection.setProtocolTracer(new ProtocolTracer() {
+        def receivedFrame(transportFrame: TransportFrame) = {
+  //        println("RECV: %s | %s".format(security_context.remote_address, transportFrame.getBody()));
+  //        connection_log.trace("RECV: %s | %s", security_context.remote_address, transportFrame.getBody());
+        }
+        def sentFrame(transportFrame: TransportFrame) = {
+          println("SEND: %s | %s".format(security_context.remote_address, transportFrame.getBody()));
+  //        connection_log.trace("SEND: %s | %s", security_context.remote_address, transportFrame.getBody());
+        }
+      });
+    }
+    connection.transport.resumeRead()
   }
 
   val amqp_listener = new AmqpListener() {
@@ -208,7 +226,6 @@ class AmqpProtocolHandler extends ProtocolHandler {
       sasl.server();
       sasl
     }
-
 
     override def processSaslEvent(sasl: Sasl): Sasl = {
       // Lets try to complete the sasl handshake.
@@ -238,14 +255,45 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    override def processConnectionOpen(conn: engine.Connection, onComplete: Task) {
-      println("connection opened.")
+    override def processRemoteOpen(endpoint: Endpoint, onComplete: Task) {
+      endpoint match {
+        case connection:engine.Connection =>
+          processConnectionOpen(connection, onComplete)
+        case session:engine.Session =>
+          session.open(); onComplete.run()
+        case sender:engine.Sender =>
+          processSenderOpen(sender, onComplete)
+        case receiver:engine.Receiver =>
+          processReceiverOpen(receiver, onComplete)
+        case _ =>
+          async_die("system-error", "Unknown Endpoint")
+      }
+    }
+
+    override def processRemoteClose(endpoint: Endpoint, onComplete: Task) {
+      endpoint match {
+        case connection:engine.Connection =>
+          processConnectionClose(connection, onComplete)
+        case session:engine.Session =>
+          session.close(); onComplete.run()
+        case sender:engine.Sender =>
+          processSenderClose(sender, onComplete)
+        case receiver:engine.Receiver =>
+          processReceiverClose(receiver, onComplete)
+        case _ =>
+          async_die("system-error", "Unknown Endpoint")
+      }
+    }
+
+
+    def processConnectionOpen(conn: engine.Connection, onComplete: Task) {
       security_context.session_id = Some(conn.getRemoteContainer())
 
       suspend_read("host lookup")
       broker.dispatch_queue {
         val virtual_host = proton.getRemoteHostname match {
           case null => broker.default_virtual_host
+          case "" => broker.default_virtual_host
           case host => broker.get_virtual_host(ascii(host))
         }
         queue {
@@ -292,7 +340,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    override def processReceiverOpen(receiver: Receiver, onComplete: Task) {
+    def processReceiverOpen(receiver: Receiver, onComplete: Task) {
       // Client producer is attaching..
       receiver.setSource(receiver.getRemoteSource());
       receiver.setTarget(receiver.getRemoteTarget());
@@ -323,18 +371,15 @@ class AmqpProtocolHandler extends ProtocolHandler {
           host.dispatch_queue {
             val rc = host.router.connect(route.addresses, route, security_context)
             queue {
-              println(rc)
               rc match {
                 case Some(failure) =>
-                  println(failure)
                   close_with_error(receiver, "Could not connect", failure)
                   onComplete.run()
                 case None =>
-                  println("ok")
                   // If the remote has not closed on us yet...
                   if (receiver.getRemoteState == EndpointState.ACTIVE) {
-                    receiver.setContext(route)
-                    receiver.flow(1024 * 64);
+                    set_attachment(receiver, route)
+                    receiver.flow(prefetch);
                     receiver.open()
                   } else {
                     receiver.close()
@@ -346,14 +391,22 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    override def processReceiverClose(receiver: Receiver, onComplete: Task) {
-      receiver.getContext match {
+    def get_attachment(endpoint:Endpoint):AnyRef = {
+      amqp_connection.context(endpoint).getAttachment()
+    }
+
+    def set_attachment(endpoint:Endpoint, value:AnyRef) = {
+      amqp_connection.context(endpoint).setAttachment(value)
+    }
+
+    def processReceiverClose(receiver: Receiver, onComplete: Task) {
+      get_attachment(receiver) match {
         case null =>
           receiver.close()
           onComplete.run()
         case route: AmqpProducerRoute =>
           // Lets disconnect the route.
-          receiver.setContext(null)
+          set_attachment(receiver, null)
           host.dispatch_queue {
             host.router.disconnect(route.addresses, route)
             queue {
@@ -366,14 +419,18 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    override def processDelivery(receiver: Receiver, delivery: engine.Delivery) {
-      receiver.getContext match {
+    override def processDelivery(delivery: engine.Delivery) {
+      get_attachment(delivery.getLink) match {
         case null =>
-        case route: AmqpProducerRoute => route.process(delivery)
+        case route: AmqpProducerRoute =>
+          route.process(delivery.asInstanceOf[DeliveryImpl])
+        case consumer: AmqpConsumer =>
+          consumer.process(delivery.asInstanceOf[DeliveryImpl])
+        // TODO
       }
     }
 
-    override def processSenderOpen(sender: Sender, onComplete: Task) {
+    def processSenderOpen(sender: Sender, onComplete: Task) {
       // Client consumer is attaching..
       sender.setSource(sender.getRemoteSource());
       sender.setTarget(sender.getRemoteTarget());
@@ -468,12 +525,17 @@ class AmqpProtocolHandler extends ProtocolHandler {
               close_with_error(sender, "subscribe-failed", reason)
               onComplete.run()
             case None =>
-              sender.setContext(consumer)
+              set_attachment(sender, consumer)
               sender.open()
               onComplete.run()
           }
         }
       }
+    }
+
+    def processSenderClose(sender: Sender, onComplete: Task) {
+      sender.close()
+      onComplete.run()
     }
 
     var gracefully_closed = false
@@ -493,10 +555,11 @@ class AmqpProtocolHandler extends ProtocolHandler {
       on_transport_disconnected()
     }
 
-    override def processConnectionClose(conn: engine.Connection, onComplete: Task) {
+    def processConnectionClose(conn: engine.Connection, onComplete: Task) {
       gracefully_closed = true
       on_transport_disconnected()
-      super.processConnectionClose(conn, onComplete)
+      conn.close()
+      onComplete.run()
       queue.after(die_delay, TimeUnit.MILLISECONDS) {
         connection.stop(NOOP)
       }
@@ -574,7 +637,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     def receiver: Receiver
 
-    def process(delivery: engine.Delivery): Unit = {
+    def process(delivery: DeliveryImpl): Unit = {
       if (!delivery.isReadable()) {
         System.out.println("it was not readable!");
         return;
@@ -599,15 +662,12 @@ class AmqpProtocolHandler extends ProtocolHandler {
         }
       }
 
-      receiver.advance();
-      delivery.settle(); // TODO: do this once accepted by the broker.
-
       val buffer = current.toBuffer();
       current = null;
       onMessage(delivery, new AmqpMessage(buffer));
     }
 
-    def onMessage(delivery: engine.Delivery, buffer: AmqpMessage): Unit
+    def onMessage(delivery: DeliveryImpl, buffer: AmqpMessage): Unit
   }
 
   def decode_target(target: Target) = {
@@ -669,13 +729,17 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     override def dispatch_queue = queue
 
-    refiller = ^ {
-      resume_read
+    val producer_overflow = new OverflowSink[Delivery](this) {
+      /**
+       * Called for each value what is passed on to the down stream sink.
+       */
+      override protected def onDelivered(value: Delivery) {
+        receiver.flow(1)
+        pump_out
+      }
     }
 
-    val producer_overflow = new OverflowSink[Delivery](this)
-
-    def onMessage(delivery: engine.Delivery, message: AmqpMessage) = {
+    def onMessage(delivery: DeliveryImpl, message: AmqpMessage) = {
       val d = new Delivery
       d.message = message
       d.size = message.encoded.length
@@ -699,15 +763,19 @@ class AmqpProtocolHandler extends ProtocolHandler {
           queue {
             result match {
               case Consumed =>
+                delivery.disposition(new Accepted())
                 delivery.settle()
               case _ =>
                 async_die("uknown", "Unexpected NAK from broker")
             }
           }
         }
+      } else {
+        delivery.settle()
       }
 
-      producer_overflow.offer(d)
+      val accepted = producer_overflow.offer(d)
+      assert(accepted)
       receiver.advance();
     }
   }
@@ -790,7 +858,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       override def time_stamp = broker.now
 
       var currentBuffer: Buffer = _;
-      var currentDelivery: org.apache.qpid.proton.engine.Delivery = _;
+      var currentDelivery: DeliveryImpl = _;
 
       override def drain_overflow: Unit = {
         queue.assertExecuting()
@@ -798,13 +866,15 @@ class AmqpProtocolHandler extends ProtocolHandler {
         try {
           while (true) {
             while (currentBuffer != null) {
-              var sent = sender.send(currentBuffer.data, currentBuffer.offset, currentBuffer.length);
-              if (sent > 0) {
-                pumpNeeded = true
+              if (sender.getCredit > 0) {
+                val sent = sender.send(currentBuffer.data, currentBuffer.offset, currentBuffer.length);
                 currentBuffer.moveHead(sent);
+                val (session, apollo_delivery) = currentDelivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
+                delivered(session, apollo_delivery.size)
+                pumpNeeded = true
                 if (currentBuffer.length == 0) {
                   if (presettle) {
-                    settle(currentDelivery, Consumed);
+                    settle(currentDelivery, Consumed, false);
                   } else {
                     sender.advance();
                   }
@@ -849,10 +919,10 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
               currentBuffer = new AmqpMessage(null, message).encoded;
               if (presettle) {
-                currentDelivery = sender.delivery(EMPTY_BYTE_ARRAY, 0, 0);
+                currentDelivery = sender.delivery(EMPTY_BYTE_ARRAY, 0, 0).asInstanceOf[DeliveryImpl];
               } else {
                 val tag = nextTag
-                currentDelivery = sender.delivery(tag, 0, tag.length);
+                currentDelivery = sender.delivery(tag, 0, tag.length).asInstanceOf[DeliveryImpl];
                 unsettled.put(new AsciiBuffer(tag), currentDelivery)
               }
               currentDelivery.setContext(value);
@@ -860,6 +930,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
           }
         } finally {
           if( pumpNeeded ) {
+            pumpNeeded = false
             pump_out
           }
         }
@@ -872,36 +943,68 @@ class AmqpProtocolHandler extends ProtocolHandler {
           redeliveries.removeFirst()
         }
       }
+    }
 
-      private def settle(delivery: org.apache.qpid.proton.engine.Delivery, ackType: DeliveryResult) {
-        val tag: Array[Byte] = delivery.getTag
-        if (tag != null && tag.length > 0) {
-          checkinTag(tag)
-          unsettled.remove(new AsciiBuffer(tag))
+    def process(proton_delivery:DeliveryImpl) = {
+      val state = proton_delivery.getRemoteState();
+      state match {
+        case null =>
+        case accepted:Accepted =>
+          if( !proton_delivery.remotelySettled() ) {
+              proton_delivery.disposition(new Accepted());
+          }
+          settle(proton_delivery, Consumed, false);
+        case rejected:Rejected =>
+          // re-deliver /w incremented delivery counter.
+          settle(proton_delivery, null, true);
+        case release:Released =>
+          // re-deliver && don't increment the counter.
+          settle(proton_delivery, null, false);
+        case modified:Modified =>
+          def b(v:java.lang.Boolean) = v!=null && v.booleanValue()
+          var ackType = if(b(modified.getUndeliverableHere())) {
+              // receiver does not want the message..
+              // perhaps we should DLQ it?
+              Poisoned;
+          } else {
+            // Delivered ??
+            null
+          }
+          settle(proton_delivery, ackType, b(modified.getDeliveryFailed()));
+      }
+    }
+
+    def settle(delivery:DeliveryImpl, ackType:DeliveryResult, incrementRedelivery:Boolean) {
+      val (session, apollo_delivery) = delivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
+      if( incrementRedelivery ) {
+        apollo_delivery.redelivered
+      }
+
+      val tag = delivery.getTag();
+      if( tag !=null && tag.length>0 ) {
+          checkinTag(tag);
+      }
+
+      if( ackType == null ) {
+        redeliveries.addFirst((session, apollo_delivery))
+        session_manager.drain_overflow
+      } else {
+
+        val remoteState = delivery.getRemoteState
+        if (remoteState != null && remoteState.isInstanceOf[TransactionalState]) {
+          val s: TransactionalState = remoteState.asInstanceOf[TransactionalState]
+          val txid = toLong(s.getTxnId)
+          async_die("txs-not-supported", "Transactions not yet supported")
+          return
         }
-        // Don't ack.. redeliver
-        val (session, apollo_delivery) = delivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
-        if (ackType == null) {
-          delivery.settle
-          redeliveries.addFirst((session, apollo_delivery))
-          drain_overflow
-        } else {
 
-          val remoteState = delivery.getRemoteState
-          if (remoteState != null && remoteState.isInstanceOf[TransactionalState]) {
-            val s: TransactionalState = remoteState.asInstanceOf[TransactionalState]
-            val txid = toLong(s.getTxnId)
-            async_die("txs-not-supported", "Transactions not yet supported")
-            return
-          }
-
-          if (apollo_delivery.ack != null) {
-            apollo_delivery.ack(ackType, null)
-          }
-          delivery.settle
-          pump_out
+        if( apollo_delivery.ack != null ) {
+          apollo_delivery.ack(ackType, null)
         }
       }
+      delivery.settle()
+      pump_out
+
     }
 
     class AmqpConsumerSession(p: DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery] {

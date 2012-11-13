@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.activemq.apollo.amqp.hawtdispatch;
+package org.apache.activemq.apollo.amqp.hawtdispatch.impl;
 
 import org.apache.qpid.proton.engine.*;
+import org.apache.qpid.proton.engine.impl.EndpointImpl;
 import org.apache.qpid.proton.engine.impl.TransportImpl;
 import org.apache.qpid.proton.type.messaging.Accepted;
 import org.fusesource.hawtdispatch.Task;
@@ -29,7 +30,7 @@ import java.io.IOException;
 */
 public class AmqpListener {
 
-    public Sasl processSaslConnect(TransportImpl protonTransport) {
+    public Sasl processSaslConnect(TransportImpl transport) {
         return null;
     }
 
@@ -37,46 +38,25 @@ public class AmqpListener {
         return sasl;
     }
 
-    public void processConnectionOpen(Connection conn, Task onComplete) {
-        conn.open();
-        onComplete.run();
-    }
-    public void processConnectionClose(Connection conn, Task onComplete){
-        conn.close();
+    public void processRemoteOpen(Endpoint endpoint, Task onComplete) {
+        ((EndpointImpl)endpoint).setLocalError(new EndpointError("error", "Not supported"));
+        endpoint.close();
         onComplete.run();
     }
 
-    public void proccessSessionOpen(Session session, Task onComplete){
-        session.open();
-        onComplete.run();
-    }
-    public void processSessionClose(Session session, Task onComplete){
-        session.close();
+    public void processRemoteClose(Endpoint endpoint, Task onComplete) {
+        endpoint.close();
         onComplete.run();
     }
 
-    public void processSenderOpen(Sender sender, Task onComplete) {
-        sender.close();
-        onComplete.run();
-    }
-    public void processSenderClose(Sender sender, Task onComplete){
-        sender.close();
-        onComplete.run();
+    public void processDelivery(Delivery delivery){
     }
 
-    public void processReceiverOpen(Receiver receiver, Task onComplete) {
-        receiver.open();
-        onComplete.run();
-    }
-    public void processReceiverClose(Receiver receiver, Task onComplete) {
-        receiver.close();
-        onComplete.run();
+    public void processTransportConnected() {
     }
 
-    public void processDelivery(Receiver receiver, Delivery delivery){
-    }
-
-    public void processDelivery(Sender sender, Delivery delivery) {
+    public void processTransportFailure(IOException e) {
+        this.processFailure(e);
     }
 
     public void processFailure(Throwable e) {
@@ -86,10 +66,4 @@ public class AmqpListener {
     public void processRefill() {
     }
 
-    public void processTransportConnected() {
-    }
-
-    public void processTransportFailure(IOException e) {
-        e.printStackTrace();
-    }
 }

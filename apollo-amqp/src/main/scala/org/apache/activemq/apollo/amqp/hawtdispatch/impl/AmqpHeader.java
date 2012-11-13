@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.amqp.hawtdispatch;
+package org.apache.activemq.apollo.amqp.hawtdispatch.impl;
 
 import org.fusesource.hawtbuf.Buffer;
 

@@ -17,9 +17,9 @@
 package org.apache.activemq.apollo.amqp
 
 
+import hawtdispatch.impl.DroppingWritableBuffer
 import org.apache.activemq.apollo.broker.protocol
 import protocol.{MessageCodecFactory, MessageCodec}
-import hawtdispatch.DroppingWritableBuffer
 import java.nio.ByteBuffer
 import org.apache.qpid.proton.codec.{WritableBuffer, CompositeWritableBuffer}
 import org.fusesource.hawtbuf.Buffer._

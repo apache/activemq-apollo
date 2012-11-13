@@ -20,10 +20,37 @@ package org.apache.activemq.apollo.amqp.test
 import org.apache.qpid.amqp_1_0.jms.impl.{ConnectionFactoryImpl, QueueImpl}
 import javax.jms._
 
+
+
+
+
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+
+object QpidJmsTest {
+  def enableJMSFrameTracing {
+    val out = System.out // new PrintStream(new FileOutputStream(new File("/tmp/amqp-trace.txt")))
+    val handler = new Handler {
+      setLevel(Level.ALL)
+      def publish(r: LogRecord)  = out.println(String.format("%s:%s", r.getLoggerName, r.getMessage))
+      def flush = out.flush
+      def close {}
+    }
+    var log = Logger.getLogger("FRM")
+    log.setLevel(Level.ALL)
+    log.addHandler(handler)
+
+//    log = Logger.getLogger("RAW")
+//    log.setLevel(Level.ALL)
+//    log.addHandler(handler)
+  }
+}
+
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-
 class QpidJmsTest extends AmqpTestSupport {
 
   def createConnection: Connection = {
@@ -56,6 +83,7 @@ class QpidJmsTest extends AmqpTestSupport {
 //  }
 
   test("Send Nack Receive") {
+    // enableJMSFrameTracing
     val queue = new QueueImpl("/queue/testqueue")
     val nMsgs = 1
     val dataFormat: String = "%01024d"
