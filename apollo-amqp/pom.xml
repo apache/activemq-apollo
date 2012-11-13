@@ -47,7 +47,7 @@
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-proton</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>${qpid-proton-version}</version>
     </dependency>
 
     <!-- Scala Support -->
@@ -113,7 +113,7 @@
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>qpid-amqp-1-0-client-jms</artifactId>
-      <version>0.18</version>
+      <version>${qpid-jms-version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
