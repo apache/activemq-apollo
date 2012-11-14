@@ -81,8 +81,7 @@
         <include>org.apache.activemq:activemq-jmdns_1.0</include>
         <include>org.apache.commons:commons-math</include>
         <include>org.fusesource.stompjms:stompjms-client</include>
-
-        <include>org.fusesource.fuse-extra:fusesource-amqp</include>
+        <include>org.apache.qpid:qpid-proton</include>
 
       </includes>
       <excludes>
