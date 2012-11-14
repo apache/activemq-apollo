@@ -549,10 +549,11 @@ class AmqpProtocolHandler extends ProtocolHandler {
     }
 
     override def processTransportFailure(error: IOException) {
+      on_transport_disconnected()
       if( !gracefully_closed ) {
         connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
+        connection.stop(NOOP)
       }
-      on_transport_disconnected()
     }
 
     def processConnectionClose(conn: engine.Connection, onComplete: Task) {

@@ -477,16 +477,18 @@ public class AmqpTransport extends WatchBase {
 
         @Override
         public void onTransportFailure(IOException error) {
-            if( state!=CONNECTED ) {
+            if( state==CONNECTED ) {
                 failure = error;
-                listener.processTransportFailure(error);
-                fireWatches();
+                if( listener!=null ) {
+                    listener.processTransportFailure(error);
+                    fireWatches();
+                }
             }
         }
 
         void onFailure(Throwable error) {
+            failure = error;
             if( listener!=null ) {
-                failure = error;
                 listener.processFailure(error);
                 fireWatches();
             }
