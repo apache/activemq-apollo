@@ -505,6 +505,7 @@ public class AmqpTransport extends WatchBase {
                         state = DISCONNECTED;
                         hawtdispatchTransport = null;
                         protonTransport = null;
+                        fireWatches();
                     }
                 });
             }
@@ -540,7 +541,7 @@ public class AmqpTransport extends WatchBase {
         addWatch(new Watch() {
             @Override
             public boolean execute() {
-                if( state!=DISCONNECTED ) {
+                if( state==DISCONNECTED ) {
                     cb.onSuccess(null);
                     return true;
                 }

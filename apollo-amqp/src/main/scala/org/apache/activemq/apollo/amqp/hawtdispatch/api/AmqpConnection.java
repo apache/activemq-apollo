@@ -21,6 +21,7 @@ import org.apache.activemq.apollo.amqp.hawtdispatch.impl.AmqpListener;
 import org.apache.activemq.apollo.amqp.hawtdispatch.impl.AmqpTransport;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Endpoint;
+import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
 import org.apache.qpid.proton.engine.impl.SessionImpl;
@@ -175,5 +176,24 @@ public class AmqpConnection extends AmqpEndpointBase  {
 
     public ProtocolTracer getProtocolTracer() {
         return transport.getProtocolTracer();
+    }
+
+    /**
+     * Once the remote end, closes the transport is disconnected.
+     */
+    @Override
+    public void close() {
+        super.close();
+        onRemoteClose(new Callback<EndpointError>() {
+            @Override
+            public void onSuccess(EndpointError value) {
+                disconnect();
+            }
+
+            @Override
+            public void onFailure(Throwable value) {
+                disconnect();
+            }
+        });
     }
 }
