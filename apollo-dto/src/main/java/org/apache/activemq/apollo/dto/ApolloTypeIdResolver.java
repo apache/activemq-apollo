@@ -17,12 +17,12 @@
 
 package org.apache.activemq.apollo.dto;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.activemq.apollo.util.DtoModule$;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.codehaus.jackson.annotate.JsonTypeName;
-import org.codehaus.jackson.map.jsontype.TypeIdResolver;
-import org.codehaus.jackson.map.type.TypeFactory;
-import org.codehaus.jackson.type.JavaType;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
@@ -47,14 +47,14 @@ public class ApolloTypeIdResolver implements TypeIdResolver {
                 JsonTypeName jsonAnnoation = c.getAnnotation(JsonTypeName.class);
                 if(jsonAnnoation!=null && jsonAnnoation.value()!=null) {
                     typeToId.put(c, jsonAnnoation.value());
-                    idToType.put(jsonAnnoation.value(), TypeFactory.specialize(baseType,  c));
-                    idToType.put(c.getName(), TypeFactory.specialize(baseType,  c));
+                    idToType.put(jsonAnnoation.value(), TypeFactory.defaultInstance().constructSpecializedType(baseType, c));
+                    idToType.put(c.getName(), TypeFactory.defaultInstance().constructSpecializedType(baseType, c));
                 } else {
                     XmlRootElement xmlAnnoation = c.getAnnotation(XmlRootElement.class);
                     if(xmlAnnoation!=null && xmlAnnoation.name()!=null) {
                         typeToId.put(c, xmlAnnoation.name());
-                        idToType.put(xmlAnnoation.name(), TypeFactory.specialize(baseType,  c));
-                        idToType.put(c.getName(), TypeFactory.specialize(baseType,  c));
+                        idToType.put(xmlAnnoation.name(), TypeFactory.defaultInstance().constructSpecializedType(baseType, c));
+                        idToType.put(c.getName(), TypeFactory.defaultInstance().constructSpecializedType(baseType, c));
                     }
                 }
             }
@@ -74,6 +74,11 @@ public class ApolloTypeIdResolver implements TypeIdResolver {
         if(rc==null)
             throw new IllegalArgumentException("Invalid sub type: "+aClass+", of base type: "+baseType.getRawClass());
         return rc;
+    }
+
+    @Override
+    public String idFromBaseType() {
+        return idFromValueAndType(null, baseType.getRawClass());
     }
 
     public JavaType typeFromId(String id) {

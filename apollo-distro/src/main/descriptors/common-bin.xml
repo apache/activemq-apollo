@@ -29,8 +29,12 @@
         <include>org.scala-lang:scala-library</include>
         <include>org.fusesource.hawtbuf:*</include>
         <include>org.fusesource.hawtdispatch:*</include>
-        <include>org.codehaus.jackson:jackson-mapper-asl</include>
-        <include>org.codehaus.jackson:jackson-core-asl</include>
+        
+        <include>com.fasterxml.jackson.core:jackson-annotations</include>
+        <include>com.fasterxml.jackson.core:jackson-core</include>
+        <include>com.fasterxml.jackson.core:jackson-databind</include>
+        <include>com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider</include>
+        <!-- <include>com.fasterxml.jackson.module:jackson-module-jaxb-annotations</include> -->
         
         <include>org.iq80.leveldb:*</include>
         <include>com.google.guava:guava</include>
@@ -65,8 +69,12 @@
         <include>org.fusesource.scalate:scalate-util</include>
         <include>net.sf.josql:josql</include>
         <include>net.sf.josql:gentlyweb-utils</include>
+
         <include>com.wordnik:swagger-jaxrs_2.9.1</include>
         <include>com.wordnik:swagger-core_2.9.1</include>
+        <!-- still needed by swagger -->
+        <include>org.codehaus.jackson:jackson-mapper-asl</include>
+        <include>org.codehaus.jackson:jackson-core-asl</include>
 
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>

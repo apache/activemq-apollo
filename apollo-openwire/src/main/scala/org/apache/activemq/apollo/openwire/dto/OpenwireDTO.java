@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.openwire.dto;
 
 import org.apache.activemq.apollo.dto.ProtocolDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 

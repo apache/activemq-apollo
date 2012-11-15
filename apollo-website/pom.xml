@@ -59,17 +59,6 @@
       <version>${slf4j-version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson-version}</version>
-    </dependency>
-    
     <!-- testing -->
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
@@ -192,26 +181,8 @@
             <phase>process-sources</phase>
             <configuration>
               <tasks>
-                <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask">
-                  <classpath refid="maven.compile.classpath" />
-                </taskdef>
-
                 <mkdir dir="${basedir}/target/sitegen/documentation/schema" />
-                <schemagen srcdir="${basedir}/.." destdir="${basedir}/target/sitegen/documentation/schema" includeantruntime="false">
-                  <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo.xsd" />
-                  <classpath refid="maven.compile.classpath" />
-                  <include name="**/package-info.java" />
-                  <include name="**/*DTO.java" />
-                  <exclude name="**/.git/**" />
-                  <exclude name="**/.svn/**" />
-                </schemagen>
-
-                <replace token="&lt;xs:sequence&gt;" value="&lt;xs:choice minOccurs=&quot;0&quot; maxOccurs=&quot;unbounded&quot;&gt;&lt;xs:choice&gt;" dir="${basedir}/target/sitegen/documentation/schema">
-                  <include name="**/*.xsd" />
-                </replace>
-                <replace token="&lt;/xs:sequence&gt;" value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" dir="${basedir}/target/sitegen/documentation/schema">
-                  <include name="**/*.xsd" />
-                </replace>
+                <copy file="${basedir}/../apollo-dto/target/schema/org/apache/activemq/apollo/dto/apollo.xsd" tofile="${basedir}/target/sitegen/documentation/schema/apollo.xsd"/>
               </tasks>
             </configuration>
             <goals>
@@ -219,25 +190,7 @@
             </goals>
           </execution>
         </executions>
-        <dependencies>
-           <dependency>
-              <groupId>javax.xml.bind</groupId>
-              <artifactId>jaxb-api</artifactId>
-              <version>${jaxb-api-version}</version>
-           </dependency>
-           <dependency>
-              <groupId>com.sun.xml.bind</groupId>
-              <artifactId>jaxb-impl</artifactId>
-              <version>${jaxb-version}</version>
-           </dependency>
-           <dependency>
-              <groupId>com.sun.xml.bind</groupId>
-              <artifactId>jaxb-xjc</artifactId>
-              <version>${jaxb-version}</version>
-           </dependency>
-        </dependencies>      
       </plugin>
-        
     </plugins>
   </build>
 

@@ -27,7 +27,7 @@ import org.apache.activemq.apollo.dto.JsonCodec;
 @javax.ws.rs.ext.Provider
 @javax.ws.rs.Consumes({"application/json", "text/json"})
 @javax.ws.rs.Produces({"application/json", "text/json"})
-public class JacksonJsonProvider extends org.codehaus.jackson.jaxrs.JacksonJsonProvider {
+public class JacksonJsonProvider extends com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider {
     public JacksonJsonProvider() {
         super(JsonCodec.mapper);
     }

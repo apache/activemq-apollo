@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.broker.store.bdb.dto;
 import org.apache.activemq.apollo.dto.IntMetricDTO;
 import org.apache.activemq.apollo.dto.StoreStatusDTO;
 import org.apache.activemq.apollo.dto.TimeMetricDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

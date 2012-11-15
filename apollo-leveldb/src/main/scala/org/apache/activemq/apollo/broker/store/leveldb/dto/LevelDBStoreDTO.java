@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker.store.leveldb.dto;
 
 import org.apache.activemq.apollo.dto.StoreDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

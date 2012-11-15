@@ -16,10 +16,9 @@
  */
 package org.apache.activemq.apollo.dto;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 
@@ -34,7 +33,7 @@ import java.io.IOException;
 public class JsonCodec {
     final public static ObjectMapper mapper = new ObjectMapper();
     static {
-        mapper.setSerializationInclusion(JsonSerialize.Inclusion.NON_NULL);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     static public <T> T decode(Buffer buffer, Class<T> type) throws IOException {

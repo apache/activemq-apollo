@@ -17,7 +17,7 @@
 package org.apache.activemq.apollo.broker.network.dto;
 
 import org.apache.activemq.apollo.dto.CustomServiceDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;

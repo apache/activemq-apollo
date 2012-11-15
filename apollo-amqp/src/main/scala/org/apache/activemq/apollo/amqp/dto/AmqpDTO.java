@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.amqp.dto;
 import org.apache.activemq.apollo.dto.AddUserHeaderDTO;
 import org.apache.activemq.apollo.dto.ProtocolDTO;
 import org.apache.activemq.apollo.dto.ProtocolFilterDTO;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
