@@ -99,4 +99,11 @@ public class AmqpProtocolCodec extends AbstractProtocolCodec {
         nextDecodeAction = initialDecodeAction();
     }
 
+    public int getMaxFrameSize() {
+        return maxFrameSize;
+    }
+
+    public void setMaxFrameSize(int maxFrameSize) {
+        this.maxFrameSize = maxFrameSize;
+    }
 }

@@ -46,13 +46,6 @@ public class XmlCodecTest {
         assertEquals(1, connector.protocols.size());
         ProtocolDTO amqp = connector.protocols.get(0);
         assertTrue(amqp instanceof AmqpDTO);
-        assertEquals("JMSXUserID", ((AmqpDTO) amqp).add_user_header);
-
-        List<AddUserHeaderDTO> add_user_headers = ((AmqpDTO) amqp).add_user_headers;
-        assertEquals(2, add_user_headers.size());
-        assertEquals("GroupId", add_user_headers.get(0).name);
-        assertEquals("UserId", add_user_headers.get(1).name);
-        assertEquals("UserPrincipal", add_user_headers.get(1).kind);
 
     }
 

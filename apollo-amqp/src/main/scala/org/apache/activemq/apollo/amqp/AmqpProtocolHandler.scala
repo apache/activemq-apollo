@@ -177,6 +177,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   }
 
   var amqp_connection:AmqpTransport = _
+  var amqp_trace = false
 
   def codec = connection.transport.getProtocolCodec.asInstanceOf[AmqpProtocolCodec]
 
@@ -201,12 +202,17 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find(_.isInstanceOf[AmqpDTO]).map(_.asInstanceOf[AmqpDTO]).getOrElse(new AmqpDTO)
+    amqp_trace = OptionSupport(config.trace).getOrElse(amqp_trace)
+
+    def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
+    codec.setMaxFrameSize(mem_size(config.max_frame_size, "100M"))
+
     amqp_connection = AmqpTransport.accept(connection.transport)
     amqp_connection.setListener(amqp_listener)
-    if( false ) {
+    if( amqp_trace ) {
       amqp_connection.setProtocolTracer(new ProtocolTracer() {
         def receivedFrame(transportFrame: TransportFrame) = {
-  //        println("RECV: %s | %s".format(security_context.remote_address, transportFrame.getBody()));
+          println("RECV: %s | %s".format(security_context.remote_address, transportFrame.getBody()));
   //        connection_log.trace("RECV: %s | %s", security_context.remote_address, transportFrame.getBody());
         }
         def sentFrame(transportFrame: TransportFrame) = {
@@ -640,7 +646,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     def process(delivery: DeliveryImpl): Unit = {
       if (!delivery.isReadable()) {
-        System.out.println("it was not readable!");
+        trace("it was not readable!");
         return;
       }
 
@@ -769,6 +775,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
               case _ =>
                 async_die("uknown", "Unexpected NAK from broker")
             }
+            pump_out
           }
         }
       } else {
@@ -855,78 +862,65 @@ class AmqpProtocolHandler extends ProtocolHandler {
     }
 
     val redeliveries = new util.LinkedList[(Session[Delivery], Delivery)]()
-    val session_manager = new SessionSinkMux[Delivery](FullSink(), queue, Delivery, 1, buffer_size) {
+    val session_manager = new SessionSinkMux[Delivery](FullSink(), queue, Delivery, 100, buffer_size) {
       override def time_stamp = broker.now
-
-      var currentBuffer: Buffer = _;
-      var currentDelivery: DeliveryImpl = _;
 
       override def drain_overflow: Unit = {
         queue.assertExecuting()
         var pumpNeeded = false
         try {
-          while (true) {
-            while (currentBuffer != null) {
-              if (sender.getCredit > 0) {
-                val sent = sender.send(currentBuffer.data, currentBuffer.offset, currentBuffer.length);
-                currentBuffer.moveHead(sent);
-                val (session, apollo_delivery) = currentDelivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
-                delivered(session, apollo_delivery.size)
-                pumpNeeded = true
-                if (currentBuffer.length == 0) {
-                  if (presettle) {
-                    settle(currentDelivery, Consumed, false);
-                  } else {
-                    sender.advance();
-                  }
-                  currentBuffer = null;
-                  currentDelivery = null;
-                }
-              } else {
-                return;
-              }
-            }
-
+          while ((sender.getCredit - sender.getQueued) > 0) {
             val value = poll
             if (value == null) {
               return
+            }
+
+            val (session, apollo_delivery) = value
+            val message = if (apollo_delivery.message.codec == AmqpMessageCodec) {
+              apollo_delivery.message.asInstanceOf[AmqpMessage].decoded
             } else {
-              val (session, delivery) = value
-              val message = if (delivery.message.codec == AmqpMessageCodec) {
-                delivery.message.asInstanceOf[AmqpMessage].decoded
-              } else {
-                val (body, content_type) = protocol_convert match {
-                  case "body" => (delivery.message.getBodyAs(classOf[Buffer]), "protocol/" + delivery.message.codec.id + ";conv=body")
-                  case _ => (delivery.message.encoded, "protocol/" + delivery.message.codec.id())
-                }
-
-                message_id_counter += 1
-
-                val message = new org.apache.qpid.proton.message.Message
-                message.setMessageId(session_id.get + message_id_counter)
-                message.setBody(new Data(new Binary(body.data, body.offset, body.length)))
-                message.setContentType(content_type)
-                message.setDurable(delivery.persistent)
-                if (delivery.expiration > 0) {
-                  message.setExpiryTime(delivery.expiration)
-                }
-                message
+              val (body, content_type) = protocol_convert match {
+                case "body" => (apollo_delivery.message.getBodyAs(classOf[Buffer]), "protocol/" + apollo_delivery.message.codec.id + ";conv=body")
+                case _ => (apollo_delivery.message.encoded, "protocol/" + apollo_delivery.message.codec.id())
               }
 
-              if (delivery.redeliveries > 0) {
-                message.setDeliveryCount(delivery.redeliveries)
-                message.setFirstAcquirer(false)
-              }
+              message_id_counter += 1
 
-              currentBuffer = new AmqpMessage(null, message).encoded;
-              if (presettle) {
-                currentDelivery = sender.delivery(EMPTY_BYTE_ARRAY, 0, 0).asInstanceOf[DeliveryImpl];
-              } else {
-                val tag = nextTag
-                currentDelivery = sender.delivery(tag, 0, tag.length).asInstanceOf[DeliveryImpl];
-                unsettled.put(new AsciiBuffer(tag), currentDelivery)
+              val message = new org.apache.qpid.proton.message.Message
+              message.setMessageId(session_id.get + message_id_counter)
+              message.setBody(new Data(new Binary(body.data, body.offset, body.length)))
+              message.setContentType(content_type)
+              message.setDurable(apollo_delivery.persistent)
+              if (apollo_delivery.expiration > 0) {
+                message.setExpiryTime(apollo_delivery.expiration)
               }
-              currentDelivery.setContext(value);
+              message
+            }
+
+            if (apollo_delivery.redeliveries > 0) {
+              message.setDeliveryCount(apollo_delivery.redeliveries)
+              message.setFirstAcquirer(false)
+            }
+
+            val buffer = new AmqpMessage(null, message).encoded;
+            val proton_delivery = if (presettle) {
+              sender.delivery(EMPTY_BYTE_ARRAY, 0, 0).asInstanceOf[DeliveryImpl];
+            } else {
+              val tag = nextTag
+              val proton_delivery = sender.delivery(tag, 0, tag.length).asInstanceOf[DeliveryImpl];
+              unsettled.put(new AsciiBuffer(tag), proton_delivery)
+              proton_delivery
+            }
+
+            val sent = sender.send(buffer.data, buffer.offset, buffer.length);
+            assert( sent == buffer.length )
+            delivered(session, apollo_delivery.size)
+            pumpNeeded = true
+            proton_delivery.setContext(value)
+            if (presettle) {
+              settle(proton_delivery, Consumed, false);
+            } else {
+              sender.advance();
             }
           }
         } finally {
@@ -979,8 +973,12 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def settle(delivery:DeliveryImpl, ackType:DeliveryResult, incrementRedelivery:Boolean) {
-      val (session, apollo_delivery) = delivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
+    def settle(delivery:DeliveryImpl, ackType:DeliveryResult, incrementRedelivery:Boolean):Unit = {
+      val ctx = delivery.getContext.asInstanceOf[(Session[Delivery], Delivery)]
+      if( ctx==null ) {
+        return
+      }
+      val (session, apollo_delivery) = ctx
       if( incrementRedelivery ) {
         apollo_delivery.redelivered
       }
@@ -1063,6 +1061,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       var next = session_manager.poll
       while( next!=null ) {
         reject(next, Undelivered)
+        next = session_manager.poll
       }
       super.dispose()
     }

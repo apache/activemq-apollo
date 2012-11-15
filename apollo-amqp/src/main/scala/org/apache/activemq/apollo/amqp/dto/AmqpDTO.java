@@ -35,38 +35,11 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AmqpDTO extends ProtocolDTO {
 
-    @XmlAttribute(name="add_user_header")
-    public String add_user_header;
+    @XmlAttribute(name="trace")
+    public Boolean trace;
 
-    /**
-     * A broker accepts connections via it's configured connectors.
-     */
-    @XmlElement(name="add_user_header")
-    public List<AddUserHeaderDTO> add_user_headers = new ArrayList<AddUserHeaderDTO>();
-
-    /**
-     * If set, it will add the configured header name with the value
-     * set the a timestamp of when the message is received.
-     */
-    @XmlAttribute(name="add_timestamp_header")
-    public String add_timestamp_header;
-
-    /**
-     * If set, the configured header will be added to message
-     * sent to consumer if the message is a redelivery.  It will be
-     * set to the number of re-deliveries that have occurred.
-     */
-    @XmlAttribute(name="add_redeliveries_header")
-    public String add_redeliveries_header;
-
-    @XmlAttribute(name="max_header_length")
-    public String max_header_length;
-
-    @XmlAttribute(name="max_headers")
-    public Integer max_headers;
-
-    @XmlAttribute(name="max_data_length")
-    public String max_data_length;
+    @XmlAttribute(name="max_frame_size")
+    public String max_frame_size;
 
     @XmlElementRef
     public List<ProtocolFilterDTO> protocol_filters = new ArrayList<ProtocolFilterDTO>();
@@ -115,14 +88,6 @@ public class AmqpDTO extends ProtocolDTO {
 
         AmqpDTO amqpDTO = (AmqpDTO) o;
 
-        if (add_redeliveries_header != null ? !add_redeliveries_header.equals(amqpDTO.add_redeliveries_header) : amqpDTO.add_redeliveries_header != null)
-            return false;
-        if (add_timestamp_header != null ? !add_timestamp_header.equals(amqpDTO.add_timestamp_header) : amqpDTO.add_timestamp_header != null)
-            return false;
-        if (add_user_header != null ? !add_user_header.equals(amqpDTO.add_user_header) : amqpDTO.add_user_header != null)
-            return false;
-        if (add_user_headers != null ? !add_user_headers.equals(amqpDTO.add_user_headers) : amqpDTO.add_user_headers != null)
-            return false;
         if (any_child_wildcard != null ? !any_child_wildcard.equals(amqpDTO.any_child_wildcard) : amqpDTO.any_child_wildcard != null)
             return false;
         if (any_descendant_wildcard != null ? !any_descendant_wildcard.equals(amqpDTO.any_descendant_wildcard) : amqpDTO.any_descendant_wildcard != null)
@@ -131,12 +96,9 @@ public class AmqpDTO extends ProtocolDTO {
             return false;
         if (destination_separator != null ? !destination_separator.equals(amqpDTO.destination_separator) : amqpDTO.destination_separator != null)
             return false;
-        if (die_delay != null ? !die_delay.equals(amqpDTO.die_delay) : amqpDTO.die_delay != null) return false;
-        if (max_data_length != null ? !max_data_length.equals(amqpDTO.max_data_length) : amqpDTO.max_data_length != null)
+        if (die_delay != null ? !die_delay.equals(amqpDTO.die_delay) : amqpDTO.die_delay != null)
             return false;
-        if (max_header_length != null ? !max_header_length.equals(amqpDTO.max_header_length) : amqpDTO.max_header_length != null)
-            return false;
-        if (max_headers != null ? !max_headers.equals(amqpDTO.max_headers) : amqpDTO.max_headers != null)
+        if (max_frame_size != null ? !max_frame_size.equals(amqpDTO.max_frame_size) : amqpDTO.max_frame_size != null)
             return false;
         if (path_separator != null ? !path_separator.equals(amqpDTO.path_separator) : amqpDTO.path_separator != null)
             return false;
@@ -154,6 +116,8 @@ public class AmqpDTO extends ProtocolDTO {
             return false;
         if (topic_prefix != null ? !topic_prefix.equals(amqpDTO.topic_prefix) : amqpDTO.topic_prefix != null)
             return false;
+        if (trace != null ? !trace.equals(amqpDTO.trace) : amqpDTO.trace != null)
+            return false;
 
         return true;
     }
@@ -161,13 +125,8 @@ public class AmqpDTO extends ProtocolDTO {
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (add_user_header != null ? add_user_header.hashCode() : 0);
-        result = 31 * result + (add_user_headers != null ? add_user_headers.hashCode() : 0);
-        result = 31 * result + (add_timestamp_header != null ? add_timestamp_header.hashCode() : 0);
-        result = 31 * result + (add_redeliveries_header != null ? add_redeliveries_header.hashCode() : 0);
-        result = 31 * result + (max_header_length != null ? max_header_length.hashCode() : 0);
-        result = 31 * result + (max_headers != null ? max_headers.hashCode() : 0);
-        result = 31 * result + (max_data_length != null ? max_data_length.hashCode() : 0);
+        result = 31 * result + (trace != null ? trace.hashCode() : 0);
+        result = 31 * result + (max_frame_size != null ? max_frame_size.hashCode() : 0);
         result = 31 * result + (protocol_filters != null ? protocol_filters.hashCode() : 0);
         result = 31 * result + (queue_prefix != null ? queue_prefix.hashCode() : 0);
         result = 31 * result + (topic_prefix != null ? topic_prefix.hashCode() : 0);
