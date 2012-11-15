@@ -90,7 +90,7 @@ object ClassFinder extends Log {
       try {
         is.close()
       } catch {
-        case _ =>
+        case _:Throwable =>
       }
     }
   }

@@ -53,7 +53,7 @@ package object leveldb  {
             attempt = Thread.currentThread().getContextClassLoader().loadClass(name).newInstance().asInstanceOf[SnappyTrait];
             attempt.compress("test")
         } catch {
-          case _ =>
+          case _:Throwable =>
             attempt = null
         }
       }

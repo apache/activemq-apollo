@@ -79,7 +79,7 @@ case class ImportStreamManager(source:InputStream) {
     }
     read_text(stream).toInt
   } catch {
-    case e => new IOException("Could not determine export format version: "+e)
+    case e:Throwable => new IOException("Could not determine export format version: "+e)
   }
   
   def getNext:AnyRef = {

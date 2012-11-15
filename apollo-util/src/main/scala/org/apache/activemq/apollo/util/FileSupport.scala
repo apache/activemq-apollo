@@ -123,7 +123,7 @@ object FileSupport {
     try {
       proc(closable)
     } finally {
-      try { closable.close  }  catch { case ignore =>  }
+      try { closable.close  }  catch { case ignore:Throwable =>  }
     }
   }
 

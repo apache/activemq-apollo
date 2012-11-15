@@ -121,7 +121,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
       next_seq += 1
     }
 
-    val tracker = new TaskTracker()
+    val tracker = new TaskTracker("unknown", 0)
 
     val task = tracker.task("uow complete")
     batch.on_complete(task.run)

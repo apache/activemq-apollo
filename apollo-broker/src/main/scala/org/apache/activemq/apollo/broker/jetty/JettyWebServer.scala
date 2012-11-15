@@ -50,7 +50,7 @@ object JettyWebServerFactory extends WebServerFactory {
     this.getClass.getClassLoader.loadClass(classOf[WebAppContext].getName)
     true
   } catch {
-    case _ =>
+    case _:Throwable =>
     false
   }
 

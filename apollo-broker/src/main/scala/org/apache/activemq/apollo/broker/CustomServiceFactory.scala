@@ -76,14 +76,14 @@ object SimpleCustomServiceFactory extends CustomServiceFactory with Log {
       try {
         service.asInstanceOf[ServiceDuckType].broker = broker
       } catch {
-        case _ =>
+        case _:Throwable =>
       }
 
       // Try to inject the config via reflection..
       try {
         service.asInstanceOf[ServiceDuckType].config = dto
       } catch {
-        case _ =>
+        case _:Throwable =>
       }
 
       service

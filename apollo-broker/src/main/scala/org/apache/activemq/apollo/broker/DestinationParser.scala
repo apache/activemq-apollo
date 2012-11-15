@@ -50,7 +50,7 @@ class DestinationParser extends PathParser {
       null
     } else {
       val rc = new StringBuilder
-      addresses.foreach { address =>
+      addresses.foreach { address:DestinationAddress =>
         if (rc.length() != 0 ) {
           assert( destination_separator!=null )
           rc.append(destination_separator)

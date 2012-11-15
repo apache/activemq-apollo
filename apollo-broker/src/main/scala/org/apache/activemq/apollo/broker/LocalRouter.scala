@@ -231,7 +231,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         val owner = address.path.parts(2).asInstanceOf[LiteralPart]
         Some((broker.value, owner.value))
       } catch {
-        case _ => None
+        case _:Throwable => None
       }
     }
   }
@@ -518,14 +518,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           dest.unbind_durable_subscription(dsub)
         }
 
-        // Delete any consumer temp queues..
-        for( consumer <- dest.consumers ) {
-          consumer match {
-            case queue:Queue =>
-              _destroy_queue(queue)
-            case _ =>
-          }
-        }
+//        // Delete any consumer temp queues..
+//        for( consumer <- dest.consumers ) {
+//          consumer match {
+//            case queue:Queue =>
+//              _destroy_queue(queue)
+//            case _ =>
+//          }
+//        }
 
         // Un-register the topic.
         remove_destination(path, dest)
@@ -622,14 +622,14 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
     }
 
     def unbind_topics(queue: Queue, topics: Traversable[_ <: BindAddress]) {
-      topics.foreach { topic =>
+      topics.foreach { topic:BindAddress =>
         var matches = local_topic_domain.get_destination_matches(topic.path)
         matches.foreach(_.unbind_durable_subscription(queue))
       }
     }
 
     def bind_topics(queue: Queue, address: SubscriptionAddress, topics: Traversable[_ <: BindAddress]) {
-      topics.foreach { topic =>
+      topics.foreach { topic:BindAddress =>
         val wildcard = PathParser.containsWildCards(topic.path)
         var matches = local_topic_domain.get_destination_matches(topic.path)
 

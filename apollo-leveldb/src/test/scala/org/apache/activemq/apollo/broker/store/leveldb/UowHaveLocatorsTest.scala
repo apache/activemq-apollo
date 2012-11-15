@@ -50,7 +50,7 @@ class UowHaveLocatorsTest extends StoreFunSuiteSupport {
     val queueEntryRecord: QueueEntryRecord =  entry(queue, 1, m1)
     batch.enqueue(queueEntryRecord)
 
-    var tracker = new TaskTracker()
+    var tracker = new TaskTracker("uknown", 0)
     var task = tracker.task("uow complete")
     batch.on_complete(task.run)
     batch.release
@@ -65,7 +65,7 @@ class UowHaveLocatorsTest extends StoreFunSuiteSupport {
     val batch2 = store.create_uow
     batch2.enqueue(queueEntryRecord)
 
-    tracker = new TaskTracker()
+    tracker = new TaskTracker("uknown", 0)
     task = tracker.task("uow complete")
     batch2.on_complete(task.run)
     batch2.release

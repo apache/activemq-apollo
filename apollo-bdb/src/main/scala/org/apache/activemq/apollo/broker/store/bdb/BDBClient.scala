@@ -88,7 +88,7 @@ class BDBClient(store: BDBStore) {
           -1
         }
       } catch {
-        case e => throw new Exception("Unexpected version file format: "+version_file)
+        case e:Throwable => throw new Exception("Unexpected version file format: "+version_file)
       }
       ver match {
         case STORE_SCHEMA_VERSION => // All is good.

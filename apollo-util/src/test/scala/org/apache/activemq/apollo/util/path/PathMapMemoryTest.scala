@@ -34,27 +34,26 @@ class PathMapMemoryTest {
     map.put(d1, "test")
   }
 
-  @Test def testVeryLongPaths: Unit = {
-    {
-      var i: Int = 1
-      while (i < 100) {
-        var name: String = "1"
-        var j: Int = 2
-        while (j <= i) {
-          name += "." + j
-          j += 1; j
-        }
-        try {
-          var d1: Path = createDestination(name)
-          var map: PathMap[String] = new PathMap[String]
-          map.put(d1, "test")
-        } catch {
-          case e: Throwable => {
-            fail(("Destination name too long: " + name + " : " + e))
-          }
-        }
-        i += 1; i
+  @Test
+  def testVeryLongPaths = {
+    var i = 1
+    while (i < 100) {
+      var name: String = "1"
+      var j = 2
+      while (j <= i) {
+        name += "." + j
+        j += 1;
       }
+      try {
+        var d1: Path = createDestination(name)
+        var map: PathMap[String] = new PathMap[String]
+        map.put(d1, "test")
+      } catch {
+        case e: Throwable => {
+          fail(("Destination name too long: " + name + " : " + e))
+        }
+      }
+      i += 1
     }
   }
 

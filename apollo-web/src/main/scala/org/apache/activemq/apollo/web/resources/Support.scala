@@ -92,13 +92,13 @@ abstract class Resource(parent:Resource=null) {
     throw new WebApplicationException(Response.ok().build)
   }
 
-  def if_ok[T](func: =>T)(then: =>T):T = {
+  def if_ok[T](func: =>T)(andThen: =>T):T = {
     try {
       func
     } catch {
       case e:WebApplicationException =>
         if( e.getResponse.getStatus == 200 ) {
-          then
+          andThen
         } else {
           throw e;
         }

@@ -41,7 +41,7 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
       try {
         connection.close()
       } catch {
-        case e =>
+        case e:Throwable =>
       }
     }
     connections = Nil

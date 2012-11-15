@@ -161,7 +161,7 @@ class BrokerResource() extends Resource {
       try {
         func
       } catch {
-        case _ => // ignore
+        case _:Throwable => // ignore
       }
     }
 

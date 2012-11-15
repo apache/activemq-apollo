@@ -166,16 +166,17 @@ trait DelayingStoreSupport extends Store with BaseService {
 
 
     def on_complete(callback: (Boolean)=>Unit) = {
-      if(this.synchronized {
-        if( state eq UowCompleted ) {
-          true
+      var (completed, value) = this.synchronized {
+        if (state eq UowCompleted) {
+          (true, canceled)
         } else {
           flush_sync = true
           complete_listeners += callback
-          false
+          (false, canceled)
         }
-      }) {
-        callback
+      }
+      if(completed) {
+        callback(value)
       }
     }
     

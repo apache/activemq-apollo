@@ -150,10 +150,10 @@ object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
       }
       try {
         filter.asInstanceOf[FilterDuckType].protocol_handler = handler
-      } catch { case _ => }
+      } catch { case _:Throwable => }
       try {
         filter.asInstanceOf[FilterDuckType].dto = dto
-      } catch { case _ => }
+      } catch { case _:Throwable => }
       filter
     case _ => null
   }

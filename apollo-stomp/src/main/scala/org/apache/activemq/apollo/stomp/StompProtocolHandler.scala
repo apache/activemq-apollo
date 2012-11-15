@@ -1245,7 +1245,7 @@ class StompProtocolHandler extends ProtocolHandler {
             rc ::= (REPLY_TO -> encode_header(encode_address(dests)))
           }
         } catch {
-          case _=> // the translation is a best effort thing.
+          case _:Throwable=> // the translation is a best effort thing.
         }
       }
     }
@@ -1406,7 +1406,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     val selector = get(headers, SELECTOR) match {
       case None=> null
-      case Some(x)=> x
+      case Some(x)=>
         try {
           val s = decode_header(x)
           (s, SelectorParser.parse(s))

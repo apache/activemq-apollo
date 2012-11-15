@@ -163,7 +163,7 @@ object Broker extends Log {
     val data = mbean_server.getAttribute(new ObjectName("java.lang:type=Memory"), "HeapMemoryUsage").asInstanceOf[CompositeData]
     data.get("max").asInstanceOf[java.lang.Long].longValue()
   } catch {
-    case _ => 1024L * 1024 * 1024 // assume it's 1 GIG (that's the default apollo ships with)
+    case _:Throwable => 1024L * 1024 * 1024 // assume it's 1 GIG (that's the default apollo ships with)
   }
 
   val BLOCKABLE_THREAD_POOL = ApolloThreadPool.INSTANCE
@@ -203,7 +203,7 @@ object Broker extends Log {
         case _ => None
       }
     } catch {
-      case _ => None
+      case _:Throwable => None
     }
   }
 

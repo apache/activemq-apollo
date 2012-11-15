@@ -172,7 +172,7 @@ class StompUdpProtocol extends UdpProtocol {
         })
 
       } catch {
-        case e => None
+        case e:Throwable => None
       }
 
     }

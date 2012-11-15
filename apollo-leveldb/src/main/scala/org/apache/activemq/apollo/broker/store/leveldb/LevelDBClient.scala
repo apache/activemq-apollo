@@ -304,7 +304,7 @@ class LevelDBClient(store: LevelDBStore) {
           -1
         }
       } catch {
-        case e => throw new Exception("Unexpected version file format: " + version_file)
+        case e:Throwable => throw new Exception("Unexpected version file format: " + version_file)
       }
       ver match {
         case STORE_SCHEMA_VERSION => // All is good.
@@ -506,7 +506,7 @@ class LevelDBClient(store: LevelDBStore) {
           }
           referenced_queues += queue_key
         } catch {
-          case e =>
+          case e:Throwable =>
             trace("invalid queue entry record: %s, error: %s", new Buffer(key), e)
             fixed_records += 1
             // Invalid record.
@@ -526,7 +526,7 @@ class LevelDBClient(store: LevelDBStore) {
           }
           referenced_queues -= queue_key
         } catch {
-          case e =>
+          case e:Throwable =>
             trace("invalid queue record: %s, error: %s", new Buffer(key), e)
             fixed_records += 1
             // Invalid record.

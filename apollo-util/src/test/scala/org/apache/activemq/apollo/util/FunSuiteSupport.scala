@@ -52,7 +52,7 @@ abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBefore
       "."
     }
   } catch {
-    case x=>
+    case x:Throwable =>
       "."
   }
 

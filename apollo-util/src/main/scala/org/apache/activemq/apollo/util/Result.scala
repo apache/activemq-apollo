@@ -19,7 +19,7 @@ package org.apache.activemq.apollo.util
 object ResultSupport {
 
   case class RichResult[A,F](self: Result[A,F]) {
-    def then[B](r2: =>Result[B,F]):Result[B,F] = {
+    def andThen[B](r2: =>Result[B,F]):Result[B,F] = {
       if( self.failed ) {
         Failure(self.failure)
       } else {

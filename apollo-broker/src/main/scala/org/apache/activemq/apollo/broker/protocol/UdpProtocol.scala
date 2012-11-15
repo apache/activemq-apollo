@@ -193,7 +193,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
           try {
             route = new UdpProducerRoute(host, address)
           } catch {
-            case e =>
+            case e:Throwable =>
               // We could run into a error like the address not parsing
               debug(e, "Could not create the producer route")
               return

@@ -58,7 +58,7 @@ class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution 
     try {
       connect("?jms.alwaysSyncSend=true", user="can_only_connect", password="can_only_connect")
     } catch {
-      case e =>
+      case e:Throwable =>
         e.printStackTrace()
         fail("Should not have thrown an exception ")
     }
@@ -114,7 +114,7 @@ class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution 
     try {
       producer.send(session.createTextMessage("Test Message"))
     } catch {
-      case e => fail("Should not have thrown an exception")
+      case e:Throwable => fail("Should not have thrown an exception")
     }
   }
 
@@ -129,7 +129,7 @@ class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution 
       producer.send(session.createTextMessage("Test Message"))
       fail("Should have thrown an exception since dest is not created.")
     } catch {
-      case e =>
+      case e:Throwable =>
     }
 
     // Now actually create it...
@@ -138,7 +138,7 @@ class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution 
     try {
       producer.send(session.createTextMessage("Test Message"))
     } catch {
-      case e =>
+      case e:Throwable =>
         e.printStackTrace()
         fail("Should not have thrown an exception since it was created")
     }

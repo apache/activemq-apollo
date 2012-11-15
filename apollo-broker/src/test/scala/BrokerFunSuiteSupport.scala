@@ -205,7 +205,7 @@ class MultiBrokerTestSupport extends FunSuiteSupport {
       try {
         admin.afterAll
       } catch {
-        case e => debug(e)
+        case e:Throwable => debug(e)
       }
     }
     admins = Array()

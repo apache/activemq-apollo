@@ -253,7 +253,7 @@ class Create extends Action {
       getClass.getClassLoader.loadClass(name)
       true
     } catch {
-      case _ => false
+      case _:Throwable => false
     }
   }
 
@@ -278,7 +278,7 @@ class Create extends Action {
     try {
         system(path.getParentFile(), Array("chmod", "a+x", path.getName))
     } catch {
-      case x =>
+      case _:Throwable =>
     }
   }
 
@@ -296,7 +296,7 @@ class Create extends Action {
               c = is.read(buffer)
             }
           } catch {
-            case x =>
+            case _:Throwable =>
           }
         }
       }.start
