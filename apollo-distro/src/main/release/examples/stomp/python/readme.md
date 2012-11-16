@@ -1,10 +1,7 @@
-Prereqs
-=======
+Overview
+========
 
-Install the [stomppy](http://code.google.com/p/stomppy) python client
-library.
+Python users can choose between examples for the following client libraries:
 
-easy_install users can install it by running:
-
-     easy_install http://stomppy.googlecode.com/files/stomp.py-3.0.2a.tar.gz
-
+* [stomppy](http://code.google.com/p/stomppy) 
+* [stompest](https://github.com/nikipore/stompest)
