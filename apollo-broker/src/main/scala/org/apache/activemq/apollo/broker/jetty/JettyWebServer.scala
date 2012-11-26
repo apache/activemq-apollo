@@ -36,6 +36,7 @@ import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder}
 import org.apache.activemq.apollo.broker.web.{AllowAnyOriginFilter, WebServer, WebServerFactory}
 import javax.servlet._
 import org.eclipse.jetty.util.log.Slf4jLog
+import java.util
 
 /**
  * <p>
@@ -211,8 +212,9 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
                 }
 
                 val connector = new SslSelectChannelConnector
-                connector.setSslContext(sslContext)
-                connector.setWantClientAuth(true)
+                val ssl_settings = connector.getSslContextFactory;
+                ssl_settings.setSslContext(sslContext)
+                ssl_settings.setWantClientAuth(true)
                 connector
             }
 
@@ -228,9 +230,10 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
             context.setWar(webapp_path.getCanonicalPath)
             context.setClassLoader(Broker.class_loader)
 
+            val ALL = util.EnumSet.allOf(classOf[DispatcherType])
             if( cors_origin!=null && !cors_origin.trim().isEmpty ) {
               val origins = cors_origin.split(",").map(_.trim()).toSet
-              context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", FilterMapping.DEFAULT)
+              context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", ALL)
             }
             context.addFilter(new FilterHolder(new Filter(){
               def init(p1: FilterConfig) {}
@@ -239,7 +242,7 @@ class JettyWebServer(val broker:Broker) extends WebServer with BaseService {
                 request.setAttribute("APOLLO_BROKER", broker)
                 chain.doFilter(request, response)
               }
-            }), "/*", FilterMapping.DEFAULT)
+            }), "/*", ALL)
 
             if( broker.tmp !=null ) {
               context.setTempDirectory(broker.tmp)

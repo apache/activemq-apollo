@@ -70,7 +70,7 @@
     <howl-version>0.1.8</howl-version>
     <hsqldb-version>1.7.2.2</hsqldb-version>
     <jdom-version>1.0</jdom-version>
-    <jetty-version>7.6.1.v20120215</jetty-version>
+    <jetty-version>8.1.8.v20121106</jetty-version>
     <jmock-version>1.0.1</jmock-version>
     <junit-version>4.10</junit-version>
     <jxta-version>2.0</jxta-version>

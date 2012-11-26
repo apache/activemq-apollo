@@ -91,9 +91,9 @@ class StaticContentFilter extends Filter {
     var servletPath: String = null;
     var pathInfo: String = null;
 
-    if (request.getAttribute(Dispatcher.INCLUDE_REQUEST_URI) != null) {
-      servletPath = request.getAttribute(Dispatcher.INCLUDE_SERVLET_PATH).asInstanceOf[String]
-      pathInfo = request.getAttribute(Dispatcher.INCLUDE_PATH_INFO).asInstanceOf[String]
+    if (request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
+      servletPath = request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH).asInstanceOf[String]
+      pathInfo = request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO).asInstanceOf[String]
       if (servletPath == null) {
         servletPath = request.getServletPath();
         pathInfo = request.getPathInfo();

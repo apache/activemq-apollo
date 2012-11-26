@@ -42,6 +42,8 @@ import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.broker.web.AllowAnyOriginFilter
 import org.eclipse.jetty.servlet.{FilterMapping, FilterHolder, ServletHolder, ServletContextHandler}
 import org.eclipse.jetty.util.log.Slf4jLog
+import java.util
+import javax.servlet.DispatcherType
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -129,8 +131,9 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
               SSLContext.getDefault
             }
             val connector = new SslSelectChannelConnector
-            connector.setSslContext(sslContext)
-            connector.setWantClientAuth(true)
+            val ssl_settings = connector.getSslContextFactory;
+            ssl_settings.setSslContext(sslContext)
+            ssl_settings.setWantClientAuth(true)
             connector
         }
         connector.setHost(host)
@@ -138,9 +141,11 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
         var context = new ServletContextHandler(ServletContextHandler.NO_SECURITY)
         context.setContextPath(prefix)
+
         if( cors_origin!=null && !cors_origin.trim().isEmpty ) {
+          val ALL = util.EnumSet.allOf(classOf[DispatcherType])
           val origins = cors_origin.split(",").map(_.trim()).toSet
-          context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", FilterMapping.DEFAULT)
+          context.addFilter(new FilterHolder(new AllowAnyOriginFilter(origins)), "/*", ALL)
         }
         context.addServlet(new ServletHolder(this), "/")
 
@@ -188,7 +193,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           transportServerListener.onAccept(transport)
         } else {
           blockingExecutor {
-            transport.connection.disconnect();
+            transport.connection.close();
           }
         }
       }
@@ -271,7 +276,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         inbound.synchronized {
           inbound.notify();
         }
-        connection.disconnect()
+        connection.close()
         dispatch_queue {
           protocolCodec = null
           on_completed.run()

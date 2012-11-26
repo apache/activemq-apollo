@@ -42,7 +42,7 @@ class JerseyServlet extends ServletContainer {
       return original_config.getServletContext
     }
 
-    def getInitParameterNames: Enumeration[_] = {
+    def getInitParameterNames: Enumeration[String] = {
       import collection.JavaConversions._
       return new java.util.Vector(custom_config_map.keys).elements();
     }
