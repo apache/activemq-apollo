@@ -37,8 +37,6 @@ object StompWebSocketTests {
 
     override def broker_config_uri = "xml:classpath:apollo-stomp-websocket.xml"
 
-    def ws_port: Int = connector_port("ws").get
-
     override def beforeAll() = {
       try {
         driver = create_web_driver(test_data_dir / "profile")
@@ -64,49 +62,53 @@ object StompWebSocketTests {
       }
     }
 
-    test("websocket") {
-      val url = getClass.getResource("websocket.html")
+    for( protocol <- Array("ws", "wss") ) {
+      test("websocket "+protocol) {
 
-      System.out.println("url: " + url)
-      driver.get(url + "#ws://127.0.0.1:" + ws_port);
-      val web_status = driver.findElement(By.id("status"));
-      val web_received = driver.findElement(By.id("received"));
+        val url = getClass.getResource("websocket.html")
+        val ws_port: Int = connector_port(protocol).get
 
-      while ("Loading" == web_status.getText) {
-        Thread.sleep(100)
+        System.out.println("url: " + url)
+        driver.get(url + "#"+protocol+"://127.0.0.1:" + ws_port);
+        val web_status = driver.findElement(By.id("status"));
+        val web_received = driver.findElement(By.id("received"));
+
+        while ("Loading" == web_status.getText) {
+          Thread.sleep(100)
+        }
+
+        // Skip test if browser does not support websockets..
+        if (web_status.getText != "No WebSockets") {
+
+          // Wait for it to get connected..
+          within(2, SECONDS) {
+            web_status.getText should be("Connected")
+          }
+
+          // Send a message via normal TCP stomp..
+          connect("1.1")
+          async_send("/queue/websocket", "Hello")
+          within(2, SECONDS) {
+            // it should get received by the websocket client.
+            web_received.getText should be("Hello")
+          }
+
+          // Send a bunch of messages..
+          val send_count = 100000
+          for (i <- 1 to send_count) {
+            async_send("/queue/websocket", "messages #" + i)
+          }
+
+          within(10, SECONDS) {
+            // it should get received by the websocket client.
+            web_received.getText should be("messages #" + send_count)
+          }
+
+        }
+
       }
-
-      // Skip test if browser does not support websockets..
-      if (web_status.getText != "No WebSockets") {
-
-        // Wait for it to get connected..
-        within(2, SECONDS) {
-          web_status.getText should be("Connected")
-        }
-
-        // Send a message via normal TCP stomp..
-        connect("1.1")
-        async_send("/queue/websocket", "Hello")
-        within(2, SECONDS) {
-          // it should get received by the websocket client.
-          web_received.getText should be("Hello")
-        }
-
-        // Send a bunch of messages..
-        val send_count = 100000
-        for (i <- 1 to send_count) {
-          async_send("/queue/websocket", "messages #" + i)
-        }
-
-        within(10, SECONDS) {
-          // it should get received by the websocket client.
-          web_received.getText should be("messages #" + send_count)
-        }
-
-      }
-
     }
-  }
+    }
 
 }
 

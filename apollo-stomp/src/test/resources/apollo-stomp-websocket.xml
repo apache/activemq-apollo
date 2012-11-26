@@ -23,7 +23,9 @@
   </virtual_host>
 
   <!--<web_admin bind="http://0.0.0.0:61680"/>-->
+  <key_storage file="${basedir}/src/test/resources/apollo.ks" password="password" key_password="password"/>
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>
   <connector id="ws" bind="ws://0.0.0.0:0"/>
+  <connector id="wss" bind="wss://0.0.0.0:0"/>
 
 </broker>
