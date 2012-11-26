@@ -56,19 +56,6 @@
     </dependency>
 
     <!-- So we can boot up a broker -->
-
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson-version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson-version}</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
