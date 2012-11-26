@@ -25,10 +25,10 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector
 import javax.net.ssl.SSLContext
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector
 import org.eclipse.jetty.util.thread.ExecutorThreadPool
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import org.eclipse.jetty.websocket.{WebSocket, WebSocketServlet}
 import org.eclipse.jetty.server.{Connector, Server}
-import java.net.{InetSocketAddress, URI}
+import java.net.{URL, InetSocketAddress, URI}
 import java.lang.Class
 import scala.reflect.BeanProperty
 import java.nio.ByteBuffer
@@ -105,6 +105,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         val scheme = uri.getScheme
         val host = uri.getHost
         var port = uri.getPort
+        val options = URISupport.parseParamters(uri);
 
         scheme match {
           case "ws" =>
@@ -133,7 +134,17 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
             val connector = new SslSelectChannelConnector
             val ssl_settings = connector.getSslContextFactory;
             ssl_settings.setSslContext(sslContext)
-            ssl_settings.setWantClientAuth(true)
+            options.get("client_auth") match {
+              case null =>
+                ssl_settings.setWantClientAuth(true)
+              case "want" =>
+                ssl_settings.setWantClientAuth(true)
+              case "need" =>
+                ssl_settings.setNeedClientAuth(true)
+              case "none" =>
+              case _ =>
+                warn("Invalid setting for the wss protcol 'client_auth' query option.  Please set to one of: want, need, or none")
+            }
             connector
         }
         connector.setHost(host)
@@ -197,6 +208,11 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           }
         }
       }
+    }
+
+    override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+      resp.setContentType("application/json")
+      resp.getOutputStream.println("{}");
     }
 
     def doWebSocketConnect(request: HttpServletRequest, protocol: String) = WebSocketTransport(this, request, protocol)
