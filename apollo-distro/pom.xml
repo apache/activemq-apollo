@@ -92,6 +92,11 @@
       <version>99-trunk-SNAPSHOT</version>
       <type>pom</type>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-jmx</artifactId>
+      <version>99-trunk-SNAPSHOT</version>
+    </dependency>
 
     <dependency>
       <groupId>org.eclipse.jetty.aggregate</groupId>

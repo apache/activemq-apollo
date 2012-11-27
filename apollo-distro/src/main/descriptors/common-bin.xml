@@ -59,7 +59,8 @@
         
         <!-- for the webapp -->
         <include>org.eclipse.jetty.aggregate:jetty-all-server</include>
-        <include>javax.servlet:servlet-api</include>
+        <include>org.eclipse.jetty.orbit:javax.servlet</include>
+
         <include>javax.servlet.jsp:jsp-api</include>
         <include>com.sun.jersey:jersey-server</include>
         <include>com.sun.jersey:jersey-core</include>
@@ -75,7 +76,11 @@
         <!-- still needed by swagger -->
         <include>org.codehaus.jackson:jackson-mapper-asl</include>
         <include>org.codehaus.jackson:jackson-core-asl</include>
-
+        
+        <!-- for JMX over REST support -->
+        <include>org.jolokia:jolokia-core</include>
+        <include>com.googlecode.json-simple:json-simple</include>
+        
         <!-- the logging apis used -->
         <include>org.slf4j:slf4j-api</include>
         <include>commons-logging:commons-logging</include>
@@ -89,7 +94,7 @@
         <include>org.apache.activemq:activemq-jmdns_1.0</include>
         <include>org.apache.commons:commons-math</include>
         <include>org.fusesource.stompjms:stompjms-client</include>
-        <include>org.apache.qpid:qpid-proton</include>
+        <include>org.apache.qpid:proton</include>
 
       </includes>
       <excludes>

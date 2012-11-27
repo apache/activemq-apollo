@@ -30,47 +30,37 @@ import collection.mutable.HashMap
  */
 class JerseyServlet extends ServletContainer {
 
-  var original_config: ServletConfig = _
-  var custom_config_map = HashMap[String, String]()
-  val custom_config: ServletConfig = new ServletConfig {
-
-    def getServletName: String = {
-      return original_config.getServletName
-    }
-
-    def getServletContext: ServletContext = {
-      return original_config.getServletContext
-    }
-
-    def getInitParameterNames: Enumeration[String] = {
-      import collection.JavaConversions._
-      return new java.util.Vector(custom_config_map.keys).elements();
-    }
-
-    def getInitParameter(s: String): String = {
-      return custom_config_map.get(s).getOrElse(null)
-    }
-
-  }
-
   override def init(config: ServletConfig): Unit = {
     com.wordnik.swagger.jaxrs.JaxrsApiReader.setFormatString("")
 
-    original_config = config
-    custom_config_map.put("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.ClassNamesResourceConfig")
-    custom_config_map.put("com.sun.jersey.config.property.classnames", WebModule.web_resources.map(_.getName).mkString(" "))
-    custom_config_map.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "false"))
-    custom_config_map.put("com.sun.jersey.spi.container.ContainerRequestFilters", "com.sun.jersey.api.container.filter.PostReplaceFilter")
-    custom_config_map.put("com.sun.jersey.config.feature.Redirect", "true")
-    custom_config_map.put("com.sun.jersey.config.feature.FilterForwardOn404", "true")
-    custom_config_map.put("com.sun.jersey.config.feature.ImplicitViewables", "true")
-    custom_config_map.put("com.sun.jersey.config.property.MediaTypeMappings", """
+    val settings = new HashMap[String, String]
+    settings.put("com.sun.jersey.config.property.resourceConfigClass", "com.sun.jersey.api.core.ClassNamesResourceConfig")
+    settings.put("com.sun.jersey.config.property.classnames", WebModule.web_resources.map(_.getName).mkString(" "))
+    settings.put("com.sun.jersey.config.feature.Trace", System.getProperty("com.sun.jersey.config.feature.Trace", "false"))
+    settings.put("com.sun.jersey.spi.container.ContainerRequestFilters", "com.sun.jersey.api.container.filter.PostReplaceFilter")
+    settings.put("com.sun.jersey.config.feature.Redirect", "true")
+    settings.put("com.sun.jersey.config.feature.FilterForwardOn404", "true")
+    settings.put("com.sun.jersey.config.feature.ImplicitViewables", "true")
+    settings.put("com.sun.jersey.config.property.MediaTypeMappings", """
         html : text/html,
         xml : application/xml,
         json : application/json
         """)
 
-    super.init(custom_config)
+    super.init(CustomServletConfig(config.getServletName, config.getServletContext, settings))
   }
 
 }
+
+case class CustomServletConfig(name:String, context:ServletContext, custom_config_map:HashMap[String, String]) extends ServletConfig {
+  def getServletName: String = name
+  def getServletContext: ServletContext = context
+  def getInitParameterNames: Enumeration[String] = {
+    import collection.JavaConversions._
+    return new java.util.Vector(custom_config_map.keys).elements();
+  }
+  def getInitParameter(s: String): String = {
+    return custom_config_map.get(s).getOrElse(null)
+  }
+}
+

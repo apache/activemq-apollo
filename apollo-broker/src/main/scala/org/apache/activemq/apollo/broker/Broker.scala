@@ -250,7 +250,7 @@ object Broker extends Log {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Broker() extends BaseService with SecuredResource {
+class Broker() extends BaseService with SecuredResource with PluginStateSupport {
 
   import Broker._
 
