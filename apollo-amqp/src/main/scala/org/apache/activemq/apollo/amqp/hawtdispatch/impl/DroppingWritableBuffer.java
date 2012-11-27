@@ -71,6 +71,11 @@ public class DroppingWritableBuffer implements WritableBuffer
     }
 
     @Override
+    public int limit() {
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
     public int position() {
         return pos;
     }
