@@ -548,6 +548,10 @@ parameter to define the order in which they are returned.  Example:
     :markdown
       Deletes the `{dest}` queue on the `{host}` virtual host.
 
+  - route("PUT", "/broker/virtual-hosts/{host}/queues/{dest}.json", 200)
+    :markdown
+      Creates the `{dest}` queue on the `{host}` virtual host.
+
   - route("GET", "/broker/virtual-hosts/{host}/topics.json", 200, "DataPageDTO", null, "TopicStatusDTO")
     :markdown
       Provides tabular access to all topic destinations on the `{host}` virtual host.
@@ -632,6 +636,10 @@ parameter to define the order in which they are returned.  Example:
     :markdown
       Deletes the `{dest}` topic on the `{host}` virtual host.  Returns a 304 (Not Modified) if the 
       topic is being used by any clients.
+
+  - route("PUT", "/broker/virtual-hosts/{host}/topics/{dest}.json", 200)
+    :markdown
+      Creates the `{dest}` topic on the `{host}` virtual host.
 
   - route("GET", "/broker/virtual-hosts/{host}/topic-queues/{dest}/{queue}.json", 200, "QueueStatusDTO")
     :markdown

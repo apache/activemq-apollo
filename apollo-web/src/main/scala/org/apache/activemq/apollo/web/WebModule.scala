@@ -41,7 +41,7 @@ object WebModule {
 
   val (root_redirect, web_resources) = {
     // sort by priority.  Highest priority wins.
-    val sorted = TreeMap(finder.singletons.map(x=> x.priority -> x): _*).values
+    val sorted = finder.singletons.sortBy( _.priority )
     val web_resources = LinkedHashMap[Class[_], Class[_]]()
     for( provider <- sorted; resource <- provider.web_resources ) {
       web_resources.put(resource,resource)

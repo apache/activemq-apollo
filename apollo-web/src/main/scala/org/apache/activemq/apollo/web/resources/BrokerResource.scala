@@ -22,7 +22,7 @@ import scala.collection.Iterable
 import org.apache.activemq.apollo.util.path.PathParser
 import org.apache.activemq.apollo.util._
 import javax.ws.rs._
-import core.Context
+import core.{Response, Context}
 import javax.ws.rs.core.Response.Status._
 import management.ManagementFactory
 import javax.management.ObjectName
@@ -36,6 +36,7 @@ import javax.ws.rs.core.MediaType._
 import com.wordnik.swagger.core._
 import javax.servlet.http.HttpServletResponse
 import FutureResult._
+import java.security.Principal
 
 @Path(          "/api/json/broker")
 @Api(value =    "/api/json/broker",
@@ -528,6 +529,24 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @PUT @Path("/virtual-hosts/{id}/topics/{name:.*}")
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
+  @ApiOperation(value = "Creates the named topic.")
+  def topic_create(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
+    with_virtual_host(id) { host =>
+      val rc = FutureResult[Null]()
+      authenticate(host.broker.authenticator) { security_context =>
+        val address = (new DestinationParser).decode_single_destination("topic:"+name, null)
+        host.local_topic_domain.get_or_create_destination(address, security_context).failure_option match {
+          case Some(x) => rc.set(Failure(new Exception(x)))
+          case _ =>
+        }
+        rc.set(Success(null))
+      }
+      rc
+    }
+  }
+
   @DELETE @Path("/virtual-hosts/{id}/topics/{name:.*}")
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
   @ApiOperation(value = "Deletes the named topic.")
@@ -612,6 +631,24 @@ class BrokerResource() extends Resource {
           router._destroy_queue(node)
         }
       }
+    }
+  }
+
+  @PUT @Path("/virtual-hosts/{id}/queues/{name:.*}")
+  @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
+  @ApiOperation(value = "Creates the named queue.")
+  def queue_create(@PathParam("id") id : String, @PathParam("name") name : String) = ok {
+    with_virtual_host(id) { host =>
+      val rc = FutureResult[Null]()
+      authenticate(host.broker.authenticator) { security_context =>
+        val address = (new DestinationParser).decode_single_destination("queue:"+name, null)
+        host.local_queue_domain.get_or_create_destination(address, security_context).failure_option match {
+          case Some(x) => rc.set(Failure(new Exception(x)))
+          case _ =>
+        }
+        rc.set(Success(null))
+      }
+      rc
     }
   }
 
