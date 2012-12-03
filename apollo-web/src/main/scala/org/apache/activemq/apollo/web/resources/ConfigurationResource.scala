@@ -23,9 +23,9 @@ import org.apache.activemq.apollo.util.FileSupport._
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.MediaType._
-import com.wordnik.swagger.core.{ApiOperation, Api}
 import org.apache.activemq.apollo.util.FutureResult
 import FutureResult._
+import com.wordnik.swagger.annotations.{ApiOperation, Api}
 
 case class EditConfig(file:String, config:String, can_write:Boolean)
 case class ListConfigs(files:Array[String])

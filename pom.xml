@@ -117,7 +117,7 @@
     <logback-version>0.9.24</logback-version>
     <jersey-version>1.7</jersey-version>
     <snakeyaml-version>1.7</snakeyaml-version>
-    <swagger-version>1.0.1</swagger-version>
+    <swagger-version>1.2.0</swagger-version>
     <jolokia-version>1.0.6</jolokia-version>
 
     <selenium-version>2.25.0</selenium-version>

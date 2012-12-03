@@ -17,13 +17,13 @@
 package org.apache.activemq.apollo.web.resources
 
 import javax.ws.rs._
-import core.{HttpHeaders, UriInfo, Context}
+import core._
 import org.apache.activemq.apollo.broker._
 import javax.servlet.ServletConfig
 import com.wordnik.swagger.jaxrs.{Help, ApiListing}
 import com.sun.jersey.spi.resource.Singleton
-import com.sun.jersey.api.core.ResourceConfig
-import com.wordnik.swagger.core.{Documentation, ApiOperation, Api}
+import com.wordnik.swagger.core.Documentation
+import com.wordnik.swagger.annotations.ApiOperation
 
 /**
  * <p>
@@ -34,17 +34,18 @@ import com.wordnik.swagger.core.{Documentation, ApiOperation, Api}
 @Path(       "/api{ext:(\\.json)?}")
 @Produces(Array("application/json"))
 class ApolloApiListing extends ApiListing {
-  @GET
+
   @ApiOperation(value = "Returns list of all available api endpoints", responseClass = "DocumentationEndPoint", multiValueResponse = true)
+  @GET
   override def getAllApis(
     @Context sc: ServletConfig,
-    @Context rc: ResourceConfig,
+    @Context app: Application,
     @Context headers: HttpHeaders,
-    @Context uriInfo: UriInfo) = {
-    val response = super.getAllApis(sc, rc, headers, uriInfo)
-    val doc = response.getEntity.asInstanceOf[Documentation]
-    doc.apiVersion = Broker.version
-    doc.basePath = uriInfo.getAbsolutePath.resolve(".").toString.stripSuffix("/")
+    @Context uriInfo: UriInfo): Response = {
+    val response = super.getAllApis(sc, app, headers, uriInfo)
+    var doc = response.getEntity.asInstanceOf[Documentation]
+    doc.setApiVersion(Broker.version)
+    doc.setBasePath(uriInfo.getAbsolutePath.resolve(".").toString.stripSuffix("/"))
     response
   }
 }
@@ -60,7 +61,6 @@ class HelpResourceJSON extends Help {
   @ApiOperation(value = "Returns information about API parameters",
     responseClass = "com.wordnik.swagger.core.Documentation")
   override def getHelp(@Context sc: ServletConfig,
-    @Context rc: ResourceConfig,
     @Context headers: HttpHeaders,
-    @Context uriInfo: UriInfo) = super.getHelp(sc, rc, headers, uriInfo)
+    @Context uriInfo: UriInfo) = super.getHelp(sc, headers, uriInfo)
 }

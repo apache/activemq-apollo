@@ -22,12 +22,12 @@ import org.apache.activemq.apollo.web.WebModule
 import javax.ws.rs.{PathParam, Produces, GET, Path}
 import scala.Array
 import javax.ws.rs.core.MediaType._
-import com.wordnik.swagger.core.{Api, ApiOperation}
 import org.apache.activemq.apollo.broker.network.dto.{LoadStatusDTO, ConsumerLoadDTO, DestinationLoadDTO}
 import org.apache.activemq.apollo.broker.{Queue, LocalRouter}
 import org.fusesource.hawtdispatch.Future
 import org.apache.activemq.apollo.util.{FutureResult, Success}
 import FutureResult._
+import com.wordnik.swagger.annotations.{ApiOperation, Api}
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

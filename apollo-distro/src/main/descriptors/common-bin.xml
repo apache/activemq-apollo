@@ -34,7 +34,6 @@
         <include>com.fasterxml.jackson.core:jackson-core</include>
         <include>com.fasterxml.jackson.core:jackson-databind</include>
         <include>com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider</include>
-        <!-- <include>com.fasterxml.jackson.module:jackson-module-jaxb-annotations</include> -->
         
         <include>org.iq80.leveldb:*</include>
         <include>com.google.guava:guava</include>
@@ -65,7 +64,6 @@
         <include>com.sun.jersey:jersey-server</include>
         <include>com.sun.jersey:jersey-core</include>
         <include>asm:asm</include>
-        <include>org.codehaus.jackson:jackson-jaxrs</include>
         <include>org.fusesource.scalate:scalate-core</include>
         <include>org.fusesource.scalate:scalate-util</include>
         <include>net.sf.josql:josql</include>
@@ -73,9 +71,8 @@
 
         <include>com.wordnik:swagger-jaxrs_2.9.1</include>
         <include>com.wordnik:swagger-core_2.9.1</include>
-        <!-- still needed by swagger -->
-        <include>org.codehaus.jackson:jackson-mapper-asl</include>
-        <include>org.codehaus.jackson:jackson-core-asl</include>
+        <include>com.wordnik:swagger-annotations_2.9.1</include>
+        <include>com.fasterxml.jackson.module:jackson-module-scala</include>
         
         <!-- for JMX over REST support -->
         <include>org.jolokia:jolokia-core</include>
