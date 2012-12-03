@@ -17,10 +17,10 @@
 
 package org.apache.activemq.apollo.amqp.test
 
-import org.apache.activemq.apollo.amqp.hawtdispatch.api._
 import org.apache.qpid.proton.`type`.messaging.{AmqpValue, Source, Target}
 import java.util.concurrent.CountDownLatch
 import org.fusesource.hawtdispatch._
+import org.apache.qpid.proton.hawtdispatch.api._
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

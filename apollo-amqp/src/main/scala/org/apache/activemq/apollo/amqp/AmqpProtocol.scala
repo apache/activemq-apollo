@@ -17,9 +17,9 @@
 package org.apache.activemq.apollo.amqp
 
 import _root_.org.fusesource.hawtbuf._
-import hawtdispatch.impl.AmqpProtocolCodec
 import org.apache.activemq.apollo.broker._
 import org.apache.activemq.apollo.broker.protocol.Protocol
+import org.apache.qpid.proton.hawtdispatch.impl.AmqpProtocolCodec
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

@@ -30,7 +30,6 @@ import path.LiteralPart
 import protocol.ProtocolHandler
 import org.apache.activemq.apollo.broker.security.SecurityContext
 import org.apache.activemq.apollo.amqp.dto._
-import hawtdispatch.impl.{AmqpProtocolCodec, AmqpListener, AmqpTransport}
 import org.apache.qpid.proton.engine
 import org.apache.qpid.proton.engine.impl.{ProtocolTracer, DeliveryImpl, LinkImpl, TransportImpl}
 import org.apache.qpid.proton.engine._
@@ -49,6 +48,7 @@ import org.apache.activemq.apollo.broker.FullSink
 import org.apache.activemq.apollo.broker.SubscriptionAddress
 import org.apache.activemq.apollo.broker.Session
 import org.apache.qpid.proton.framing.TransportFrame
+import org.apache.qpid.proton.hawtdispatch.impl.{AmqpListener, AmqpTransport, AmqpProtocolCodec}
 
 object AmqpProtocolHandler extends Log {
 

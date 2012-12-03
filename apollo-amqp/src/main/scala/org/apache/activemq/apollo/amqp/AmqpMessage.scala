@@ -17,7 +17,6 @@
 package org.apache.activemq.apollo.amqp
 
 
-import hawtdispatch.impl.DroppingWritableBuffer
 import org.apache.activemq.apollo.broker.protocol
 import protocol.{MessageCodecFactory, MessageCodec}
 import java.nio.ByteBuffer
@@ -28,6 +27,7 @@ import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtbuf.Buffer
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.UTF8Buffer
+import org.apache.qpid.proton.hawtdispatch.impl.DroppingWritableBuffer
 
 object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
   def create = Array[MessageCodec](AmqpMessageCodec)

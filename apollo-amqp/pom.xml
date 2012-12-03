@@ -46,7 +46,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.qpid</groupId>
-      <artifactId>proton</artifactId>
+      <artifactId>proton-hawtdispatch</artifactId>
       <version>${qpid-proton-version}</version>
     </dependency>
 
