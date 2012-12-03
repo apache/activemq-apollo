@@ -1409,7 +1409,7 @@ class StompProtocolHandler extends ProtocolHandler {
       case Some(x)=>
         try {
           val s = decode_header(x)
-          (s, SelectorParser.parse(s))
+          (s, SelectorParser.parse("convert_string_expressions:"+s))
         } catch {
           case e:FilterException =>
             die("Invalid selector expression: "+e.getMessage)
