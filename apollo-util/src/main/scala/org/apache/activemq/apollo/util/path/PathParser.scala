@@ -118,7 +118,7 @@ class PathParser {
   var regex_wildcard_start = "{"
   var regex_wildcard_end = "}"
   var path_separator = "."
-  var part_pattern = Pattern.compile("[ a-zA-Z0-9\\_\\-\\%\\~\\:]+")
+  var part_pattern = Pattern.compile("""[ a-zA-Z0-9\_\-\%\~\:\(\)]+""")
 
   def copy(other:PathParser) = {
     any_descendant_wildcard = other.any_descendant_wildcard
@@ -134,15 +134,17 @@ class PathParser {
     val matcher = allowed.matcher(ascii);
     var pos = 0;
     val rc = new StringBuffer(ascii.length())
-    while( pos < ascii.length() ) {
-      val c = ascii.charAt(pos)
-      if( matcher.find(pos) ) {
-        rc.append(c)
-      } else {
-        rc.append("%%%02x".format(c))
-      }
-      pos += 1
+
+    def escape_until(end:Int) = while( pos < end ) {
+      rc.append("%%%02x".format(ascii.charAt(pos).toInt))
+      pos+=1
     }
+    while( matcher.find(pos) ) {
+      escape_until(matcher.start)
+      rc.append(ascii.substring(matcher.start, matcher.end))
+      pos+=(matcher.end-matcher.start)
+    }
+    escape_until(ascii.length)
     rc.toString
   }
 
