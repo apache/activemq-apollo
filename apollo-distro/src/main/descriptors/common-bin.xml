@@ -95,6 +95,7 @@
         <include>org.apache.commons:commons-math</include>
         <include>org.fusesource.stompjms:stompjms-client</include>
         <include>org.apache.qpid:proton</include>
+        <include>org.apache.qpid:proton-hawtdispatch</include>
 
       </includes>
       <excludes>

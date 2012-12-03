@@ -177,7 +177,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   }
 
   var amqp_connection:AmqpTransport = _
-  var amqp_trace = false
+  var amqp_trace = true
 
   def codec = connection.transport.getProtocolCodec.asInstanceOf[AmqpProtocolCodec]
 
@@ -405,6 +405,18 @@ class AmqpProtocolHandler extends ProtocolHandler {
       amqp_connection.context(endpoint).setAttachment(value)
     }
 
+    def processSenderClose(sender: Sender, onComplete: Task) = {
+      get_attachment(sender) match {
+        case null =>
+          sender.close()
+          onComplete.run()
+        case consumer: AmqpConsumer =>
+          // Lets disconnect the route.
+          set_attachment(sender, null)
+          consumer.close
+      }
+    }
+
     def processReceiverClose(receiver: Receiver, onComplete: Task) {
       get_attachment(receiver) match {
         case null =>
@@ -445,6 +457,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       val (address, requested_addresses, actual) = decode_source(source)
       sender.setSource(actual);
       if (requested_addresses == null) {
+        sender.setSource(null)
         close_with_error(sender, "invalid-address", "Invaild address: " + address)
         onComplete.run()
         return
@@ -459,6 +472,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
             (selector, SelectorParser.parse(selector))
           } catch {
             case e: FilterException =>
+              sender.setSource(null)
               close_with_error(sender, "amqp:invalid-field", "Invalid selector expression '%s': %s".format(selector, e.getMessage))
               onComplete.run()
               return
@@ -485,6 +499,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
 
       if (from_seq_opt.isDefined && is_multi_destination) {
+        sender.setSource(null)
         close_with_error(sender, "invalid-from-seq", "The from-seq header is only supported when you subscribe to one destination")
         onComplete.run()
         return
@@ -500,6 +515,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
               case "dsub" => dsubs += address
               case "topic" => topics += address
               case _ =>
+                sender.setSource(null)
                 close_with_error(sender, "invalid-from-seq", "A durable link can only be used on a topic destination")
                 onComplete.run()
                 return
@@ -518,7 +534,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
       link_counter += 1
       val id = link_counter
-      val consumer = new AmqpConsumer(sender, link_counter, requested_addresses, presettle, selector, browser, exclusive, include_seq, from_seq, browser_end);
+      val consumer = new AmqpConsumer(sender, id, requested_addresses, presettle, selector, browser, exclusive, include_seq, from_seq, browser_end);
       consumers += (id -> consumer)
 
       host.dispatch_queue {
@@ -528,6 +544,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
             case Some(reason) =>
               consumers -= id
               consumer.release
+              sender.setSource(null)
               close_with_error(sender, "subscribe-failed", reason)
               onComplete.run()
             case None =>
@@ -537,11 +554,6 @@ class AmqpProtocolHandler extends ProtocolHandler {
           }
         }
       }
-    }
-
-    def processSenderClose(sender: Sender, onComplete: Task) {
-      sender.close()
-      onComplete.run()
     }
 
     var gracefully_closed = false
@@ -820,7 +832,17 @@ class AmqpProtocolHandler extends ProtocolHandler {
     override def connection = Option(AmqpProtocolHandler.this.connection)
 
     def is_persistent = false
-    def matches(message: Delivery) = true
+    def matches(delivery: Delivery) = {
+      if( delivery.message.codec eq AmqpMessageCodec ) {
+        if( selector!=null ) {
+          selector._2.matches(delivery.message)
+        } else {
+          true
+        }
+      } else {
+        false
+      }
+    }
     override def start_from_tail = from_seq == -1
 
     override def jms_selector = if (selector != null) {
@@ -837,6 +859,17 @@ class AmqpProtocolHandler extends ProtocolHandler {
       starting_seq = seq
     }
 
+    def isSenderClosed = {
+      sender.getLocalState == EndpointState.CLOSED
+    }
+
+    def close = {
+      consumers -= subscription_id
+      host.dispatch_queue {
+        host.router.unbind(addresses, this, false , security_context)
+        release()
+      }
+    }
 
     var nextTagId = 0L;
     val tagCache = new util.HashSet[Array[Byte]]();
@@ -1063,6 +1096,9 @@ class AmqpProtocolHandler extends ProtocolHandler {
         reject(next, Undelivered)
         next = session_manager.poll
       }
+
+      sender.close()
+      pump_out
       super.dispose()
     }
 
