@@ -140,7 +140,7 @@
     <osgi.fragment.host>${project.groupId}.apollo-broker</osgi.fragment.host>
     <mvnplugins-version>1.15</mvnplugins-version>
     <qpid-proton-version>1.0-SNAPSHOT</qpid-proton-version>
-    <qpid-jms-version>0.18</qpid-jms-version>
+    <qpid-jms-version>0.22-SNAPSHOT</qpid-jms-version>
   </properties>
 
   <prerequisites>

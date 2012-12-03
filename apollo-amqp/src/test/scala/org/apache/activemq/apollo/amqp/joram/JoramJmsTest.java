@@ -53,35 +53,28 @@ public class JoramJmsTest extends TestCase {
 
         TestSuite suite = new TestSuite();
 
-        // TODO: Fix these tests..
-        if (false) {
-            // Fails due to durable subs not being implemented.
-            suite.addTestSuite(TopicSessionTest.class);
-            // Fails due to https://issues.apache.org/jira/browse/PROTON-110 and DestinationImpl vs QueueImpl mapping issues
+        // TODO: enable once QPID-4454 is fixed.
+        if(false) {
             suite.addTestSuite(MessageHeaderTest.class);
-            // Fails due to inconsistent Message mapping in the JMS client.
-            suite.addTestSuite(MessageTypeTest.class);
-            suite.addTestSuite(QueueBrowserTest.class);
-
         }
 
-        // TODO: enable once QPID 0.19 is released
-        if(false) {
+        // TODO: enable once QPID 0.20 is released
+        if(true) {
+            suite.addTestSuite(TopicSessionTest.class);
+            suite.addTestSuite(MessageTypeTest.class);
+            suite.addTestSuite(QueueBrowserTest.class);
             suite.addTestSuite(UnifiedSessionTest.class);
             suite.addTestSuite(TemporaryTopicTest.class);
             suite.addTestSuite(TopicConnectionTest.class);
         }
 
-        if( false ) {
+        // Passing tests against 0.18
+        if( true ) {
             suite.addTestSuite(SelectorSyntaxTest.class);
             suite.addTestSuite(QueueSessionTest.class);
             suite.addTestSuite(SelectorTest.class);
             suite.addTestSuite(TemporaryQueueTest.class);
             suite.addTestSuite(SessionTest.class);
-        }
-
-        // Passing tests
-        if( false ) {
             suite.addTestSuite(ConnectionTest.class);
             suite.addTestSuite(JMSXPropertyTest.class);
             suite.addTestSuite(MessageBodyTest.class);

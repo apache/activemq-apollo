@@ -26,7 +26,7 @@ import org.apache.qpid.proton.hawtdispatch.api._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
-class AmqpConnectionTest extends AmqpTestSupport {
+  class AmqpConnectionTest extends AmqpTestSupport {
 
   def print_result[T](action: String)(then: => Unit): Callback[T] = new Callback[T] {
     def onSuccess(value: T) {
@@ -56,7 +56,6 @@ class AmqpConnectionTest extends AmqpTestSupport {
     amqp.setUser("admin");
     amqp.setPassword("password");
 
-    val done = new CountDownLatch(1)
     val connection = AmqpConnection.connect(amqp)
     connection.queue() {
       var session = connection.createSession()
@@ -75,13 +74,11 @@ class AmqpConnectionTest extends AmqpTestSupport {
           def onMessageDelivery(delivery: MessageDelivery) = {
             println("Received: " + delivery.getMessage().getBody().asInstanceOf[AmqpValue].getValue);
             delivery.settle()
-            done.countDown()
+            connection.close()
           }
         })
       })
     }
-
-    done.await
     connection.waitForDisconnected()
   }
 }

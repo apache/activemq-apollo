@@ -1047,7 +1047,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
   def unbind(addresses: Array[_ <: BindAddress], consumer: DeliveryConsumer, persistent:Boolean, security: SecurityContext) = {
     dispatch_queue.assertExecuting()
-    consumer.retain
     addresses.foreach { address=>
       address.domain match {
         case "topic" =>
@@ -1059,7 +1058,6 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         case _ => sys.error("Unknown domain: "+address.domain)
       }
     }
-    consumer.release
   }
 
   def connect(addresses: Array[_ <: ConnectAddress], producer: BindableDeliveryProducer, security: SecurityContext):Option[String] = {
