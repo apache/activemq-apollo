@@ -563,6 +563,11 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     for(link <- producers.remove(producer) ) {
       add_enqueue_counters(topic_metrics, link)
     }
+    var targets:List[DeliveryConsumer] = producer_tracker :: consumers.values.toList
+    if( topic_queue !=null ) {
+      targets ::= topic_queue
+    }
+    producer.unbind(targets)
     check_idle
   }
 
