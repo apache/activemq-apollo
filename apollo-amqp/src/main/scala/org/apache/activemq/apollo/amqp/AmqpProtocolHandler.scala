@@ -51,6 +51,7 @@ import proton_type.{Symbol => AmqpSymbol, UnsignedInteger, Binary, DescribedType
 import proton_type.transport.SenderSettleMode
 import proton_type.messaging._
 import proton_type.transaction._
+import org.apache.activemq.apollo.stomp.Stomp
 
 object AmqpProtocolHandler extends Log {
 
@@ -59,16 +60,16 @@ object AmqpProtocolHandler extends Log {
   val DEFAULT_DIE_DELAY = 5 * 1000L
   val WAITING_ON_CLIENT_REQUEST = () => "client request"
 
-  val DEFAULT_DETINATION_PARSER = new DestinationParser
-  DEFAULT_DETINATION_PARSER.queue_prefix = "/queue/"
-  DEFAULT_DETINATION_PARSER.topic_prefix = "/topic/"
-  DEFAULT_DETINATION_PARSER.dsub_prefix = "/dsub/"
-  DEFAULT_DETINATION_PARSER.temp_queue_prefix = "/temp-queue/"
-  DEFAULT_DETINATION_PARSER.temp_topic_prefix = "/temp-topic/"
-  DEFAULT_DETINATION_PARSER.destination_separator = ","
-  DEFAULT_DETINATION_PARSER.path_separator = "."
-  DEFAULT_DETINATION_PARSER.any_child_wildcard = "*"
-  DEFAULT_DETINATION_PARSER.any_descendant_wildcard = "**"
+  val DEFAULT_DESTINATION_PARSER = new DestinationParser
+  DEFAULT_DESTINATION_PARSER.queue_prefix = "/queue/"
+  DEFAULT_DESTINATION_PARSER.topic_prefix = "/topic/"
+  DEFAULT_DESTINATION_PARSER.dsub_prefix = "/dsub/"
+  DEFAULT_DESTINATION_PARSER.temp_queue_prefix = "/temp-queue/"
+  DEFAULT_DESTINATION_PARSER.temp_topic_prefix = "/temp-topic/"
+  DEFAULT_DESTINATION_PARSER.destination_separator = ","
+  DEFAULT_DESTINATION_PARSER.path_separator = "."
+  DEFAULT_DESTINATION_PARSER.any_child_wildcard = "*"
+  DEFAULT_DESTINATION_PARSER.any_descendant_wildcard = "**"
 
   val COPY = org.apache.qpid.proton.`type`.Symbol.getSymbol("copy");
 
@@ -213,6 +214,29 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt
     codec.setMaxFrameSize(mem_size(config.max_frame_size, "100M"))
+
+    if( config.queue_prefix!=null ||
+        config.topic_prefix!=null ||
+        config.destination_separator!=null ||
+        config.path_separator!= null ||
+        config.any_child_wildcard != null ||
+        config.any_descendant_wildcard!= null ||
+        config.regex_wildcard_start!= null ||
+        config.regex_wildcard_end!= null
+    ) {
+
+      destination_parser = new DestinationParser().copy(DEFAULT_DESTINATION_PARSER)
+      if( config.queue_prefix!=null ) { destination_parser.queue_prefix = config.queue_prefix }
+      if( config.topic_prefix!=null ) { destination_parser.topic_prefix = config.topic_prefix }
+      if( config.temp_queue_prefix!=null ) { destination_parser.temp_queue_prefix = config.temp_queue_prefix }
+      if( config.temp_topic_prefix!=null ) { destination_parser.temp_topic_prefix = config.temp_topic_prefix }
+      if( config.destination_separator!=null ) { destination_parser.destination_separator = config.destination_separator }
+      if( config.path_separator!=null ) { destination_parser.path_separator = config.path_separator }
+      if( config.any_child_wildcard!=null ) { destination_parser.any_child_wildcard = config.any_child_wildcard }
+      if( config.any_descendant_wildcard!=null ) { destination_parser.any_descendant_wildcard = config.any_descendant_wildcard }
+      if( config.regex_wildcard_start!=null ) { destination_parser.regex_wildcard_start = config.regex_wildcard_start }
+      if( config.regex_wildcard_end!=null ) { destination_parser.regex_wildcard_end = config.regex_wildcard_end }
+    }
 
     amqp_connection = AmqpTransport.accept(connection.transport)
     amqp_connection.setListener(amqp_listener)
@@ -650,7 +674,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     }
   }
 
-  var destination_parser = DEFAULT_DETINATION_PARSER
+  var destination_parser = DEFAULT_DESTINATION_PARSER
   var temp_destination_map = HashMap[SimpleAddress, SimpleAddress]()
 
   def decode_addresses(value: String): Array[SimpleAddress] = {
