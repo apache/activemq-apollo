@@ -176,6 +176,7 @@
     <module>apollo-bdb</module>
     <module>apollo-dto</module>
     <module>apollo-stomp</module>
+    <module>apollo-amqp</module>
     <module>apollo-mqtt</module>
     <module>apollo-web</module>
     <module>apollo-cli</module>
@@ -486,7 +487,6 @@
       <id>unstable</id>
       <modules>
         <module>apollo-network</module>
-        <module>apollo-amqp</module>
       </modules>
     </profile>
     

@@ -45,6 +45,13 @@
       <version>99-trunk-SNAPSHOT</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-web</artifactId>
+      <version>99-trunk-SNAPSHOT</version>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -88,14 +95,6 @@
       <version>${jetty-version}</version>
       <scope>test</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-
 
     <dependency>
       <groupId>junit</groupId>

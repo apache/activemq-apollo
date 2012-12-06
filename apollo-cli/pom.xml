@@ -148,6 +148,12 @@
       <version>99-trunk-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>apollo-amqp</artifactId>
+      <version>99-trunk-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
@@ -284,12 +290,6 @@
       <id>unstable</id>
       <dependencies>
 
-        <dependency>
-          <groupId>org.apache.activemq</groupId>
-          <artifactId>apollo-amqp</artifactId>
-          <version>99-trunk-SNAPSHOT</version>
-          <scope>test</scope>
-        </dependency>
         <dependency>
           <groupId>org.apache.activemq</groupId>
           <artifactId>apollo-network</artifactId>
