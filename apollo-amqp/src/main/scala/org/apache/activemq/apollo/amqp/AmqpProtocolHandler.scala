@@ -51,7 +51,6 @@ import proton_type.{Symbol => AmqpSymbol, UnsignedInteger, Binary, DescribedType
 import proton_type.transport.SenderSettleMode
 import proton_type.messaging._
 import proton_type.transaction._
-import org.apache.activemq.apollo.stomp.Stomp
 
 object AmqpProtocolHandler extends Log {
 
