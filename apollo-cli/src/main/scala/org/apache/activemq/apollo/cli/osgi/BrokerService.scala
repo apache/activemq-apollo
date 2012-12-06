@@ -119,6 +119,9 @@ object BrokerService extends Log {
         info("Loading configuration file '%s'.", apollo_xml)
 
         val props = new Properties()
+        for( entry <- System.getenv().entrySet() ) {
+          props.put("env."+entry.getKey, entry.getValue)
+        }
         props.putAll(System.getProperties)
         if( cmProps!=null ) {
           cmProps.keySet.foreach { key =>

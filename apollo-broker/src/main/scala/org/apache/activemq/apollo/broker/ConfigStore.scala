@@ -63,7 +63,11 @@ object ConfigStore {
   }
 
   def config_properties(file:File): Properties = {
+    import collection.JavaConversions._
     val props = new Properties()
+    for( entry <- System.getenv().entrySet() ) {
+      props.put("env."+entry.getKey, entry.getValue)
+    }
     props.putAll(System.getProperties)
     if( file!=null ) {
       val prop_file = file.getParentFile / (file.getName + ".properties")

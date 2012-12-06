@@ -42,6 +42,7 @@ import org.xml.sax.InputSource
 import java.util
 import javax.management.openmbean.CompositeData
 import javax.net.ssl.SSLContext
+import util.Properties
 
 /**
  * <p>
@@ -65,7 +66,15 @@ object BrokerFactory {
 
   val finder = new ClassFinder[BrokerFactoryTrait]("META-INF/services/org.apache.activemq.apollo/broker-factory.index",classOf[BrokerFactoryTrait])
 
-  def createBroker(brokerURI:String):Broker = createBroker(brokerURI, System.getProperties)
+  def createBroker(brokerURI:String):Broker = {
+    val props = new Properties
+    for( entry <- System.getenv().entrySet() ) {
+      props.put("env."+entry.getKey, entry.getValue)
+    }
+    props.putAll(System.getProperties)
+    createBroker(brokerURI, props)
+  }
+
   def createBroker(uri:String, props:util.Properties):Broker = {
     if( uri == null ) {
       return null
