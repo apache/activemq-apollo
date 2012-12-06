@@ -26,12 +26,11 @@ sort_info: 5
   We version our website content along with the project so that you
   can easily get to the documentation that's most appropriate for the 
   version of the project your using.
-    
+  
+ul
 - for( version <- project_versions )
-  :&markdown
-    ### 1.0 Release
-
-    * [#{version} Website](${website_base_url}/versions/#{version}/website/index.html)
+  li
+    a(href = "#{website_base_url}/versions/#{version}/website/index.html") #{version} Website
 
 :markdown
   # Nightly Development Snapshots
