@@ -30,7 +30,6 @@ import org.apache.activemq.apollo.broker.security.SecurityContext
 import FutureResult._
 import com.wordnik.swagger.annotations._
 import org.apache.activemq.apollo.util.Success
-import org.apache.activemq.apollo.web.resources.UserInfo
 
 @Path(          "/api/json/session")
 @Api(value =    "/api/json/session",

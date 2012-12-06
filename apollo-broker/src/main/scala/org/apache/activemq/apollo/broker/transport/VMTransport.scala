@@ -63,7 +63,7 @@ class VMTransportFactory extends Logging with TransportFactory.Provider {
       new PipeTransport(this) {
         val stopped = new AtomicBoolean()
 
-        override def stop(onComplete:Runnable) = {
+        override def stop(onComplete:Task) = {
           if (stopped.compareAndSet(false, true)) {
             super.stop(onComplete);
             if (refs.decrementAndGet() == 0) {
