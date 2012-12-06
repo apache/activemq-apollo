@@ -26,7 +26,7 @@ In another terminal window run:
 You can control to which stomp server the examples try to connect to by
 setting the following environment variables: 
 
-* `STOMP_HOST`
-* `STOMP_PORT`
-* `STOMP_USER`
-* `STOMP_PASSWORD`
+* `APOLLO_HOST`
+* `APOLLO_PORT`
+* `APOLLO_USER`
+* `APOLLO_PASSWORD`

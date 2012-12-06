@@ -27,10 +27,10 @@ class Listener {
 
     public static void main(String []args) throws Exception {
 
-        String user = env("STOMP_USER", "admin");
-        String password = env("STOMP_PASSWORD", "password");
-        String host = env("STOMP_HOST", "localhost");
-        int port = Integer.parseInt(env("STOMP_PORT", "61613"));
+        String user = env("APOLLO_USER", "admin");
+        String password = env("APOLLO_PASSWORD", "password");
+        String host = env("APOLLO_HOST", "localhost");
+        int port = Integer.parseInt(env("APOLLO_PORT", "61613"));
         final String destination = arg(args, 0, "/topic/event");
 
 

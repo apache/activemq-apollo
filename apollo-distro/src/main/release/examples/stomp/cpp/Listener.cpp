@@ -66,10 +66,10 @@ int main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED) {
     std::cout << "Starting the Listener example:" << std::endl;
     std::cout << "-----------------------------------------------------\n";
 
-    std::string user = getEnv("STOMP_USER", "admin");
-    std::string password = getEnv("STOMP_PASSWORD", "password");
-    std::string host = getEnv("STOMP_HOST", "localhost");
-    int port = Integer::parseInt(getEnv("STOMP_PORT", "61613"));
+    std::string user = getEnv("APOLLO_USER", "admin");
+    std::string password = getEnv("APOLLO_PASSWORD", "password");
+    std::string host = getEnv("APOLLO_HOST", "localhost");
+    int port = Integer::parseInt(getEnv("APOLLO_PORT", "61613"));
     std::string destination = getArg(argv, argc, 1, "event");
 
     {

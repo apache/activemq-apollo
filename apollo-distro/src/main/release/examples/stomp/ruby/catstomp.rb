@@ -18,10 +18,10 @@
 require 'rubygems'
 require 'stomp'
 
-user = ENV["STOMP_USER"] || "admin"
-password = ENV["STOMP_PASSWORD"] || "password"
-host = ENV["STOMP_HOST"] || "localhost"
-port = ENV["STOMP_PORT"] || 61613
+user = ENV["APOLLO_USER"] || "admin"
+password = ENV["APOLLO_PASSWORD"] || "password"
+host = ENV["APOLLO_HOST"] || "localhost"
+port = ENV["APOLLO_PORT"] || 61613
 destination = $*[0] || "/topic/event"
 
 begin

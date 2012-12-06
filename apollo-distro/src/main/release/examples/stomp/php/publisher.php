@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-$user = getenv("STOMP_USER"); 
+$user = getenv("APOLLO_USER"); 
 if( !$user ) $user = "admin";
 
-$password = getenv("STOMP_PASSWORD");
+$password = getenv("APOLLO_PASSWORD");
 if( !$password ) $password = "password";
 
-$host = getenv("STOMP_HOST");
+$host = getenv("APOLLO_HOST");
 if( !$host ) $host = "localhost";
 
-$port = getenv("STOMP_PORT");
+$port = getenv("APOLLO_PORT");
 if( !$port ) $port = 61613;
 
 $destination  = '/topic/event';

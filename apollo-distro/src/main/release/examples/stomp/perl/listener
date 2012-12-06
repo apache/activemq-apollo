@@ -26,10 +26,10 @@ use Time::HiRes qw(time);
 
 our(%Option, $Conn, $Count, $Start, $Run);
 
-$Option{user} = $ENV{STOMP_USER} || "admin";
-$Option{password} = $ENV{STOMP_PASSWORD} || "password";
-$Option{host} = $ENV{STOMP_HOST} || "localhost";
-$Option{port} = $ENV{STOMP_PORT} || 61613;
+$Option{user} = $ENV{APOLLO_USER} || "admin";
+$Option{password} = $ENV{APOLLO_PASSWORD} || "password";
+$Option{host} = $ENV{APOLLO_HOST} || "localhost";
+$Option{port} = $ENV{APOLLO_PORT} || 61613;
 $Option{destination} = $ENV{STOMP_DESTINATION} || "/topic/event";
 
 sub callback ($$) {

@@ -28,10 +28,10 @@ namespace Apollo.Example
 		{
 			Console.WriteLine("Starting up Listener.");			
 						
-	        String user = env("STOMP_USER", "admin");
-	        String password = env("STOMP_PASSWORD", "password");
-	        String host = env("STOMP_HOST", "localhost");
-	        int port = Int32.Parse(env("STOMP_PORT", "61613"));
+	        String user = env("APOLLO_USER", "admin");
+	        String password = env("APOLLO_PASSWORD", "password");
+	        String host = env("APOLLO_HOST", "localhost");
+	        int port = Int32.Parse(env("APOLLO_PORT", "61613"));
 	        String destination = arg(args, 0, "event");
 	
 			String brokerUri = "stomp:tcp://" + host + ":" + port + "?transport.useLogging=true";

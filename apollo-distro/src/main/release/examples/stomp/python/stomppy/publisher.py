@@ -21,10 +21,10 @@ import sys
 import os
 import stomp
 
-user = os.getenv("STOMP_USER") or "admin"
-password = os.getenv("STOMP_PASSWORD") or "password"
-host = os.getenv("STOMP_HOST") or "localhost"
-port = os.getenv("STOMP_PORT") or 61613
+user = os.getenv("APOLLO_USER") or "admin"
+password = os.getenv("APOLLO_PASSWORD") or "password"
+host = os.getenv("APOLLO_HOST") or "localhost"
+port = os.getenv("APOLLO_PORT") or 61613
 destination = sys.argv[1:2] or ["/topic/event"]
 destination = destination[0]
 
