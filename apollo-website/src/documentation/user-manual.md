@@ -1167,4 +1167,5 @@ host's message store.
 ## Messaging Protocols Manuals
 
 * [STOMP Protocol Manual](stomp-manual.html)
+* [AMQP Protocol Manual](amqp-manual.html) 
 * [OpenWire Protocol Manual](openwire-manual.html) 

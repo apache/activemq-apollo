@@ -27,6 +27,7 @@ ${project_slogan}
 * [User Manual](user-manual.html)
 * [STOMP Protocol Manual](stomp-manual.html)
 * [OpenWire Protocol Manual](openwire-manual.html) 
+* [AMQP Protocol Manual](amqp-manual.html) 
 * [Migration Guide](migration-guide.html)
 * [Management API](management-api.html)
 * [Contributor Documentation](../community/developers.html)
