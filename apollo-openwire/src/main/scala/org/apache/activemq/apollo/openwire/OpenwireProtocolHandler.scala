@@ -281,6 +281,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           case info:ShutdownInfo=> ack(info); connection.stop(NOOP)
           case info:FlushCommand=> ack(info)
           case info:DestinationInfo=> on_destination_info(info)
+          case info:RemoveSubscriptionInfo=> on_remove_subscription_info(info)
 
           // case info:ConnectionControl=>
           // case info:ConnectionError=>
@@ -506,6 +507,27 @@ class OpenwireProtocolHandler extends ProtocolHandler {
           case Some(error)=>
             ack(info)
         }
+      }
+    }
+  }
+
+  def on_remove_subscription_info(info: RemoveSubscriptionInfo) ={
+    var subscription_id = ""
+    if( info.getClientId != null ) {
+      subscription_id += info.getClientId + ":"
+    }
+    subscription_id += info.getSubscriptionName
+    host.dispatch_queue {
+      host.local_router.dsub_domain.destination_by_id.get(subscription_id) match {
+        case None =>
+          queue(fail("The subscription does not exist", info))
+        case Some(dest:Queue) =>
+          host.local_router._destroy_queue(dest, security_context) match {
+            case Some(error) =>
+              queue(fail(error, info))
+            case None=>
+              queue(ack(info))
+          }
       }
     }
   }

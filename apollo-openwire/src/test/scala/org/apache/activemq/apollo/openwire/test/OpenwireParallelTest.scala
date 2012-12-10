@@ -721,4 +721,16 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     consumer.receive(1000) should equal(outbound(2))
   }
 
+  test("Unsubscribe invalid durable sub") {
+    connect()
+    val session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    try {
+      session.unsubscribe("does not exist")
+      fail("Expecting JMS Exception")
+    } catch {
+      case e:JMSException =>
+      case _ => fail("Expecting JMS Exception")
+    }
+ }
+
 }
