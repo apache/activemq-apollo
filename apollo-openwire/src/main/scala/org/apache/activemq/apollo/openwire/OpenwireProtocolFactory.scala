@@ -31,13 +31,7 @@ import org.apache.activemq.apollo.util.Log
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol with Log {
-
   def createProtocolHandler = new OpenwireProtocolHandler
-
-  lazy val log_exerimental_warning = {
-    warn("The OpenWire protocol implementation is still experimental and not recommended for production use.  Production users should use ActiveMQ instead.")
-    null
-  }
 }
 
 object OpenwireMessageCodecFactory extends MessageCodecFactory.Provider {
@@ -69,7 +63,6 @@ class OpenwireProtocolCodecFactory extends ProtocolCodecFactory.Provider {
   def id = PROTOCOL
 
   def createProtocolCodec(connector:Connector) = {
-    OpenwireProtocol.log_exerimental_warning
     new OpenwireCodec();
   }
 
