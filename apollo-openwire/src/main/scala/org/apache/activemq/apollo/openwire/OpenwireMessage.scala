@@ -20,10 +20,8 @@ import org.apache.activemq.apollo.broker.Message
 import java.lang.{String, Class}
 import org.fusesource.hawtdispatch.BaseRetained
 import org.fusesource.hawtbuf.Buffer._
-import OpenwireConstants._
 import org.fusesource.hawtbuf.{UTF8Buffer, AsciiBuffer, Buffer}
 import command.{ActiveMQBytesMessage, ActiveMQTextMessage, ActiveMQMessage}
-import org.apache.activemq.apollo.broker.protocol.Protocol
 
 /**
  * <p>
@@ -35,7 +33,42 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   val _id = ascii(message.getMessageId.toString)
 
-  def getProperty(name: String) = message.getProperty(name)
+  def toString(buffer:AnyRef) = if (buffer==null) null else buffer.toString
+
+  def getProperty(name: String) = {
+    name match {
+      case "JMSDeliveryMode" =>
+        if( message.isPersistent) "PERSISTENT" else "NON_PERSISTENT"
+      case "JMSPriority" =>
+        new java.lang.Integer(message.getPriority)
+      case "JMSType" =>
+        toString(message.getType)
+      case "JMSMessageID" =>
+        toString(message.getMessageId)
+      case "JMSDestination" =>
+        toString(message.getDestination)
+      case "JMSReplyTo" =>
+        toString(message.getReplyTo)
+      case "JMSCorrelationID" =>
+        toString(message.getCorrelationId)
+      case "JMSExpiration" =>
+        new java.lang.Long(message.getExpiration)
+      case "JMSXDeliveryCount" =>
+        new java.lang.Integer(message.getRedeliveryCounter)
+      case "JMSXUserID" =>
+        toString(message.getUserID)
+      case "JMSXGroupID" =>
+        toString(message.getGroupID)
+      case "JMSXGroupSeq" =>
+        if ( message.getGroupID!=null ) {
+          new java.lang.Integer(message.getGroupSequence)
+        } else {
+          null
+        }
+      case x =>
+        message.getProperty(name)
+    }
+  }
 
   def getLocalConnectionId = message.getProducerId.getConnectionId
 
