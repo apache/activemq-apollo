@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.codec;
 
+import org.apache.activemq.apollo.openwire.OpenwireException;
 import org.apache.activemq.apollo.openwire.command.DataStructure;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayInputStream;
@@ -229,7 +230,7 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
             Constructor constructor = clazz.getConstructor(new Class[] {UTF8Buffer.class});
             return (Throwable)constructor.newInstance(new Object[] {message.toString()});
         } catch (Throwable e) {
-            return new Throwable(className + ": " + message);
+            return new OpenwireException(message.toString(), className.toString());
         }
     }
 
@@ -241,7 +242,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         } else {
             int rc = 0;
             bs.writeBoolean(true);
-            rc += tightMarshalString1(new UTF8Buffer(o.getClass().getName()), bs);
+            String className = o instanceof OpenwireException ? ((OpenwireException)o).getClassName() : o.getClass().getName();
+            rc += tightMarshalString1(new UTF8Buffer(className), bs);
             rc += tightMarshalString1(new UTF8Buffer(o.getMessage()), bs);
             if (wireFormat.isStackTraceEnabled()) {
                 rc += 2;
@@ -262,7 +264,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
     protected void tightMarshalThrowable2(OpenWireFormat wireFormat, Throwable o, DataByteArrayOutputStream dataOut,
                                           BooleanStream bs) throws IOException {
         if (bs.readBoolean()) {
-            tightMarshalString2(new UTF8Buffer(o.getClass().getName()), dataOut, bs);
+            String className = o instanceof OpenwireException ? ((OpenwireException)o).getClassName() : o.getClass().getName();
+            tightMarshalString2(new UTF8Buffer(className), dataOut, bs);
             tightMarshalString2(new UTF8Buffer(o.getMessage()), dataOut, bs);
             if (wireFormat.isStackTraceEnabled()) {
                 StackTraceElement[] stackTrace = o.getStackTrace();
@@ -529,7 +532,8 @@ public abstract class BaseDataStreamMarshaller implements DataStreamMarshaller {
         throws IOException {
         dataOut.writeBoolean(o != null);
         if (o != null) {
-            looseMarshalString(new UTF8Buffer(o.getClass().getName()), dataOut);
+            String className = o instanceof OpenwireException ? ((OpenwireException)o).getClassName() : o.getClass().getName();
+            looseMarshalString(new UTF8Buffer(className), dataOut);
             looseMarshalString(new UTF8Buffer(o.getMessage()), dataOut);
             if (wireFormat.isStackTraceEnabled()) {
                 StackTraceElement[] stackTrace = o.getStackTrace();

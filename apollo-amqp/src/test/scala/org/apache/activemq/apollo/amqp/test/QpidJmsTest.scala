@@ -65,24 +65,31 @@ class QpidJmsTest extends AmqpTestSupport {
     return connection
   }
 
+  test("unsubscribe invalid dest") {
+    val queue = new QueueImpl("queue://txqueue")
+    val connection = createConnection
+    val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    session.unsubscribe("does not exist")
+    connection.close
+  }
 
-//  test("browse") {
-//    val queue = new QueueImpl("queue://txqueue")
-//    val connection = createConnection
-//    val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-//    val p = session.createProducer(queue)
-//    val msg = session.createTextMessage("Hello World")
-//    msg.setObjectProperty("x", 1)
-//    p.send(msg)
-//    val browser = session.createBrowser(queue)
-//    val enumeration = browser.getEnumeration
-//    while (enumeration.hasMoreElements) {
-//      System.out.println("BROWSE " + enumeration.nextElement)
-//    }
-//    connection.close
-//  }
+  ignore("browse") {
+    val queue = new QueueImpl("queue://txqueue")
+    val connection = createConnection
+    val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val p = session.createProducer(queue)
+    val msg = session.createTextMessage("Hello World")
+    msg.setObjectProperty("x", 1)
+    p.send(msg)
+    val browser = session.createBrowser(queue)
+    val enumeration = browser.getEnumeration
+    while (enumeration.hasMoreElements) {
+      System.out.println("BROWSE " + enumeration.nextElement)
+    }
+    connection.close
+  }
 
-  test("Send Nack Receive") {
+  ignore("Send Nack Receive") {
     // enableJMSFrameTracing
     val queue = new QueueImpl("/queue/testqueue")
     val nMsgs = 1

@@ -317,11 +317,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   class ProtocolException(msg:String) extends RuntimeException(msg)
   class Break extends RuntimeException
 
-  def fail[T](msg: String, actual:Command=null):Unit = {
+  def fail[T](msg: String):Unit = fail(msg, null)
+  def fail[T](msg: String, actual:Command):Unit = fail(new ProtocolException(msg), actual)
+
+  def fail[T](e: Throwable, actual:Command):Unit = {
+    e.fillInStackTrace()
     def respond(command:Command) = {
       if(command.isResponseRequired()) {
-        val e = new ProtocolException(msg)
-        e.fillInStackTrace
 
         val rc = new ExceptionResponse()
         rc.setCorrelationId(command.getCommandId())
@@ -332,12 +334,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
     }
     def connection_error() = {
-      val e = new ProtocolException(msg)
-      e.fillInStackTrace()
-
       val err = new ConnectionError()
       err.setException(e)
-
       connection_session.offer(err)
     }
     (current_command,actual) match {
@@ -347,7 +345,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
          respond(command)
        case (command:Command, null)=>
          connection_error()
-       case (command:Command, command2:Command)=>
+       case (command2:Command, command:Command)=>
          respond(command)
     }
   }
@@ -520,7 +518,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     host.dispatch_queue {
       host.local_router.dsub_domain.destination_by_id.get(subscription_id) match {
         case None =>
-          queue(fail("The subscription does not exist", info))
+          queue(fail(new OpenwireException("The subscription does not exist", "javax.jms.InvalidDestinationException"), info))
         case Some(dest:Queue) =>
           host.local_router._destroy_queue(dest, security_context) match {
             case Some(error) =>
