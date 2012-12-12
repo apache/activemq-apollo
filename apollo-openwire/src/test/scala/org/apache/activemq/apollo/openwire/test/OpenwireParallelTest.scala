@@ -733,4 +733,22 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     }
  }
 
+  test("NoLocal Test") {
+    connect()
+    val destination = topic(next_id("NOLOCAL"))
+    val localSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var localConsumer = localSession.createConsumer(destination, null, true)
+    var localProducer = localSession.createProducer(destination)
+
+    val remoteConnection = connect("")
+    val remoteSession = remoteConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var remoteProducer = remoteSession.createProducer(destination)
+
+    remoteProducer.send(localSession.createTextMessage("1"))
+    localProducer.send(localSession.createTextMessage("2"))
+    remoteProducer.send(localSession.createTextMessage("3"))
+
+    receive_text(localConsumer) should equal("1")
+    receive_text(localConsumer) should equal("3")
+ }
 }

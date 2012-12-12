@@ -948,8 +948,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def is_persistent = false
     override def receive_buffer_size = buffer_size
 
-    def matches(delivery:Delivery) = {
+    def matches(delivery:Delivery):Boolean = {
       if( delivery.message.codec eq OpenwireMessageCodec ) {
+        val message = delivery.message.asInstanceOf[OpenwireMessage].message
+        if( info.isNoLocal ) {
+          if( message.getProducerId.getParentId.getConnectionId == connection_context.info.getConnectionId.getValue ) {
+            return false;
+          }
+        }
         if( selector_expression!=null ) {
           selector_expression.matches(delivery.message)
         } else {
