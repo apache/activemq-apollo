@@ -60,11 +60,11 @@ object AmqpProtocolHandler extends Log {
   val WAITING_ON_CLIENT_REQUEST = () => "client request"
 
   val DEFAULT_DESTINATION_PARSER = new DestinationParser
-  DEFAULT_DESTINATION_PARSER.queue_prefix = "/queue/"
-  DEFAULT_DESTINATION_PARSER.topic_prefix = "/topic/"
-  DEFAULT_DESTINATION_PARSER.dsub_prefix = "/dsub/"
-  DEFAULT_DESTINATION_PARSER.temp_queue_prefix = "/temp-queue/"
-  DEFAULT_DESTINATION_PARSER.temp_topic_prefix = "/temp-topic/"
+  DEFAULT_DESTINATION_PARSER.queue_prefix = "queue://"
+  DEFAULT_DESTINATION_PARSER.topic_prefix = "topic://"
+  DEFAULT_DESTINATION_PARSER.dsub_prefix = "dsub://"
+  DEFAULT_DESTINATION_PARSER.temp_queue_prefix = "temp-queue://"
+  DEFAULT_DESTINATION_PARSER.temp_topic_prefix = "temp-topic://"
   DEFAULT_DESTINATION_PARSER.destination_separator = ","
   DEFAULT_DESTINATION_PARSER.path_separator = "."
   DEFAULT_DESTINATION_PARSER.any_child_wildcard = "*"
@@ -169,7 +169,12 @@ class AmqpProtocolHandler extends ProtocolHandler {
     throw new Break()
   }
 
-  def amqp_error(name: String = "", message: String = "") = new EndpointError(name, message)
+  def amqp_error(name: String = "", message: String = "") = {
+    if ( name==null || message == null ) {
+      println("crap")
+    }
+    new EndpointError(name, message)
+  }
 
   def suspend_read(reason: => String) = {
     waiting_on = reason _

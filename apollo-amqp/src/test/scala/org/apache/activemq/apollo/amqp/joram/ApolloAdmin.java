@@ -123,7 +123,7 @@ public class ApolloAdmin implements Admin {
 
     public void createQueue(String name) {
         try {
-            context.bind(name, new QueueImpl("/queue/"+name));
+            context.bind(name, new QueueImpl("queue://"+name));
         } catch (NamingException e) {
             throw new RuntimeException(e);
         }
@@ -131,7 +131,7 @@ public class ApolloAdmin implements Admin {
 
     public void createTopic(String name) {
         try {
-            context.bind(name, new TopicImpl("/topic/"+name));
+            context.bind(name, new TopicImpl("topic://"+name));
         } catch (NamingException e) {
             throw new RuntimeException(e);
         }

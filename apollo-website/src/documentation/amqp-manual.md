@@ -45,8 +45,8 @@ following configuration attributes:
 The amqp configuration element can also be used to control how the destination 
 headers are parsed and interpreted.  The supported attributes are:
   
-* `queue_prefix` : Defaults to `/queue/`
-* `topic_prefix` : Defaults to `/topic/`
+* `queue_prefix` : Defaults to `queue://`
+* `topic_prefix` : Defaults to `topic://`
 * `path_separator` : Defaults to `.`
 * `destination_separator` : Defaults to `,`
 * `any_child_wildcard` : Defaults to `*`
@@ -93,8 +93,8 @@ can reconnect and consume the queued message originating from the topic
 at a later time.
 
 If you want to send or subscribe to a queue, topic, or durable
-subscription the AMQP address should be prefixed with `/queue/`,
-`/topic/` or `/dsub/` respectively.
+subscription the AMQP address should be prefixed with `queue://`,
+`topic://` or `dsub://` respectively.
 
 <!-- TODO: not supported yet via AMQP protocol
 ### Topic Retained Messages
@@ -148,12 +148,12 @@ If you want the durable subscription to be destroyed, change the
 source expiry policy to LINK_DETACH and then close the link.
 
 If the durable subscription already exists you can address it directly using
-`/dsub/` prefix on the `destination` header. For example, send a message to
+`dsub://` prefix on the `destination` header. For example, send a message to
 the previously created `mysub` durable subscription, you would message to
-the target address of `/dsub/mysub`.
+the target address of `dsub://mysub`.
 
 Similarly, you can also receive messages from the durable subscription by using 
-the source address of `/dsub/mysub`,
+the source address of `dsub://mysub`,
 
 Unlike typical AMQP link id's which are local to the AMQP client's
 connection, the durable subscription id's are global across a virtual host. If
@@ -345,8 +345,8 @@ information you're interested in.
 For example imagine you are sending price messages from a stock exchange feed.
 You might use some kind of destination naming conventions such as:
 
-* `/topic/PRICE.STOCK.NASDAQ.IBM` to publish IBM's price on NASDAQ and
-* `/topic/PRICE.STOCK.NYSE.SUNW` to publish Sun's price on the New York Stock Exchange
+* `topic://PRICE.STOCK.NASDAQ.IBM` to publish IBM's price on NASDAQ and
+* `topic://PRICE.STOCK.NYSE.SUNW` to publish Sun's price on the New York Stock Exchange
 
 A subscriber could then use exact destinations to subscribe to exactly the
 prices it requires. Or it could use wildcards to define hierarchical pattern
@@ -354,12 +354,12 @@ matches to the destinations to subscribe from.
 
 For example using the example above, these subscriptions are possible
 
-* `/topic/PRICE.**` : Any price for any product on any exchange
-* `/topic/PRICE.STOCK.**` : Any price for a stock on any exchange
-* `/topic/PRICE.STOCK.NASDAQ.*` : Any stock price on NASDAQ
-* `/topic/PRICE.STOCK.*.IBM` : Any IBM stock price on any exchange
-* `/topic/PRICE.STOCK.*.I*` : Any stock price starting with 'I' on any exchange
-* `/topic/PRICE.STOCK.*.*{[0-9]}` : Any stock price that ends in a digit on any exchange
+* `topic://PRICE.**` : Any price for any product on any exchange
+* `topic://PRICE.STOCK.**` : Any price for a stock on any exchange
+* `topic://PRICE.STOCK.NASDAQ.*` : Any stock price on NASDAQ
+* `topic://PRICE.STOCK.*.IBM` : Any IBM stock price on any exchange
+* `topic://PRICE.STOCK.*.I*` : Any stock price starting with 'I' on any exchange
+* `topic://PRICE.STOCK.*.*{[0-9]}` : Any stock price that ends in a digit on any exchange
 
 Destination wildcards can only be used in a SUBSCRIBE frame.
 
@@ -368,7 +368,7 @@ Destination wildcards can only be used in a SUBSCRIBE frame.
 You can use composite destinations to send or subscribe to multiple
 destinations at one time. You use separator of `,` between destination
 names.  For example to send one message to 2 queues and 1 topic, you would
-use an address of '/queue/a,/queue/b,/topic/c'
+use an address of 'queue://a,queue://b,topic://c'
 
 ### Message Selectors
 
