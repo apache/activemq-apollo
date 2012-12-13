@@ -74,6 +74,8 @@ object AmqpProtocolHandler extends Log {
 
   val JMS_SELECTOR = AmqpSymbol.valueOf("jms-selector")
   val NO_LOCAL = AmqpSymbol.valueOf("no-local");
+  val ORIGIN = AmqpSymbol.valueOf("origin");
+
   val DURABLE = new UnsignedInteger(2);
 
   val EMPTY_BYTE_ARRAY = Array[Byte]()
@@ -328,7 +330,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
 
     def processConnectionOpen(conn: engine.Connection, onComplete: Task) {
-      security_context.session_id = Some(conn.getRemoteContainer())
+      security_context.remote_application = Some(conn.getRemoteContainer())
 
       suspend_read("host lookup")
       broker.dispatch_queue {
@@ -349,6 +351,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
             connection_log = virtual_host.connection_log
             host = virtual_host
             proton.setLocalContainerId(virtual_host.id)
+            security_context.session_id = Some("%s-%x".format(host.config.id, host.session_counter.incrementAndGet))
             //                proton.open()
             //                callback.onSuccess(response)
             if (virtual_host.authenticator != null && virtual_host.authorizer != null) {
@@ -489,7 +492,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       if( source == null ) {
         // Source get set to null when a durable sub is being ended.
         source = new org.apache.qpid.proton.`type`.messaging.Source();
-        source.setAddress("/dsub/"+sender.getName);
+        source.setAddress("dsub://"+sender.getName);
         source.setDurable(DURABLE)
         source.setExpiryPolicy(TerminusExpiryPolicy.NEVER)
         sender.setSource(source);
@@ -499,17 +502,18 @@ class AmqpProtocolHandler extends ProtocolHandler {
       sender.setSource(actual);
       if (requested_addresses == null) {
         sender.setSource(null)
-        close_with_error(sender, "invalid-address", "Invaild address: " + address)
+        close_with_error(sender, "amqp:not-found", "Invaild address: " + address)
         onComplete.run()
         return
       }
 
+      var noLocal = false
       val filter = source.getFilter()
       val selector = if (filter != null) {
         var value = filter.get(NO_LOCAL).asInstanceOf[DescribedType];
         if( value!=null ) {
           // TODO: setup a no-local filter.
-//            consumerInfo.setNoLocal(true);
+          noLocal = true
         }
         value = filter.get(JMS_SELECTOR).asInstanceOf[DescribedType]
         if (value != null) {
@@ -532,23 +536,10 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
       val presettle = sender.getRemoteSenderSettleMode() == SenderSettleMode.SETTLED;
 
-      var browser = source.getDistributionMode() == COPY
-      var browser_end = browser && true
-      var exclusive = !browser && false
-      var include_seq: Option[Long] = None
-      val from_seq_opt: Option[Long] = None
-
       def is_multi_destination = if (requested_addresses.length > 1) {
         true
       } else {
         PathParser.containsWildCards(requested_addresses(0).path)
-      }
-
-      if (from_seq_opt.isDefined && is_multi_destination) {
-        sender.setSource(null)
-        close_with_error(sender, "invalid-from-seq", "The from-seq header is only supported when you subscribe to one destination")
-        onComplete.run()
-        return
       }
 
       val persistent = DURABLE == source.getDurable() && source.getExpiryPolicy == TerminusExpiryPolicy.NEVER
@@ -577,12 +568,24 @@ class AmqpProtocolHandler extends ProtocolHandler {
         requested_addresses
       }
 
+      var browser = addresses.find(_.domain != "queue").isEmpty && (source.getDistributionMode() == COPY)
+      var browser_end = false
+      var exclusive = !browser && false
+      var include_seq: Option[Long] = None
+      val from_seq_opt: Option[Long] = None
+
+      if (from_seq_opt.isDefined && is_multi_destination) {
+        sender.setSource(null)
+        close_with_error(sender, "invalid-from-seq", "The from-seq header is only supported when you subscribe to one destination")
+        onComplete.run()
+        return
+      }
       val from_seq = from_seq_opt.getOrElse(0L)
 
 
       link_counter += 1
       val id = link_counter
-      val consumer = new AmqpConsumer(sender, id, addresses, presettle, selector, browser, exclusive, include_seq, from_seq, browser_end);
+      val consumer = new AmqpConsumer(sender, id, addresses, presettle, selector, noLocal, browser, exclusive, include_seq, from_seq, browser_end);
       consumers += (id -> consumer)
 
       host.dispatch_queue {
@@ -593,7 +596,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
               consumers -= id
               consumer.release
               sender.setSource(null)
-              close_with_error(sender, "subscribe-failed", reason)
+              close_with_error(sender, "amqp:not-found", reason)
               onComplete.run()
             case None =>
               set_attachment(sender, consumer)
@@ -805,7 +808,21 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def onMessage(receiver:Receiver, delivery: DeliveryImpl, message: AmqpMessage) = {
+    def onMessage(receiver:Receiver, delivery: DeliveryImpl, m: AmqpMessage) = {
+
+      // Update the message to attach some producer context to the footer..
+      // of the message.
+      val dm = m.decoded
+      val footer_map:java.util.Map[AnyRef,AnyRef] = if( dm.getFooter == null ) {
+        val map = new java.util.HashMap[AnyRef,AnyRef]
+        dm.setFooter(new Footer(map))
+        map
+      } else {
+        dm.getFooter.getValue.asInstanceOf[java.util.Map[AnyRef,AnyRef]]
+      }
+      footer_map.put(ORIGIN, session_id.get)
+      val message = new AmqpMessage(null, dm)
+
       val d = new Delivery
       d.message = message
       d.size = message.encoded.length
@@ -877,6 +894,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
                      val addresses: Array[_ <: BindAddress],
                      val presettle: Boolean,
                      val selector: (String, BooleanExpression),
+                     val noLocal:Boolean,
                      override val browser: Boolean,
                      override val exclusive: Boolean,
                      val include_seq: Option[Long],
@@ -922,8 +940,14 @@ class AmqpProtocolHandler extends ProtocolHandler {
     override def connection = Option(AmqpProtocolHandler.this.connection)
 
     def is_persistent = false
-    def matches(delivery: Delivery) = {
+    def matches(delivery: Delivery):Boolean = {
       if( delivery.message.codec eq AmqpMessageCodec ) {
+        if ( noLocal ) {
+          val origin = delivery.message.asInstanceOf[AmqpMessage].getFooterProperty(ORIGIN)
+          if ( origin == session_id.get ) {
+            return false
+          }
+        }
         if( selector!=null ) {
           selector._2.matches(delivery.message)
         } else {

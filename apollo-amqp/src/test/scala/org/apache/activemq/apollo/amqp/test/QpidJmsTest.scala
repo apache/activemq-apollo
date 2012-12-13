@@ -17,7 +17,7 @@
 
 package org.apache.activemq.apollo.amqp.test
 
-import org.apache.qpid.amqp_1_0.jms.impl.{ConnectionFactoryImpl, QueueImpl}
+import org.apache.qpid.amqp_1_0.jms.impl.{TopicImpl, ConnectionFactoryImpl, QueueImpl}
 import javax.jms._
 
 
@@ -53,8 +53,8 @@ object QpidJmsTest {
  */
 class QpidJmsTest extends AmqpTestSupport {
 
-  def createConnection: Connection = {
-    val factory = new ConnectionFactoryImpl("localhost", port, "admin", "password")
+  def createConnection(clientId:String=null): Connection = {
+    val factory = new ConnectionFactoryImpl("localhost", port, "admin", "password", clientId)
     val connection = factory.createConnection
     connection.setExceptionListener(new ExceptionListener {
       def onException(exception: JMSException) {
@@ -65,9 +65,51 @@ class QpidJmsTest extends AmqpTestSupport {
     return connection
   }
 
+  test("NoLocal Test") {
+
+    val default_connection = createConnection("clientid")
+    val destination = new TopicImpl("topic://example")
+    val localSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var localConsumer = localSession.createConsumer(destination, null, true)
+    var localProducer = localSession.createProducer(destination)
+
+    val remoteConnection = createConnection()
+    val remoteSession = remoteConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var remoteProducer = remoteSession.createProducer(destination)
+
+    remoteProducer.send(localSession.createTextMessage("1"))
+    localProducer.send(localSession.createTextMessage("2"))
+    remoteProducer.send(localSession.createTextMessage("3"))
+
+    receive_text(localConsumer) should equal("1")
+    receive_text(localConsumer) should equal("3")
+  }
+
+  test("NoLocal Durable Sub Test") {
+
+    val default_connection = createConnection("clientid")
+    val destination = new TopicImpl("topic://example2")
+    val localSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var localConsumer = localSession.createDurableSubscriber(destination, "A", null, true)
+    var localProducer = localSession.createProducer(destination)
+
+    val remoteConnection = createConnection()
+    val remoteSession = remoteConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var remoteProducer = remoteSession.createProducer(destination)
+
+    remoteProducer.send(localSession.createTextMessage("1"))
+    localProducer.send(localSession.createTextMessage("2"))
+    remoteProducer.send(localSession.createTextMessage("3"))
+
+    receive_text(localConsumer) should equal("1")
+    receive_text(localConsumer) should equal("3")
+  }
+
+  def receive_text(consumer:MessageConsumer) = consumer.receive().asInstanceOf[TextMessage].getText
+
   test("unsubscribe invalid dest") {
     val queue = new QueueImpl("queue://txqueue")
-    val connection = createConnection
+    val connection = createConnection()
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     session.unsubscribe("does not exist")
     connection.close
@@ -75,7 +117,7 @@ class QpidJmsTest extends AmqpTestSupport {
 
   ignore("browse") {
     val queue = new QueueImpl("queue://txqueue")
-    val connection = createConnection
+    val connection = createConnection()
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val p = session.createProducer(queue)
     val msg = session.createTextMessage("Hello World")
@@ -95,7 +137,7 @@ class QpidJmsTest extends AmqpTestSupport {
     val nMsgs = 1
     val dataFormat: String = "%01024d"
 
-    var connection = createConnection
+    var connection = createConnection()
     var session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val p = session.createProducer(queue)
     var i = 0
@@ -109,7 +151,7 @@ class QpidJmsTest extends AmqpTestSupport {
     System.out.println("=======================================================================================")
     System.out.println(" failing a receive ")
     System.out.println("=======================================================================================")
-    connection = createConnection
+    connection = createConnection()
     session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
     var c = session.createConsumer(queue)
     i = 0
@@ -127,7 +169,7 @@ class QpidJmsTest extends AmqpTestSupport {
     System.out.println("=======================================================================================")
     System.out.println(" receiving ")
     System.out.println("=======================================================================================")
-    connection = createConnection
+    connection = createConnection()
     session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     c = session.createConsumer(queue)
     i = 0

@@ -164,7 +164,7 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
       null
     }
   }
-  def getFooterProperty(name:String) = {
+  def getFooterProperty(name:AnyRef) = {
     if( decoded.getFooter !=null ) {
       decoded.getFooter.getValue.get(name).asInstanceOf[AnyRef]
     } else {
