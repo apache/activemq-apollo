@@ -862,15 +862,15 @@ class AmqpProtocolHandler extends ProtocolHandler {
         case state:TransactionalState =>
           transactions.get(toLong(state.getTxnId())) match {
             case Some(tx) =>
-              tx.add({ uow =>
+              tx.add((uow)=>{
                 d.uow = uow
                 val accepted = producer_overflow.offer(d)
                 assert(accepted)
-                receiver.advance();
               })
             case None =>
               die("uknown-tx", "txid in the delivery remote state is invalid")
           }
+          receiver.advance();
         case _ =>
           val accepted = producer_overflow.offer(d)
           assert(accepted)
@@ -1109,9 +1109,11 @@ class AmqpProtocolHandler extends ProtocolHandler {
         case state:TransactionalState =>
           transactions.get(toLong(state.getTxnId())) match {
             case Some(tx) =>
-              tx.add({ uow =>
+              tx.add((uow)=>{
                   process(proton_delivery, state.getOutcome, uow)
-              })
+              }
+//                , ()=>{ settle(proton_delivery, null, true, null) }
+              )
             case None =>
               die("uknown-tx", "txid in the delivery remote state is invalid")
           }
@@ -1324,12 +1326,10 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
           val tx_queue = remove_tx_queue(txid);
           if (discharge.getFail()) {
-            System.out.println("rollback transaction " + txid);
             tx_queue.rollback
             delivery.settle();
             pump_out
           } else {
-            System.out.println("commit transaction " + txid);
             tx_queue.commit {
               queue {
                 delivery.settle();

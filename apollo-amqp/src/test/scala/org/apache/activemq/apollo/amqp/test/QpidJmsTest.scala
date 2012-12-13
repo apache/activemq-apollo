@@ -65,6 +65,35 @@ class QpidJmsTest extends AmqpTestSupport {
     return connection
   }
 
+  test("Transaction Test") {
+
+    val default_connection = createConnection()
+    val destination = new QueueImpl("queue://txtest")
+    val session = default_connection.createSession(true, Session.SESSION_TRANSACTED)
+    var consumer = session.createConsumer(destination)
+    var producer = session.createProducer(destination)
+
+    var msg = session.createTextMessage("1")
+    producer.send(msg)
+    session.commit()
+
+    msg.setText("2")
+    producer.send(msg)
+    session.rollback()
+
+    msg.setText("3")
+    producer.send(msg)
+    session.commit()
+
+    receive_text(consumer) should equal("1")
+    session.commit()
+    receive_text(consumer) should equal("3")
+    session.rollback()
+    receive_text(consumer) should equal("3")
+    session.commit()
+
+  }
+
   test("NoLocal Test") {
 
     val default_connection = createConnection("clientid")
