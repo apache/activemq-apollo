@@ -17,8 +17,7 @@
 
 package org.apache.activemq.apollo.amqp.test
 
-import org.apache.qpid.proton.`type`.messaging.{AmqpValue, Source, Target}
-import java.util.concurrent.CountDownLatch
+import org.apache.qpid.proton.amqp.messaging.{AmqpValue, Source, Target}
 import org.fusesource.hawtdispatch._
 import org.apache.qpid.proton.hawtdispatch.api._
 
@@ -60,14 +59,14 @@ import org.apache.qpid.proton.hawtdispatch.api._
     connection.queue() {
       var session = connection.createSession()
       val target = new Target
-      target.setAddress("/queue/FOO")
+      target.setAddress("queue://FOO")
       val sender = session.createSender(target);
       val md = sender.send(session.createTextMessage("Hello World"))
       md.onSettle(print_result("message sent") {
         println("========================================================")
         println("========================================================")
         val source = new Source
-        source.setAddress("/queue/FOO")
+        source.setAddress("queue://FOO")
         val receiver = session.createReceiver(source);
         receiver.resume()
         receiver.setDeliveryListener(new AmqpDeliveryListener {

@@ -46,11 +46,12 @@ import org.apache.qpid.proton.framing.TransportFrame
 import org.apache.qpid.proton.hawtdispatch.impl.{AmqpListener, AmqpTransport, AmqpProtocolCodec}
 import org.apache.qpid.proton.engine._
 import org.apache.qpid.proton.engine.impl.{ProtocolTracer, DeliveryImpl, LinkImpl, TransportImpl}
-import org.apache.qpid.proton.{`type` => proton_type}
-import proton_type.{Symbol => AmqpSymbol, UnsignedInteger, Binary, DescribedType}
-import proton_type.transport.SenderSettleMode
-import proton_type.messaging._
-import proton_type.transaction._
+import org.apache.qpid.proton.amqp
+import amqp.{Symbol => AmqpSymbol, UnsignedInteger, Binary, DescribedType}
+import amqp.transport.SenderSettleMode
+import amqp.messaging._
+import amqp.transaction._
+import org.apache.qpid.proton.message.impl.MessageImpl
 
 object AmqpProtocolHandler extends Log {
 
@@ -70,13 +71,11 @@ object AmqpProtocolHandler extends Log {
   DEFAULT_DESTINATION_PARSER.any_child_wildcard = "*"
   DEFAULT_DESTINATION_PARSER.any_descendant_wildcard = "**"
 
-  val COPY = org.apache.qpid.proton.`type`.Symbol.getSymbol("copy");
+  val COPY = org.apache.qpid.proton.amqp.Symbol.getSymbol("copy");
 
   val JMS_SELECTOR = AmqpSymbol.valueOf("jms-selector")
   val NO_LOCAL = AmqpSymbol.valueOf("no-local");
   val ORIGIN = AmqpSymbol.valueOf("origin");
-
-  val DURABLE = new UnsignedInteger(2);
 
   val EMPTY_BYTE_ARRAY = Array[Byte]()
 
@@ -191,7 +190,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   }
 
   var amqp_connection:AmqpTransport = _
-  var amqp_trace = false
+  var amqp_trace = true
 
   def codec = connection.transport.getProtocolCodec.asInstanceOf[AmqpProtocolCodec]
 
@@ -491,9 +490,9 @@ class AmqpProtocolHandler extends ProtocolHandler {
       var source = sender.getRemoteSource().asInstanceOf[Source]
       if( source == null ) {
         // Source get set to null when a durable sub is being ended.
-        source = new org.apache.qpid.proton.`type`.messaging.Source();
+        source = new amqp.messaging.Source();
         source.setAddress("dsub://"+sender.getName);
-        source.setDurable(DURABLE)
+        source.setDurable(TerminusDurability.UNSETTLED_STATE)
         source.setExpiryPolicy(TerminusExpiryPolicy.NEVER)
         sender.setSource(source);
       }
@@ -542,7 +541,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
         PathParser.containsWildCards(requested_addresses(0).path)
       }
 
-      val persistent = DURABLE == source.getDurable() && source.getExpiryPolicy == TerminusExpiryPolicy.NEVER
+      val persistent = TerminusDurability.UNSETTLED_STATE == source.getDurable() && source.getExpiryPolicy == TerminusExpiryPolicy.NEVER
       val addresses: Array[_ <: BindAddress] = if (persistent) {
         val dsubs = ListBuffer[BindAddress]()
         val topics = ListBuffer[BindAddress]()
@@ -1047,7 +1046,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
               message_id_counter += 1
 
-              val message = new org.apache.qpid.proton.message.Message
+              val message = new MessageImpl
               message.setMessageId(session_id.get + message_id_counter)
               message.setBody(new Data(new Binary(body.data, body.offset, body.length)))
               message.setContentType(content_type)
@@ -1104,7 +1103,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     def process(proton_delivery:DeliveryImpl):Unit = {
       val state = proton_delivery.getRemoteState();
       state match {
-        case outcome:proton_type.messaging.Outcome =>
+        case outcome:amqp.messaging.Outcome =>
           process(proton_delivery, outcome, null)
         case state:TransactionalState =>
           transactions.get(toLong(state.getTxnId())) match {
@@ -1120,7 +1119,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       }
     }
 
-    def process(proton_delivery:DeliveryImpl, outcome:proton_type.messaging.Outcome, uow:StoreUOW):Unit = {
+    def process(proton_delivery:DeliveryImpl, outcome:amqp.messaging.Outcome, uow:StoreUOW):Unit = {
       outcome match {
         case null =>
           if( !proton_delivery.remotelySettled() ) {
@@ -1132,13 +1131,13 @@ class AmqpProtocolHandler extends ProtocolHandler {
               proton_delivery.disposition(new Accepted());
           }
           settle(proton_delivery, Consumed, false, uow);
-        case rejected:proton_type.messaging.Rejected =>
+        case rejected:amqp.messaging.Rejected =>
           // re-deliver /w incremented delivery counter.
           settle(proton_delivery, null, true, uow);
-        case release:proton_type.messaging.Released =>
+        case release:amqp.messaging.Released =>
           // re-deliver && don't increment the counter.
           settle(proton_delivery, null, false, uow);
-        case modified:proton_type.messaging.Modified =>
+        case modified:amqp.messaging.Modified =>
           def b(v:java.lang.Boolean) = v!=null && v.booleanValue()
           var ackType = if(b(modified.getUndeliverableHere())) {
               // receiver does not want the message..

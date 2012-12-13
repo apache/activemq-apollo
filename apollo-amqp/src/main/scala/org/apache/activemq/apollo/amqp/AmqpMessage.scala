@@ -20,17 +20,17 @@ package org.apache.activemq.apollo.amqp
 import org.apache.activemq.apollo.broker.protocol
 import protocol.{MessageCodecFactory, MessageCodec}
 import java.nio.ByteBuffer
-import org.apache.qpid.proton.codec.{WritableBuffer, CompositeWritableBuffer}
+import org.apache.qpid.proton.codec.{DroppingWritableBuffer, WritableBuffer, CompositeWritableBuffer}
 import org.fusesource.hawtbuf.Buffer._
 import org.apache.activemq.apollo.broker.Message
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtbuf.Buffer
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.UTF8Buffer
-import org.apache.qpid.proton.hawtdispatch.impl.DroppingWritableBuffer
-import org.apache.qpid.proton.`type`.{UnsignedLong, UnsignedInteger}
-import org.apache.qpid.proton.`type`.messaging.{Properties, Header}
+import org.apache.qpid.proton.amqp.{UnsignedLong, UnsignedInteger}
+import org.apache.qpid.proton.amqp.messaging.{Properties, Header}
 import org.apache.activemq.apollo.filter.Filterable
+import org.apache.qpid.proton.message.impl.MessageImpl
 
 object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
   def create = Array[MessageCodec](AmqpMessageCodec)
@@ -82,7 +82,7 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
 
   def decoded = {
     if( decoded_message==null ) {
-      val amqp = new org.apache.qpid.proton.message.Message();
+      val amqp = new MessageImpl();
       var offset = encoded_buffer.offset
       var len = encoded_buffer.length
       while( len > 0 ) {
@@ -99,14 +99,13 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
 
   override def encoded = {
     if( encoded_buffer == null ) {
-      var buffer = ByteBuffer.wrap(new Array[Byte](1024*4));
-      val overflow = new DroppingWritableBuffer();
-      var c = decoded_message.encode(new CompositeWritableBuffer(new WritableBuffer.ByteBufferWrapper(buffer), overflow));
-      if( overflow.position() > 0 ) {
-          buffer = ByteBuffer.wrap(new Array[Byte](1024*4+overflow.position()));
-          c = decoded_message.encode(new WritableBuffer.ByteBufferWrapper(buffer));
+      var buffer = new Array[Byte](1024);
+      var c = decoded_message.asInstanceOf[MessageImpl].encode2(buffer, 0, buffer.length);
+      if( c >  buffer.length) {
+        buffer = new Array[Byte](c);
+        decoded_message.encode(buffer, 0, c);
       }
-      encoded_buffer = new Buffer(buffer.array(), 0, c)
+      encoded_buffer = new Buffer(buffer, 0, c)
     }
     encoded_buffer
   }
@@ -149,7 +148,7 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
       var ma = decoded.getMessageAnnotations
       var rc = ma.getValue.get(name)
       if( rc == null ) {
-        rc = ma.getValue.get(org.apache.qpid.proton.`type`.Symbol.valueOf(name))
+        rc = ma.getValue.get(org.apache.qpid.proton.amqp.Symbol.valueOf(name))
       }
       rc.asInstanceOf[AnyRef]
     } else {
