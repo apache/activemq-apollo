@@ -19,8 +19,6 @@ package org.apache.activemq.apollo.amqp
 
 import org.apache.activemq.apollo.broker.protocol
 import protocol.{MessageCodecFactory, MessageCodec}
-import java.nio.ByteBuffer
-import org.apache.qpid.proton.codec.{DroppingWritableBuffer, WritableBuffer, CompositeWritableBuffer}
 import org.fusesource.hawtbuf.Buffer._
 import org.apache.activemq.apollo.broker.Message
 import org.apache.activemq.apollo.broker.store.MessageRecord
@@ -29,7 +27,6 @@ import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.UTF8Buffer
 import org.apache.qpid.proton.amqp.{UnsignedLong, UnsignedInteger}
 import org.apache.qpid.proton.amqp.messaging.{Properties, Header}
-import org.apache.activemq.apollo.filter.Filterable
 import org.apache.qpid.proton.message.impl.MessageImpl
 
 object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {
