@@ -952,7 +952,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       if( delivery.message.codec eq OpenwireMessageCodec ) {
         val message = delivery.message.asInstanceOf[OpenwireMessage].message
         if( info.isNoLocal ) {
-          if( message.getProducerId.getParentId.getConnectionId == connection_context.info.getConnectionId.getValue ) {
+          if (message.getProducerId.getParentId.getConnectionId == info.getConsumerId.getParentId.getConnectionId ) {
             return false;
           }
         }
