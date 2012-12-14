@@ -190,7 +190,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   }
 
   var amqp_connection:AmqpTransport = _
-  var amqp_trace = true
+  var amqp_trace = false
 
   def codec = connection.transport.getProtocolCodec.asInstanceOf[AmqpProtocolCodec]
 

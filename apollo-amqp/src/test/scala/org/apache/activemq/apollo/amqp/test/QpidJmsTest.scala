@@ -140,7 +140,12 @@ class QpidJmsTest extends AmqpTestSupport {
     val queue = new QueueImpl("queue://txqueue")
     val connection = createConnection()
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    session.unsubscribe("does not exist")
+    try {
+      session.unsubscribe("does not exist")
+      fail("expected an InvalidDestinationException")
+    } catch {
+      case e:InvalidDestinationException =>
+    }
     connection.close
   }
 
