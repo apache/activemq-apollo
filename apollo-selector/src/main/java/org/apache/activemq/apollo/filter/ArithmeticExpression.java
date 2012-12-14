@@ -27,6 +27,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
     protected static final int INTEGER = 1;
     protected static final int LONG = 2;
     protected static final int DOUBLE = 3;
+    boolean convertStringExpressions = false;
 
     /**
      * @param left
@@ -34,6 +35,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
      */
     public ArithmeticExpression(Expression left, Expression right) {
         super(left, right);
+        convertStringExpressions = ComparisonExpression.CONVERT_STRING_EXPRESSIONS.get()!=null;
     }
 
     public static Expression createPlus(Expression left, Expression right) {
@@ -43,10 +45,9 @@ public abstract class ArithmeticExpression extends BinaryExpression {
                     String text = (String)lvalue;
                     String answer = text + rvalue;
                     return answer;
-                } else if (lvalue instanceof Number) {
-                    return plus((Number)lvalue, asNumber(rvalue));
+                } else {
+                    return plus(asNumber(lvalue), asNumber(rvalue));
                 }
-                throw new RuntimeException("Cannot call plus operation on: " + lvalue + " and: " + rvalue);
             }
 
             public String getExpressionSymbol() {
@@ -58,10 +59,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
     public static Expression createMinus(Expression left, Expression right) {
         return new ArithmeticExpression(left, right) {
             protected Object evaluate(Object lvalue, Object rvalue) {
-                if (lvalue instanceof Number) {
-                    return minus((Number)lvalue, asNumber(rvalue));
-                }
-                throw new RuntimeException("Cannot call minus operation on: " + lvalue + " and: " + rvalue);
+                return minus(asNumber(lvalue), asNumber(rvalue));
             }
 
             public String getExpressionSymbol() {
@@ -74,10 +72,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
         return new ArithmeticExpression(left, right) {
 
             protected Object evaluate(Object lvalue, Object rvalue) {
-                if (lvalue instanceof Number) {
-                    return multiply((Number)lvalue, asNumber(rvalue));
-                }
-                throw new RuntimeException("Cannot call multiply operation on: " + lvalue + " and: " + rvalue);
+                return multiply(asNumber(lvalue), asNumber(rvalue));
             }
 
             public String getExpressionSymbol() {
@@ -90,10 +85,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
         return new ArithmeticExpression(left, right) {
 
             protected Object evaluate(Object lvalue, Object rvalue) {
-                if (lvalue instanceof Number) {
-                    return divide((Number)lvalue, asNumber(rvalue));
-                }
-                throw new RuntimeException("Cannot call divide operation on: " + lvalue + " and: " + rvalue);
+                return divide(asNumber(lvalue), asNumber(rvalue));
             }
 
             public String getExpressionSymbol() {
@@ -106,10 +98,7 @@ public abstract class ArithmeticExpression extends BinaryExpression {
         return new ArithmeticExpression(left, right) {
 
             protected Object evaluate(Object lvalue, Object rvalue) {
-                if (lvalue instanceof Number) {
-                    return mod((Number)lvalue, asNumber(rvalue));
-                }
-                throw new RuntimeException("Cannot call mod operation on: " + lvalue + " and: " + rvalue);
+                return mod(asNumber(lvalue), asNumber(rvalue));
             }
 
             public String getExpressionSymbol() {
@@ -177,6 +166,18 @@ public abstract class ArithmeticExpression extends BinaryExpression {
         if (value instanceof Number) {
             return (Number)value;
         } else {
+            if( convertStringExpressions && value instanceof String) {
+                String v = (String) value;
+                try {
+                    if( v.contains(".") ) {
+                        return new Double(v);
+                    } else {
+                        return new Long(v);
+                    }
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Cannot convert value: " + value + " into a number");
+                }
+            }
             throw new RuntimeException("Cannot convert value: " + value + " into a number");
         }
     }
