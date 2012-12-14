@@ -110,11 +110,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   }
 
   def ::=(sub:Subscription) = {
-    parked ::= sub
+    parked = parked ::: sub :: Nil
   }
 
   def :::=(l:List[Subscription]) = {
-    parked :::= l
+    parked = parked ::: l
   }
 
 
@@ -638,7 +638,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
                   heldBack += sub
                 } else {
                   // advance: accepted...
-                  acquiringSub = sub
+                  if( queue.tune_round_robin ) {
+                    acquiringSub = sub
+                  } else {
+                    advancing += sub
+                  }
                   acquirer = sub
 
                   val acquiredQueueEntry = sub.acquire(entry)

@@ -36,6 +36,7 @@
     <queue id="drop.tail.persistent" full_policy="drop tail" quota="100k"/>
     <queue id="drop.head.non" full_policy="drop head" tail_buffer="100k" persistent="false"/>
     <queue id="drop.tail.non" full_policy="drop tail" tail_buffer="100k" persistent="false"/>
+    <queue id="noroundrobin.**" round_robin="false"/>
 
     <bdb_store directory="${testdatadir}"/>
   </virtual_host>

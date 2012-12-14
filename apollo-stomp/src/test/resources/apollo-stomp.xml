@@ -31,6 +31,7 @@
     <topic id="queued.**" slow_consumer_policy="queue">
       <subscription tail_buffer="4k"/>
     </topic>
+    <queue id="noroundrobin.**" round_robin="false"/>
 
   </virtual_host>
 

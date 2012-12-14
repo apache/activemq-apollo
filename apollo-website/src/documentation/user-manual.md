@@ -392,6 +392,11 @@ freshly enqueued message.  Defaults to `640k`.
 * `persistent` : If set to false, then the queue will not persistently
 store it's message.  Defaults to true.
 
+* `round_robin` : Should the destination dispatch messages to consumers
+  using round robin distribution strategy?  Defaults to true.
+  If set to false, then messages will be dispatched to the first attached 
+  consumers until those consumers start throttling the broker.
+
 * `swap` : If set to false, then the queue will not swap messages out of 
 memory.  Defaults to true.
 

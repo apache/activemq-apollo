@@ -589,6 +589,32 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   }
 
+  test("Queues do not load balance on queues with round_robin=false") {
+    connect("1.1")
+    subscribe("1", "/queue/noroundrobin.test1")
+    subscribe("2", "/queue/noroundrobin.test1")
+
+    for (i <- 0 until 4) {
+      async_send("/queue/noroundrobin.test1", "message:" + i)
+    }
+
+    var sub1_counter = 0
+    var sub2_counter = 0
+
+    for (i <- 0 until 4) {
+      val (frame, ack) = receive_message()
+      if (frame.contains("subscription:1\n")) {
+        sub1_counter += 1
+      } else if (frame.contains("subscription:2\n")) {
+        sub2_counter += 1
+      }
+    }
+
+    sub2_counter should be(0)
+    sub1_counter should be(4)
+  }
+
+
   test("Queues do NOT load balance across exclusive subscribers") {
     connect("1.1")
 

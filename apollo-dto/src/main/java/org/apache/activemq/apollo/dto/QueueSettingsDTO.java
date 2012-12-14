@@ -47,6 +47,15 @@ public class QueueSettingsDTO {
     public Boolean persistent;
 
     /**
+     * Should the destination dispatch messages to consumers
+     * using round robin distribution strategy?  Defaults to true.
+     * If set to false, then messages will be dispatched
+     * to the first attached consumers until they throttle the broker.
+     */
+    @XmlAttribute(name="round_robin")
+    public Boolean round_robin;
+
+    /**
      * Should messages be swapped out of memory if
      * no consumers need the message?
      */

@@ -113,6 +113,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var tune_persistent = true
 
   /**
+   * Should use a round robin dispatching of messages?
+   */
+  var tune_round_robin = true
+
+  /**
    * Should messages be swapped out of memory if
    * no consumers need the message?
    */
@@ -222,6 +227,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     session_manager.resize(Int.MaxValue, new_tail_buffer)
 
     tune_persistent = virtual_host.store !=null && update.persistent.getOrElse(true)
+    tune_round_robin = update.round_robin.getOrElse(true)
     tune_swap = tune_persistent && update.swap.getOrElse(true)
     tune_swap_range_size = update.swap_range_size.getOrElse(10000)
     tune_fast_delivery_rate = mem_size(update.fast_delivery_rate,"512k")
