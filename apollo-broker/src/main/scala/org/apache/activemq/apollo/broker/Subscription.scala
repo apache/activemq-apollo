@@ -208,6 +208,12 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       queue.exclusive_subscriptions = queue.exclusive_subscriptions.filterNot( _ == this )
       queue.all_subscriptions -= consumer
+      if( !consumer.browser && queue._message_group_buckets != null ) {
+        queue._message_group_buckets.remove(GroupBucket(this))
+        if( queue._message_group_buckets.getNodes.isEmpty ) {
+          queue._message_group_buckets = null
+        }
+      }
 
       session.refiller = NOOP
       session.close
