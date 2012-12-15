@@ -107,6 +107,9 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
     encoded_buffer
   }
 
+
+  override def message_group = decoded.getGroupId
+
   def getBodyAs[T](toType : Class[T]): T = {
     if (toType == classOf[Buffer]) {
       encoded

@@ -549,6 +549,38 @@ to the `SUBSCRIBE` frame.  Example:
     
     ^@
 
+### Message Groups
+
+Message Groups are an enhancement to the Exclusive Consumer feature to provide
+
+* guaranteed ordering of the processing of related messages across a single queue
+* load balancing of the processing of messages across multiple consumers
+* high availability / auto-failover to other consumers if a JVM goes down
+
+Message Groups are logically like a parallel Exclusive Consumer. Rather 
+than all messages going to a single consumer, the stomp `message_group` header
+is used to define which message group the message belongs to. The Message Group feature
+then ensures that all messages for the same message group will be sent to the same 
+consumer - while that consumer stays alive. As soon as the consumer dies another 
+will be chosen.
+
+Another way of explaining Message Groups is that it provides sticky load balancing 
+of messages across consumers; where the message group value is kinda like a HTTP 
+session ID or cookie value and the message broker is acting like a HTTP load balancer.
+
+Here is an example message with the message group set:
+
+    MESSAGE
+    destination:/queue/PO.REQUEST
+    message_group:hiram
+    
+    PO145
+    ^@
+
+The broker uses consistent hashing to map message groups to consumers.  When you another
+subscription to a queue, the broker will first wait for messages sent to previous subscriptions
+to be processed and then the broker rebalances the message groups across consumers.
+
 ### Temporary Destinations
 
 Temporary destinations are typically used to receive response messages in

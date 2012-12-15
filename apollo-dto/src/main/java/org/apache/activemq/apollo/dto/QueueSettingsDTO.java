@@ -56,6 +56,15 @@ public class QueueSettingsDTO {
     public Boolean round_robin;
 
     /**
+     * When set to true, the queue
+     * will drain the required message group consumers of messages before
+     * allowing new messages to dispatched to messages groups which have been
+     * moved to a different consumer due to re-balancing. Defaults to true.
+     */
+    @XmlAttribute(name="message_group_graceful_handoff")
+    public Boolean message_group_graceful_handoff;
+
+    /**
      * Should messages be swapped out of memory if
      * no consumers need the message?
      */

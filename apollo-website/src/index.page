@@ -31,18 +31,19 @@ multi-protocol broker and supports STOMP, AMQP, MQTT, Openwire, SSL, and WebSock
 
 ## Features
 
-* [STOMP Protocol Support](documentation/stomp-manual.html) 
-* [AMQP Protocol Support](documentation/stomp-manual.html) 
+* STOMP Protocol Support
+* AMQP Protocol Support
 * MQTT Protocol Support
-* [OpenWire Protocol Support](documentation/openwire-manual.html)
-* [Topics and Queues](documentation/user-manual.html#Destination_Types)
-* [Queue Browsers](documentation/user-manual.html#Browsing_Subscriptions)
-* [Durable Subscriptions on Topics](documentation/user-manual.html#Topic_Durable_Subscriptions)
+* OpenWire Protocol Support
+* [Topics and Queues](documentation/stomp-manual.html#Destination_Types)
+* [Queue Browsers](documentation/stino-manual.html#Browsing_Subscriptions)
+* [Durable Subscriptions on Topics](documentation/stomp-manual.html#Topic_Durable_Subscriptions)
 * [Mirrored Queues](documentation/user-manual.html#Mirrored_Queues)
-* [Reliable Messaging](documentation/user-manual.html#Reliable_Messaging)
-* [Message Expiration](documentation/user-manual.html#Message_Expiration)
+* [Reliable Messaging](documentation/stomp-manual.html#Reliable_Messaging)
+* [Message Expiration](documentation/stomp-manual.html#Message_Expiration)
 * [Message Swapping](documentation/architecture.html#Message_Swapping)
-* [Message Selectors](documentation/user-manual.html#Message_Selectors)
+* [Message Selectors](documentation/stomp-manual.html#Message_Selectors)
+* [Message Groups](documentation/stomp-manual.html#Message_Groups)
 * [JAAS Authentication](documentation/user-manual.html#Authentication)
 * [ACL based Authorization](documentation/user-manual.html#Authorization)
 * [SSL/TLS Support](documentation/user-manual.html#Using_SSL_TLS) and Certificate based Authentication
@@ -51,8 +52,11 @@ multi-protocol broker and supports STOMP, AMQP, MQTT, Openwire, SSL, and WebSock
 
 ## Documentation
 
- * [Getting Started Guide](documentation/getting-started.html)
- * [User Manual](documentation/user-manual.html)
- * [Migration Guide](documentation/migration-guide.html)
+* [Getting Started Guide](documentation/getting-started.html)
+* [User Manual](documentation/user-manual.html)
+* [Migration Guide](documentation/migration-guide.html)
+* [STOMP Protocol Manual](documentation/stomp-manual.html) 
+* [OpenWire Protocol Manual](documentation/openwire-manual.html)
+* [AMQP Protocol Manual](documentation/amqp-manual.html) 
 
 

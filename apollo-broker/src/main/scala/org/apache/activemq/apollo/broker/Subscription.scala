@@ -39,7 +39,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
   def dispatch_queue = queue.dispatch_queue
 
-  val id = Queue.subcsription_counter.incrementAndGet
+  val id = Queue.subscription_counter.incrementAndGet
   var acquired = new LinkedNodeList[AcquiredQueueEntry]
   var session: DeliverySession = null
   var pos:QueueEntry = null
@@ -120,6 +120,43 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     pos ::= this
 
     queue.all_subscriptions += consumer -> this
+    if( !consumer.browser && queue._message_group_buckets != null ) {
+
+      var iterators = queue._message_group_buckets.add(GroupBucket(this), 10)
+
+      // If we are doing graceful handoffs of message groups...
+      if( queue.message_group_graceful_handoff ) {
+        import collection.JavaConversions._
+        for ( iterator <- iterators ) {
+
+          // When we add the new bucket, it's going to get assigned
+          // message groups that were previously being serviced by the next
+          // bucket.  We need to suspend dispatch to both these groups
+          // until all dispatched messages get ack/drained, so that
+          // messages groups are not being concurrently being processed
+          // by two subscriptions.
+
+          var taking_over:Subscription = null
+          while ( iterator.hasNext && taking_over==null) {
+            val next = iterator.next()
+            if( next.sub != this ) {
+              taking_over = next.sub
+            }
+          }
+
+          // If we are taking over
+          if( taking_over!=null ) {
+            this.suspend
+            taking_over.suspend
+            taking_over.on_drain {
+              resume
+              taking_over.resume
+            }
+          }
+        }
+      }
+    }
+
     queue.consumer_counter += 1
     queue.change_consumer_capacity( consumer_buffer )
 
@@ -135,14 +172,32 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
     queue.check_idle
   }
 
-  var pending_close_action: ()=>Unit = _
+  var suspend_count = 0;
 
-  def check_finish_close = {
+  def suspend = suspend_count+=1
+  def resume = {
+    suspend_count-=1
+    if( suspend_count <= 0) {
+      queue.dispatch_queue << pos.task
+    }
+  }
+
+  def on_drain(func: =>Unit) {
+    drain_watchers ::= func _
+    check_drained
+  }
+
+  var drain_watchers: List[()=>Unit] = Nil
+
+  def check_drained = {
     // We can complete the closing of the sub
     // once the outstanding acks are settled.
-    if (pending_close_action!=null && acquired.isEmpty) {
-      pending_close_action()
-      pending_close_action = null
+    if (acquired.isEmpty && drain_watchers!=Nil) {
+      val t = drain_watchers
+      drain_watchers = Nil
+      for ( action <- t) {
+        action()
+      }
     }
   }
 
@@ -160,7 +215,9 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       // The following action gets executed once all acquired messages
       // ared acked or nacked.
-      pending_close_action = ()=> {
+
+      consumer.release
+      on_drain {
         queue.change_consumer_capacity( - consumer_buffer )
 
         if( exclusive ) {
@@ -171,9 +228,6 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         queue.check_idle
         queue.trigger_swap
       }
-
-      consumer.release
-      check_finish_close
     } else {}
   }
 
@@ -206,11 +260,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   def tail_parked = pos eq queue.tail_entry
 
   def matches(entry:Delivery) = consumer.matches(entry)
-  def full = session.full
+  def full = suspend_count > 0 || session.full
 
   def offer(delivery:Delivery) = try {
     assert(delivery.seq > 0 )
-    if( session.full ) {
+    if( full ) {
       false
     } else {
       val accepted = session.offer(delivery)
@@ -288,7 +342,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
 
       queue.trigger_swap
       next.task.run
-      check_finish_close
+      check_drained
 
     }
 
@@ -336,7 +390,7 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       if( acquired.isEmpty ) {
         idle_start = System.nanoTime()
       }
-      check_finish_close
+      check_drained
     }
   }
 

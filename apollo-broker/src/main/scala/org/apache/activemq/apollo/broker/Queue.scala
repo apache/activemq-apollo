@@ -32,7 +32,7 @@ import java.util.regex.Pattern
 import collection.mutable.ListBuffer
 
 object Queue extends Log {
-  val subcsription_counter = new AtomicInteger(0)
+  val subscription_counter = new AtomicInteger(0)
 
   class MemorySpace {
     var items = 0
@@ -54,6 +54,10 @@ object Queue extends Log {
 
 import Queue._
 
+case class GroupBucket(sub:Subscription) {
+  override def toString: String = sub.id.toString
+}
+
 /**
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -74,6 +78,21 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var inbound_sessions = Set[DeliverySession]()
   var all_subscriptions = Map[DeliveryConsumer, Subscription]()
   var exclusive_subscriptions = ListBuffer[Subscription]()
+
+  var _message_group_buckets: HashRing[GroupBucket, String] = _
+
+  def message_group_buckets = {
+    // If the queue is not using message groups, lets avoid
+    // creating the bucket hash ring.
+    if( _message_group_buckets == null )  {
+      _message_group_buckets = new HashRing[GroupBucket, String]()
+      // Create a bucket for each subscription
+      for( sub <- all_subscriptions.values if !sub.browser) {
+        _message_group_buckets.add(GroupBucket(sub), 10)
+      }
+    }
+    _message_group_buckets
+  }
 
   def filter = binding.message_filter
 
@@ -214,6 +233,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var full_policy:FullDropPolicy = Block
 
   def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
+
+  def message_group_graceful_handoff = OptionSupport(config.message_group_graceful_handoff).getOrElse(true)
 
   def configure(update:QueueSettingsDTO) = {
     def mem_size(value:String, default:String) = MemoryPropertyEditor.parse(Option(value).getOrElse(default)).toInt

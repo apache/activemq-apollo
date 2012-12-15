@@ -121,7 +121,8 @@ trait Message extends Filterable with Retained {
   def codec:MessageCodec
 
   def encoded:Buffer = codec.encode(this).buffer
-  
+
+  def message_group: String = null
 }
 
 /**

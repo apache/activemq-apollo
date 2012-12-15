@@ -35,6 +35,8 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
 
   def toString(buffer:AnyRef) = if (buffer==null) null else buffer.toString
 
+  override def message_group: String = if(message.getGroupID!=null ) message.getGroupID.toString else null
+
   def getProperty(name: String) = {
     name match {
       case "JMSDeliveryMode" =>

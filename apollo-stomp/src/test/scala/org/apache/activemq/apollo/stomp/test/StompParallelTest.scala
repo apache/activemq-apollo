@@ -23,6 +23,7 @@ import org.apache.activemq.apollo.broker._
 import java.net.{SocketTimeoutException, InetSocketAddress}
 import org.apache.activemq.apollo.stomp.{Stomp, StompProtocolHandler}
 import org.fusesource.hawtdispatch._
+import collection.mutable
 
 /**
  * These tests can be run in parallel against a single Apollo broker.
@@ -612,6 +613,63 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     sub2_counter should be(0)
     sub1_counter should be(4)
+  }
+
+  test("Message groups are sticky to a consumer") {
+
+    val dest = next_id("/queue/msggroups")
+    connect("1.1")
+    subscribe("1", dest)
+    subscribe("2", dest)
+
+    var actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
+
+    def send_receive = {
+      for (i <- 0 until 26 ) { async_send(dest, "data", "message_group:"+('a'+i).toChar+"\n") }
+      for (i <- 0 until 26 ) {
+        val (frame, ack) = receive_message()
+        for( sub <- List("1", "2", "3") if( frame.contains("subscription:"+sub+"\n")) ) {
+          val set = actual_mapping.getOrElseUpdate(sub, mutable.HashSet())
+          for (i <- 0 until 26 ) {
+            var c = ('a' + i).toChar
+            if( frame.contains("message_group:"+c+"\n")) {
+              set.add(c)
+            }
+          }
+        }
+        ack
+      }
+    }
+
+    send_receive
+
+    var expected_mapping = actual_mapping
+    println(expected_mapping)
+    expected_mapping.get("1").get.intersect(expected_mapping.get("2").get).isEmpty should be(true)
+
+    actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
+    // Send more messages in, make sure they stay mapping to same consumers.
+    send_receive; send_receive; send_receive; send_receive
+
+    actual_mapping should be (expected_mapping)
+
+    // Add another subscriber, the groups should re-balance
+    subscribe("3", dest)
+
+    actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
+    send_receive
+    expected_mapping = actual_mapping
+    println(expected_mapping)
+
+    expected_mapping.get("1").get.intersect(expected_mapping.get("2").get).isEmpty should be(true)
+    expected_mapping.get("2").get.intersect(expected_mapping.get("3").get).isEmpty should be(true)
+    expected_mapping.get("1").get.intersect(expected_mapping.get("3").get).isEmpty should be(true)
+
+    actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
+    // Send more messages in, make sure they stay mapping to same consumers.
+    send_receive; send_receive; send_receive; send_receive
+    actual_mapping should be (expected_mapping)
+
   }
 
 

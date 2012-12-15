@@ -598,6 +598,21 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
 
       var acquiringSub: Subscription = null
+
+      // Find the the first exclusive target of the message
+      var exclusive_target = queue.exclusive_subscriptions.find( _.matches(delivery) )
+
+      // Should we looks for the message group bucket?
+      if ( exclusive_target.isEmpty && delivery.message.message_group != null ) {
+        var iterator = queue.message_group_buckets.iterator(delivery.message.message_group)
+        while (exclusive_target==None && iterator.hasNext) {
+          val bucket = iterator.next();
+          if( bucket.sub.matches(delivery) ) {
+            exclusive_target = Some(bucket.sub)
+          }
+        }
+      }
+
       parked.foreach{ sub=>
 
         if( sub.browser ) {
@@ -619,48 +634,43 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             // advance: another sub already acquired this entry..
             advancing += sub
           } else {
-            if (!sub.matches(delivery)) {
+
+            // Is the current sub not the exclusive target?
+            if( (exclusive_target.isDefined && (exclusive_target.get != sub))
+                || !sub.matches(delivery)
+                || (exclusive_target.isEmpty && delivery.message.message_group!=null) ) {
               // advance: not interested.
               advancing += sub
             } else {
 
-              // Find the the first exclusive target of the message
-              val exclusive_target = queue.exclusive_subscriptions.find( _.matches(delivery) )
-
-              // Is the current sub not the exclusive target?
-              if( exclusive_target.isDefined && (exclusive_target.get != sub) ) {
-                // advance: not interested.
-                advancing += sub
+              // Is the sub flow controlled?
+              if( sub.full ) {
+                // hold back: flow controlled
+                heldBack += sub
               } else {
-                // Is the sub flow controlled?
-                if( sub.full ) {
-                  // hold back: flow controlled
-                  heldBack += sub
+                // advance: accepted...
+                if( queue.tune_round_robin ) {
+                  acquiringSub = sub
                 } else {
-                  // advance: accepted...
-                  if( queue.tune_round_robin ) {
-                    acquiringSub = sub
-                  } else {
-                    advancing += sub
-                  }
-                  acquirer = sub
-
-                  val acquiredQueueEntry = sub.acquire(entry)
-                  val acquiredDelivery = delivery.copy
-                  if( acquiredDelivery.sender == Nil) {
-                    acquiredDelivery.sender ::= queue.address
-                  }
-
-                  acquiredDelivery.ack = (consumed, uow)=> {
-                    if( uow!=null ) {
-                      uow.retain()
-                    }
-                    queue.ack_source.merge((acquiredQueueEntry, consumed, uow))
-                  }
-
-                  val accepted = sub.offer(acquiredDelivery)
-                  assert(accepted, "sub should have accepted, it had reported not full earlier.")
+                  advancing += sub
                 }
+                acquirer = sub
+
+                val acquiredQueueEntry = sub.acquire(entry)
+                val acquiredDelivery = delivery.copy
+                if( acquiredDelivery.sender == Nil) {
+                  acquiredDelivery.sender ::= queue.address
+                }
+
+                acquiredDelivery.ack = (consumed, uow)=> {
+                  if( uow!=null ) {
+                    uow.retain()
+                  }
+                  queue.ack_source.merge((acquiredQueueEntry, consumed, uow))
+                }
+
+                val accepted = sub.offer(acquiredDelivery)
+                assert(accepted, "sub should have accepted, it had reported not full earlier.")
               }
             }
           }

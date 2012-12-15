@@ -387,10 +387,15 @@ A `queue` element may be configured with the following attributes:
   details.  Defaults to false.
 
 * `tail_buffer` : The amount of memory buffer space allocated for holding
-freshly enqueued message.  Defaults to `640k`.
+  freshly enqueued message.  Defaults to `640k`.
 
 * `persistent` : If set to false, then the queue will not persistently
-store it's message.  Defaults to true.
+  store it's message.  Defaults to true.
+
+* `message_group_graceful_handoff` : When set to true, the queue
+  will drain message group consumers of messages before
+  allowing new messages to dispatched to messages groups which have been 
+  moved to a different consumer due to re-balancing. Defaults to true.
 
 * `round_robin` : Should the destination dispatch messages to consumers
   using round robin distribution strategy?  Defaults to true.
@@ -398,7 +403,7 @@ store it's message.  Defaults to true.
   consumers until those consumers start throttling the broker.
 
 * `swap` : If set to false, then the queue will not swap messages out of 
-memory.  Defaults to true.
+  memory.  Defaults to true.
 
 * `swap_range_size` : The number max number of flushed queue entries to load
   from the store at a time. Note that Flushed entires are just reference

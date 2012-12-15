@@ -60,6 +60,9 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
    */
   var persistent = false
 
+  var message_group_buffer:AsciiBuffer = null
+  override def message_group = if( message_group_buffer==null ) null else message_group_buffer.toString
+
   for( header <- (frame.updated_headers ::: frame.headers).reverse ) {
     header match {
       case (MESSAGE_ID, value) =>
@@ -70,9 +73,12 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
         expiration = java.lang.Long.parseLong(value)
       case (PERSISTENT, value) =>
         persistent = java.lang.Boolean.parseBoolean(value)
+      case (MESSAGE_GROUP, value) =>
+        message_group_buffer = value
       case _ =>
     }
   }
+
 
   def getBodyAs[T](toType : Class[T]) = {
     (frame.content match {
@@ -386,6 +392,7 @@ object Stomp {
   val RETAIN = ascii("retain")
   val SET = ascii("set")
   val REMOVE = ascii("remove")
+  val MESSAGE_GROUP = ascii("message_group")
 
   val MESSAGE_ID = ascii("message-id")
   val PRORITY = ascii("priority")
