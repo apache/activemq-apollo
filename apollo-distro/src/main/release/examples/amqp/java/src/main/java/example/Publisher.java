@@ -21,7 +21,7 @@ import javax.jms.*;
 
 class Publisher {
 
-    public static void main(String []args) throws JMSException {
+    public static void main(String []args) throws Exception {
 
         String user = env("APOLLO_USER", "admin");
         String password = env("APOLLO_PASSWORD", "password");
@@ -53,7 +53,7 @@ class Publisher {
         producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
         for( int i=1; i <= messages; i ++) {
-            TextMessage msg = session.createTextMessage(body);
+            TextMessage msg = session.createTextMessage("#:"+i);
             msg.setIntProperty("id", i);
             producer.send(msg);
             if( (i % 1000) == 0) {
@@ -62,8 +62,9 @@ class Publisher {
         }
 
         producer.send(session.createTextMessage("SHUTDOWN"));
+        Thread.sleep(1000*3);
         connection.close();
-
+        System.exit(0);
     }
 
     private static String env(String key, String defaultValue) {

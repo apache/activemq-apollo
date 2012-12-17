@@ -51,17 +51,18 @@ class Listener {
                 if( "SHUTDOWN".equals(body)) {
                     long diff = System.currentTimeMillis() - start;
                     System.out.println(String.format("Received %d in %.2f seconds", count, (1.0*diff/1000.0)));
-                    break;
+                    connection.close();
+                    System.exit(1);
                 } else {
-                    if( count != msg.getIntProperty("id") ) {
-                        System.out.println("mismatch: "+count+"!="+msg.getIntProperty("id"));
+                    try {
+                        if( count != msg.getIntProperty("id") ) {
+                            System.out.println("mismatch: "+count+"!="+msg.getIntProperty("id"));
+                        }
+                    } catch (NumberFormatException ignore) {
                     }
-                    count = msg.getIntProperty("id");
-
-                    if( count == 0 ) {
+                    if( count == 1 ) {
                         start = System.currentTimeMillis();
-                    }
-                    if( count % 1000 == 0 ) {
+                    } else if( count % 1000 == 0 ) {
                         System.out.println(String.format("Received %d messages.", count));
                     }
                     count ++;
@@ -71,7 +72,6 @@ class Listener {
                 System.out.println("Unexpected message type: "+msg.getClass());
             }
         }
-        connection.close();
     }
 
     private static String env(String key, String defaultValue) {
