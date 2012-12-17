@@ -36,7 +36,7 @@ multi-protocol broker and supports STOMP, AMQP, MQTT, Openwire, SSL, and WebSock
 * MQTT Protocol Support
 * OpenWire Protocol Support
 * [Topics and Queues](documentation/stomp-manual.html#Destination_Types)
-* [Queue Browsers](documentation/stino-manual.html#Browsing_Subscriptions)
+* [Queue Browsers](documentation/stomp-manual.html#Browsing_Subscriptions)
 * [Durable Subscriptions on Topics](documentation/stomp-manual.html#Topic_Durable_Subscriptions)
 * [Mirrored Queues](documentation/user-manual.html#Mirrored_Queues)
 * [Reliable Messaging](documentation/stomp-manual.html#Reliable_Messaging)

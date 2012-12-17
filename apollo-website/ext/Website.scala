@@ -43,13 +43,7 @@ object Website {
         "1.3",
         "1.2",
         "1.1",
-        "1.0",
-        "1.0-beta6",
-        "1.0-beta5",
-        "1.0-beta4",
-        "1.0-beta3",
-        "1.0-beta2",
-        "1.0-beta1"
+        "1.0"
         )  
 
   val project_keywords= "messaging,stomp,jms,activemq,apollo"

@@ -72,39 +72,36 @@ Download it today!
       td
         a(href="http://apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz.asc") GPG Signature
 
-- if( !project_versions.drop(1).isEmpty )
-  h2.accordion 
-    a(href="#") Older Versions
-  div.hide
-    - for( version <- project_versions.drop(1) )
-      - val release_version = if( version.startsWith("1.0-beta" ) ) 
-        - version.replace('.','-')
-      - else
+  - if( !project_versions.drop(1).isEmpty )
+    div.accordion(style="padding-top:1em;")
+      a(href="#") Show older versions...
+    div.hide
+      - for( version <- project_versions.drop(1) )
         - version
-      h3.accordion 
-        a(href="#") #{project_name} #{version} 
-      div.hide
-        :&markdown
-          [Release Notes](blog/releases/release-#{release_version}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
-        table.download
-          tr 
-            td Binaries for Unix/Linux/OS X:
-            td 
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz") apache-apollo-#{version}-unix-distro.tar.gz
-            td
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz.asc") GPG Signature
-          tr 
-            td Binaries for Windows:
-            td 
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip") apache-apollo-#{version}-windows-distro.zip
-            td
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip.asc") GPG Signature
-          tr 
-            td  Source Code Distribution:
-            td 
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz") apollo-project-#{version}-source-release.tar.gz
-            td
-              a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz.asc") GPG Signature
+        h3.accordion 
+          a(href="#") #{project_name} #{version} 
+        div.hide
+          :&markdown
+            [Release Notes](blog/releases/release-#{version}.html) | [Installation Instructions](${website_base_url}/versions/#{version}/website/documentation/getting-started.html) | [Documentation](${website_base_url}/versions/#{version}/website/documentation/index.html)
+          table.download
+            tr 
+              td Binaries for Unix/Linux/OS X:
+              td 
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz") apache-apollo-#{version}-unix-distro.tar.gz
+              td
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-unix-distro.tar.gz.asc") GPG Signature
+            tr 
+              td Binaries for Windows:
+              td 
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip") apache-apollo-#{version}-windows-distro.zip
+              td
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apache-apollo-#{version}-windows-distro.zip.asc") GPG Signature
+            tr 
+              td  Source Code Distribution:
+              td 
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz") apollo-project-#{version}-source-release.tar.gz
+              td
+                a(href="http://archive.apache.org/dist/activemq/activemq-apollo/#{version}/apollo-project-#{version}-source-release.tar.gz.asc") GPG Signature
 
 
 :&markdown
