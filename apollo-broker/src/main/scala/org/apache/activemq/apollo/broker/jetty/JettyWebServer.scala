@@ -116,8 +116,10 @@ object JettyWebServer extends Log {
         if( url.getProtocol == "file") {
           // we are probably being run from an IDE...
           val classes_dir = new File( url.getFile.stripSuffix("/"+bootClazz) )
-          if( classes_dir.isDirectory ) {
+          if( (classes_dir/".."/".."/"src"/"main"/"webapp").isDirectory ) {
             classes_dir/".."/".."/"src"/"main"/"webapp"
+          } else if( (classes_dir/".."/".."/"apollo-web"/"src"/"main"/"webapp").isDirectory ) {
+              classes_dir/".."/".."/"apollo-web"/"src"/"main"/"webapp"
           } else {
             null
           }
