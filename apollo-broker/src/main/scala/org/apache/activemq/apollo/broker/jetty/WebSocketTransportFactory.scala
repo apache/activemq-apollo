@@ -296,6 +296,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         dispatch_queue {
           protocolCodec = null
           on_completed.run()
+          transportListener.onTransportDisconnected()
         }
       }
     }
