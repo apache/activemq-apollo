@@ -58,5 +58,6 @@ multi-protocol broker and supports STOMP, AMQP, MQTT, Openwire, SSL, and WebSock
 * [STOMP Protocol Manual](documentation/stomp-manual.html) 
 * [OpenWire Protocol Manual](documentation/openwire-manual.html)
 * [AMQP Protocol Manual](documentation/amqp-manual.html) 
+* [MQTT Protocol Manual](documentation/mqtt-manual.html)
 
 
