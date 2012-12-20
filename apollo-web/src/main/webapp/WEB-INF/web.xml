@@ -67,5 +67,10 @@
     <error-code>500</error-code>
     <location>/WEB-INF/scalate/errors/500.scaml</location>
   </error-page>
-  
+
+  <mime-mapping>
+    <extension>woff</extension>
+    <mime-type>font/woff</mime-type>
+  </mime-mapping>
+
 </web-app>

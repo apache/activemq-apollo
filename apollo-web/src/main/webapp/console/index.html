@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <!-- 
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png"> 
+  -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
+  <link href="css/app.css" rel="stylesheet">
+
+  <title>Apache Apollo - Admin Console</title>
+  <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div id="notfooter">
+<!-- Navigation Bar -->
+<div id="navbar-holder" class="navbar navbar-fixed-top">
+  <script type="text/x-handlebars" data-template-name="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse"
+         data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+      <a class="brand">Apollo Console</a>
+
+      <div class="nav-collapse" id="main-menu">
+        <!--
+        <ul class="nav" id="main-menu-left">
+          <li><a href="">Broker</a></li>
+          <li><a href="">Alerts</a></li>
+          <li><a href="">Logs</a></li>
+        </ul>
+        -->
+        <ul class="nav pull-right" id="main-menu-right">
+          {{#if App.LoginController.is_logged_in}}
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="icon-user"></i>{{App.LoginController.user_name}}<b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="#" {{action "logout" target="App.LoginController" on="click"}}>Logout</a></li>
+            </ul>
+          </li>
+          {{/if}}
+        </ul>
+      </div>
+    </div>
+  </div>
+  </script>
+</div>
+<div class="container" style="padding-top:51px;">
+  <div class="row" id="notifications" style="padding-top: 1em;" >
+  </div>
+  <div id="content-holder" class="row">
+  <script type="text/x-handlebars" data-template-name="content">
+    {{#unless App.LoginController.is_logged_in}}
+    <div class="login-form span4 offset4 well">
+      <h2>Login</h2>
+      <form action="">
+        <fieldset>
+          <div class="clearfix">
+            {{view Ember.TextField placeholder="Username" valueBinding="App.LoginController.username"}}
+          </div>
+          <div class="clearfix">
+            {{view Ember.TextField placeholder="Password" valueBinding="App.LoginController.password" type="password"}}
+          </div>
+          <input type="submit" value="Sign in" class="btn btn-primary" {{action "login" target="App.LoginController" on="click"}}>
+        </fieldset>
+      </form>
+    </div>    
+    {{else}}
+    <div class="span12">
+      <ul class="nav nav-tabs">
+        <li class="active"><a href="#TAB_Virtual_Hosts" data-toggle="tab">Virtual Hosts</a></li>
+        <!--
+        <li><a href="#TAB_Connectors" data-toggle="tab">Connectors</a></li>
+        <li><a href="#TAB_Connections" data-toggle="tab">Connections</a></li>
+        -->
+        <li><a href="#TAB_Operating_Environment" data-toggle="tab">Operating Environment</a></li>
+      </ul>
+      <div class="tabbable">
+        <div class="tab-content">
+          <div class="tab-pane active" id="TAB_Virtual_Hosts">
+            <div class="form-horizontal">
+              <div class="control-group">
+                <label class="control-label" for="select01"><strong style="font-size:170%">Virtual Host:</strong></label>
+                <div class="controls">
+                  {{view Ember.Select contentBinding="App.broker.virtual_hosts" selectionBinding="App.VirtualHostController.selected"}}
+                  <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="span4">
+                <div class="well" style="padding: 8px 8px">
+                  <div class="well-title">Details</div>
+                  <table class="details table table-bordered table-striped">
+                    <tbody>
+                    <tr><td><strong>Up time: </strong>{{App.virtual_host.state_since}}</td></tr>
+                    <tr><td><strong>Host Names: </strong>
+                      <ul>
+                      {{#each App.virtual_host.host_names}}
+                        <li>{{.}}</li>
+                      {{/each}}
+                      </ul>
+                    </td></tr>
+                    {{#if App.virtual_host.store}}
+                    <tr><td><strong>Store: </strong>{{App.virtual_host_store.id}}</td></tr>
+                    {{/if}}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="span8">
+                {{view Bootstrap.Tabs contentBinding="App.VirtualHostController.tabs" selectionBinding="App.VirtualHostController.selected_tab"}}
+                <div>
+                  <div class="well form-horizontal">
+                    <label class="control-label" for="select01"><strong>Create: </strong></label>
+                    <div class="controls">
+                      <input type="text" class="input-xlarge" id="create_queue">
+                      <a class="btn" href="#"><i class="icon-plus-sign icon-white"></i></a>
+                    </div>
+                  </div>
+
+                  <table class="details table table-bordered table-striped" style="">
+                    <tbody>
+                    <tr>
+                      <th><input type="checkbox" id="all"></th>
+                      <th>Name</th>
+                      <th>Messages</th>
+                      <th>Size</th>
+                      <th>Producers</th>
+                      <th>Consumer</th>
+                    </tr>
+                    {{#each App.DestinationsController}}
+                    <tr>
+                      <td><input type="checkbox" id="foo"></td>
+                      <td><i class=" icon-zoom-in"></i> {{[0]}}</td><td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
+                    </tr>
+                    {{/each}}
+                    </tbody>
+                  </table>
+                  <div style="padding:.5em 0">
+                    <button class="btn btn-small">Delete</button>
+                  </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+          <!--
+          <div class="tab-pane" id="TAB_Connectors">
+            <h3>Connectors</h3>
+            <p>
+              How client connect to the broker, select
+              a connector to view more details about it.
+            </p>
+            <p>
+              <ul>
+                <li>61613</li>
+                <li>61616</li>
+              </ul>
+            </p>
+          </div>
+          <div class="tab-pane" id="TAB_Connections">
+            <h3>Connections</h3>
+            <p>
+              How client connect to the broker, select
+              a connector to view more details about it.
+            </p>
+            <form class="well form-search">
+              <input type="text" class="input-medium search-query">
+              <button type="submit" class="btn">Search</button>
+            </form>
+            <p>
+              <ul>
+                <li>61613</li>
+                <li>61616</li>
+              </ul>
+            </p>
+          </div>
+          -->
+          <div class="row tab-pane" id="TAB_Operating_Environment">
+            <div class="span4">
+              <div class="well" style="padding: 8px 8px">
+                <div class="well-title">Apache Apollo</div>
+                <table class="details table table-bordered table-striped">
+                  <tbody>
+                  <tr>
+                    <td><strong>Version: </strong>{{App.broker.version}}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Installed: </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Configuration: </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="span4">
+              <div class="well" style="padding: 8px 8px">
+                <div class="well-title">Java Virtual Machine</div>
+                <table class="details table table-bordered table-striped">
+                  <tbody>
+                  <tr><td><strong>Version: </strong>{{App.broker.jvm_metrics.jvm_name}}</td></tr>
+                  <tr><td><strong>Up Time: </strong>{{App.broker.jvm_metrics.uptime}}</td></tr>
+                  <tr><td><strong>Heap Memory: </strong>{{App.broker.jvm_metrics.heap_memory.used}} / {{App.broker.jvm_metrics.heap_memory.alloc}}</td></tr>
+                  <tr><td><strong>Non-Heap Memory: </strong>{{App.broker.jvm_metrics.non_heap_memory.used}} / {{App.broker.jvm_metrics.non_heap_memory.alloc}}</td></tr>
+                  <tr><td><strong>Threads: </strong>{{App.broker.jvm_metrics.threads_current}}</td></tr>
+                  <tr><td><strong>CPU Time: </strong>{{App.broker.jvm_metrics.os_cpu_time}}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="span4">
+              <div class="well" style="padding: 8px 8px">
+                <div class="well-title">Operating System</div>
+                <table class="details table table-bordered table-striped">
+                  <tbody>
+                  <tr><td><strong>Name: </strong>{{App.broker.jvm_metrics.os_name}}</td></tr>
+                  <tr><td><strong>Architecture: </strong>{{App.broker.jvm_metrics.os_arch}}</td></tr>
+                  <tr><td><strong>Processor Cores: </strong>{{App.broker.jvm_metrics.os_processors}}</td></tr>
+                  <tr><td><strong>Memory Free/Total: </strong>{{App.broker.jvm_metrics.os_memory_free}} / {{App.broker.jvm_metrics.os_memory_total}}</td></tr>
+                  <tr><td><strong>Swap Used/Available: </strong>{{App.broker.jvm_metrics.os_swap_total}} / {{App.broker.jvm_metrics.os_swap_free}} </td></tr>
+                  <tr><td><strong>FD Open/Max: </strong>{{App.broker.jvm_metrics.os_fd_open}} / {{App.broker.jvm_metrics.os_fd_max}}</td></tr>
+                  <tr><td><strong>Load Average</strong>{{App.broker.jvm_metrics.os_load_average}}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/unless}}
+    </script>
+  </div>
+</div>
+<div class="footer-push"></div>
+</div>
+<footer id="footer">
+  © The Apache Software Foundation. 
+</footer>
+
+<script src="js/jquery-1.7.2.min.js"></script>
+<script src="js/excanvas.min.js"></script>
+<script src="js/jquery.flot.js"></script>
+<script src="js/jquery.flot.pie.js"></script>
+<script src="js/jquery.flot.orderBars.js"></script>
+<script src="js/jquery.flot.resize.js"></script>
+<script src="js/bootstrap.js"></script>
+<script src="js/handlebars-1.0.0.beta.6.js"></script>
+<script src="js/ember-1.0.0-pre.2.js"></script>
+<script src="js/ember-bootstrap-0.0.1.min.js"></script>
+<script src="js/app.js"></script>  
+</body>
+</html>
