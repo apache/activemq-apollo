@@ -201,8 +201,6 @@ For example using the above, these subscriptions are possible
 * `PRICE/STOCK/#` : Any price for a stock on any exchange
 * `PRICE/STOCK/NASDAQ/+` : Any stock price on NASDAQ
 * `PRICE/STOCK/+/IBM` : Any IBM stock price on any exchange
-* `PRICE/STOCK/+/I+` : Any stock price starting with 'I' on any exchange
-* `PRICE/STOCK/+/+{[0-9]}` : Any stock price that ends in a digit on any exchange
 
 ### Keep Alive
 ${project_name} will only set a keep-alive/heart-beat monitor if the client has specified a `keepAlive` value in the
