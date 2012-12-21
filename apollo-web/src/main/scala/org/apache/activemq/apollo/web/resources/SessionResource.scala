@@ -129,7 +129,6 @@ class SessionResource extends Resource {
       }
     } catch {
       case e:WebApplicationException => // this happens if user is not authorized
-        e.printStackTrace()
         false
     }
   }
