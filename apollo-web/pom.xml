@@ -50,7 +50,7 @@
     <!-- Web Framework APIs -->
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
-      <artifactId>scalate-core</artifactId>
+      <artifactId>scalate-core_2.10</artifactId>
       <version>${scalate-version}</version>
     </dependency>
     <dependency>
@@ -66,7 +66,7 @@
 
     <dependency>
       <groupId>com.wordnik</groupId>
-      <artifactId>swagger-jaxrs_2.9.1</artifactId>
+      <artifactId>swagger-jaxrs_2.10.0-RC5</artifactId>
       <version>${swagger-version}</version>
       <exclusions>
         <exclusion>
@@ -106,7 +106,7 @@
     <!-- Testing -->
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
-      <artifactId>scalate-test</artifactId>
+      <artifactId>scalate-test_2.10</artifactId>
       <version>${scalate-version}</version>
       <scope>test</scope>
       <exclusions>
@@ -153,8 +153,7 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.9.2
-</artifactId>
+      <artifactId>scalatest_${scala-version}</artifactId>
       <version>${scalatest-version}</version>
       <scope>test</scope>
     </dependency>
@@ -234,7 +233,7 @@
 
       <plugin>
         <groupId>org.fusesource.scalate</groupId>
-        <artifactId>maven-scalate-plugin</artifactId>
+        <artifactId>maven-scalate-plugin_2.10</artifactId>
         <version>${scalate-version}</version>
         <executions>
           <execution>

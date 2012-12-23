@@ -73,8 +73,7 @@
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.9.2
-</artifactId>
+      <artifactId>scalatest_${scala-version}</artifactId>
       <version>${scalatest-version}</version>
       <scope>test</scope>
     </dependency>
@@ -133,7 +132,7 @@
 
       <plugin>
         <groupId>org.fusesource.scalate</groupId>
-        <artifactId>maven-scalate-plugin</artifactId>
+        <artifactId>maven-scalate-plugin_2.10</artifactId>
         <version>${scalate-version}</version>
         <executions>
           <execution>

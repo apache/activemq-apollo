@@ -40,17 +40,17 @@
 
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
-      <artifactId>scalate-wikitext</artifactId>
+      <artifactId>scalate-wikitext_2.10</artifactId>
       <version>${scalate-version}</version>
     </dependency>
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
-      <artifactId>scalate-page</artifactId>
+      <artifactId>scalate-page_2.10</artifactId>
       <version>${scalate-version}</version>
     </dependency>
     <dependency>
       <groupId>org.fusesource.scalamd</groupId>
-      <artifactId>scalamd</artifactId>
+      <artifactId>scalamd_2.10</artifactId>
       <version>${scalamd-version}</version>
     </dependency>
     <dependency>
@@ -62,7 +62,7 @@
     <!-- testing -->
     <dependency>
       <groupId>org.fusesource.scalate</groupId>
-      <artifactId>scalate-test</artifactId>
+      <artifactId>scalate-test_2.10</artifactId>
       <version>${scalate-version}</version>
       <scope>test</scope>
     </dependency>
@@ -87,9 +87,9 @@
       </plugin>
 
       <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>${maven-scala-plugin-version}</version>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>${scala-plugin-version}</version>
         <executions>
           <execution>
             <goals>
@@ -127,7 +127,7 @@
 
       <plugin>
         <groupId>org.fusesource.scalate</groupId>
-        <artifactId>maven-scalate-plugin</artifactId>
+        <artifactId>maven-scalate-plugin_2.10</artifactId>
         <version>${scalate-version}</version>
         
         <configuration>
@@ -299,7 +299,7 @@
         <plugins>
           <plugin>
             <groupId>org.fusesource.scalate</groupId>
-            <artifactId>maven-scalate-plugin</artifactId>
+            <artifactId>maven-scalate-plugin_2.10</artifactId>
             <version>${scalate-version}</version>
         
             <executions>

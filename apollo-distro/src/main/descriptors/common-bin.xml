@@ -64,14 +64,14 @@
         <include>com.sun.jersey:jersey-server</include>
         <include>com.sun.jersey:jersey-core</include>
         <include>asm:asm</include>
-        <include>org.fusesource.scalate:scalate-core</include>
-        <include>org.fusesource.scalate:scalate-util</include>
+        <include>org.fusesource.scalate:scalate-core_2.10</include>
+        <include>org.fusesource.scalate:scalate-util_2.10</include>
         <include>net.sf.josql:josql</include>
         <include>net.sf.josql:gentlyweb-utils</include>
 
-        <include>com.wordnik:swagger-jaxrs_2.9.1</include>
-        <include>com.wordnik:swagger-core_2.9.1</include>
-        <include>com.wordnik:swagger-annotations_2.9.1</include>
+        <include>com.wordnik:swagger-jaxrs_2.10.0-RC5</include>
+        <include>com.wordnik:swagger-core_2.10.0-RC5</include>
+        <include>com.wordnik:swagger-annotations_2.10.0-RC5</include>
         <include>com.fasterxml.jackson.module:jackson-module-scala</include>
         
         <!-- for JMX over REST support -->

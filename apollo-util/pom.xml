@@ -112,8 +112,7 @@
     <!-- Testing Dependencies -->    
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.9.2
-</artifactId>
+      <artifactId>scalatest_${scala-version}</artifactId>
       <version>${scalatest-version}</version>
       <scope>test</scope>
     </dependency>
