@@ -109,7 +109,7 @@
 
     <jasypt-version>1.6</jasypt-version>
 
-    <scalate-version>1.6.0</scalate-version>
+    <scalate-version>1.6.1</scalate-version>
     <scalamd-version>1.6</scalamd-version>
 
     <servlet-api-version>3.0.0.v201112011016</servlet-api-version>
