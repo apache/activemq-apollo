@@ -51,6 +51,12 @@
       <version>99-trunk-SNAPSHOT</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.orbit</groupId>
+      <artifactId>javax.servlet</artifactId>
+      <version>${servlet-api-version}</version>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Scala Support -->
     <dependency>
