@@ -152,7 +152,7 @@ class TreeAllocator(range:Range) extends Allocator {
     free_by_size.remove(spot)
 
     // only need to put back if it was not exactly what we need.
-    if( spot != req ) {
+    if( spot.offset != req.offset || spot.size != req.size ) {
 
       // deal with excess at the front
       if( spot.offset != req.offset ) {

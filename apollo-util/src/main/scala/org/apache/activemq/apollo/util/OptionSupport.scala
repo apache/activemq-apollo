@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.util
 import java.{lang=>jl}
+import language.implicitConversions
 
 /**
  * <p>

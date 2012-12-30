@@ -38,6 +38,7 @@ import org.apache.activemq.apollo.broker.store.leveldb.RecordLog.LogInfo
 import org.apache.activemq.apollo.broker.store.PBSupport
 import java.util.concurrent.atomic.AtomicReference
 import org.fusesource.hawtbuf.{DataByteArrayInputStream, Buffer}
+import language.implicitConversions;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

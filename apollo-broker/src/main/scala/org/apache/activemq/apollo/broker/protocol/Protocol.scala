@@ -144,6 +144,7 @@ object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
         case null => null
         case _ => throw new IllegalArgumentException("Invalid protocol filter type: "+instance.getClass)
       }
+      import language.reflectiveCalls
       type FilterDuckType = {
         var protocol_handler:ProtocolHandler
         var dto:SimpleProtocolFilterDTO

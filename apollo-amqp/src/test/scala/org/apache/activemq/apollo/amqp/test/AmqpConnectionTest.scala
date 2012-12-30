@@ -27,10 +27,10 @@ import org.apache.qpid.proton.hawtdispatch.api._
 
   class AmqpConnectionTest extends AmqpTestSupport {
 
-  def print_result[T](action: String)(then: => Unit): Callback[T] = new Callback[T] {
+  def print_result[T](action: String)(then_action: => Unit): Callback[T] = new Callback[T] {
     def onSuccess(value: T) {
       println(action + " completed");
-      then
+      then_action
     }
 
     def onFailure(value: Throwable) {
@@ -39,7 +39,7 @@ import org.apache.qpid.proton.hawtdispatch.api._
     }
   }
 
-  def then[T](func: (T) => Unit): Callback[T] = new Callback[T] {
+  def then_do[T](func: (T) => Unit): Callback[T] = new Callback[T] {
     def onSuccess(value: T) {
       func(value)
     }

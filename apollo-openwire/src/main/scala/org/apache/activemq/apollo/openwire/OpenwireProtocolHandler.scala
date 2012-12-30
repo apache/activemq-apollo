@@ -526,6 +526,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
             case None=>
               queue(ack(info))
           }
+        case Some(dest) =>
+          queue(fail(new OpenwireException("Internal error", "javax.jms.InvalidDestinationException"), info))
       }
     }
   }

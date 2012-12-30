@@ -38,6 +38,7 @@ class PathMapMemoryTest {
   def testVeryLongPaths = {
     var i = 1
     while (i < 100) {
+      i += 1
       var name: String = "1"
       var j = 2
       while (j <= i) {
@@ -49,11 +50,8 @@ class PathMapMemoryTest {
         var map: PathMap[String] = new PathMap[String]
         map.put(d1, "test")
       } catch {
-        case e: Throwable => {
-          fail(("Destination name too long: " + name + " : " + e))
-        }
+        case e: Throwable => fail("Destination name too long: " + name + " : " + e)
       }
-      i += 1
     }
   }
 

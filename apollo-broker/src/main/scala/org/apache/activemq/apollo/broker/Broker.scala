@@ -43,6 +43,7 @@ import java.util
 import javax.management.openmbean.CompositeData
 import javax.net.ssl.SSLContext
 import util.Properties
+import language.implicitConversions
 
 /**
  * <p>

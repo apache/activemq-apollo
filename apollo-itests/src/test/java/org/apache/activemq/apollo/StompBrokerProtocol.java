@@ -47,7 +47,7 @@ public class StompBrokerProtocol extends BrokerProtocol {
 
     @Override
     public String name(Destination destination) {
-        return ((StompJmsDestination)destination).getPhysicalName();
+        return ((StompJmsDestination)destination).getName();
     }
 
     @Override

@@ -22,6 +22,7 @@ import java.io.Serializable
 import org.apache.activemq.apollo.broker.store._
 import PBSupport._
 import org.fusesource.hawtbuf._
+import language.implicitConversions
 
 object HelperTrait {
 

@@ -39,8 +39,7 @@ import com.sun.jersey.server.impl.ThreadLocalInvoker
 import com.sun.jersey.spi.resource.Singleton
 import com.sun.jersey.api.view.ImplicitProduces
 import com.sun.jersey.api.core.ResourceConfig
-// import com.wordnik.swagger.jaxrs.{Help, ApiListing}
-// import com.wordnik.swagger.core.{Documentation, ApiOperation, Api}
+import language.implicitConversions;
 
 object Resource extends Log {
 

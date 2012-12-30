@@ -729,7 +729,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
       fail("Expecting JMS Exception")
     } catch {
       case e:JMSException =>
-      case _ => fail("Expecting JMS Exception")
+      case e:Throwable => fail("Expecting JMS Exception")
     }
  }
 

@@ -51,6 +51,7 @@ case class RichBuffer(self:Buffer) extends Proxy {
   }
 }
 
+import language.implicitConversions
 object BufferSupport {
   implicit def to_rich_buffer(value:Buffer):RichBuffer = RichBuffer(value)
 }

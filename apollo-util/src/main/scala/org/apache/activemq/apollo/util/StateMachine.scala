@@ -64,7 +64,7 @@ abstract class StateMachine {
 
   def react[T <: State : Manifest](func: (T)=>Unit) = {
     var m = manifest[T]
-    if( m.erasure == _state.getClass ) {
+    if( m.runtimeClass == _state.getClass ) {
       func(_state.asInstanceOf[T])
     }
   }

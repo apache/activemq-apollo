@@ -532,7 +532,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     var outbound_capacity_remaining = 1024 * 64;
 
-    val outbound_executor = new SerialExecutor(blockingExecutor) {
+    object outbound_executor extends SerialExecutor(blockingExecutor) {
       var outbound_drained = 0
       override def drained  = {
         val amount = outbound_drained

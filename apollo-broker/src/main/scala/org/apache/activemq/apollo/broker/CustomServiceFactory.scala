@@ -67,6 +67,7 @@ object SimpleCustomServiceFactory extends CustomServiceFactory with Log {
           return null;
       }
 
+      import language.reflectiveCalls
       type ServiceDuckType = {
         var broker: Broker
         var config: CustomServiceDTO

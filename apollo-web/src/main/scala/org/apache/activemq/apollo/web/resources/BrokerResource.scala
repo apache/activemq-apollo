@@ -36,6 +36,7 @@ import javax.ws.rs.core.MediaType._
 import javax.servlet.http.HttpServletResponse
 import FutureResult._
 import com.wordnik.swagger.annotations.{ApiOperation, Api}
+import language.implicitConversions;
 
 @Path(          "/api/json/broker")
 @Api(value =    "/api/json/broker",

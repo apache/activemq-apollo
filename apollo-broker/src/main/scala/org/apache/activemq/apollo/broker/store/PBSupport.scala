@@ -4,6 +4,7 @@ import java.io.{OutputStream, InputStream}
 import org.fusesource.hawtbuf.Buffer
 import org.apache.activemq.apollo.broker.DestinationAddress
 import collection.mutable.ListBuffer
+import language.implicitConversions;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more

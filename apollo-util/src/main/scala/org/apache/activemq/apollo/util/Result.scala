@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 package org.apache.activemq.apollo.util
+import language.implicitConversions
 
 object ResultSupport {
 

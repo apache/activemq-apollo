@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.util
 
 import java.io._
 import org.fusesource.hawtdispatch._
+import language.implicitConversions
 
 object FileSupport {
 

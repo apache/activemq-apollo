@@ -45,6 +45,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   @transient
   var retained_message: Delivery = _
 
+  import language.implicitConversions
   implicit def from_link(from:LinkDTO):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
   implicit def from_session(from:DeliverySession):(Long,Long,Long)=(from.enqueue_item_counter, from.enqueue_size_counter, from.enqueue_ts)
 

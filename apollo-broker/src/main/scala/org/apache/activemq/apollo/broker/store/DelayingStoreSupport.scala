@@ -26,6 +26,7 @@ import org.fusesource.hawtdispatch.{BaseRetained, ListEventAggregator}
 import org.apache.activemq.apollo.dto.{StoreStatusDTO, TimeMetricDTO, IntMetricDTO}
 import org.fusesource.hawtbuf.Buffer
 import java.lang.ref.WeakReference
+import language.implicitConversions
 
 object DelayingStoreSupport extends Log
 
