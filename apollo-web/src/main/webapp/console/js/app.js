@@ -30,15 +30,7 @@ App = Em.Application.create({
     }
   },
 
-  get:function(path, success, error) {
-    this.http("GET", path, success, error)
-  },
-
-  put:function(path, success, error) {
-    this.http("PUT", path, success, error)
-  },
-
-  http:function(type, path, success, error) {
+  ajax:function(type, path, success, error) {
     if( !error ) {
       error = this.default_error_handler;
     }
@@ -100,7 +92,7 @@ App.LoginController = Em.Controller.create({
   },
 
   logout: function() {
-    App.get("/session/signout", function(data) {
+    App.ajax("GET", "/session/signout", function(data) {
       App.LoginController.set('content', data);
     });
     this.set('content', null);
@@ -125,7 +117,7 @@ App.LoginController = Em.Controller.create({
   refresh: function(clear) {
     var was_logged_in = this.get('is_logged_in')
     var kind = this.get('kind')
-    App.get("/session/whoami", function(data) {
+    App.ajax("GET", "/session/whoami", function(data) {
       App.LoginController.set('content', data);
       if( App.LoginController.get('is_logged_in') ) {
         App.refresh();
@@ -139,7 +131,7 @@ App.LoginController = Em.Controller.create({
 App.broker = Ember.Object.create({});
 App.BrokerController = Ember.Controller.create({
   refresh: function() {
-    App.get("/broker", function(json) {
+    App.ajax("GET", "/broker", function(json) {
       App.broker.setProperties(json);
       if( App.VirtualHostController.get('selected') == null && json.virtual_hosts.length > 0 ) {
         App.VirtualHostController.set('selected', json.virtual_hosts[0]);
@@ -158,10 +150,10 @@ App.VirtualHostController = Em.ArrayController.create({
   refresh: function() {
     var selected = this.get("selected")
     if( selected ) {
-      App.get("/broker/virtual-hosts/"+selected, function(host) {
+      App.ajax("GET", "/broker/virtual-hosts/"+selected, function(host) {
         App.virtual_host.setProperties(host);
         if( host.store ) {
-          App.get("/broker/virtual-hosts/"+selected+"/store", function(store) {
+          App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
             App.virtual_host_store.setProperties(store);
           });
         } 
@@ -196,7 +188,7 @@ App.DestinationsController = Ember. ArrayController.create({
     }
     var kind = this.get('kind')
     var fields = ['id', 'metrics.queue_items', 'metrics.queue_size', 'metrics.producer_count', 'metrics.consumer_count'];
-    App.get("/broker/virtual-hosts/"+virtual_host+"/"+kind+"?ps=10000&f="+fields.join("&f="), function(data) {
+    App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"?ps=10000&f="+fields.join("&f="), function(data) {
       App.DestinationsController.set('content', data.rows);
     });
   }.observes("virtual_host", "kind"),
@@ -210,9 +202,33 @@ App.DestinationsController = Ember. ArrayController.create({
     var virtual_host = this.get('virtual_host');
     var kind = this.get('kind');
     var create_name = this.get('create_name');
-    var self = this;
-    App.put("/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+create_name, function(data) {
-      self.refresh();
+    this.set('create_name', "");
+    App.ajax("PUT", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+create_name, function(data) {
+      App.DestinationsController.refresh();
+    });
+  },
+
+  all_checked:false,
+
+  check_all_toggle: function() {
+    var all_checked= this.get("all_checked");
+    this.get('content').forEach(function(item){
+      item.set('checked', all_checked);
+    });
+  }.observes("all_checked"),
+
+  remove: function() {
+    var virtual_host = this.get('virtual_host');
+    var kind = this.get('kind');
+    var content = this.get('content');
+    content.forEach(function(item){
+      var checked = item.get('checked');
+      if( checked ) {
+        var name = item.get(0);
+        App.ajax("DELETE", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+name, function(data) {
+          App.DestinationsController.refresh();
+        });
+      }
     });
   },
 

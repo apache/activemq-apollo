@@ -139,23 +139,23 @@
                   <table class="details table table-bordered table-striped" style="">
                     <tbody>
                     <tr>
-                      <th><input type="checkbox" id="all"></th>
+                      <th>{{view Ember.Checkbox checkedBinding="App.DestinationsController.all_checked"}}</th>
                       <th>Name</th>
                       <th>Messages</th>
                       <th>Size</th>
                       <th>Producers</th>
-                      <th>Consumer</th>
+                      <th>Consumers</th>
                     </tr>
                     {{#each App.DestinationsController}}
                     <tr>
-                      <td><input type="checkbox" id="foo"></td>
+                      <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
                       <td><i class=" icon-zoom-in"></i> {{[0]}}</td><td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
                     </tr>
                     {{/each}}
                     </tbody>
                   </table>
                   <div style="padding:.5em 0">
-                    <button class="btn btn-small">Delete</button>
+                    <button class="btn btn-small" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
                   </div>
                   </div>
               </div>
@@ -258,11 +258,11 @@
 </footer>
 
 <script src="js/jquery-1.7.2.min.js"></script>
-<script src="js/excanvas.min.js"></script>
-<script src="js/jquery.flot.js"></script>
-<script src="js/jquery.flot.pie.js"></script>
-<script src="js/jquery.flot.orderBars.js"></script>
-<script src="js/jquery.flot.resize.js"></script>
+<!--<script src="js/excanvas.min.js"></script>-->
+<!--<script src="js/jquery.flot.js"></script>-->
+<!--<script src="js/jquery.flot.pie.js"></script>-->
+<!--<script src="js/jquery.flot.orderBars.js"></script>-->
+<!--<script src="js/jquery.flot.resize.js"></script>-->
 <script src="js/bootstrap.js"></script>
 <script src="js/handlebars-1.0.0.beta.6.js"></script>
 <script src="js/ember-1.0.0-pre.2.js"></script>
