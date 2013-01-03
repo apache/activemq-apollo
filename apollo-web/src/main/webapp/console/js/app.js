@@ -16,17 +16,22 @@ App = Em.Application.create({
   },
 
   default_error_handler:function(xhr, status, thrown) {
-    if( xhr.status == 401 ) {
-      Bootstrap.AlertMessage.create({
-        type:"warning",
-        message:"Action not authorized."
-      }).appendTo("#notifications")
-      App.LoginController.refresh();
+    if( xhr.status == 0 ) {
+      App.BrokerController.set("offline", true);
     } else {
-      Bootstrap.AlertMessage.create({
-        type:"error",
-        message:xhr.status+": "+thrown
-      }).appendTo("#notifications")
+      App.BrokerController.set("offline", false);
+      if( xhr.status == 401 ) {
+        Bootstrap.AlertMessage.create({
+          type:"warning",
+          message:"Action not authorized."
+        }).appendTo("#notifications")
+        App.LoginController.refresh();
+      } else {
+        Bootstrap.AlertMessage.create({
+          type:"error",
+          message:xhr.status+": "+thrown
+        }).appendTo("#notifications")
+      }
     }
   },
 
@@ -41,7 +46,12 @@ App = Em.Application.create({
         AuthPrompt:'false',
       },
       dataType: 'json',
-      success: success,
+      success: function(data, textStatus, jqXHR){
+        App.BrokerController.set("offline", false);
+        if( success ) {
+          success(data, textStatus, jqXHR)
+        }
+      },
       error: error,
     });
   },
@@ -130,6 +140,7 @@ App.LoginController = Em.Controller.create({
 
 App.broker = Ember.Object.create({});
 App.BrokerController = Ember.Controller.create({
+  offline:false,
   refresh: function() {
     App.ajax("GET", "/broker", function(json) {
       App.broker.setProperties(json);
@@ -233,6 +244,10 @@ App.DestinationsController = Ember. ArrayController.create({
   },
 
 });
+
+Ember.View.create({
+  templateName: 'notifications',
+}).appendTo("#notifications");
 
 Ember.View.create({
   templateName: 'navbar',

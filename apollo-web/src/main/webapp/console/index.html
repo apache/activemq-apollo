@@ -61,6 +61,11 @@
 </div>
 <div class="container" style="padding-top:51px;">
   <div class="row" id="notifications" style="padding-top: 1em;" >
+    <script type="text/x-handlebars" data-template-name="notifications">
+    {{#if App.BrokerController.offline}}
+    <div class="alert alert-message alert-error">Currently having trouble connecting to the broker...</div>
+    {{/if}}
+    </script>
   </div>
   <div id="content-holder" class="row">
   <script type="text/x-handlebars" data-template-name="content">
