@@ -14,25 +14,36 @@ App = Em.Application.create({
     App.BrokerController.refresh();
     App.VirtualHostController.refresh();
   },
-  
-  fetch:function(path, success, error) {
+
+  default_error_handler:function(xhr, status, thrown) {
+    if( xhr.status == 401 ) {
+      Bootstrap.AlertMessage.create({
+        type:"warning",
+        message:"Action not authorized."
+      }).appendTo("#notifications")
+      App.LoginController.refresh();
+    } else {
+      Bootstrap.AlertMessage.create({
+        type:"error",
+        message:xhr.status+": "+thrown
+      }).appendTo("#notifications")
+    }
+  },
+
+  get:function(path, success, error) {
+    this.http("GET", path, success, error)
+  },
+
+  put:function(path, success, error) {
+    this.http("PUT", path, success, error)
+  },
+
+  http:function(type, path, success, error) {
     if( !error ) {
-      error = function(xhr, status, thrown) {
-        if( xhr.status == 401 ) {
-          Bootstrap.AlertMessage.create({
-            type:"warning",
-            message:"Action not authorized."
-          }).appendTo("#notifications")
-          App.LoginController.refresh();
-        } else {
-          Bootstrap.AlertMessage.create({
-            type:"error",
-            message:xhr.status+": "+error
-          }).appendTo("#notifications")
-        }
-      }
+      error = this.default_error_handler;
     }
     $.ajax({
+      type: type,
       url: "../api/json"+path,
       headers: {
         AuthPrompt:'false',
@@ -41,7 +52,7 @@ App = Em.Application.create({
       success: success,
       error: error,
     });
-  }
+  },
 });
 
 App.LoginController = Em.Controller.create({
@@ -89,7 +100,7 @@ App.LoginController = Em.Controller.create({
   },
 
   logout: function() {
-    App.fetch("/session/signout", function(data) {
+    App.get("/session/signout", function(data) {
       App.LoginController.set('content', data);
     });
     this.set('content', null);
@@ -114,7 +125,7 @@ App.LoginController = Em.Controller.create({
   refresh: function(clear) {
     var was_logged_in = this.get('is_logged_in')
     var kind = this.get('kind')
-    App.fetch("/session/whoami", function(data) {
+    App.get("/session/whoami", function(data) {
       App.LoginController.set('content', data);
       if( App.LoginController.get('is_logged_in') ) {
         App.refresh();
@@ -128,7 +139,7 @@ App.LoginController = Em.Controller.create({
 App.broker = Ember.Object.create({});
 App.BrokerController = Ember.Controller.create({
   refresh: function() {
-    App.fetch("/broker", function(json) {
+    App.get("/broker", function(json) {
       App.broker.setProperties(json);
       if( App.VirtualHostController.get('selected') == null && json.virtual_hosts.length > 0 ) {
         App.VirtualHostController.set('selected', json.virtual_hosts[0]);
@@ -147,10 +158,10 @@ App.VirtualHostController = Em.ArrayController.create({
   refresh: function() {
     var selected = this.get("selected")
     if( selected ) {
-      App.fetch("/broker/virtual-hosts/"+selected, function(host) {
+      App.get("/broker/virtual-hosts/"+selected, function(host) {
         App.virtual_host.setProperties(host);
         if( host.store ) {
-          App.fetch("/broker/virtual-hosts/"+selected+"/store", function(store) {
+          App.get("/broker/virtual-hosts/"+selected+"/store", function(store) {
             App.virtual_host_store.setProperties(store);
           });
         } 
@@ -161,6 +172,7 @@ App.VirtualHostController = Em.ArrayController.create({
 
 App.DestinationsController = Ember. ArrayController.create({
   virtual_hostBinding: "App.VirtualHostController.selected",
+  create_name: "",
 
   kind: function(){
     var s = App.VirtualHostController.get('selected_tab');
@@ -184,10 +196,26 @@ App.DestinationsController = Ember. ArrayController.create({
     }
     var kind = this.get('kind')
     var fields = ['id', 'metrics.queue_items', 'metrics.queue_size', 'metrics.producer_count', 'metrics.consumer_count'];
-    App.fetch("/broker/virtual-hosts/"+virtual_host+"/"+kind+"?ps=10000&f="+fields.join("&f="), function(data) {
+    App.get("/broker/virtual-hosts/"+virtual_host+"/"+kind+"?ps=10000&f="+fields.join("&f="), function(data) {
       App.DestinationsController.set('content', data.rows);
     });
-  }.observes("virtual_host", "kind")
+  }.observes("virtual_host", "kind"),
+
+  show_create_box: function(){
+    var kind = this.get('kind');
+    return kind == "queues" || kind == "topics";
+  }.property("kind"),
+
+  create: function() {
+    var virtual_host = this.get('virtual_host');
+    var kind = this.get('kind');
+    var create_name = this.get('create_name');
+    var self = this;
+    App.put("/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+create_name, function(data) {
+      self.refresh();
+    });
+  },
+
 });
 
 Ember.View.create({

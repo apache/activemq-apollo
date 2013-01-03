@@ -94,7 +94,7 @@
           <div class="tab-pane active" id="TAB_Virtual_Hosts">
             <div class="form-horizontal">
               <div class="control-group">
-                <label class="control-label" for="select01"><strong style="font-size:170%">Virtual Host:</strong></label>
+                <label class="control-label"><strong style="font-size:170%">Virtual Host:</strong></label>
                 <div class="controls">
                   {{view Ember.Select contentBinding="App.broker.virtual_hosts" selectionBinding="App.VirtualHostController.selected"}}
                   <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
@@ -125,13 +125,16 @@
               <div class="span8">
                 {{view Bootstrap.Tabs contentBinding="App.VirtualHostController.tabs" selectionBinding="App.VirtualHostController.selected_tab"}}
                 <div>
+
+                  {{#if App.DestinationsController.show_create_box}}
                   <div class="well form-horizontal">
-                    <label class="control-label" for="select01"><strong>Create: </strong></label>
+                    <label class="control-label"><strong>Create: </strong></label>
                     <div class="controls">
-                      <input type="text" class="input-xlarge" id="create_queue">
-                      <a class="btn" href="#"><i class="icon-plus-sign icon-white"></i></a>
+                      {{view Ember.TextField class="input-xlarge" placeholder="name" valueBinding="App.DestinationsController.create_name"}}
+                      <a class="btn" href="#" {{action "create" target="App.DestinationsController" on="click"}}><i class="icon-plus-sign icon-white"></i></a>
                     </div>
                   </div>
+                  {{/if}}
 
                   <table class="details table table-bordered table-striped" style="">
                     <tbody>
@@ -200,10 +203,10 @@
                     <td><strong>Version: </strong>{{App.broker.version}}</td>
                   </tr>
                   <tr>
-                    <td><strong>Installed: </td>
+                    <td><strong>Install Directory: </strong>{{App.broker.home_location}}</td>
                   </tr>
                   <tr>
-                    <td><strong>Configuration: </td>
+                    <td><strong>Instance Directory: </strong>{{App.broker.base_location}}</td>
                   </tr>
                   </tbody>
                 </table>
