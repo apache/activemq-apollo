@@ -1179,3 +1179,4 @@ host's message store.
 * [STOMP Protocol Manual](stomp-manual.html)
 * [AMQP Protocol Manual](amqp-manual.html) 
 * [OpenWire Protocol Manual](openwire-manual.html) 
+* [MQTT Protocol Manual](mqtt-manual.html) 
