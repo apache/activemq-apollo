@@ -117,6 +117,9 @@ class BrokerResource() extends Resource {
         result.state = broker.service_state.toString
         result.state_since = broker.service_state.since
         result.version = Broker.version
+        result.home_location = Option(System.getProperty("apollo.home")).getOrElse(null)
+        result.base_location = Option(System.getProperty("apollo.base")).getOrElse(null)
+        result.version = Broker.version
         result.connection_counter = broker.connection_id_counter.get()
         result.connected = broker.connections.size
         broker.virtual_hosts.values.foreach{ host=>

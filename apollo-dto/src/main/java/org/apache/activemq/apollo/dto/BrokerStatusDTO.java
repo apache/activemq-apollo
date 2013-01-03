@@ -40,6 +40,18 @@ public class BrokerStatusDTO extends ServiceStatusDTO {
 	public String version;
 
     /**
+     * Where the Apache Apollo distribution is located.
+     */
+	@XmlElement(name="home_location")
+    public String home_location;
+
+    /**
+     * Where the broker instance is located.
+     */
+	@XmlElement(name="base_location")
+    public String base_location;
+
+    /**
      * Metrics about the JVM
      */
 	@XmlElement(name="jvm_metrics")
