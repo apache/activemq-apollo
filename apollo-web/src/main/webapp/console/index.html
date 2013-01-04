@@ -88,8 +88,8 @@
     <div class="span12">
       <ul class="nav nav-tabs">
         <li class="active"><a href="#TAB_Virtual_Hosts" data-toggle="tab">Virtual Hosts</a></li>
-        <!--
         <li><a href="#TAB_Connectors" data-toggle="tab">Connectors</a></li>
+          <!--
         <li><a href="#TAB_Connections" data-toggle="tab">Connections</a></li>
         -->
         <li><a href="#TAB_Operating_Environment" data-toggle="tab">Operating Environment</a></li>
@@ -166,20 +166,64 @@
               </div>
             </div>
           </div>
-          <!--
           <div class="tab-pane" id="TAB_Connectors">
-            <h3>Connectors</h3>
-            <p>
-              How client connect to the broker, select
-              a connector to view more details about it.
-            </p>
-            <p>
-              <ul>
-                <li>61613</li>
-                <li>61616</li>
-              </ul>
-            </p>
+              <div class="form-horizontal">
+                <div class="control-group">
+                  <label class="control-label"><strong style="font-size:170%">Connector:</strong></label>
+                  <div class="controls">
+                    {{view Ember.Select contentBinding="App.broker.connectors" selectionBinding="App.ConnectorController.selected"}}
+                    <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="span4">
+                  <div class="well" style="padding: 8px 8px">
+                    <div class="well-title">Details</div>
+                    <table class="details table table-bordered table-striped">
+                      <tbody>
+                      <tr><td><strong>Up time: </strong>{{App.connector.state_since}}</td></tr>
+                      <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
+                      <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
+                      <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>
+                      <tr><td><strong>Connection Counter: </strong>{{App.connector.connection_counter}}</td></tr>
+                      <tr><td><strong>Outbound Messages: </strong>{{App.connector.messages_sent}}</td></tr>
+                      <tr><td><strong>Inbound Messages: </strong>{{App.connector.messages_received}}</td></tr>
+                      <tr><td><strong>Data Transferred In: </strong>{{App.connector.read_counter}}</td></tr>
+                      <tr><td><strong>Data Transferred Out: </strong>{{App.connector.write_counter}}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="span8">
+                  <h3>Connections</h3>
+                  <table class="details table table-bordered table-striped" style="">
+                    <tbody>
+                    <tr>
+                      <th>{{view Ember.Checkbox checkedBinding="App.ConnectionsController.all_checked"}}</th>
+                      <th>Remote Address</th>
+                      <th>Protocol</th>
+                      <th>User</th>
+                      <th>Data In</th>
+                      <th>Data Out</th>
+                      <th>Msgs In</th>
+                      <th>Msgs out</th>
+                    </tr>
+                    {{#each App.ConnectionsController}}
+                    <tr>
+                      <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
+                      <td><i class=" icon-zoom-in"></i>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td><td>{{[5]}}</td><td>{{[6]}}</td><td>{{[7]}}</td>
+                    </tr>
+                    {{/each}}
+                    </tbody>
+                  </table>
+                  <div style="padding:.5em 0">
+                    <button class="btn btn-small" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
+                  </div>
+                </div>
+              </div>
           </div>
+          <!--
           <div class="tab-pane" id="TAB_Connections">
             <h3>Connections</h3>
             <p>

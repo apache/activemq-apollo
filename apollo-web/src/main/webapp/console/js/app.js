@@ -13,6 +13,7 @@ App = Em.Application.create({
   refresh: function() {
     App.BrokerController.refresh();
     App.VirtualHostController.refresh();
+    App.ConnectorController.refresh();
   },
 
   default_error_handler:function(xhr, status, thrown) {
@@ -146,11 +147,68 @@ App.BrokerController = Ember.Controller.create({
       App.broker.setProperties(json);
       if( App.VirtualHostController.get('selected') == null && json.virtual_hosts.length > 0 ) {
         App.VirtualHostController.set('selected', json.virtual_hosts[0]);
+        App.ConnectorController.set('selected', json.connectors[0]);
       }
     });
   }
 });
 
+App.connector = Ember.Object.create({});
+App.ConnectorController = Em.ArrayController.create({
+  selected:null,
+  refresh: function() {
+    var selected = this.get("selected")
+    if( selected ) {
+      App.ajax("GET", "/broker/connectors/"+selected, function(connector) {
+        App.connector.setProperties(connector);
+      });
+    }
+  }.observes("selected")
+});
+
+
+App.ConnectionsController = Ember. ArrayController.create({
+  connectorBinding: "App.ConnectorController.selected",
+
+  refresh: function(clear) {
+    var connector = this.get('connector');
+    if( !connector ) {
+      App.ConnectionsController.set('content', []);
+      return;
+    }
+    if( clear ) {
+      App.ConnectionsController.set('content', []);
+    }
+    var kind = this.get('kind')
+    var fields = ['id', 'remote_address', 'protocol', 'user', 'read_counter', 'write_counter', 'messages_received', 'messages_sent'];
+
+    App.ajax("GET", "/broker/connections?q=connector='"+connector+"'&ps=10000&f="+fields.join("&f="), function(data) {
+      App.ConnectionsController.set('content', data.rows);
+    });
+  }.observes("connector"),
+
+  all_checked:false,
+  check_all_toggle: function() {
+    var all_checked= this.get("all_checked");
+    this.get('content').forEach(function(item){
+      item.set('checked', all_checked);
+    });
+  }.observes("all_checked"),
+
+  remove: function() {
+    var content = this.get('content');
+    content.forEach(function(item){
+      var checked = item.get('checked');
+      if( checked ) {
+        var id = item.get(0);
+        App.ajax("DELETE", "/broker/connections/"+id, function(data) {
+          App.ConnectionsController.refresh();
+        });
+      }
+    });
+  },
+
+});
 
 App.virtual_host = Ember.Object.create({});
 App.virtual_host_store = Ember.Object.create({});
@@ -172,6 +230,7 @@ App.VirtualHostController = Em.ArrayController.create({
     }
   }.observes("selected")
 });
+
 
 App.DestinationsController = Ember. ArrayController.create({
   virtual_hostBinding: "App.VirtualHostController.selected",
