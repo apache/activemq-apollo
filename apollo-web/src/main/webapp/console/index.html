@@ -112,7 +112,7 @@
                   <div class="well-title">Details</div>
                   <table class="details table table-bordered table-striped">
                     <tbody>
-                    <tr><td><strong>Up time: </strong>{{App.virtual_host.state_since}}</td></tr>
+                    <tr><td><strong>Up time: </strong>{{App.virtual_host.state_date}}</td></tr>
                     <tr><td><strong>Host Names: </strong>
                       <ul>
                       {{#each App.virtual_host.host_names}}
@@ -152,7 +152,7 @@
                       <th>Consumers</th>
                     </tr>
                     {{#each App.DestinationsController}}
-                    <tr>
+                    <tr {{action "select" . target="App.DestinationsController" on="click"}}>
                       <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
                       <td><i class=" icon-zoom-in"></i> {{[0]}}</td><td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
                     </tr>
@@ -165,6 +165,98 @@
                   </div>
               </div>
             </div>
+            {{#if App.destination}}
+            <div class="row">
+                <div class="span12" style="font-size:170%; padding:0.5em;">
+                  <strong>{{App.DestinationsController.kind_label}}:</strong> {{App.destination.id}}
+                </div>
+                <div class="span4">
+                  <div class="well" style="padding: 8px 8px">
+                    <div class="well-title">Details</div>
+                    <table class="details table table-bordered table-striped">
+                      <tbody>
+                      <tr><td><strong>Up time: </strong>{{App.destination.state_date}}</td></tr>
+                      {{#if App.destination.selector}}
+                      <tr><td><strong>Selector: </strong>{{App.destination.selector}}</td></tr>
+                      {{/if}}
+                      <tr><td><strong>Queue Size: </strong>{{App.destination.metrics.queue_items}} messages</td></tr>
+                      <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items /{{App.destination.metrics.enqueue_size_counter}} bytes {{App.destination.metrics.enqueue_date}} ago</td></tr>
+                      <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} /{{App.destination.metrics.dequeue_size_counter}} bytes {{App.destination.metrics.dequeue_date}} ago</td></tr>
+                      <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} /{{App.destination.metrics.nack_size_counter}} bytes {{App.destination.metrics.nack_date}} ago</td></tr>
+                      <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} /{{App.destination.metrics.expired_size_counter}} bytes {{App.destination.metrics.expired_date}} ago</td></tr>
+                      <tr><td><strong>Enqueue Rate Throttle: </strong>{{App.destination.metrics.max_enqueue_rate}}</td></tr>
+                      <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{App.destination.metrics.swapped_in_size}} bytes</td></tr>
+                      <tr><td><strong>Swapping Out: </strong>{{App.destination.metrics.swapping_out_size}} bytes</td></tr>
+                      <tr><td><strong>Swapping In: </strong>{{App.destination.metrics.swapping_in_size}} bytes</td></tr>
+                      <tr><td><strong>Total Swap Ins: </strong>{{App.destination.metrics.swap_out_item_counter}} msgs {{App.destination.metrics.swap_out_size_counter}} bytes</td></tr>
+                      <tr><td><strong>Total Swap Outs: </strong>{{App.destination.metrics.swap_in_item_counter}} msgs {{App.destination.metrics.swap_in_size_counter}} bytes</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="span8">
+                  {{#if App.destination.producers}}
+                  <div>
+                      <h4>Producers</h4>
+                      <table class="details table table-bordered table-striped" style="">
+                        <tbody>
+                        <tr>
+                          <th>Name</th>
+                          <th>Kind</th>
+                          <th>Items</th>
+                          <th>Size</th>
+                          <th>Last Enqueue</th>
+                        </tr>
+                        {{#each App.destination.producers}}
+                        <tr>
+                          <td>{{label}}</td>
+                          <td>{{kind}}</td>
+                          <td>{{enqueue_item_counter}}</td>
+                          <td>{{enqueue_size_counter}}</td>
+                          <td>{{enqueue_date}}</td>
+                        </tr>
+                        {{/each}}
+                        </tbody>
+                      </table>
+                  </div>
+                  {{/if}}
+                  {{#if App.destination.consumers}}
+                  <div>
+                      <h4>Consumers</h4>
+                      <table class="details table table-bordered table-striped" style="">
+                        <tbody>
+                        <tr>
+                          <th>Name</th>
+                          <th>Kind</th>
+                          <th>Items</th>
+                          <th>Size</th>
+                          <th>Last Enqueue</th>
+                            <th>Acks</th>
+                            <th>Nacks</th>
+                            <th>Last Enqueue</th>
+                            <th>Ack Rate</th>
+                            <th>Status</th>
+                        </tr>
+                        {{#each App.destination.consumers}}
+                        <tr>
+                          <td>{{label}}</td>
+                          <td>{{kind}}</td>
+                          <td>{{enqueue_item_counter}}</td>
+                          <td>{{enqueue_size_counter}}</td>
+                          <td>{{enqueue_date}}</td>
+                          <td>{{total_ack_count}}</td>
+                          <td>{{total_nack_count}}</td>
+                          <td>{{ack_item_rate}} msgs/sec {{ack_size_rate}} bytes/sec</td>
+                          <td>{{waiting_on}}</td>
+                        </tr>
+                        {{/each}}
+                        </tbody>
+                      </table>
+                  </div>
+                  {{/if}}
+                </div>
+            </div>
+            {{/if}}
           </div>
           <div class="tab-pane" id="TAB_Connectors">
               <div class="form-horizontal">
@@ -182,7 +274,7 @@
                     <div class="well-title">Details</div>
                     <table class="details table table-bordered table-striped">
                       <tbody>
-                      <tr><td><strong>Up time: </strong>{{App.connector.state_since}}</td></tr>
+                      <tr><td><strong>Up time: </strong>{{App.connector.state_date}}</td></tr>
                       <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
                       <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
                       <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>

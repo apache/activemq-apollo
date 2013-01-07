@@ -1,11 +1,11 @@
 App = Em.Application.create({
   ready: function() {
     var self = this;
-    setInterval(function() {
-      if( App.LoginController.get('is_logged_in') ) {
-        self.refresh();
-      }
-    }, 2000);
+//    setInterval(function() {
+//      if( App.LoginController.get('is_logged_in') ) {
+//        self.refresh();
+//      }
+//    }, 2000);
     App.LoginController.refresh();
     this._super();
   },
@@ -160,6 +160,7 @@ App.ConnectorController = Em.ArrayController.create({
     var selected = this.get("selected")
     if( selected ) {
       App.ajax("GET", "/broker/connectors/"+selected, function(connector) {
+        connector.state_date = new Date(connector.state_since);
         App.connector.setProperties(connector);
       });
     }
@@ -221,6 +222,7 @@ App.VirtualHostController = Em.ArrayController.create({
     if( selected ) {
       App.ajax("GET", "/broker/virtual-hosts/"+selected, function(host) {
         App.virtual_host.setProperties(host);
+        host.state_date = new Date(host.state_since);
         if( host.store ) {
           App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
             App.virtual_host_store.setProperties(store);
@@ -230,7 +232,6 @@ App.VirtualHostController = Em.ArrayController.create({
     }
   }.observes("selected")
 });
-
 
 App.DestinationsController = Ember. ArrayController.create({
   virtual_hostBinding: "App.VirtualHostController.selected",
@@ -246,7 +247,12 @@ App.DestinationsController = Ember. ArrayController.create({
       return "dsubs";
     }
   }.property("App.VirtualHostController.selected_tab"),
-  
+
+  kind_label: function() {
+    var v = App.VirtualHostController.get('selected_tab')
+    return v.substring(0, v.length-1);
+  }.property("App.VirtualHostController.selected_tab"),
+
   refresh: function(clear) {
     var virtual_host = this.get('virtual_host');
     if( !virtual_host ) {
@@ -302,6 +308,41 @@ App.DestinationsController = Ember. ArrayController.create({
     });
   },
 
+  selected:null,
+  select: function(event) {
+    this.set("selected", event.context.get(0))
+  },
+
+});
+
+App.destination = null;
+App.DestinationController = Em.Controller.create({
+  destinationBinding:"App.destination",
+  selectedBinding:"App.DestinationsController.selected",
+
+  refresh: function() {
+    var selected = this.get("selected")
+    if( selected==null ) {
+      App.set('destination', null);
+    } else {
+      var virtual_host = App.DestinationsController.get("virtual_host");
+      var kind = App.DestinationsController.get("kind");
+      App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"?consumers=true&producers=true", function(data) {
+        data.metrics.state_date = new Date(data.state_since);
+        data.metrics.enqueue_date = new Date(data.metrics.enqueue_ts);
+        data.metrics.dequeue_date = new Date(data.metrics.dequeue_ts);
+        data.metrics.nak_date = new Date(data.metrics.nak_ts);
+        data.metrics.expired_date = new Date(data.metrics.expired_ts);
+        data.producers.forEach(function(value){
+          value.enqueue_date = new Date(value.enqueue_ts);
+        });
+        data.consumers.forEach(function(value){
+          value.enqueue_date = new Date(value.enqueue_ts);
+        });
+        App.set('destination', data);
+      });
+    }
+  }.observes("selected"),
 });
 
 Ember.View.create({
