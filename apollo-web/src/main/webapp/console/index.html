@@ -106,7 +106,7 @@
                 </div>
               </div>
             </div>
-            <div class="row">
+            <div class="row" {{bindAttr style="App.VirtualHostController.style"}}>
               <div class="span4">
                 <div class="well" style="padding: 8px 8px">
                   <div class="well-title">Details</div>
@@ -166,10 +166,15 @@
               </div>
             </div>
             {{#if App.destination}}
-            <div class="row">
-                <div class="span12" style="font-size:170%; padding:0.5em;">
-                  <strong>{{App.DestinationsController.kind_label}}:</strong> {{App.destination.id}}
-                </div>
+            <div class="row" style="padding:0em 2em">
+                  <ul class="nav nav-tabs">
+                    <li class="active">
+                        <a data-toggle="tab">
+                        <strong>{{App.DestinationsController.kind_label}}:</strong> {{App.destination.id}}
+                        <strong {{action "clear" target="App.DestinationController" on="click"}}><i class="icon-remove-sign"></i></strong>
+                    </a>
+                    </li>
+                  </ul>
                 <div class="span4">
                   <div class="well" style="padding: 8px 8px">
                     <div class="well-title">Details</div>

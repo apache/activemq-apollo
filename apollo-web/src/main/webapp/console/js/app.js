@@ -217,6 +217,16 @@ App.VirtualHostController = Em.ArrayController.create({
   tabs:["Queues","Topics","Durable Subs"],
   selected_tab:"Queues",
   selected:null,
+  style:function(){
+    // Hide the virtual host details while the destination is displayed.
+    var destination = App.get("destination");
+    if( destination ) {
+      return "display:none";
+    } else {
+      return null;
+    }
+  }.property("App.destination"),
+
   refresh: function() {
     var selected = this.get("selected")
     if( selected ) {
@@ -230,6 +240,11 @@ App.VirtualHostController = Em.ArrayController.create({
         } 
       });
     }
+
+  },
+  onSelectedChange: function() {
+    App.set("destination", null)
+    this.refresh();
   }.observes("selected")
 });
 
@@ -319,7 +334,9 @@ App.destination = null;
 App.DestinationController = Em.Controller.create({
   destinationBinding:"App.destination",
   selectedBinding:"App.DestinationsController.selected",
-
+  clear: function() {
+    this.set('selected', null);
+  },
   refresh: function() {
     var selected = this.get("selected")
     if( selected==null ) {
