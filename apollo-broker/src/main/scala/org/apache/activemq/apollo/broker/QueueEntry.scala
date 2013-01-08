@@ -554,8 +554,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
 
     override def remove = {
-      queue.loaded_items -= 1
-      queue.loaded_size -= size
+      if( !remove_pending ) {
+        queue.loaded_items -= 1
+        queue.loaded_size -= size
+      }
       if( storing | remove_pending ) {
         remove_pending = true
       } else {
