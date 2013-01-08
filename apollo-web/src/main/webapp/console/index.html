@@ -152,9 +152,10 @@
                       <th>Consumers</th>
                     </tr>
                     {{#each App.DestinationsController}}
-                    <tr {{action "select" . target="App.DestinationsController" on="click"}}>
+                    <tr>
                       <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
-                      <td><i class=" icon-zoom-in"></i> {{[0]}}</td><td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
+                      <td><a href="#" {{action "select" . target="App.DestinationsController" on="click"}}><i class=" icon-zoom-in"></i> {{[0]}}</a></td>
+                      <td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
                     </tr>
                     {{/each}}
                     </tbody>
