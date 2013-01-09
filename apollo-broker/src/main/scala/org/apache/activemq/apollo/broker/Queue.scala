@@ -748,18 +748,20 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   }
 
   def expired(uow:StoreUOW, entry:QueueEntry)(func: =>Unit):Unit = {
-    if( dlq_expired ) {
-      dead_letter(uow, entry) { uow =>
-        expired_ts = now
-        expired_item_counter += 1
-        expired_size_counter += entry.size
-        func
-      }
+    if( entry.expiring ) {
+      func
     } else {
+      entry.expiring = true
       expired_ts = now
       expired_item_counter += 1
       expired_size_counter += entry.size
-      func
+      if( dlq_expired ) {
+        dead_letter(uow, entry) { uow =>
+          func
+        }
+      } else {
+        func
+      }
     }
   }
 
@@ -820,7 +822,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       val next = cur.getNext
 
       // handle expiration...
-      if( cur.expiration != 0 && cur.expiration <= now ) {
+      if( !cur.expiring && cur.expiration != 0 && cur.expiration <= now ) {
+        val entry = cur
         cur.state match {
           case x:QueueEntry#SwappedRange =>
             // load the range to expire the messages in it.
@@ -830,9 +833,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // acquired.
             if( !state.is_acquired ) {
               val uow = create_uow
-              cur.dequeue(uow)
-              expired(uow, cur) {
-                state.remove
+              entry.dequeue(uow)
+              expired(uow, entry) {
+                if( entry.isLinked ) {
+                  entry.remove
+                }
               }
             }
           case state:QueueEntry#Loaded =>
@@ -840,9 +845,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // acquired.
             if( !state.is_acquired ) {
               val uow = create_uow
-              cur.dequeue(uow)
-              expired(uow, cur) {
-                state.remove
+              entry.dequeue(uow)
+              expired(uow, entry) {
+                if( entry.isLinked ) {
+                  entry.remove
+                }
               }
             }
           case _ =>
@@ -1110,14 +1117,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       case (entry, consumed, uow) =>
         consumed match {
           case Consumed =>
-//            debug("ack consumed: ("+store_id+","+entry.entry.seq+")")
             entry.ack(uow)
           case Expired=>
-//            debug("ack expired: ("+store_id+","+entry.entry.seq+")")
-            expired_ts = now
-            expired_item_counter += 1
-            expired_size_counter += entry.entry.size
-            entry.ack(uow)
+            val actual = create_uow(uow)
+            expired(actual, entry.entry) {
+              entry.ack(actual)
+            }
           case Delivered =>
             entry.increment_nack
             entry.entry.redelivered

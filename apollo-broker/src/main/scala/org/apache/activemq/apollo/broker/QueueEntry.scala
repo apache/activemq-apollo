@@ -192,6 +192,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def dispatch() = state.dispatch
   def memory_space = state.memory_space
 
+  var expiring = false
+
   // These methods may cause a change in the current state.
   def swap(asap:Boolean) = state.swap_out(asap)
   def load(space:MemorySpace) = state.swap_in(space)
@@ -571,7 +573,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         val uow = queue.create_uow
         entry.dequeue(uow)
         queue.expired(uow, entry) {
-          remove
+          if( isLinked ) {
+            remove
+          }
         }
         return true
       }
@@ -832,7 +836,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         val uow = queue.create_uow
         entry.dequeue(uow)
         queue.expired(uow, entry) {
-          remove
+          if( isLinked ) {
+            remove
+          }
         }
         return true
       }
