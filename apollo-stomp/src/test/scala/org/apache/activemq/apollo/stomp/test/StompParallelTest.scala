@@ -553,9 +553,10 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     }
 
     test_selector("color = 'red'", List("color:blue", "not:set", "color:red"), List(3))
-    test_selector("hyphen-5 = 5", List("hyphen:9", "not:set", "hyphen:10"), List(3))
     test_selector("age >= 21", List("age:3", "not:set", "age:21", "age:30"), List(3, 4))
-
+    test_selector("hyphen - 5 = 5", List("hyphen:9", "not:set", "hyphen:10"), List(3))
+    test_selector("hyphen -5 = 5", List("hyphen:9", "not:set", "hyphen:10"), List(3))
+    test_selector("hyphen-5 = 5", List("hyphen:9", "hyphen-5:5", "not:set", "hyphen:10"), List(2))
   }
 
   test("Queues load balance across subscribers") {

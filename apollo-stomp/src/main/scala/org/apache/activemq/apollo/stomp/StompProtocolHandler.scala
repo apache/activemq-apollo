@@ -1409,8 +1409,8 @@ class StompProtocolHandler extends ProtocolHandler {
       case None=> null
       case Some(x)=>
         try {
-          val s = decode_header(x)
-          (s, SelectorParser.parse("convert_string_expressions:"+s))
+          val s = "convert_string_expressions:hyphenated_props:"+decode_header(x)
+          (s, SelectorParser.parse(s))
         } catch {
           case e:FilterException =>
             die("Invalid selector expression: "+e.getMessage)
