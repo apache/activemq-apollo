@@ -31,6 +31,8 @@ public class SelectorParser {
     private static final LRUCache cache = new LRUCache(100);
     private static final String CONVERT_STRING_EXPRESSIONS_PREFIX = "convert_string_expressions:";
     private static final String HYPHENATED_PROPS_PREFIX = "hyphenated_props:";
+    private static final String NO_CONVERT_STRING_EXPRESSIONS_PREFIX = "no_convert_string_expressions:";
+    private static final String NO_HYPHENATED_PROPS_PREFIX = "no_hyphenated_props:";
 
     public static BooleanExpression parse(String sql) throws FilterException {
         Object result = cache.get(sql);
@@ -51,6 +53,16 @@ public class SelectorParser {
               if( actual.startsWith(HYPHENATED_PROPS_PREFIX)) {
                   hyphenatedProps = true;
                   actual = actual.substring(HYPHENATED_PROPS_PREFIX.length());
+                  continue;
+              }
+              if( actual.startsWith(NO_CONVERT_STRING_EXPRESSIONS_PREFIX)) {
+                  convertStringExpressions = false;
+                  actual = actual.substring(NO_CONVERT_STRING_EXPRESSIONS_PREFIX.length());
+                  continue;
+              }
+              if( actual.startsWith(NO_HYPHENATED_PROPS_PREFIX)) {
+                  hyphenatedProps = false;
+                  actual = actual.substring(NO_HYPHENATED_PROPS_PREFIX.length());
                   continue;
               }
               break;
