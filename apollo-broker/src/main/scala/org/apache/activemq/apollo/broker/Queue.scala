@@ -233,6 +233,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var full_policy:FullDropPolicy = Block
 
   def dlq_nak_limit = OptionSupport(config.nak_limit).getOrElse(0)
+  def dlq_expired = OptionSupport(config.dlq_expired).getOrElse(false)
 
   def message_group_graceful_handoff = OptionSupport(config.message_group_graceful_handoff).getOrElse(true)
 
@@ -541,9 +542,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       sub.close()
     }
 
-    if( dql_route!=null ) {
-      val route = dql_route
-      dql_route = null
+    if( dlq_route!=null ) {
+      val route = dlq_route
+      dlq_route = null
       virtual_host.dispatch_queue {
         router.disconnect(route.addresses, route)
       }
@@ -582,6 +583,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
 
   def is_topic_queue = resource_kind eq TopicQueueKind
+  def create_uow:StoreUOW = if(virtual_host.store==null) null else virtual_host.store.create_uow
+  def create_uow(uow:StoreUOW):StoreUOW = if(uow==null) create_uow else uow
 
   object messages extends Sink[(Session[Delivery], Delivery)] {
     def stall_check = {}
@@ -744,10 +747,20 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  def expired(entry:QueueEntry):Unit = {
-    expired_ts = now
-    expired_item_counter += 1
-    expired_size_counter += entry.size
+  def expired(uow:StoreUOW, entry:QueueEntry)(func: =>Unit):Unit = {
+    if( dlq_expired ) {
+      dead_letter(uow, entry) { uow =>
+        expired_ts = now
+        expired_item_counter += 1
+        expired_size_counter += entry.size
+        func
+      }
+    } else {
+      expired_ts = now
+      expired_item_counter += 1
+      expired_size_counter += entry.size
+      func
+    }
   }
 
   def display_stats: Unit = {
@@ -812,21 +825,25 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           case x:QueueEntry#SwappedRange =>
             // load the range to expire the messages in it.
             cur.load(null)
-          case x:QueueEntry#Swapped =>
+          case state:QueueEntry#Swapped =>
             // remove the expired message if it has not been
             // acquired.
-            if( !x.is_acquired ) {
-              expired(cur)
-              cur.dequeue(null)
-              x.remove
+            if( !state.is_acquired ) {
+              val uow = create_uow
+              cur.dequeue(uow)
+              expired(uow, cur) {
+                state.remove
+              }
             }
-          case x:QueueEntry#Loaded =>
+          case state:QueueEntry#Loaded =>
             // remove the expired message if it has not been
             // acquired.
-            if( !x.is_acquired ) {
-              expired(cur)
-              cur.dequeue(null)
-              x.remove
+            if( !state.is_acquired ) {
+              val uow = create_uow
+              cur.dequeue(uow)
+              expired(uow, cur) {
+                state.remove
+              }
             }
           case _ =>
         }
@@ -1036,10 +1053,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     override def connection = None
     override def dispatch_queue = Queue.this.dispatch_queue
   }
-  var dql_route:DlqProducerRoute = _
+  var dlq_route:DlqProducerRoute = _
   
   def dead_letter(original_uow:StoreUOW, entry:QueueEntry)(removeFunc: (StoreUOW)=>Unit) = {
-
+    assert_executing
     if( config.dlq==null ) {
       removeFunc(original_uow)
     } else {
@@ -1047,21 +1064,24 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
       def complete(delivery:Delivery) = {
         delivery.uow = original_uow
         delivery.ack = (result, uow) => {
-          removeFunc(uow)
+          dispatch_queue {
+            removeFunc(uow)
+          }
         }
+        delivery.expiration=0
 
-        if( dql_route==null ) {
+        if( dlq_route==null ) {
           val dlq = config.dlq.replaceAll(Pattern.quote("*"), id)
-          dql_route = new DlqProducerRoute(Array(SimpleAddress("queue:"+dlq)))
+          dlq_route = new DlqProducerRoute(Array(SimpleAddress("queue:"+dlq)))
           router.virtual_host.dispatch_queue {
-            val rc = router.connect(dql_route.addresses, dql_route, null)
+            val rc = router.connect(dlq_route.addresses, dlq_route, null)
             assert( rc == None ) // Not expecting this to ever fail.
-            dql_route.dispatch_queue {
-              dql_route.offer(delivery)
+            dlq_route.dispatch_queue {
+              dlq_route.offer(delivery)
             }
           }
         } else {
-          dql_route.offer(delivery)
+          dlq_route.offer(delivery)
         }
       }
 
@@ -1110,9 +1130,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             var limit = dlq_nak_limit
             if( limit>0 && entry.entry.redelivery_count >= limit ) {
               dead_letter(uow, entry.entry) { uow =>
-                dispatch_queue {
-                  entry.ack(uow)
-                }
+                entry.ack(uow)
               }
             } else {
               entry.nack

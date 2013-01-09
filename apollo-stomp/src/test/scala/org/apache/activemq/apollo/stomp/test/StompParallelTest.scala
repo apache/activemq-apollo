@@ -1061,6 +1061,24 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     get("3")
   }
 
+  test("Expired message sent to DLQ") {
+    connect("1.1")
+
+    val now = System.currentTimeMillis()
+    var dest = "/queue/nacker.expires"
+    async_send(dest, "1")
+    async_send(dest, "2", "expires:"+(now+500)+"\n")
+    sync_send(dest, "3")
+
+    Thread.sleep(1000)
+    subscribe("a", dest)
+    assert_received("1", "a")
+    assert_received("3", "a")
+
+    subscribe("b", "/queue/dlq.nacker.expires")
+    assert_received("2", "b")
+  }
+
   test("Receipts on SEND to unconsummed topic") {
     connect("1.1")
 

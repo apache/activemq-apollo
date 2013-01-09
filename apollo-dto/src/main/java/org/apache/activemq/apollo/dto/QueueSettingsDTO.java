@@ -163,6 +163,12 @@ public class QueueSettingsDTO {
     public Integer nak_limit;
 
     /**
+     * Should expired messages be sent to the dead letter queue?  Defaults to false.
+     */
+    @XmlAttribute(name="dlq_expired")
+    public Boolean dlq_expired;
+
+    /**
      * To hold any other non-matching XML elements
      */
     @XmlAnyElement(lax=true)

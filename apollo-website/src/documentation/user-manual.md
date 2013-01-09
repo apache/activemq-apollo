@@ -449,6 +449,9 @@ A `queue` element may be configured with the following attributes:
    configured or dropped.  If set to less than one, then the message
    will never be considered to be a poison message. Defaults to zero.
 
+* `dlq_expired`: Should expired messages be sent to the dead letter queue?  
+  Defaults to false.
+
 * `full_policy`: Once the queue is full, the `full_policy` 
   controls how the   queue behaves when additional messages attempt to 
   be enqueued onto the queue.

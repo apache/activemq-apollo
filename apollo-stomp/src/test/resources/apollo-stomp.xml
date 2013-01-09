@@ -26,7 +26,7 @@
       <subscription quota="10k"/>
     </topic>
 
-    <queue id="nacker.**" dlq="dlq.*" nak_limit="2"/>
+    <queue id="nacker.**" dlq="dlq.*" dlq_expired="true" nak_limit="2"/>
     <queue id="mirrored.**" mirrored="true"/>
     <topic id="queued.**" slow_consumer_policy="queue">
       <subscription tail_buffer="4k"/>

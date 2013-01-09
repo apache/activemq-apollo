@@ -202,14 +202,10 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def dequeue(uow: StoreUOW) = {
     if ( queued ) {
       if (messageKey != -1) {
-        val storeBatch = if( uow == null ) {
-          queue.virtual_host.store.create_uow
-        } else {
-          uow
-        }
-        storeBatch.dequeue(toQueueEntryRecord)
+        val actual_uow = queue.create_uow(uow)
+        actual_uow.dequeue(toQueueEntryRecord)
         if( uow == null ) {
-          storeBatch.release
+          actual_uow.release
         }
       }
       queue.dequeue_item_counter += 1
@@ -480,8 +476,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
             if( !storing ) {
               assert( delivery.storeKey == -1 )
 
-              delivery.uow = queue.virtual_host.store.create_uow
-              val uow = delivery.uow
+              val uow = queue.create_uow
+              delivery.uow = uow
               delivery.storeLocator = new AtomicReference[Object]()
               delivery.storeKey = uow.store(delivery.createMessageRecord )
               store
@@ -572,9 +568,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       queue.assert_executing
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
-        queue.expired(entry)
-        entry.dequeue(null)
-        remove
+        val uow = queue.create_uow
+        entry.dequeue(uow)
+        queue.expired(uow, entry) {
+          remove
+        }
         return true
       }
 
@@ -831,9 +829,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       queue.assert_executing
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
-        queue.expired(entry)
-        entry.dequeue(null)
-        remove
+        val uow = queue.create_uow
+        entry.dequeue(uow)
+        queue.expired(uow, entry) {
+          remove
+        }
         return true
       }
 
