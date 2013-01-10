@@ -539,6 +539,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         outbound_drained = 0
         dispatch_queue {
           outbound_capacity_remaining += amount
+          flush();
           transportListener.onRefill()
         }
       }
