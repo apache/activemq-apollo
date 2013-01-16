@@ -22,7 +22,6 @@ import org.apache.activemq.apollo.dto._
 import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import collection.mutable.{HashSet, HashMap, ListBuffer}
-import java.lang.Long
 import security.SecuredResource
 
 /**
@@ -323,6 +322,19 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
   }
 
+  def browse(from_seq:Long, max:Long)(func: (Array[(EntryStatusDTO, Delivery)])=>Unit):Unit = {
+    val msg = retained_message
+    if ( msg==null ) {
+      func(Array())
+    } else {
+      val status = new EntryStatusDTO()
+      status.seq = retained_message.seq
+      status.size = retained_message.size
+      status.state = "loaded"
+      status.is_prefetched = true;
+      func(Array((status, retained_message)))
+    }
+  }
 
   def update(on_completed:Task) = {
     refresh_config

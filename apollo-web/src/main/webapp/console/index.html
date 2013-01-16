@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -200,67 +200,151 @@
                     </table>
                   </div>
                 </div>
-                <div class="span8">
-                  {{#if App.destination.producers}}
-                  <div>
-                      <h4>Producers</h4>
-                      <table class="details table table-bordered table-striped" style="">
-                        <tbody>
-                        <tr>
-                          <th>Name</th>
-                          <th>Kind</th>
-                          <th>Items</th>
-                          <th>Size</th>
-                          <th>Last Enqueue</th>
-                        </tr>
-                        {{#each App.destination.producers}}
-                        <tr>
-                          <td>{{label}}</td>
-                          <td>{{kind}}</td>
-                          <td>{{enqueue_item_counter}}</td>
-                          <td>{{enqueue_size_counter}}</td>
-                          <td>{{enqueue_date}}</td>
-                        </tr>
-                        {{/each}}
-                        </tbody>
-                      </table>
-                  </div>
-                  {{/if}}
-                  {{#if App.destination.consumers}}
-                  <div>
-                      <h4>Consumers</h4>
-                      <table class="details table table-bordered table-striped" style="">
-                        <tbody>
-                        <tr>
-                          <th>Name</th>
-                          <th>Kind</th>
-                          <th>Items</th>
-                          <th>Size</th>
-                          <th>Last Enqueue</th>
-                            <th>Acks</th>
-                            <th>Nacks</th>
+
+                <div class="span7">
+                  <ul class="nav nav-tabs">
+                    <li class="active"><a href="#TAB_Messages" data-toggle="tab">Messages ({{App.destination.metrics.queue_items}})</a></li>
+                    <li><a href="#TAB_Producers" data-toggle="tab">Producers ({{App.destination.producers.length}})</a></li>
+                    <li><a href="#TAB_Consumers" data-toggle="tab">Consumers ({{App.destination.producers.length}})</a></li>
+                  </ul>
+                  <div class="tabbable">
+                    <div class="tab-content">
+                      <div class="tab-pane active" id="TAB_Messages">
+
+                        <div class="well form-horizontal">
+                          <label class="control-label"><strong>Message: </strong></label>
+                          <div class="controls">
+                            {{view Ember.TextField class="input-xlarge" placeholder="body" valueBinding="App.MessagesController.send_body"}}
+                            <a class="btn" href="#" {{action "send" target="App.MessagesController" on="click"}}>Send</a>
+                          </div>
+                        </div>
+
+                        <table class="details table table-bordered" style="">
+                          <tbody>
+                          <tr>
+                            <th>&nbsp;</th>
+                            <th>Sequence</th>
+                            <th>Codec</th>
+                            <th>Persistent</th>
+                            <th>Expires</th>
+                            <th>Prefetched</th>
+                            <th>Acquirer</th>
+                            <th width="100%">Size</th>
+                          </tr>
+                          {{#each App.MessagesController}}
+                          <tr>
+                            <td>
+                              <a {{action "toggle_details" . target="App.MessagesController" on="click"}}>
+                              {{#if show_details}}
+                              <i class="icon-caret-down"></i>
+                              {{else}}
+                              <i class="icon-caret-right"></i>
+                              {{/if}}
+                              </a>
+                            </td>
+                            <td>{{entry.seq}}</td>
+                            <td>{{codec}}</td>
+                            <td>{{persistent}}</td>
+                            <td>{{expiration}}</td>
+                            <td>{{entry.is_prefetched}}</td>
+                            <td>{{entry.acquirer}}</td>
+                            <td>{{entry.size}}</td>
+                          </tr>
+                          {{#if show_details}}
+                          <tr>
+                            <td colspan="9">
+                            <!-- body -->
+                            <div>
+
+                              {{#if show_headers}}
+                              <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-down"></i> Headers</a></h4>
+                              <table class="details table table-bordered table-striped" style="">
+                                <tbody>
+                                {{#key_value headers}}
+                                <tr>
+                                  <th class="nowrap">{{key}}</th>
+                                  <td width="100%">{{value}}</td>
+                                </tr>
+                                {{/key_value}}
+                                </tbody>
+                              </table>
+                              {{else}}
+                              <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-right"></i> Headers</a></h4>
+                              {{/if}}
+                              <h4>Body</h4>
+                              <div>
+                                <pre>{{body}}</pre>
+                              </div>
+                            </div>
+                            </td>
+                          </tr>
+                          {{/if}}
+                          {{/each}}
+                          </tbody>
+                        </table>
+
+                        <div style="padding:.5em 0">
+                          <button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>
+                        </div>
+                      </div>
+                      <div class="tab-pane" id="TAB_Producers">
+                        <table class="details table table-bordered table-striped" style="">
+                          <tbody>
+                          <tr>
+                            <th>Name</th>
+                            <th>Kind</th>
+                            <th>Items</th>
+                            <th>Size</th>
                             <th>Last Enqueue</th>
-                            <th>Ack Rate</th>
-                            <th>Status</th>
-                        </tr>
-                        {{#each App.destination.consumers}}
-                        <tr>
-                          <td>{{label}}</td>
-                          <td>{{kind}}</td>
-                          <td>{{enqueue_item_counter}}</td>
-                          <td>{{enqueue_size_counter}}</td>
-                          <td>{{enqueue_date}}</td>
-                          <td>{{total_ack_count}}</td>
-                          <td>{{total_nack_count}}</td>
-                          <td>{{ack_item_rate}} msgs/sec {{ack_size_rate}} bytes/sec</td>
-                          <td>{{waiting_on}}</td>
-                        </tr>
-                        {{/each}}
-                        </tbody>
-                      </table>
+                          </tr>
+                          {{#each App.destination.producers}}
+                          <tr>
+                            <td>{{label}}</td>
+                            <td>{{kind}}</td>
+                            <td>{{enqueue_item_counter}}</td>
+                            <td>{{enqueue_size_counter}}</td>
+                            <td>{{enqueue_date}}</td>
+                          </tr>
+                          {{/each}}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="tab-pane" id="TAB_Consumers">
+                        <table class="details table table-bordered table-striped" style="">
+                          <tbody>
+                          <tr>
+                            <th>Name</th>
+                            <th>Kind</th>
+                            <th>Items</th>
+                            <th>Size</th>
+                            <th>Last Enqueue</th>
+                              <th>Acks</th>
+                              <th>Nacks</th>
+                              <th>Last Enqueue</th>
+                              <th>Ack Rate</th>
+                              <th>Status</th>
+                          </tr>
+                          {{#each App.destination.consumers}}
+                          <tr>
+                            <td>{{label}}</td>
+                            <td>{{kind}}</td>
+                            <td>{{enqueue_item_counter}}</td>
+                            <td>{{enqueue_size_counter}}</td>
+                            <td>{{enqueue_date}}</td>
+                            <td>{{total_ack_count}}</td>
+                            <td>{{total_nack_count}}</td>
+                            <td>{{ack_item_rate}} msgs/sec {{ack_size_rate}} bytes/sec</td>
+                            <td>{{waiting_on}}</td>
+                          </tr>
+                          {{/each}}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                  {{/if}}
                 </div>
+
+
             </div>
             {{/if}}
           </div>

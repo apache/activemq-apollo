@@ -72,6 +72,37 @@ class OpenwireMessage(val message:ActiveMQMessage) extends BaseRetained with Mes
     }
   }
 
+
+  override def headers_as_json: java.util.HashMap[String, Object] = {
+    val rc = new java.util.HashMap[String, Object]()
+    import collection.JavaConversions._
+
+    def fillin(name:String) = {
+      val t = getProperty(name)
+      if ( t !=null ) {
+        rc.put(name, t.asInstanceOf[Object])
+      }
+    }
+
+    fillin("JMSDeliveryMode")
+    fillin("JMSPriority")
+    fillin("JMSType")
+    fillin("JMSMessageID")
+    fillin("JMSDestination")
+    fillin("JMSReplyTo")
+    fillin("JMSCorrelationID")
+    fillin("JMSExpiration")
+    fillin("JMSXDeliveryCount")
+    fillin("JMSXUserID")
+    fillin("JMSXGroupID")
+    fillin("JMSXGroupSeq")
+
+    for( (x,y) <- message.getProperties ) {
+      rc.put(x,y)
+    }
+    rc
+  }
+
   def getLocalConnectionId = message.getProducerId.getConnectionId
 
   def codec = OpenwireMessageCodec

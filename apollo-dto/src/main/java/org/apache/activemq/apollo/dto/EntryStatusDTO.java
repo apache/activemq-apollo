@@ -20,10 +20,7 @@ package org.apache.activemq.apollo.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 /**
  * <p>
@@ -57,4 +54,6 @@ public class EntryStatusDTO {
     @XmlAttribute(name="is_prefetched")
     public boolean is_prefetched;
 
+    @XmlElement
+    public QueueConsumerLinkDTO acquirer;
 }

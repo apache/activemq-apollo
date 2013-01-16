@@ -36,7 +36,10 @@ import javax.ws.rs.core.MediaType._
 import javax.servlet.http.HttpServletResponse
 import FutureResult._
 import com.wordnik.swagger.annotations.{ApiOperation, Api}
-import language.implicitConversions;
+import language.implicitConversions
+import org.fusesource.hawtbuf.Buffer
+import org.apache.commons.codec.binary.Base64
+;
 
 @Path(          "/api/json/broker")
 @Api(value =    "/api/json/broker",
@@ -572,20 +575,43 @@ class BrokerResource() extends Resource {
   }
 
   @GET @Path("/virtual-hosts/{id}/topic-queues/{name:.*}/{qid}")
-  @ApiOperation(value = "Gets the status of a topic consumer queue.")
-  def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long,
-            @QueryParam("entries") entries:Boolean,
-            @QueryParam("producers") producers:Boolean,
-            @QueryParam("consumers") consumers:Boolean):QueueStatusDTO = {
-    with_virtual_host(id) { host =>
-      val router:LocalRouter = host
-      val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
-      val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
-      monitoring(node) {
-        sync(queue) {
-          queue.status(entries, producers, consumers)
+    @ApiOperation(value = "Gets the status of a topic consumer queue.")
+    def topic(@PathParam("id") id : String,@PathParam("name") name : String,  @PathParam("qid") qid : Long,
+              @QueryParam("entries") entries:Boolean,
+              @QueryParam("producers") producers:Boolean,
+              @QueryParam("consumers") consumers:Boolean):QueueStatusDTO = {
+      with_virtual_host(id) { host =>
+        val router:LocalRouter = host
+        val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+        val queue =router.queues_by_store_id.get(qid).getOrElse(result(NOT_FOUND))
+        monitoring(node) {
+          sync(queue) {
+            queue.status(entries, producers, consumers)
+          }
         }
       }
+    }
+
+
+  @GET @Path("/virtual-hosts/{id}/topics/{name:.*}/messages")
+  @ApiOperation(value = "Gets a list of recent messages sent to the topic.")
+  def topic_messages(@PathParam("id") id : String, @PathParam("name") name : String,
+                     @QueryParam("from") _from:java.lang.Long,
+                     @QueryParam("max") _max:java.lang.Long,
+                     @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+    var from = OptionSupport(_from).getOrElse(0L)
+    var max = OptionSupport(_max).getOrElse(100L)
+    var max_body = OptionSupport(_max_body).getOrElse(0)
+    with_virtual_host(id) { host =>
+      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val router: LocalRouter = host
+      val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      monitoring(node) {
+        node.browse(from, max) { deliveries =>
+          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        }
+      }
+      rc
     }
   }
 
@@ -621,6 +647,30 @@ class BrokerResource() extends Resource {
       }
     }
   }
+  @GET @Path("/virtual-hosts/{id}/queues/{name:.*}/messages")
+  @ApiOperation(value = "Gets a list of messages that exist on the queue.")
+  def queue_messagesx(@PathParam("id") id : String, @PathParam("name") name : String,
+                      @QueryParam("from") _from:java.lang.Long,
+                      @QueryParam("to") _to:java.lang.Long,
+                      @QueryParam("max") _max:java.lang.Long,
+                      @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+    var from = OptionSupport(_from).getOrElse(0L)
+    var to = OptionSupport(_to)
+    var max = OptionSupport(_max).getOrElse(100L)
+    var max_body = OptionSupport(_max_body).getOrElse(0)
+    with_virtual_host(id) { host =>
+      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val router: LocalRouter = host
+      val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      monitoring(node) {
+        node.browse(from, to, max) { deliveries =>
+          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        }
+      }
+      rc
+    }
+  }
+
 
   @DELETE @Path("/virtual-hosts/{id}/queues/{name:.*}")
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML))
@@ -661,6 +711,28 @@ class BrokerResource() extends Resource {
     if_ok(queue_delete(id, name)) {
       result(strip_resolve("../../.."))
     }
+  }
+
+  private def base64(buffer:Buffer) =
+    new String(Base64.encodeBase64(buffer.toByteArray), "UTF-8");
+
+  private def message_convert(max_body:Int, value:(EntryStatusDTO, Delivery)): MessageStatusDTO = {
+    val (entry, delivery) = value
+    val rc = new MessageStatusDTO
+    rc.codec = delivery.message.codec.id()
+    rc.headers = delivery.message.headers_as_json;
+    rc.expiration = delivery.expiration
+    rc.entry = entry
+
+    if( max_body > 0 ) {
+      val body = delivery.message.getBodyAs(classOf[Buffer])
+      if( body.length > max_body) {
+        body.length = max_body
+        rc.body_truncated = true
+      }
+      rc.base64_body = base64(body)
+    }
+    rc
   }
 
   @GET @Path("/virtual-hosts/{id}/dsubs")
@@ -720,6 +792,30 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @GET @Path("/virtual-hosts/{id}/dsub/{name:.*}/messages")
+  @ApiOperation(value = "Gets a list of the messages that exist on the durable sub.")
+  def dsub_messages(@PathParam("id") id : String, @PathParam("name") name : String,
+             @QueryParam("from") _from:java.lang.Long,
+             @QueryParam("to") _to:java.lang.Long,
+             @QueryParam("max") _max:java.lang.Long,
+             @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+    var from = OptionSupport(_from).getOrElse(0L)
+    var to = OptionSupport(_to)
+    var max = OptionSupport(_max).getOrElse(100L)
+    var max_body = OptionSupport(_max_body).getOrElse(0)
+
+    with_virtual_host(id) { host =>
+      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val router: LocalRouter = host
+      val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
+      monitoring(node) {
+        node.browse(from, to, max) { deliveries =>
+          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        }
+      }
+      rc
+    }
+  }
 
   private def decode_path(name:String) = {
     try {

@@ -16,32 +16,57 @@
  */
 package org.apache.activemq.apollo.dto;
 
+
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-@XmlRootElement(name="queue_consumer_link")
-@XmlAccessorType(XmlAccessType.FIELD)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class QueueConsumerLinkDTO extends LinkDTO {
-
-    public Long position;
-
-    public Integer acquired_count;
-    public Long acquired_size;
-
-    public Long total_ack_count;
-    public Long total_nack_count;
-
-    public Double ack_item_rate;
-    public Double ack_size_rate;
+public class MessageStatusDTO {
 
     /**
-     * What the consumer is currently waiting on
+     * Additional
      */
-    @XmlAttribute(name="waiting_on")
-	public String waiting_on;
+    public EntryStatusDTO entry;
+
+    /**
+     * When the message will expire
+     */
+    public long expiration;
+
+    /**
+     * Is the delivery persistent?
+     */
+    public boolean persistent = false;
+
+    /**
+     * The encoding that the message is stored in.
+     */
+    public String codec;
+
+    /**
+     * A map of all the headers in the mesasge.
+     */
+    public HashMap<String, Object> headers = new HashMap<String, Object>();
+
+    /**
+     * The body of the message in base 64 encoding.
+     */
+    public String base64_body;
+
+    /**
+     * Has the body been truncated.
+     */
+    public boolean body_truncated;
+
 }

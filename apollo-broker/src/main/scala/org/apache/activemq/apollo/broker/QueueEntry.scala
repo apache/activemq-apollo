@@ -189,6 +189,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def messageKey = state.message_key
   def is_swapped_or_swapping_out = state.is_swapped_or_swapping_out
   def is_acquired = state.is_acquired
+  def acquiring_subscription = state.acquiring_subscription
   def dispatch() = state.dispatch
   def memory_space = state.memory_space
 
@@ -296,7 +297,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     /**
      * Is the entry acquired by a subscription.
      */
-    def is_acquired = false
+    def is_acquired = acquiring_subscription!=null
+    def acquiring_subscription:Subscription = null
 
     /**
      * @returns true if the entry is either swapped or swapping.
@@ -399,7 +401,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     assert( delivery!=null, "delivery cannot be null")
 
     var acquirer:Subscription = _
-    override def is_acquired = acquirer!=null
+    override def acquiring_subscription = acquirer
 
     override def memory_space = space
 
@@ -723,13 +725,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     override def redelivery_count = _redeliveries
     override def redelivered = _redeliveries = ((_redeliveries+1).min(Short.MaxValue)).toShort
 
+    override def acquiring_subscription = acquirer
     override def count = 1
 
     override def as_swapped = this
 
     override def is_swapped_or_swapping_out = true
-
-    override def is_acquired = acquirer!=null
 
     override def memory_space = space
 
@@ -773,7 +774,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
-
     def to_delivery = {
       val delivery = new Delivery()
       delivery.seq = seq
@@ -785,6 +785,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       delivery.redeliveries = redelivery_count
       delivery.sender = sender
       delivery
+    }
+
+    var swapped_in_watchers = List[()=>Unit]()
+    def fire_swapped_in_watchers = {
+      val watchers = swapped_in_watchers
+      swapped_in_watchers = Nil
+      watchers.foreach(_())
     }
 
     def swapped_in(messageRecord:MessageRecord) = {
@@ -803,9 +810,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.individual_swapped_items -= 1
         state = new Loaded(delivery, true, space)
         space = null
-      } else {
-//        debug("Ignoring store load of: ", messageKey)
       }
+      fire_swapped_in_watchers
     }
 
 
@@ -927,6 +933,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
     }
     override def toString = { "swapped_range:{ swapping_in: "+loading+", count: "+count+", size: "+size+"}" }
 
+    var swapped_in_watchers = List[()=>Unit]()
+    def fire_swapped_in_watchers = {
+      val watchers = swapped_in_watchers
+      swapped_in_watchers = Nil
+      watchers.foreach(_())
+    }
+
     override def swap_in(space:MemorySpace):Unit = {
       if( !loading ) {
         loading = true
@@ -972,8 +985,8 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           parked.foreach(_.advance(next))
           next :::= parked
           queue.trigger_swap
-
           unlink
+          fire_swapped_in_watchers
         }
 
         def attempt_load(attempt_counter:Int):Unit = {

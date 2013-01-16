@@ -149,6 +149,14 @@ case class StompFrameMessage(frame:StompFrame) extends Message {
   }
 
 
+  override def headers_as_json: java.util.HashMap[String, Object] = {
+    val rc = new java.util.HashMap[String, Object]
+    for( (k,v)<-headerIndex ) {
+      rc.put(k.toString, v.toString)
+    }
+    rc
+  }
+
   def setDisposer(disposer: Runnable) = throw new UnsupportedOperationException
   def retained = throw new UnsupportedOperationException
   def retain = frame.retain

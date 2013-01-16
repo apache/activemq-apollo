@@ -21,6 +21,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker.store._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
+import org.apache.activemq.apollo.dto.QueueConsumerLinkDTO
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -48,6 +49,45 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
   def acquired_count = acquired.size()
 
   var enqueue_size_per_interval = new CircularBuffer[Int](15)
+
+  def create_link_dto(include_metrics:Boolean=true) = {
+    val link = new QueueConsumerLinkDTO
+    consumer.connection match {
+      case Some(connection) =>
+        link.kind = "connection"
+        link.id = connection.id.toString
+        link.label = connection.transport.getRemoteAddress.toString
+      case _ =>
+        link.kind = "unknown"
+        link.label = "unknown"
+    }
+    if ( include_metrics ) {
+      link.position = pos.seq
+      link.enqueue_item_counter = session.enqueue_item_counter
+      link.enqueue_size_counter = session.enqueue_size_counter
+      link.enqueue_ts = session.enqueue_ts
+      link.total_ack_count = total_ack_count
+      link.total_nack_count = total_nack_count
+      link.acquired_size = acquired_size
+      link.acquired_count = acquired_count
+      ack_rates match {
+        case Some((items_per_sec, size_per_sec) ) =>
+          link.ack_item_rate = items_per_sec
+          link.ack_size_rate = size_per_sec
+        case _ =>
+      }
+      link.waiting_on = if( full ) {
+        "consumer"
+      } else if( pos.is_tail ) {
+        "producer"
+      } else if( !pos.is_loaded ) {
+        "load"
+      } else {
+        "dispatch"
+      }
+    }
+    link
+  }
 
   def avg_enqueue_size_per_interval = {
     var rc = 0

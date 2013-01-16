@@ -36,6 +36,7 @@ class StompUdpProtocol extends UdpProtocol {
   override def createProtocolHandler = new UdpProtocolHandler {
 
     type ConfigTypeDTO = StompDTO
+    def configClass = classOf[ConfigTypeDTO]
 
     var config:ConfigTypeDTO = _
     var destination_parser = Stomp.destination_parser

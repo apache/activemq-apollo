@@ -1,3 +1,48 @@
+
+// Install a base64 decoding function if one is not available.
+if( !window.atob ) {
+  window.atob = function(text){
+    text = text.replace(/\s/g,"");
+    if(!(/^[a-z0-9\+\/\s]+\={0,2}$/i.test(text)) || text.length % 4 > 0){
+      throw new Error("Not a base64-encoded string.");
+    }
+    var digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+      cur, prev, digitNum,
+      i=0,
+      result = [];
+    text = text.replace(/=/g, "");
+    while(i < text.length){
+      cur = digits.indexOf(text.charAt(i));
+      digitNum = i % 4;
+      switch(digitNum){
+        case 1:
+          result.push(String.fromCharCode(prev << 2 | cur >> 4));
+          break;
+        case 2:
+          result.push(String.fromCharCode((prev & 0x0f) << 4 | cur >> 2));
+          break;
+        case 3:
+          result.push(String.fromCharCode((prev & 3) << 6 | cur));
+          break;
+      }
+      prev = cur;
+      i++;
+    }
+    return result.join("");
+  }
+}
+
+Handlebars.registerHelper("key_value", function(name, fn) {
+  var obj = this[name];
+  var buffer = "", key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      buffer += fn({key: key, value: obj[key]});
+    }
+  }
+  return buffer;
+});
+
 App = Em.Application.create({
   ready: function() {
     var self = this;
@@ -244,6 +289,7 @@ App.VirtualHostController = Em.ArrayController.create({
   },
   onSelectedChange: function() {
     App.set("destination", null)
+    App.MessagesController.clear();
     this.refresh();
   }.observes("selected")
 });
@@ -332,6 +378,10 @@ App.DestinationsController = Ember. ArrayController.create({
 
 App.destination = null;
 App.DestinationController = Em.Controller.create({
+
+  tabs:["Messages","Producers","Consumers"],
+  selected_tab:"Messages",
+
   destinationBinding:"App.destination",
   selectedBinding:"App.DestinationsController.selected",
   clear: function() {
@@ -341,6 +391,7 @@ App.DestinationController = Em.Controller.create({
     var selected = this.get("selected")
     if( selected==null ) {
       App.set('destination', null);
+      App.MessagesController.clear();
     } else {
       var virtual_host = App.DestinationsController.get("virtual_host");
       var kind = App.DestinationsController.get("kind");
@@ -358,8 +409,80 @@ App.DestinationController = Em.Controller.create({
         });
         App.set('destination', data);
       });
+      var max_body = 100;
+      App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"/messages?from=0&max=100&max_body="+max_body, function(data) {
+        App.MessagesController.clear();
+        data.forEach(function(item){
+          if( item.base64_body ) {
+            var rc = atob(item.base64_body);
+            if( item.body_truncated ) {
+              rc += "..."
+            }
+            item.body = rc;
+          }
+          if( item.expiration==0 ) {
+            item.expiration = "no"
+          } else {
+            item.expiration = new Date(connector.state_since);
+          }
+          App.MessagesController.addObject(Ember.Object.create(item));
+        });
+      });
     }
   }.observes("selected"),
+});
+
+
+App.MessagesController = Ember. ArrayController.create({
+  content: [],
+
+  toggle_headers: function(event) {
+    event.context.set("show_headers", !event.context.get("show_headers"));
+  },
+  toggle_details: function(event) {
+    event.context.set("show_details", !event.context.get("show_details"));
+  },
+
+  body: "",
+
+  send: function() {
+//    var virtual_host = this.get('virtual_host');
+//    var kind = this.get('kind');
+//    var create_name = this.get('create_name');
+    this.set('body', "");
+//    App.ajax("PUT", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+create_name, function(data) {
+//      App.DestinationsController.refresh();
+//    });
+  },
+
+  all_checked:false,
+  check_all_toggle: function() {
+    var all_checked= this.get("all_checked");
+    this.get('content').forEach(function(item){
+      item.set('checked', all_checked);
+    });
+  }.observes("all_checked"),
+
+  remove: function() {
+    var virtual_host = this.get('virtual_host');
+    var kind = this.get('kind');
+    var content = this.get('content');
+    content.forEach(function(item){
+      var checked = item.get('checked');
+      if( checked ) {
+        var name = item.get(0);
+        App.ajax("DELETE", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+name, function(data) {
+          App.DestinationsController.refresh();
+        });
+      }
+    });
+  },
+
+  selected:null,
+  select: function(event) {
+    this.set("selected", event.context.get(0))
+  },
+
 });
 
 Ember.View.create({

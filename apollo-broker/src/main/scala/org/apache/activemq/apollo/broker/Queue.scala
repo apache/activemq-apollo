@@ -332,6 +332,41 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
+  def browse(from_seq:Long, to:Option[Long], max:Long)(func: (Array[(EntryStatusDTO, Delivery)])=>Unit):Unit = {
+    var result = ListBuffer[(EntryStatusDTO, Delivery)]()
+    def load_from(start:Long):Unit = {
+      assert_executing
+      var cur = head_entry.getNext
+      while(true) {
+        if( cur == null || result.size >= max || ( to.isDefined && cur.seq > to.get) ) {
+          func(result.toArray)
+          return
+        }
+        val next = cur.getNext
+        if ( cur.seq >= start ) {
+          cur.state match {
+            case state:QueueEntry#Loaded =>
+              result.append((create_entry_status(cur), state.delivery))
+            case state:QueueEntry#Swapped =>
+              state.swapped_in_watchers ::=(()=>{
+                load_from(cur.seq) // resume loading
+              })
+              cur.load(consumer_swapped_in)
+              return
+            case state:QueueEntry#SwappedRange =>
+              state.swapped_in_watchers ::=(()=>{
+                load_from(cur.seq)
+              })
+              cur.load(consumer_swapped_in)
+              return
+          }
+        }
+        cur = next
+      }
+    }
+    load_from(from_seq)
+  }
+
   def status(entries:Boolean=false, include_producers:Boolean=false, include_consumers:Boolean=false) = {
     val rc = new QueueStatusDTO
     rc.id = this.id
@@ -353,17 +388,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     if( entries ) {
       var cur = this.head_entry
       while( cur!=null ) {
-
-        val e = new EntryStatusDTO
-        e.seq = cur.seq
-        e.count = cur.count
-        e.size = cur.size
-        e.consumer_count = cur.parked.size
-        e.is_prefetched = cur.prefetched
-        e.state = cur.label
-
-        rc.entries.add(e)
-
+        rc.entries.add(create_entry_status(cur))
         cur = if( cur == this.tail_entry ) {
           null
         } else {
@@ -397,44 +422,25 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
     if( include_consumers ) {
       for( sub <- this.all_subscriptions.values ) {
-        val link = new QueueConsumerLinkDTO
-        sub.consumer.connection match {
-          case Some(connection) =>
-            link.kind = "connection"
-            link.id = connection.id.toString
-            link.label = connection.transport.getRemoteAddress.toString
-          case _ =>
-            link.kind = "unknown"
-            link.label = "unknown"
-        }
-        link.position = sub.pos.seq
-        link.enqueue_item_counter = sub.session.enqueue_item_counter
-        link.enqueue_size_counter = sub.session.enqueue_size_counter
-        link.enqueue_ts = sub.session.enqueue_ts
-        link.total_ack_count = sub.total_ack_count
-        link.total_nack_count = sub.total_nack_count
-        link.acquired_size = sub.acquired_size
-        link.acquired_count = sub.acquired_count
-        sub.ack_rates match {
-          case Some((items_per_sec, size_per_sec) ) =>
-            link.ack_item_rate = items_per_sec
-            link.ack_size_rate = size_per_sec
-          case _ =>
-        }
-
-        link.waiting_on = if( sub.full ) {
-          "consumer"
-        } else if( sub.pos.is_tail ) {
-          "producer"
-        } else if( !sub.pos.is_loaded ) {
-          "load"
-        } else {
-          "dispatch"
-        }
-        rc.consumers.add(link)
+        rc.consumers.add(sub.create_link_dto())
       }
     } else {
       rc.consumers = null
+    }
+    rc
+  }
+
+
+  def create_entry_status(cur: QueueEntry): EntryStatusDTO = {
+    val rc = new EntryStatusDTO
+    rc.seq = cur.seq
+    rc.count = cur.count
+    rc.size = cur.size
+    rc.consumer_count = cur.parked.size
+    rc.is_prefetched = cur.prefetched
+    rc.state = cur.label
+    if( cur.acquiring_subscription != null ) {
+      rc.acquirer = cur.acquiring_subscription.create_link_dto(false)
     }
     rc
   }

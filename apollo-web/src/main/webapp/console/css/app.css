@@ -57,6 +57,10 @@ div.application {
   float:right;
 }
 
+.nowrap {
+  white-space:nowrap;
+}
+
 @media (max-width: 767px) {
   #footer {
     margin-right: -20px;

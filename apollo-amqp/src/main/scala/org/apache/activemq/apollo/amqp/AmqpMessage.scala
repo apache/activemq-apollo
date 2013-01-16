@@ -25,7 +25,7 @@ import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtbuf.Buffer
 import org.fusesource.hawtbuf.AsciiBuffer
 import org.fusesource.hawtbuf.UTF8Buffer
-import org.apache.qpid.proton.amqp.{UnsignedLong, UnsignedInteger}
+import org.apache.qpid.proton.amqp.{UnsignedByte, UnsignedShort, UnsignedLong, UnsignedInteger}
 import org.apache.qpid.proton.amqp.messaging.{Properties, Header}
 import org.apache.qpid.proton.message.impl.MessageImpl
 
@@ -243,6 +243,104 @@ class AmqpMessage(private var encoded_buffer:Buffer, private var decoded_message
       case x:UnsignedInteger => new java.lang.Long(x.longValue());
       case x:UnsignedLong => new java.lang.Long(x.longValue());
       case x => x
+    }
+    rc
+  }
+
+
+  override def headers_as_json: java.util.HashMap[String, Object] = {
+    val rc = new java.util.HashMap[String, Object]()
+    import collection.JavaConversions._
+
+    def convert(v: AnyRef) = (v match {
+      case v: UnsignedByte => new java.lang.Integer(v.shortValue())
+      case v: UnsignedShort => new java.lang.Integer(v.intValue())
+      case v: UnsignedInteger => new java.lang.Long(v.longValue())
+      case v: UnsignedLong => new java.lang.Long(v.longValue())
+      case _ => v
+    })
+
+    if ( decoded.getHeader!=null ) {
+      val header = decoded.getHeader
+      if ( header.getDeliveryCount !=null ) {
+        rc.put("header.delivery_count", new java.lang.Long(header.getDeliveryCount.longValue()))
+      }
+      if ( header.getDurable !=null ) {
+        rc.put("header.durable", new java.lang.Boolean(header.getDurable.booleanValue()))
+      }
+      if ( header.getFirstAcquirer !=null ) {
+        rc.put("header.first_acquirer", new java.lang.Boolean(header.getFirstAcquirer.booleanValue()))
+      }
+      if ( header.getPriority !=null ) {
+        rc.put("header.priority", new java.lang.Integer(header.getPriority.intValue()))
+      }
+      if ( header.getTtl !=null ) {
+        rc.put("header.ttl", new java.lang.Long(header.getTtl.longValue()))
+      }
+    }
+
+    if( decoded.getProperties != null ) {
+      val properties = decoded.getProperties
+      if ( properties.getAbsoluteExpiryTime !=null ) {
+        rc.put("property.absolute_expiry_time", new java.lang.Long(properties.getAbsoluteExpiryTime.getTime()))
+      }
+      if ( properties.getContentEncoding !=null ) {
+        rc.put("property.content_encoding", properties.getContentEncoding.toString)
+      }
+      if ( properties.getContentType !=null ) {
+        rc.put("property.content_type", properties.getContentType.toString)
+      }
+      if ( properties.getCorrelationId !=null ) {
+        rc.put("property.correlation_id", properties.getCorrelationId.toString)
+      }
+      if ( properties.getCreationTime !=null ) {
+        rc.put("property.creation_time",  new java.lang.Long(properties.getCreationTime.getTime))
+      }
+      if ( properties.getGroupId !=null ) {
+        rc.put("property.group_id", properties.getGroupId)
+      }
+      if ( properties.getGroupSequence !=null ) {
+        rc.put("property.group_sequence", new java.lang.Long(properties.getGroupSequence.longValue()))
+      }
+      if ( properties.getMessageId !=null ) {
+        rc.put("property.message_id", properties.getMessageId)
+      }
+      if ( properties.getReplyTo !=null ) {
+        rc.put("property.reply_to", properties.getReplyTo)
+      }
+      if ( properties.getReplyToGroupId !=null ) {
+        rc.put("property.reply_to_group_id", properties.getReplyToGroupId)
+      }
+      if ( properties.getSubject !=null ) {
+        rc.put("property.subject", properties.getSubject)
+      }
+      if ( properties.getTo !=null ) {
+        rc.put("property.to", properties.getTo)
+      }
+      if ( properties.getUserId !=null ) {
+        rc.put("property.user_id", properties.getUserId.toString)
+      }
+    }
+
+    if( decoded.getDeliveryAnnotations !=null ) {
+      val annotations = decoded.getDeliveryAnnotations
+      for( (k,v:AnyRef) <- annotations.getValue ) {
+        rc.put("annotation."+k, convert(v))
+      }
+    }
+
+    if( decoded.getApplicationProperties !=null ) {
+      val properties = decoded.getApplicationProperties
+      for( (k,v:AnyRef) <- properties.getValue ) {
+        rc.put("app."+k, convert(v))
+      }
+    }
+
+    if( decoded.getFooter !=null ) {
+      val footer = decoded.getFooter
+      for( (k,v:AnyRef) <- footer.getValue ) {
+        rc.put("footer."+k, convert(v))
+      }
     }
     rc
   }

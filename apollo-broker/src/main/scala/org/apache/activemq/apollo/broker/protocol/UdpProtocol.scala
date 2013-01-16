@@ -121,6 +121,8 @@ trait DecodedUdpMessage {
 abstract class UdpProtocolHandler extends ProtocolHandler {
   import UdpProtocolHandler._
   type ConfigTypeDTO <: ProtocolDTO
+  def configClass:Class[ConfigTypeDTO]
+
   def protocol = "udp"
   var session_id:Option[String] = None
 
@@ -148,10 +150,13 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
 
     configure(connection.connector.config match {
       case connector_config:AcceptingConnectorDTO =>
-        connector_config.protocols.flatMap{ _ match {
-          case x:ConfigTypeDTO => Some(x)
-          case _ => None
-        }}.headOption
+        connector_config.protocols.flatMap{ x=>
+          if( x.getClass == configClass) {
+            Some(x.asInstanceOf[ConfigTypeDTO])
+          } else {
+            None
+          }
+        }.headOption
       case _ => None
     })
   }
@@ -290,6 +295,7 @@ class UdpProtocol extends BaseProtocol {
 
   def createProtocolHandler:ProtocolHandler = new UdpProtocolHandler {
     type ConfigTypeDTO = UdpDTO
+    def configClass = classOf[ConfigTypeDTO]
 
     var default_host:VirtualHost = _
     var topic_address:AsciiBuffer = _
