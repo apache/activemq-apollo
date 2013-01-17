@@ -32,7 +32,7 @@ if( !window.atob ) {
   }
 }
 
-Handlebars.registerHelper("key_value", function(name, fn) {
+Ember.Handlebars.registerHelper("key_value", function(name, fn) {
   var obj = this[name];
   var buffer = "", key;
   for (key in obj) {
@@ -42,6 +42,35 @@ Handlebars.registerHelper("key_value", function(name, fn) {
   }
   return buffer;
 });
+
+Ember.Handlebars.registerHelper('memory', function(property, options) {
+  options.fn = function(size) {
+    if( (typeof size)=="number" ) {
+      var units = "bytes"
+      if( size > 1024 ) {
+        size = size / 1024;
+        units = "kb"
+        if( size > 1024 ) {
+          size = size / 1024;
+          units = "mb"
+          if( size > 1024 ) {
+            size = size / 1024;
+            units = "gb"
+            if( size > 1024 ) {
+              size = size / 1024;
+              units = "tb"
+            }
+          }
+        }
+        size = size.toFixed(2);
+      }
+      return size+" "+units;
+    }
+    return size;
+  }
+  return Ember.Handlebars.helpers.bind(property, options);
+});
+
 
 App = Em.Application.create({
   ready: function() {
@@ -189,6 +218,8 @@ App.BrokerController = Ember.Controller.create({
   offline:false,
   refresh: function() {
     App.ajax("GET", "/broker", function(json) {
+      json.jvm_metrics.os_cpu_time = (json.jvm_metrics.os_cpu_time / 1000000000).toFixed(3) + " seconds"
+      json.jvm_metrics.uptime = (json.jvm_metrics.uptime / 1000).toFixed(2) + " seconds"
       App.broker.setProperties(json);
       if( App.VirtualHostController.get('selected') == null && json.virtual_hosts.length > 0 ) {
         App.VirtualHostController.set('selected', json.virtual_hosts[0]);
@@ -408,25 +439,7 @@ App.DestinationController = Em.Controller.create({
           value.enqueue_date = new Date(value.enqueue_ts);
         });
         App.set('destination', data);
-      });
-      var max_body = 100;
-      App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"/messages?from=0&max=100&max_body="+max_body, function(data) {
-        App.MessagesController.clear();
-        data.forEach(function(item){
-          if( item.base64_body ) {
-            var rc = atob(item.base64_body);
-            if( item.body_truncated ) {
-              rc += "..."
-            }
-            item.body = rc;
-          }
-          if( item.expiration==0 ) {
-            item.expiration = "no"
-          } else {
-            item.expiration = new Date(connector.state_since);
-          }
-          App.MessagesController.addObject(Ember.Object.create(item));
-        });
+        App.MessagesController.reset();
       });
     }
   }.observes("selected"),
@@ -481,6 +494,63 @@ App.MessagesController = Ember. ArrayController.create({
   selected:null,
   select: function(event) {
     this.set("selected", event.context.get(0))
+  },
+
+  max: 25,
+  from: 0,
+
+  reset:function() {
+    this.set("from", 0)
+    this.refresh();
+  },
+
+  refresh:function() {
+    var virtual_host = App.DestinationsController.get("virtual_host");
+    var kind = App.DestinationsController.get("kind");
+    var selected = App.DestinationController.get("selected")
+    var max_body = 100;
+    var from = this.get("from");
+    var max = this.get("max");
+    App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"/messages?from="+from+"&max="+max+"&max_body="+max_body, function(data) {
+      var content=[]
+      if( data.length > 0 ) {
+        data.forEach(function(item){
+          if( item.base64_body ) {
+            var rc = atob(item.base64_body);
+            if( item.body_truncated ) {
+              rc += "..."
+            }
+            item.body = rc;
+          }
+          if( item.expiration==0 ) {
+            item.expiration = "no"
+          } else {
+            item.expiration = new Date(connector.state_since);
+          }
+          content.push(Ember.Object.create(item));
+        });
+        App.MessagesController.set("from", data[0].entry.seq);
+      }
+      App.MessagesController.set("content", content);
+    });
+  },
+
+  prev: function() {
+    var content = this.get("content");
+    if( content.length > 0 ) {
+      var seq = content[0].get("entry.seq")
+      this.set("from", seq-this.get("max"));
+      this.refresh();
+    }
+  },
+
+  next: function() {
+    var content = this.get("content");
+    if( content.length > 0 ) {
+      var seq = content[content.length-1].get("entry.seq")
+      this.set("from", seq+1);
+      this.refresh();
+    }
   },
 
 });

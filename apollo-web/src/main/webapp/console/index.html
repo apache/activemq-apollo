@@ -132,15 +132,16 @@
                 <div>
 
                   {{#if App.DestinationsController.show_create_box}}
-                  <div class="well form-horizontal">
-                    <label class="control-label"><strong>Create: </strong></label>
-                    <div class="controls">
-                      {{view Ember.TextField class="input-xlarge" placeholder="name" valueBinding="App.DestinationsController.create_name"}}
-                      <a class="btn" href="#" {{action "create" target="App.DestinationsController" on="click"}}><i class="icon-plus-sign icon-white"></i></a>
-                    </div>
+                  <div class="well center">
+                    <form action="" class="nomargin form-inline">
+                      <strong>Name: </strong>
+                      {{view Ember.TextField placeholder="name" valueBinding="App.DestinationsController.create_name"}}
+                      <input type="submit" value="Create" class="btn btn-primary" {{action "create" target="App.DestinationsController" on="click"}}>
+                    </form>
                   </div>
                   {{/if}}
 
+                  {{#if App.DestinationsController.firstObject }}
                   <table class="details table table-bordered table-striped" style="">
                     <tbody>
                     <tr>
@@ -163,7 +164,10 @@
                   <div style="padding:.5em 0">
                     <button class="btn btn-small" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
                   </div>
-                  </div>
+                  {{else}}
+                    <div style="padding-left:2em;">No {{App.VirtualHostController.selected_tab}} have been created yet.</div>
+                  {{/if}}
+                </div>
               </div>
             </div>
             {{#if App.destination}}
@@ -186,16 +190,16 @@
                       <tr><td><strong>Selector: </strong>{{App.destination.selector}}</td></tr>
                       {{/if}}
                       <tr><td><strong>Queue Size: </strong>{{App.destination.metrics.queue_items}} messages</td></tr>
-                      <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items /{{App.destination.metrics.enqueue_size_counter}} bytes {{App.destination.metrics.enqueue_date}} ago</td></tr>
-                      <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} /{{App.destination.metrics.dequeue_size_counter}} bytes {{App.destination.metrics.dequeue_date}} ago</td></tr>
-                      <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} /{{App.destination.metrics.nack_size_counter}} bytes {{App.destination.metrics.nack_date}} ago</td></tr>
-                      <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} /{{App.destination.metrics.expired_size_counter}} bytes {{App.destination.metrics.expired_date}} ago</td></tr>
+                      <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items / {{memory App.destination.metrics.enqueue_size_counter}} bytes {{App.destination.metrics.enqueue_date}} ago</td></tr>
+                      <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} / {{memory App.destination.metrics.dequeue_size_counter}} bytes {{App.destination.metrics.dequeue_date}} ago</td></tr>
+                      <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} / {{memory App.destination.metrics.nack_size_counter}} bytes {{App.destination.metrics.nack_date}} ago</td></tr>
+                      <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} / {{memory App.destination.metrics.expired_size_counter}} bytes {{App.destination.metrics.expired_date}} ago</td></tr>
                       <tr><td><strong>Enqueue Rate Throttle: </strong>{{App.destination.metrics.max_enqueue_rate}}</td></tr>
-                      <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{App.destination.metrics.swapped_in_size}} bytes</td></tr>
-                      <tr><td><strong>Swapping Out: </strong>{{App.destination.metrics.swapping_out_size}} bytes</td></tr>
-                      <tr><td><strong>Swapping In: </strong>{{App.destination.metrics.swapping_in_size}} bytes</td></tr>
-                      <tr><td><strong>Total Swap Ins: </strong>{{App.destination.metrics.swap_out_item_counter}} msgs {{App.destination.metrics.swap_out_size_counter}} bytes</td></tr>
-                      <tr><td><strong>Total Swap Outs: </strong>{{App.destination.metrics.swap_in_item_counter}} msgs {{App.destination.metrics.swap_in_size_counter}} bytes</td></tr>
+                      <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{memory App.destination.metrics.swapped_in_size}} bytes</td></tr>
+                      <tr><td><strong>Swapping Out: </strong>{{memory App.destination.metrics.swapping_out_size}} bytes</td></tr>
+                      <tr><td><strong>Swapping In: </strong>{{memory App.destination.metrics.swapping_in_size}} bytes</td></tr>
+                      <tr><td><strong>Total Swap Ins: </strong>{{App.destination.metrics.swap_out_item_counter}} msgs {{memory App.destination.metrics.swap_out_size_counter}} bytes</td></tr>
+                      <tr><td><strong>Total Swap Outs: </strong>{{App.destination.metrics.swap_in_item_counter}} msgs {{memory App.destination.metrics.swap_in_size_counter}} bytes</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -211,11 +215,32 @@
                     <div class="tab-content">
                       <div class="tab-pane active" id="TAB_Messages">
 
+                        <!--
                         <div class="well form-horizontal">
                           <label class="control-label"><strong>Message: </strong></label>
                           <div class="controls">
                             {{view Ember.TextField class="input-xlarge" placeholder="body" valueBinding="App.MessagesController.send_body"}}
                             <a class="btn" href="#" {{action "send" target="App.MessagesController" on="click"}}>Send</a>
+                          </div>
+                        </div>
+                        -->
+                        {{#if App.MessagesController.firstObject }}
+                        <div class="well">
+                          <div class="form-inline">
+                            <span style="padding-right:1em;">
+                              Browse From:
+                              {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.from"}}
+                            </span>
+                            <span style="padding-right:1em;">
+                              Max:
+                              {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.max"}}
+                            </span>
+                            <span style="padding-right:3em;">
+                              <button class="btn" {{action "refresh" target="App.MessagesController" on="click"}}>Go</button>
+                            </span>
+
+                            <button class="btn" {{action "prev" target="App.MessagesController" on="click"}}>Prev</button>
+                            <button class="btn" {{action "next" target="App.MessagesController" on="click"}}>Next</button>
                           </div>
                         </div>
 
@@ -232,9 +257,9 @@
                             <th width="100%">Size</th>
                           </tr>
                           {{#each App.MessagesController}}
-                          <tr>
+                          <tr {{action "toggle_details" . target="App.MessagesController" on="click"}}>
                             <td>
-                              <a {{action "toggle_details" . target="App.MessagesController" on="click"}}>
+                              <a>
                               {{#if show_details}}
                               <i class="icon-caret-down"></i>
                               {{else}}
@@ -282,17 +307,21 @@
                           {{/each}}
                           </tbody>
                         </table>
-
-                        <div style="padding:.5em 0">
-                          <button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>
-                        </div>
+                        {{else}}
+                          <div style="padding-left:2em;">No messages are available for browsing.</div>
+                        {{/if}}
                       </div>
                       <div class="tab-pane" id="TAB_Producers">
+                        {{#if App.destination.producers}}
                         <table class="details table table-bordered table-striped" style="">
                           <tbody>
                           <tr>
                             <th>Name</th>
                             <th>Kind</th>
+                            <div style="padding:.5em 0">
+                              <!--<button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>-->
+                              &nbsp;
+                            </div>
                             <th>Items</th>
                             <th>Size</th>
                             <th>Last Enqueue</th>
@@ -302,14 +331,18 @@
                             <td>{{label}}</td>
                             <td>{{kind}}</td>
                             <td>{{enqueue_item_counter}}</td>
-                            <td>{{enqueue_size_counter}}</td>
+                            <td>{{memory enqueue_size_counter}}</td>
                             <td>{{enqueue_date}}</td>
                           </tr>
                           {{/each}}
                           </tbody>
                         </table>
+                        {{else}}
+                          <div style="padding-left:2em;">No producers are attached.</div>
+                        {{/if}}
                       </div>
                       <div class="tab-pane" id="TAB_Consumers">
+                        {{#if App.destination.consumers}}
                         <table class="details table table-bordered table-striped" style="">
                           <tbody>
                           <tr>
@@ -329,16 +362,19 @@
                             <td>{{label}}</td>
                             <td>{{kind}}</td>
                             <td>{{enqueue_item_counter}}</td>
-                            <td>{{enqueue_size_counter}}</td>
+                            <td>{{memory enqueue_size_counter}}</td>
                             <td>{{enqueue_date}}</td>
                             <td>{{total_ack_count}}</td>
                             <td>{{total_nack_count}}</td>
-                            <td>{{ack_item_rate}} msgs/sec {{ack_size_rate}} bytes/sec</td>
+                            <td>{{ack_item_rate}} msgs/sec {{memory ack_size_rate}}/sec</td>
                             <td>{{waiting_on}}</td>
                           </tr>
                           {{/each}}
                           </tbody>
                         </table>
+                        {{else}}
+                          <div style="padding-left:2em;">No consumers are attached.</div>
+                        {{/if}}
                       </div>
                     </div>
                   </div>
@@ -379,6 +415,7 @@
                 </div>
                 <div class="span8">
                   <h3>Connections</h3>
+                  {{#if App.ConnectionsController.firstObject}}
                   <table class="details table table-bordered table-striped" style="">
                     <tbody>
                     <tr>
@@ -402,6 +439,9 @@
                   <div style="padding:.5em 0">
                     <button class="btn btn-small" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
                   </div>
+                  {{else}}
+                    <div style="padding-left:2em;">No connections exist at this time.</div>
+                  {{/if}}
                 </div>
               </div>
           </div>
@@ -450,8 +490,8 @@
                   <tbody>
                   <tr><td><strong>Version: </strong>{{App.broker.jvm_metrics.jvm_name}}</td></tr>
                   <tr><td><strong>Up Time: </strong>{{App.broker.jvm_metrics.uptime}}</td></tr>
-                  <tr><td><strong>Heap Memory: </strong>{{App.broker.jvm_metrics.heap_memory.used}} / {{App.broker.jvm_metrics.heap_memory.alloc}}</td></tr>
-                  <tr><td><strong>Non-Heap Memory: </strong>{{App.broker.jvm_metrics.non_heap_memory.used}} / {{App.broker.jvm_metrics.non_heap_memory.alloc}}</td></tr>
+                  <tr><td><strong>Heap Memory: </strong>{{memory App.broker.jvm_metrics.heap_memory.used}} / {{memory App.broker.jvm_metrics.heap_memory.alloc}}</td></tr>
+                  <tr><td><strong>Non-Heap Memory: </strong>{{memory App.broker.jvm_metrics.non_heap_memory.used}} / {{memory App.broker.jvm_metrics.non_heap_memory.alloc}}</td></tr>
                   <tr><td><strong>Threads: </strong>{{App.broker.jvm_metrics.threads_current}}</td></tr>
                   <tr><td><strong>CPU Time: </strong>{{App.broker.jvm_metrics.os_cpu_time}}</td></tr>
                   </tbody>
@@ -466,8 +506,8 @@
                   <tr><td><strong>Name: </strong>{{App.broker.jvm_metrics.os_name}}</td></tr>
                   <tr><td><strong>Architecture: </strong>{{App.broker.jvm_metrics.os_arch}}</td></tr>
                   <tr><td><strong>Processor Cores: </strong>{{App.broker.jvm_metrics.os_processors}}</td></tr>
-                  <tr><td><strong>Memory Free/Total: </strong>{{App.broker.jvm_metrics.os_memory_free}} / {{App.broker.jvm_metrics.os_memory_total}}</td></tr>
-                  <tr><td><strong>Swap Used/Available: </strong>{{App.broker.jvm_metrics.os_swap_total}} / {{App.broker.jvm_metrics.os_swap_free}} </td></tr>
+                  <tr><td><strong>Memory Free/Total: </strong>{{memory App.broker.jvm_metrics.os_memory_free}} / {{memory App.broker.jvm_metrics.os_memory_total}}</td></tr>
+                  <tr><td><strong>Swap Used/Available: </strong>{{memory App.broker.jvm_metrics.os_swap_total}} / {{memory App.broker.jvm_metrics.os_swap_free}} </td></tr>
                   <tr><td><strong>FD Open/Max: </strong>{{App.broker.jvm_metrics.os_fd_open}} / {{App.broker.jvm_metrics.os_fd_max}}</td></tr>
                   <tr><td><strong>Load Average</strong>{{App.broker.jvm_metrics.os_load_average}}</td></tr>
                   </tbody>
@@ -483,6 +523,7 @@
   </div>
 </div>
 <div class="footer-push"></div>
+<div>&nbsp;</div>
 </div>
 <footer id="footer">
   <div class="footer-inner">
