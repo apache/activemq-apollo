@@ -199,4 +199,10 @@ trait Store extends ServiceTrait {
    * Imports a previous export from the input stream.
    */
   def import_data(is:InputStream, cb:(Option[String])=>Unit):Unit
+
+  /**
+   * Compacts the data in the store.
+   */
+  def compact(callback: =>Unit) = callback
+
 }

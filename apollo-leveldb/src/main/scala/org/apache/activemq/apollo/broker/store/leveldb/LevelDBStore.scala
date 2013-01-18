@@ -31,6 +31,9 @@ import java.io._
 import org.apache.activemq.apollo.web.resources.ViewHelper
 import org.fusesource.hawtbuf.Buffer
 import FileSupport._
+import org.apache.activemq.apollo.broker.store.leveldb.LevelDBClient._
+import org.apache.activemq.apollo.broker.store.QueueRecord
+
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -321,4 +324,14 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
     cb(client.import_data(is))
   }
 
+  /**
+   * Compacts the data in the store.
+   */
+  override def compact(callback: => Unit) = write_executor {
+    info("Compacting '%s'", toString)
+    client.index.compact_needed = true
+    client.gc
+    info("'%s' compaction completed", toString)
+    callback
+  }
 }

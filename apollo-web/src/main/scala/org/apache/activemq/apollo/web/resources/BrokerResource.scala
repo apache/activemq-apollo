@@ -427,6 +427,26 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @POST @Path("/virtual-hosts/{id}/store/action/compact")
+  @ApiOperation(value = "Compacts the store.")
+  @Produces(Array("text/html;qs=5"))
+  def store_compact(@PathParam("id") id : String):Unit = {
+    with_virtual_host(id) { host =>
+      admining(host) {
+        if(host.store!=null) {
+          val rc = FutureResult[Unit]()
+          host.store.compact {
+            rc(Success(()))
+          }
+          rc
+        } else {
+          result(NOT_FOUND)
+        }
+      }
+    }
+  }
+
+
   class JosqlHelper {
 
     def get(o:AnyRef, name:String):AnyRef = {
