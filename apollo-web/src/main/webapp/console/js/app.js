@@ -71,19 +71,26 @@ Ember.Handlebars.registerHelper('memory', function(property, options) {
   return Ember.Handlebars.helpers.bind(property, options);
 });
 
-
 App = Em.Application.create({
   ready: function() {
-    var self = this;
-//    setInterval(function() {
-//      if( App.LoginController.get('is_logged_in') ) {
-//        self.refresh();
-//      }
-//    }, 2000);
-    App.LoginController.refresh();
+    setInterval(function() {
+      if( App.LoginController.get('is_logged_in') ) {
+        App.auto_refresh();
+      }
+    }, 2000);
     this._super();
   },
-  
+
+  auto_refresh: function() {
+    App.LoginController.auto_refresh();
+    App.BrokerController.auto_refresh();
+    App.VirtualHostController.auto_refresh();
+    App.ConnectorController.auto_refresh();
+    Ember.run(function(){
+      $(".tooltip-link").tooltip();
+    });
+  },
+
   refresh: function() {
     App.BrokerController.refresh();
     App.VirtualHostController.refresh();
@@ -130,6 +137,26 @@ App = Em.Application.create({
       error: error,
     });
   },
+
+});
+
+function date_to_string(v) {
+  var d = new Date(v);
+  return d.toLocaleDateString()+" "+d.toLocaleTimeString();
+}
+
+App.MainController = Em.Controller.create({
+  tabs:["Virtual Hosts","Connectors","Operating Environment"],
+  selected_tab:"Virtual Hosts",
+  is_virtual_hosts_selected:function() {
+    return this.get("selected_tab") == "Virtual Hosts"
+  }.property("selected_tab"),
+  is_connectors_selected:function() {
+    return this.get("selected_tab") == "Connectors"
+  }.property("selected_tab"),
+  is_operating_environment_selected:function() {
+    return this.get("selected_tab") == "Operating Environment"
+  }.property("selected_tab"),
 });
 
 App.LoginController = Em.Controller.create({
@@ -157,7 +184,7 @@ App.LoginController = Em.Controller.create({
       success: function(data){
         if( data ) {
           self.refresh();
-          App.refresh();
+          App.auto_refresh();
         } else {
           self.set('content', null);
           Bootstrap.AlertMessage.create({
@@ -198,24 +225,37 @@ App.LoginController = Em.Controller.create({
     var content = this.get('content');
     return content && content.length > 0;
   }.property('content'),
-  
+
+
+  auto_refresh:function() {
+    if( !this.get('is_logged_in') ) {
+      this.refresh();
+    }
+  },
   refresh: function(clear) {
     var was_logged_in = this.get('is_logged_in')
     var kind = this.get('kind')
     App.ajax("GET", "/session/whoami", function(data) {
-      App.LoginController.set('content', data);
-      if( App.LoginController.get('is_logged_in') ) {
-        App.refresh();
-      }
-    }, function(xhr, status, thrown) {
-      App.LoginController.set('content', null);
-    });
+        App.LoginController.set('content', data);
+        if( App.LoginController.get('is_logged_in') ) {
+          App.refresh();
+        }
+      },
+      function(xhr, status, thrown) {
+        App.LoginController.set('content', null);
+      });
   }
 })
 
 App.broker = Ember.Object.create({});
 App.BrokerController = Ember.Controller.create({
   offline:false,
+  auto_refresh: function() {
+    if( App.broker.get("virtual_hosts") == null || App.MainController.get("is_operating_environment_selected")) {
+      App.BrokerController.refresh();
+    }
+  },
+
   refresh: function() {
     App.ajax("GET", "/broker", function(json) {
       json.jvm_metrics.os_cpu_time = (json.jvm_metrics.os_cpu_time / 1000000000).toFixed(3) + " seconds"
@@ -232,20 +272,27 @@ App.BrokerController = Ember.Controller.create({
 App.connector = Ember.Object.create({});
 App.ConnectorController = Em.ArrayController.create({
   selected:null,
+  auto_refresh: function() {
+    if( App.MainController.get("is_connectors_selected")) {
+      App.ConnectorController.refresh();
+    }
+  },
   refresh: function() {
     var selected = this.get("selected")
     if( selected ) {
       App.ajax("GET", "/broker/connectors/"+selected, function(connector) {
-        connector.state_date = new Date(connector.state_since);
+        connector.state_date = date_to_string(connector.state_since);
         App.connector.setProperties(connector);
       });
     }
+    App.ConnectionsController.refresh();
   }.observes("selected")
 });
 
 
 App.ConnectionsController = Ember. ArrayController.create({
   connectorBinding: "App.ConnectorController.selected",
+  content:[],
 
   refresh: function(clear) {
     var connector = this.get('connector');
@@ -261,6 +308,7 @@ App.ConnectionsController = Ember. ArrayController.create({
 
     App.ajax("GET", "/broker/connections?q=connector='"+connector+"'&ps=10000&f="+fields.join("&f="), function(data) {
       App.ConnectionsController.set('content', data.rows);
+      updateArrayController(App.ConnectionsController, data.rows, function(item){ return item.id; });
     });
   }.observes("connector"),
 
@@ -303,12 +351,23 @@ App.VirtualHostController = Em.ArrayController.create({
     }
   }.property("App.destination"),
 
+  auto_refresh: function() {
+    if( App.MainController.get("is_virtual_hosts_selected")) {
+      var dest = App.get("destination");
+      if( dest == null ) {
+        App.VirtualHostController.refresh();
+      } else {
+        App.DestinationController.refresh();
+      }
+    }
+  },
+
   refresh: function() {
     var selected = this.get("selected")
     if( selected ) {
       App.ajax("GET", "/broker/virtual-hosts/"+selected, function(host) {
+        host.state_date = date_to_string(host.state_since);
         App.virtual_host.setProperties(host);
-        host.state_date = new Date(host.state_since);
         if( host.store ) {
           App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
             App.virtual_host_store.setProperties(store);
@@ -427,24 +486,65 @@ App.DestinationController = Em.Controller.create({
       var virtual_host = App.DestinationsController.get("virtual_host");
       var kind = App.DestinationsController.get("kind");
       App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"?consumers=true&producers=true", function(data) {
-        data.metrics.state_date = new Date(data.state_since);
-        data.metrics.enqueue_date = new Date(data.metrics.enqueue_ts);
-        data.metrics.dequeue_date = new Date(data.metrics.dequeue_ts);
-        data.metrics.nak_date = new Date(data.metrics.nak_ts);
-        data.metrics.expired_date = new Date(data.metrics.expired_ts);
+        data.state_date = date_to_string(data.state_since);
+        data.metrics.enqueue_date = date_to_string(data.metrics.enqueue_ts);
+        data.metrics.dequeue_date = date_to_string(data.metrics.dequeue_ts);
+        data.metrics.nak_date = date_to_string(data.metrics.nak_ts);
+        data.metrics.expired_date = date_to_string(data.metrics.expired_ts);
         data.producers.forEach(function(value){
-          value.enqueue_date = new Date(value.enqueue_ts);
+          value.enqueue_date = date_to_string(value.enqueue_ts);
         });
         data.consumers.forEach(function(value){
-          value.enqueue_date = new Date(value.enqueue_ts);
+          value.enqueue_date = date_to_string(value.enqueue_ts);
+          value.ack_item_rate = value.ack_item_rate.toFixed(2);
         });
         App.set('destination', data);
-        App.MessagesController.reset();
+        App.MessagesController.auto_refresh();
       });
     }
   }.observes("selected"),
 });
 
+function updateArrayController(controller, data, keyFn) {
+  if( data.length == 0 ) {
+    controller.set("content", []);
+  } else {
+    var content = controller.get("content");
+    var matches=true;
+
+    var keyIndex = {}
+    if( data.length == content.length ) {
+      content.forEach(function(item, i){
+        var key = keyFn(item);
+        keyIndex[key] = item;
+        if( key != keyFn(data[i]) ) {
+          matches = false;
+        }
+      })
+    } else {
+      matches = false;
+    }
+
+    if( matches ) {
+      content.forEach(function(item, index){
+        item.setProperties(data[index]);
+      });
+    } else {
+
+      var new_content = [];
+      data.forEach(function(item){
+        var obj = keyIndex[item.entry.seq];
+        if( obj ) {
+          obj.setProperties(item);
+        } else {
+          obj = Ember.Object.create(item);
+        }
+        new_content.push(obj);
+      });
+      controller.set("content", new_content);
+    }
+  }
+}
 
 App.MessagesController = Ember. ArrayController.create({
   content: [],
@@ -504,6 +604,16 @@ App.MessagesController = Ember. ArrayController.create({
     this.refresh();
   },
 
+  auto_refresh:function() {
+    var virtual_host = App.DestinationsController.get("virtual_host");
+    var kind = App.DestinationsController.get("kind");
+    var selected = App.DestinationController.get("selected")
+    var destination_path = "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected;
+    if( destination_path != this.get("destination_path") ) {
+      this.refresh();
+    }
+  },
+
   refresh:function() {
     var virtual_host = App.DestinationsController.get("virtual_host");
     var kind = App.DestinationsController.get("kind");
@@ -511,27 +621,29 @@ App.MessagesController = Ember. ArrayController.create({
     var max_body = 100;
     var from = this.get("from");
     var max = this.get("max");
-    App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"/messages?from="+from+"&max="+max+"&max_body="+max_body, function(data) {
-      var content=[]
-      if( data.length > 0 ) {
-        data.forEach(function(item){
-          if( item.base64_body ) {
-            var rc = atob(item.base64_body);
-            if( item.body_truncated ) {
-              rc += "..."
-            }
-            item.body = rc;
+    var destination_path = "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected;
+    App.ajax("GET", destination_path+"/messages?from="+from+"&max="+max+"&max_body="+max_body, function(data) {
+      data.forEach(function(item, index){
+        if( item.base64_body ) {
+          var rc = atob(item.base64_body);
+          if( item.body_truncated ) {
+            rc += "..."
           }
-          if( item.expiration==0 ) {
-            item.expiration = "no"
-          } else {
-            item.expiration = new Date(connector.state_since);
-          }
-          content.push(Ember.Object.create(item));
-        });
+          item.body = rc;
+        }
+        if( item.expiration==0 ) {
+          item.expiration = "no"
+        } else {
+          item.expiration = date_to_string(item.expiration);
+        }
+      });
+      if( data.length == 0 ) {
+        App.MessagesController.set("from", 0);
+      } else {
         App.MessagesController.set("from", data[0].entry.seq);
       }
-      App.MessagesController.set("content", content);
+      updateArrayController(App.MessagesController, data, function(item){ return item.entry.seq; });
+      App.MessagesController.set("destination_path", destination_path);
     });
   },
 

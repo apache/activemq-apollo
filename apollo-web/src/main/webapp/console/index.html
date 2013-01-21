@@ -86,437 +86,420 @@
     </div>    
     {{else}}
     <div class="span12">
-      <ul class="nav nav-tabs">
-        <li class="active"><a href="#TAB_Virtual_Hosts" data-toggle="tab">Virtual Hosts</a></li>
-        <li><a href="#TAB_Connectors" data-toggle="tab">Connectors</a></li>
-          <!--
-        <li><a href="#TAB_Connections" data-toggle="tab">Connections</a></li>
-        -->
-        <li><a href="#TAB_Operating_Environment" data-toggle="tab">Operating Environment</a></li>
-      </ul>
-      <div class="tabbable">
-        <div class="tab-content">
-          <div class="tab-pane active" id="TAB_Virtual_Hosts">
-            <div class="form-horizontal">
-              <div class="control-group">
-                <label class="control-label"><strong style="font-size:170%">Virtual Host:</strong></label>
-                <div class="controls">
-                  {{view Ember.Select contentBinding="App.broker.virtual_hosts" selectionBinding="App.VirtualHostController.selected"}}
-                  <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
-                </div>
-              </div>
-            </div>
-            <div class="row" {{bindAttr style="App.VirtualHostController.style"}}>
-              <div class="span4">
-                <div class="well" style="padding: 8px 8px">
-                  <div class="well-title">Details</div>
-                  <table class="details table table-bordered table-striped">
-                    <tbody>
-                    <tr><td><strong>Up time: </strong>{{App.virtual_host.state_date}}</td></tr>
-                    <tr><td><strong>Host Names: </strong>
-                      <ul>
-                      {{#each App.virtual_host.host_names}}
-                        <li>{{.}}</li>
-                      {{/each}}
-                      </ul>
-                    </td></tr>
-                    {{#if App.virtual_host.store}}
-                    <tr><td><strong>Store: </strong>{{App.virtual_host_store.id}}</td></tr>
-                    {{/if}}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div class="span8">
-                {{view Bootstrap.Tabs contentBinding="App.VirtualHostController.tabs" selectionBinding="App.VirtualHostController.selected_tab"}}
-                <div>
-
-                  {{#if App.DestinationsController.show_create_box}}
-                  <div class="well center">
-                    <form action="" class="nomargin form-inline">
-                      <strong>Name: </strong>
-                      {{view Ember.TextField placeholder="name" valueBinding="App.DestinationsController.create_name"}}
-                      <input type="submit" value="Create" class="btn btn-primary" {{action "create" target="App.DestinationsController" on="click"}}>
-                    </form>
-                  </div>
-                  {{/if}}
-
-                  {{#if App.DestinationsController.firstObject }}
-                  <table class="details table table-bordered table-striped" style="">
-                    <tbody>
-                    <tr>
-                      <th>{{view Ember.Checkbox checkedBinding="App.DestinationsController.all_checked"}}</th>
-                      <th>Name</th>
-                      <th>Messages</th>
-                      <th>Size</th>
-                      <th>Producers</th>
-                      <th>Consumers</th>
-                    </tr>
-                    {{#each App.DestinationsController}}
-                    <tr>
-                      <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
-                      <td><a href="#" {{action "select" . target="App.DestinationsController" on="click"}}><i class=" icon-zoom-in"></i> {{[0]}}</a></td>
-                      <td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
-                    </tr>
-                    {{/each}}
-                    </tbody>
-                  </table>
-                  <div style="padding:.5em 0">
-                    <button class="btn btn-small" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
-                  </div>
-                  {{else}}
-                    <div style="padding-left:2em;">No {{App.VirtualHostController.selected_tab}} have been created yet.</div>
-                  {{/if}}
-                </div>
-              </div>
-            </div>
-            {{#if App.destination}}
-            <div class="row" style="margin:0 1em">
-                  <ul class="nav nav-tabs">
-                    <li class="active">
-                        <a data-toggle="tab">
-                        <strong>{{App.DestinationsController.kind_label}}:</strong> {{App.destination.id}}
-                        <strong {{action "clear" target="App.DestinationController" on="click"}}><i class="icon-remove-sign"></i></strong>
-                    </a>
-                    </li>
-                  </ul>
-                <div class="span4">
-                  <div class="well" style="padding: 8px 8px">
-                    <div class="well-title">Details</div>
-                    <table class="details table table-bordered table-striped">
-                      <tbody>
-                      <tr><td><strong>Up time: </strong>{{App.destination.state_date}}</td></tr>
-                      {{#if App.destination.selector}}
-                      <tr><td><strong>Selector: </strong>{{App.destination.selector}}</td></tr>
-                      {{/if}}
-                      <tr><td><strong>Queue Size: </strong>{{App.destination.metrics.queue_items}} messages</td></tr>
-                      <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items / {{memory App.destination.metrics.enqueue_size_counter}} bytes {{App.destination.metrics.enqueue_date}} ago</td></tr>
-                      <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} / {{memory App.destination.metrics.dequeue_size_counter}} bytes {{App.destination.metrics.dequeue_date}} ago</td></tr>
-                      <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} / {{memory App.destination.metrics.nack_size_counter}} bytes {{App.destination.metrics.nack_date}} ago</td></tr>
-                      <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} / {{memory App.destination.metrics.expired_size_counter}} bytes {{App.destination.metrics.expired_date}} ago</td></tr>
-                      <tr><td><strong>Enqueue Rate Throttle: </strong>{{App.destination.metrics.max_enqueue_rate}}</td></tr>
-                      <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{memory App.destination.metrics.swapped_in_size}} bytes</td></tr>
-                      <tr><td><strong>Swapping Out: </strong>{{memory App.destination.metrics.swapping_out_size}} bytes</td></tr>
-                      <tr><td><strong>Swapping In: </strong>{{memory App.destination.metrics.swapping_in_size}} bytes</td></tr>
-                      <tr><td><strong>Total Swap Ins: </strong>{{App.destination.metrics.swap_out_item_counter}} msgs {{memory App.destination.metrics.swap_out_size_counter}} bytes</td></tr>
-                      <tr><td><strong>Total Swap Outs: </strong>{{App.destination.metrics.swap_in_item_counter}} msgs {{memory App.destination.metrics.swap_in_size_counter}} bytes</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div class="span7">
-                  <ul class="nav nav-tabs">
-                    <li class="active"><a href="#TAB_Messages" data-toggle="tab">Messages ({{App.destination.metrics.queue_items}})</a></li>
-                    <li><a href="#TAB_Producers" data-toggle="tab">Producers ({{App.destination.producers.length}})</a></li>
-                    <li><a href="#TAB_Consumers" data-toggle="tab">Consumers ({{App.destination.producers.length}})</a></li>
-                  </ul>
-                  <div class="tabbable">
-                    <div class="tab-content">
-                      <div class="tab-pane active" id="TAB_Messages">
-
-                        <!--
-                        <div class="well form-horizontal">
-                          <label class="control-label"><strong>Message: </strong></label>
-                          <div class="controls">
-                            {{view Ember.TextField class="input-xlarge" placeholder="body" valueBinding="App.MessagesController.send_body"}}
-                            <a class="btn" href="#" {{action "send" target="App.MessagesController" on="click"}}>Send</a>
-                          </div>
-                        </div>
-                        -->
-                        {{#if App.MessagesController.firstObject }}
-                        <div class="well">
-                          <div class="form-inline">
-                            <span style="padding-right:1em;">
-                              Browse From:
-                              {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.from"}}
-                            </span>
-                            <span style="padding-right:1em;">
-                              Max:
-                              {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.max"}}
-                            </span>
-                            <span style="padding-right:3em;">
-                              <button class="btn" {{action "refresh" target="App.MessagesController" on="click"}}>Go</button>
-                            </span>
-
-                            <button class="btn" {{action "prev" target="App.MessagesController" on="click"}}>Prev</button>
-                            <button class="btn" {{action "next" target="App.MessagesController" on="click"}}>Next</button>
-                          </div>
-                        </div>
-
-                        <table class="details table table-bordered" style="">
-                          <tbody>
-                          <tr>
-                            <th>&nbsp;</th>
-                            <th>Sequence</th>
-                            <th>Codec</th>
-                            <th>Persistent</th>
-                            <th>Expires</th>
-                            <th>Prefetched</th>
-                            <th>Acquirer</th>
-                            <th width="100%">Size</th>
-                          </tr>
-                          {{#each App.MessagesController}}
-                          <tr {{action "toggle_details" . target="App.MessagesController" on="click"}}>
-                            <td>
-                              <a>
-                              {{#if show_details}}
-                              <i class="icon-caret-down"></i>
-                              {{else}}
-                              <i class="icon-caret-right"></i>
-                              {{/if}}
-                              </a>
-                            </td>
-                            <td>{{entry.seq}}</td>
-                            <td>{{codec}}</td>
-                            <td>{{persistent}}</td>
-                            <td>{{expiration}}</td>
-                            <td>{{entry.is_prefetched}}</td>
-                            <td>{{entry.acquirer}}</td>
-                            <td>{{entry.size}}</td>
-                          </tr>
-                          {{#if show_details}}
-                          <tr>
-                            <td colspan="9">
-                            <!-- body -->
-                            <div>
-
-                              {{#if show_headers}}
-                              <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-down"></i> Headers</a></h4>
-                              <table class="details table table-bordered table-striped" style="">
-                                <tbody>
-                                {{#key_value headers}}
-                                <tr>
-                                  <th class="nowrap">{{key}}</th>
-                                  <td width="100%">{{value}}</td>
-                                </tr>
-                                {{/key_value}}
-                                </tbody>
-                              </table>
-                              {{else}}
-                              <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-right"></i> Headers</a></h4>
-                              {{/if}}
-                              <h4>Body</h4>
-                              <div>
-                                <pre>{{body}}</pre>
-                              </div>
-                            </div>
-                            </td>
-                          </tr>
-                          {{/if}}
-                          {{/each}}
-                          </tbody>
-                        </table>
-                        {{else}}
-                          <div style="padding-left:2em;">No messages are available for browsing.</div>
-                        {{/if}}
-                      </div>
-                      <div class="tab-pane" id="TAB_Producers">
-                        {{#if App.destination.producers}}
-                        <table class="details table table-bordered table-striped" style="">
-                          <tbody>
-                          <tr>
-                            <th>Name</th>
-                            <th>Kind</th>
-                            <div style="padding:.5em 0">
-                              <!--<button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>-->
-                              &nbsp;
-                            </div>
-                            <th>Items</th>
-                            <th>Size</th>
-                            <th>Last Enqueue</th>
-                          </tr>
-                          {{#each App.destination.producers}}
-                          <tr>
-                            <td>{{label}}</td>
-                            <td>{{kind}}</td>
-                            <td>{{enqueue_item_counter}}</td>
-                            <td>{{memory enqueue_size_counter}}</td>
-                            <td>{{enqueue_date}}</td>
-                          </tr>
-                          {{/each}}
-                          </tbody>
-                        </table>
-                        {{else}}
-                          <div style="padding-left:2em;">No producers are attached.</div>
-                        {{/if}}
-                      </div>
-                      <div class="tab-pane" id="TAB_Consumers">
-                        {{#if App.destination.consumers}}
-                        <table class="details table table-bordered table-striped" style="">
-                          <tbody>
-                          <tr>
-                            <th>Name</th>
-                            <th>Kind</th>
-                            <th>Items</th>
-                            <th>Size</th>
-                            <th>Last Enqueue</th>
-                              <th>Acks</th>
-                              <th>Nacks</th>
-                              <th>Last Enqueue</th>
-                              <th>Ack Rate</th>
-                              <th>Status</th>
-                          </tr>
-                          {{#each App.destination.consumers}}
-                          <tr>
-                            <td>{{label}}</td>
-                            <td>{{kind}}</td>
-                            <td>{{enqueue_item_counter}}</td>
-                            <td>{{memory enqueue_size_counter}}</td>
-                            <td>{{enqueue_date}}</td>
-                            <td>{{total_ack_count}}</td>
-                            <td>{{total_nack_count}}</td>
-                            <td>{{ack_item_rate}} msgs/sec {{memory ack_size_rate}}/sec</td>
-                            <td>{{waiting_on}}</td>
-                          </tr>
-                          {{/each}}
-                          </tbody>
-                        </table>
-                        {{else}}
-                          <div style="padding-left:2em;">No consumers are attached.</div>
-                        {{/if}}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-
-            </div>
-            {{/if}}
-          </div>
-          <div class="tab-pane" id="TAB_Connectors">
-              <div class="form-horizontal">
-                <div class="control-group">
-                  <label class="control-label"><strong style="font-size:170%">Connector:</strong></label>
-                  <div class="controls">
-                    {{view Ember.Select contentBinding="App.broker.connectors" selectionBinding="App.ConnectorController.selected"}}
-                    <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
-                  </div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="span4">
-                  <div class="well" style="padding: 8px 8px">
-                    <div class="well-title">Details</div>
-                    <table class="details table table-bordered table-striped">
-                      <tbody>
-                      <tr><td><strong>Up time: </strong>{{App.connector.state_date}}</td></tr>
-                      <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
-                      <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
-                      <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>
-                      <tr><td><strong>Connection Counter: </strong>{{App.connector.connection_counter}}</td></tr>
-                      <tr><td><strong>Outbound Messages: </strong>{{App.connector.messages_sent}}</td></tr>
-                      <tr><td><strong>Inbound Messages: </strong>{{App.connector.messages_received}}</td></tr>
-                      <tr><td><strong>Data Transferred In: </strong>{{App.connector.read_counter}}</td></tr>
-                      <tr><td><strong>Data Transferred Out: </strong>{{App.connector.write_counter}}</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div class="span8">
-                  <h3>Connections</h3>
-                  {{#if App.ConnectionsController.firstObject}}
-                  <table class="details table table-bordered table-striped" style="">
-                    <tbody>
-                    <tr>
-                      <th>{{view Ember.Checkbox checkedBinding="App.ConnectionsController.all_checked"}}</th>
-                      <th>Remote Address</th>
-                      <th>Protocol</th>
-                      <th>User</th>
-                      <th>Data In</th>
-                      <th>Data Out</th>
-                      <th>Msgs In</th>
-                      <th>Msgs out</th>
-                    </tr>
-                    {{#each App.ConnectionsController}}
-                    <tr>
-                      <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
-                      <td><i class=" icon-zoom-in"></i>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td><td>{{[5]}}</td><td>{{[6]}}</td><td>{{[7]}}</td>
-                    </tr>
-                    {{/each}}
-                    </tbody>
-                  </table>
-                  <div style="padding:.5em 0">
-                    <button class="btn btn-small" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
-                  </div>
-                  {{else}}
-                    <div style="padding-left:2em;">No connections exist at this time.</div>
-                  {{/if}}
-                </div>
-              </div>
-          </div>
-          <!--
-          <div class="tab-pane" id="TAB_Connections">
-            <h3>Connections</h3>
-            <p>
-              How client connect to the broker, select
-              a connector to view more details about it.
-            </p>
-            <form class="well form-search">
-              <input type="text" class="input-medium search-query">
-              <button type="submit" class="btn">Search</button>
-            </form>
-            <p>
-              <ul>
-                <li>61613</li>
-                <li>61616</li>
-              </ul>
-            </p>
-          </div>
-          -->
-          <div class="row tab-pane" id="TAB_Operating_Environment">
-            <div class="span4">
-              <div class="well" style="padding: 8px 8px">
-                <div class="well-title">Apache Apollo</div>
-                <table class="details table table-bordered table-striped">
-                  <tbody>
-                  <tr>
-                    <td><strong>Version: </strong>{{App.broker.version}}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Install Directory: </strong>{{App.broker.home_location}}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Instance Directory: </strong>{{App.broker.base_location}}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="span4">
-              <div class="well" style="padding: 8px 8px">
-                <div class="well-title">Java Virtual Machine</div>
-                <table class="details table table-bordered table-striped">
-                  <tbody>
-                  <tr><td><strong>Version: </strong>{{App.broker.jvm_metrics.jvm_name}}</td></tr>
-                  <tr><td><strong>Up Time: </strong>{{App.broker.jvm_metrics.uptime}}</td></tr>
-                  <tr><td><strong>Heap Memory: </strong>{{memory App.broker.jvm_metrics.heap_memory.used}} / {{memory App.broker.jvm_metrics.heap_memory.alloc}}</td></tr>
-                  <tr><td><strong>Non-Heap Memory: </strong>{{memory App.broker.jvm_metrics.non_heap_memory.used}} / {{memory App.broker.jvm_metrics.non_heap_memory.alloc}}</td></tr>
-                  <tr><td><strong>Threads: </strong>{{App.broker.jvm_metrics.threads_current}}</td></tr>
-                  <tr><td><strong>CPU Time: </strong>{{App.broker.jvm_metrics.os_cpu_time}}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="span4">
-              <div class="well" style="padding: 8px 8px">
-                <div class="well-title">Operating System</div>
-                <table class="details table table-bordered table-striped">
-                  <tbody>
-                  <tr><td><strong>Name: </strong>{{App.broker.jvm_metrics.os_name}}</td></tr>
-                  <tr><td><strong>Architecture: </strong>{{App.broker.jvm_metrics.os_arch}}</td></tr>
-                  <tr><td><strong>Processor Cores: </strong>{{App.broker.jvm_metrics.os_processors}}</td></tr>
-                  <tr><td><strong>Memory Free/Total: </strong>{{memory App.broker.jvm_metrics.os_memory_free}} / {{memory App.broker.jvm_metrics.os_memory_total}}</td></tr>
-                  <tr><td><strong>Swap Used/Available: </strong>{{memory App.broker.jvm_metrics.os_swap_total}} / {{memory App.broker.jvm_metrics.os_swap_free}} </td></tr>
-                  <tr><td><strong>FD Open/Max: </strong>{{App.broker.jvm_metrics.os_fd_open}} / {{App.broker.jvm_metrics.os_fd_max}}</td></tr>
-                  <tr><td><strong>Load Average</strong>{{App.broker.jvm_metrics.os_load_average}}</td></tr>
-                  </tbody>
-                </table>
-              </div>
+      {{view Bootstrap.Tabs contentBinding="App.MainController.tabs" selectionBinding="App.MainController.selected_tab"}}
+      {{#if App.MainController.is_virtual_hosts_selected}}
+      <div class="tab-pane active" id="TAB_Virtual_Hosts">
+        <div class="form-horizontal">
+          <div class="control-group">
+            <label class="control-label"><strong style="font-size:170%">Virtual Host:</strong></label>
+            <div class="controls">
+              {{view Ember.Select contentBinding="App.broker.virtual_hosts" selectionBinding="App.VirtualHostController.selected"}}
+              <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
             </div>
           </div>
         </div>
+        <div class="row" {{bindAttr style="App.VirtualHostController.style"}}>
+          <div class="span4">
+            <div class="well" style="padding: 8px 8px">
+              <div class="well-title">Details</div>
+              <table class="details table table-bordered table-striped">
+                <tbody>
+                <tr><td><strong>Up Since: </strong>{{App.virtual_host.state_date}}</td></tr>
+                <tr><td><strong>Host Names: </strong>
+                  <ul>
+                  {{#each App.virtual_host.host_names}}
+                    <li>{{.}}</li>
+                  {{/each}}
+                  </ul>
+                </td></tr>
+                {{#if App.virtual_host.store}}
+                <tr><td><strong>Store: </strong>{{App.virtual_host_store.id}}</td></tr>
+                {{/if}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="span8">
+            {{view Bootstrap.Tabs contentBinding="App.VirtualHostController.tabs" selectionBinding="App.VirtualHostController.selected_tab"}}
+            <div>
+
+              {{#if App.DestinationsController.show_create_box}}
+              <div class="well center">
+                <form action="" class="nomargin form-inline">
+                  <strong>Name: </strong>
+                  {{view Ember.TextField placeholder="name" valueBinding="App.DestinationsController.create_name"}}
+                  <input type="submit" value="Create" class="btn btn-primary" {{action "create" target="App.DestinationsController" on="click"}}>
+                </form>
+              </div>
+              {{/if}}
+
+              {{#if App.DestinationsController.firstObject }}
+              <table class="details table table-bordered table-striped" style="">
+                <tbody>
+                <tr>
+                  <th>{{view Ember.Checkbox checkedBinding="App.DestinationsController.all_checked"}}</th>
+                  <th>Name</th>
+                  <th>Messages</th>
+                  <th>Size</th>
+                  <th>Producers</th>
+                  <th>Consumers</th>
+                </tr>
+                {{#each App.DestinationsController}}
+                <tr>
+                  <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
+                  <td><a href="#" {{action "select" . target="App.DestinationsController" on="click"}}><i class=" icon-zoom-in"></i> {{[0]}}</a></td>
+                  <td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
+                </tr>
+                {{/each}}
+                </tbody>
+              </table>
+              <div style="padding:.5em 0">
+                <button class="btn btn-small" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
+              </div>
+              {{else}}
+                <div style="padding-left:2em;">No {{App.VirtualHostController.selected_tab}} have been created yet.</div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+        {{#if App.destination}}
+        <div class="row" style="margin:0 1em">
+              <ul class="nav nav-tabs">
+                <li class="active">
+                    <a data-toggle="tab">
+                    <strong>{{App.DestinationsController.kind_label}}:</strong> {{App.destination.id}}
+                    <strong {{action "clear" target="App.DestinationController" on="click"}}><i class="icon-remove-sign"></i></strong>
+                </a>
+                </li>
+              </ul>
+            <div class="span4">
+              <div class="well" style="padding: 8px 8px">
+                <div class="well-title">Details</div>
+                <table class="details table table-bordered table-striped">
+                  <tbody>
+                  <tr><td><strong>Up Since: </strong>{{App.destination.state_date}}</td></tr>
+                  {{#if App.destination.selector}}
+                  <tr><td><strong>Selector: </strong>{{App.destination.selector}}</td></tr>
+                  {{/if}}
+                  <tr><td><strong>Queue Size: </strong>{{App.destination.metrics.queue_items}} messages</td></tr>
+                  <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items / {{memory App.destination.metrics.enqueue_size_counter}}
+                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.enqueue_date"}}><i class="icon-time"></i></a>
+                  </td></tr>
+                  <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} / {{memory App.destination.metrics.dequeue_size_counter}}
+                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.dequeue_date"}}><i class="icon-time"></i></a>
+                    </td></tr>
+                  <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} / {{memory App.destination.metrics.nack_size_counter}}
+                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.nack_date"}}><i class="icon-time"></i></a>
+                    </td></tr>
+                  <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} / {{memory App.destination.metrics.expired_size_counter}}
+                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.expired_date"}}><i class="icon-time"></i></a>
+                    </td></tr>
+                  <tr><td><strong>Enqueue Rate Throttle: </strong>{{App.destination.metrics.max_enqueue_rate}}</td></tr>
+                  <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{memory App.destination.metrics.swapped_in_size}}</td></tr>
+                  <tr><td><strong>Swapping Out: </strong>{{memory App.destination.metrics.swapping_out_size}}</td></tr>
+                  <tr><td><strong>Swapping In: </strong>{{memory App.destination.metrics.swapping_in_size}}</td></tr>
+                  <tr><td><strong>Total Swap Ins: </strong>{{App.destination.metrics.swap_out_item_counter}} msgs {{memory App.destination.metrics.swap_out_size_counter}}</td></tr>
+                  <tr><td><strong>Total Swap Outs: </strong>{{App.destination.metrics.swap_in_item_counter}} msgs {{memory App.destination.metrics.swap_in_size_counter}}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="span7">
+              <ul class="nav nav-tabs">
+                <li class="active"><a href="#TAB_Messages" data-toggle="tab">Messages ({{App.destination.metrics.queue_items}})</a></li>
+                <li><a href="#TAB_Producers" data-toggle="tab">Producers ({{App.destination.producers.length}})</a></li>
+                <li><a href="#TAB_Consumers" data-toggle="tab">Consumers ({{App.destination.consumers.length}})</a></li>
+              </ul>
+              <div class="tabbable">
+                <div class="tab-content">
+                  <div class="tab-pane active" id="TAB_Messages">
+
+                    <!--
+                    <div class="well form-horizontal">
+                      <label class="control-label"><strong>Message: </strong></label>
+                      <div class="controls">
+                        {{view Ember.TextField class="input-xlarge" placeholder="body" valueBinding="App.MessagesController.send_body"}}
+                        <a class="btn" href="#" {{action "send" target="App.MessagesController" on="click"}}>Send</a>
+                      </div>
+                    </div>
+                    -->
+                    {{#if App.MessagesController.firstObject }}
+                    <div class="well">
+                      <div class="form-inline">
+                        <span style="padding-right:1em;">
+                          Browse From:
+                          {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.from"}}
+                        </span>
+                        <span style="padding-right:1em;">
+                          Max:
+                          {{view Ember.TextField class="input-number" valueBinding="App.MessagesController.max"}}
+                        </span>
+                        <span style="padding-right:3em;">
+                          <button class="btn" {{action "refresh" target="App.MessagesController" on="click"}}><i class="icon-repeat"></i> Go</button>
+                        </span>
+
+                        <button class="btn" {{action "prev" target="App.MessagesController" on="click"}}>Prev</button>
+                        <button class="btn" {{action "next" target="App.MessagesController" on="click"}}>Next</button>
+                      </div>
+                    </div>
+
+                    <table class="details table table-bordered" style="">
+                      <tbody>
+                      <tr>
+                        <th>&nbsp;</th>
+                        <th>Sequence</th>
+                        <th>Codec</th>
+                        <th>Persistent</th>
+                        <th>Expires</th>
+                        <th>Prefetched</th>
+                        <th>Acquirer</th>
+                        <th width="100%">Size</th>
+                      </tr>
+                      {{#each App.MessagesController}}
+                      <tr {{action "toggle_details" . target="App.MessagesController" on="click"}}>
+                        <td>
+                          <a>
+                          {{#if show_details}}
+                          <i class="icon-caret-down"></i>
+                          {{else}}
+                          <i class="icon-caret-right"></i>
+                          {{/if}}
+                          </a>
+                        </td>
+                        <td>{{entry.seq}}:{{count}}</td>
+                        <td>{{codec}}</td>
+                        <td>{{persistent}}</td>
+                        <td>{{expiration}}</td>
+                        <td>{{entry.is_prefetched}}</td>
+                        <td>{{entry.acquirer}}</td>
+                        <td>{{entry.size}}</td>
+                      </tr>
+                      {{#if show_details}}
+                      <tr>
+                        <td colspan="9">
+                        <!-- body -->
+                        <div>
+
+                          {{#if show_headers}}
+                          <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-down"></i> Headers</a></h4>
+                          <table class="details table table-bordered table-striped" style="">
+                            <tbody>
+                            {{#key_value headers}}
+                            <tr>
+                              <th class="nowrap">{{key}}</th>
+                              <td width="100%">{{value}}</td>
+                            </tr>
+                            {{/key_value}}
+                            </tbody>
+                          </table>
+                          {{else}}
+                          <h4><a {{action "toggle_headers" . target="App.MessagesController" on="click"}}><i class="icon-caret-right"></i> Headers</a></h4>
+                          {{/if}}
+                          <h4>Body</h4>
+                          <div>
+                            <pre>{{body}}</pre>
+                          </div>
+                        </div>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      {{/each}}
+                      </tbody>
+                    </table>
+                    {{else}}
+                      <div style="padding-left:2em;">No messages are available for browsing.</div>
+                    {{/if}}
+                  </div>
+                  <div class="tab-pane" id="TAB_Producers">
+                    {{#if App.destination.producers}}
+                    <table class="details table table-bordered table-striped" style="">
+                      <tbody>
+                      <tr>
+                        <th>Name</th>
+                        <th>Kind</th>
+                        <div style="padding:.5em 0">
+                          <!--<button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>-->
+                          &nbsp;
+                        </div>
+                        <th>Transfers</th>
+                        <th>Size</th>
+                        <th>Last Transfer</th>
+                      </tr>
+                      {{#each App.destination.producers}}
+                      <tr>
+                        <td>{{label}}</td>
+                        <td>{{kind}}</td>
+                        <td>{{enqueue_item_counter}}</td>
+                        <td>{{memory enqueue_size_counter}}</td>
+                        <td>{{enqueue_date}}</td>
+                      </tr>
+                      {{/each}}
+                      </tbody>
+                    </table>
+                    {{else}}
+                      <div style="padding-left:2em;">No producers are attached.</div>
+                    {{/if}}
+                  </div>
+                  <div class="tab-pane" id="TAB_Consumers">
+                    {{#if App.destination.consumers}}
+                    <table class="details table table-bordered table-striped" style="">
+                      <tbody>
+                      <tr>
+                        <th>Kind</th>
+                        <th>Name</th>
+                        <th>Transfers</th>
+                        <th>Size</th>
+                        <th>Last Transfer</th>
+                        <th>Acks</th>
+                        <th>Nacks</th>
+                        <th>Ack Rate</th>
+                        <th>Status</th>
+                      </tr>
+                      {{#each App.destination.consumers}}
+                      <tr>
+                        <td>{{kind}}</td>
+                        <td>{{label}}</td>
+                        <td>{{enqueue_item_counter}}</td>
+                        <td>{{memory enqueue_size_counter}}</td>
+                        <td>{{enqueue_date}}</td>
+                        <td>{{total_ack_count}}</td>
+                        <td>{{total_nack_count}}</td>
+                        <td>{{ack_item_rate}} msgs/sec {{memory ack_size_rate}}/sec</td>
+                        <td>{{waiting_on}}</td>
+                      </tr>
+                      {{/each}}
+                      </tbody>
+                    </table>
+                    {{else}}
+                      <div style="padding-left:2em;">No consumers are attached.</div>
+                    {{/if}}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+        </div>
+        {{/if}}
       </div>
+      {{/if}}
+      {{#if App.MainController.is_connectors_selected}}
+      <div>
+        <div class="form-horizontal">
+          <div class="control-group">
+            <label class="control-label"><strong style="font-size:170%">Connector:</strong></label>
+            <div class="controls">
+              {{view Ember.Select contentBinding="App.broker.connectors" selectionBinding="App.ConnectorController.selected"}}
+              <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="span4">
+            <div class="well" style="padding: 8px 8px">
+              <div class="well-title">Details</div>
+              <table class="details table table-bordered table-striped">
+                <tbody>
+                <tr><td><strong>Up Since: </strong>{{App.connector.state_date}}</td></tr>
+                <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
+                <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
+                <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>
+                <tr><td><strong>Connection Counter: </strong>{{App.connector.connection_counter}}</td></tr>
+                <tr><td><strong>Outbound Messages: </strong>{{App.connector.messages_sent}}</td></tr>
+                <tr><td><strong>Inbound Messages: </strong>{{App.connector.messages_received}}</td></tr>
+                <tr><td><strong>Data Transferred In: </strong>{{App.connector.read_counter}}</td></tr>
+                <tr><td><strong>Data Transferred Out: </strong>{{App.connector.write_counter}}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="span8">
+            <h3>Connections</h3>
+            {{#if App.ConnectionsController.firstObject}}
+            <table class="details table table-bordered table-striped" style="">
+              <tbody>
+              <tr>
+                <th>{{view Ember.Checkbox checkedBinding="App.ConnectionsController.all_checked"}}</th>
+                <th>Remote Address</th>
+                <th>Protocol</th>
+                <th>User</th>
+                <th>Data In</th>
+                <th>Data Out</th>
+                <th>Msgs In</th>
+                <th>Msgs out</th>
+              </tr>
+              {{#each App.ConnectionsController}}
+              <tr>
+                <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
+                <td><i class=" icon-zoom-in"></i>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td><td>{{[5]}}</td><td>{{[6]}}</td><td>{{[7]}}</td>
+              </tr>
+              {{/each}}
+              </tbody>
+            </table>
+            <div style="padding:.5em 0">
+              <button class="btn btn-small" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
+            </div>
+            {{else}}
+              <div style="padding-left:2em;">No connections exist at this time.</div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      {{/if}}
+      {{#if App.MainController.is_operating_environment_selected}}
+      <div class="row">
+        <div class="span4">
+          <div class="well" style="padding: 8px 8px">
+            <div class="well-title">Apache Apollo</div>
+            <table class="details table table-bordered table-striped">
+              <tbody>
+              <tr>
+                <td><strong>Version: </strong>{{App.broker.version}}</td>
+              </tr>
+              <tr>
+                <td><strong>Install Directory: </strong>{{App.broker.home_location}}</td>
+              </tr>
+              <tr>
+                <td><strong>Instance Directory: </strong>{{App.broker.base_location}}</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="span4">
+          <div class="well" style="padding: 8px 8px">
+            <div class="well-title">Java Virtual Machine</div>
+            <table class="details table table-bordered table-striped">
+              <tbody>
+              <tr><td><strong>Version: </strong>{{App.broker.jvm_metrics.jvm_name}}</td></tr>
+              <tr><td><strong>Up Time: </strong>{{App.broker.jvm_metrics.uptime}}</td></tr>
+              <tr><td><strong>Heap Memory: </strong>{{memory App.broker.jvm_metrics.heap_memory.used}} / {{memory App.broker.jvm_metrics.heap_memory.alloc}}</td></tr>
+              <tr><td><strong>Non-Heap Memory: </strong>{{memory App.broker.jvm_metrics.non_heap_memory.used}} / {{memory App.broker.jvm_metrics.non_heap_memory.alloc}}</td></tr>
+              <tr><td><strong>Threads: </strong>{{App.broker.jvm_metrics.threads_current}}</td></tr>
+              <tr><td><strong>CPU Time: </strong>{{App.broker.jvm_metrics.os_cpu_time}}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="span4">
+          <div class="well" style="padding: 8px 8px">
+            <div class="well-title">Operating System</div>
+            <table class="details table table-bordered table-striped">
+              <tbody>
+              <tr><td><strong>Name: </strong>{{App.broker.jvm_metrics.os_name}}</td></tr>
+              <tr><td><strong>Architecture: </strong>{{App.broker.jvm_metrics.os_arch}}</td></tr>
+              <tr><td><strong>Processor Cores: </strong>{{App.broker.jvm_metrics.os_processors}}</td></tr>
+              <tr><td><strong>Memory Free/Total: </strong>{{memory App.broker.jvm_metrics.os_memory_free}} / {{memory App.broker.jvm_metrics.os_memory_total}}</td></tr>
+              <tr><td><strong>Swap Used/Available: </strong>{{memory App.broker.jvm_metrics.os_swap_total}} / {{memory App.broker.jvm_metrics.os_swap_free}} </td></tr>
+              <tr><td><strong>FD Open/Max: </strong>{{App.broker.jvm_metrics.os_fd_open}} / {{App.broker.jvm_metrics.os_fd_max}}</td></tr>
+              <tr><td><strong>Load Average</strong>{{App.broker.jvm_metrics.os_load_average}}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {{/if}}
     </div>
     {{/unless}}
     </script>
@@ -541,6 +524,6 @@
 <script src="js/handlebars-1.0.0.beta.6.js"></script>
 <script src="js/ember-1.0.0-pre.2.js"></script>
 <script src="js/ember-bootstrap-0.0.1.min.js"></script>
-<script src="js/app.js"></script>  
+<script src="js/app.js"></script>
 </body>
 </html>
