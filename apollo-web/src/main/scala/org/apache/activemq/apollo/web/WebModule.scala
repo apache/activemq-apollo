@@ -80,6 +80,6 @@ object DefaultWebModule extends WebModule {
 
   )
 
-  def root_redirect: String = "broker"
+  def root_redirect: String = "console/index.html"
 
 }

@@ -354,7 +354,7 @@
                         <th>Acks</th>
                         <th>Nacks</th>
                         <th>Ack Rate</th>
-                        <th>Status</th>
+                        <th>Waiting On</th>
                       </tr>
                       {{#each App.destination.consumers}}
                       <tr>
@@ -408,8 +408,8 @@
                 <tr><td><strong>Connection Counter: </strong>{{App.connector.connection_counter}}</td></tr>
                 <tr><td><strong>Outbound Messages: </strong>{{App.connector.messages_sent}}</td></tr>
                 <tr><td><strong>Inbound Messages: </strong>{{App.connector.messages_received}}</td></tr>
-                <tr><td><strong>Data Transferred In: </strong>{{App.connector.read_counter}}</td></tr>
-                <tr><td><strong>Data Transferred Out: </strong>{{App.connector.write_counter}}</td></tr>
+                <tr><td><strong>Data Transferred In: </strong>{{memory App.connector.read_counter}}</td></tr>
+                <tr><td><strong>Data Transferred Out: </strong>{{memory App.connector.write_counter}}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -432,7 +432,7 @@
               {{#each App.ConnectionsController}}
               <tr>
                 <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
-                <td><i class=" icon-zoom-in"></i>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td><td>{{[5]}}</td><td>{{[6]}}</td><td>{{[7]}}</td>
+                <td><i class=" icon-zoom-in"></i>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{memory [4]}}</td><td>{{memory [5]}}</td><td>{{[6]}}</td><td>{{[7]}}</td>
               </tr>
               {{/each}}
               </tbody>

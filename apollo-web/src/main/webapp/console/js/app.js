@@ -63,6 +63,10 @@ Ember.Handlebars.registerHelper('memory', function(property, options) {
           }
         }
         size = size.toFixed(2);
+      } else {
+        if( (""+size).indexOf(".") !== -1 ) {
+          size = size.toFixed(2);
+        }
       }
       return size+" "+units;
     }
@@ -79,6 +83,7 @@ App = Em.Application.create({
       }
     }, 2000);
     this._super();
+    App.LoginController.refresh();
   },
 
   auto_refresh: function() {
@@ -489,7 +494,7 @@ App.DestinationController = Em.Controller.create({
         data.state_date = date_to_string(data.state_since);
         data.metrics.enqueue_date = date_to_string(data.metrics.enqueue_ts);
         data.metrics.dequeue_date = date_to_string(data.metrics.dequeue_ts);
-        data.metrics.nak_date = date_to_string(data.metrics.nak_ts);
+        data.metrics.nack_date = date_to_string(data.metrics.nack_ts);
         data.metrics.expired_date = date_to_string(data.metrics.expired_ts);
         data.producers.forEach(function(value){
           value.enqueue_date = date_to_string(value.enqueue_ts);
