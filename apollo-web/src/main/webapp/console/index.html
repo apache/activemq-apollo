@@ -391,7 +391,11 @@
             <label class="control-label"><strong style="font-size:170%">Connector:</strong></label>
             <div class="controls">
               {{view Ember.Select contentBinding="App.broker.connectors" selectionBinding="App.ConnectorController.selected"}}
-              <!-- <a class="btn" href="#"><i class="icon-stop icon-white"></i> Stop</a> -->
+              {{#if App.connector.paused}}
+              <button class="btn" {{action "start" target="App.ConnectorController" on="click"}}><i class="icon-play"></i> Start</button>
+              {{else}}
+              <button class="btn" {{action "stop" target="App.ConnectorController" on="click"}}><i class="icon-stop"></i> Stop</button>
+              {{/if}}
             </div>
           </div>
         </div>
@@ -401,7 +405,7 @@
               <div class="well-title">Details</div>
               <table class="details table table-bordered table-striped">
                 <tbody>
-                <tr><td><strong>Up Since: </strong>{{App.connector.state_date}}</td></tr>
+                <tr><td><strong>{{App.connector.state_label}} Since: </strong>{{App.connector.state_date}}</td></tr>
                 <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
                 <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
                 <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>

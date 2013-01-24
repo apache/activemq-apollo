@@ -79,7 +79,7 @@ App = Em.Application.create({
   ready: function() {
     setInterval(function() {
       if( App.LoginController.get('is_logged_in') ) {
-        App.auto_refresh();
+//        App.auto_refresh();
       }
     }, 2000);
     this._super();
@@ -287,11 +287,32 @@ App.ConnectorController = Em.ArrayController.create({
     if( selected ) {
       App.ajax("GET", "/broker/connectors/"+selected, function(connector) {
         connector.state_date = date_to_string(connector.state_since);
+        connector.paused = connector.state != "STARTED";
+        if( connector.paused ) {
+          connector.state_label = "Stopped";
+        } else {
+          connector.state_label = "Started";
+        }
         App.connector.setProperties(connector);
       });
     }
     App.ConnectionsController.refresh();
-  }.observes("selected")
+  }.observes("selected"),
+
+  start: function() {
+    var selected = this.get("selected")
+    App.ajax("POST", "/broker/connectors/"+selected+"/action/start", function(connector) {
+      App.ConnectorController.refresh();
+    });
+  },
+
+  stop: function() {
+    var selected = this.get("selected")
+    App.ajax("POST", "/broker/connectors/"+selected+"/action/stop", function(connector) {
+      App.ConnectorController.refresh();
+    });
+  },
+
 });
 
 
