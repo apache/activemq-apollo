@@ -72,9 +72,6 @@ object DestinationAddress {
   
   def escape(value:String) = {
     val rc = new StringBuffer(value.length())
-    def unicode_encode(c:Char) = {
-      rc.append("\\u%04x".format(c.toInt))
-    }
     var i=0;
     while( i < value.length() ) {
       val c = value.charAt(i);
@@ -92,10 +89,11 @@ object DestinationAddress {
         rc.append("\\w")
       }  else if( c == '.' ) {
         rc.append("\\d")
-      } else if  ( c < '!' || c > '~' ) {
-        unicode_encode(c)
+      } else if  ( c < ' ' || c > '~' ) {
+        rc.append("\\u%04x".format(c.toInt))
+      } else {
+        rc.append(c)
       }
-      rc.append(c)
       i+=1
     }
     rc.toString
