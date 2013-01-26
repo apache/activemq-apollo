@@ -52,37 +52,24 @@ public class JoramJmsTest extends TestCase {
         }
 
         TestSuite suite = new TestSuite();
-
-        // TODO: enable once QPID-4454 is fixed.
-        if(false) {
-            suite.addTestSuite(MessageHeaderTest.class);
-        }
-
-        // TODO: enable once QPID 0.20 is released
-        if(true) {
-            suite.addTestSuite(TopicSessionTest.class);
-            suite.addTestSuite(MessageTypeTest.class);
-            suite.addTestSuite(QueueBrowserTest.class);
-            suite.addTestSuite(UnifiedSessionTest.class);
-            suite.addTestSuite(TemporaryTopicTest.class);
-            suite.addTestSuite(TopicConnectionTest.class);
-        }
-
-        // Passing tests against 0.18
-        if( true ) {
-            suite.addTestSuite(SelectorSyntaxTest.class);
-            suite.addTestSuite(QueueSessionTest.class);
-            suite.addTestSuite(SelectorTest.class);
-            suite.addTestSuite(TemporaryQueueTest.class);
-            suite.addTestSuite(SessionTest.class);
-            suite.addTestSuite(ConnectionTest.class);
-            suite.addTestSuite(JMSXPropertyTest.class);
-            suite.addTestSuite(MessageBodyTest.class);
-            suite.addTestSuite(MessageDefaultTest.class);
-            suite.addTestSuite(MessagePropertyConversionTest.class);
-            suite.addTestSuite(MessagePropertyTest.class);
-        }
-
+        suite.addTestSuite(MessageHeaderTest.class);
+        suite.addTestSuite(TopicSessionTest.class);
+        suite.addTestSuite(MessageTypeTest.class);
+        suite.addTestSuite(QueueBrowserTest.class);
+        suite.addTestSuite(UnifiedSessionTest.class);
+        suite.addTestSuite(TemporaryTopicTest.class);
+        suite.addTestSuite(TopicConnectionTest.class);
+        suite.addTestSuite(SelectorSyntaxTest.class);
+        suite.addTestSuite(QueueSessionTest.class);
+        suite.addTestSuite(SelectorTest.class);
+        suite.addTestSuite(TemporaryQueueTest.class);
+        suite.addTestSuite(SessionTest.class);
+        suite.addTestSuite(ConnectionTest.class);
+        suite.addTestSuite(JMSXPropertyTest.class);
+        suite.addTestSuite(MessageBodyTest.class);
+        suite.addTestSuite(MessageDefaultTest.class);
+        suite.addTestSuite(MessagePropertyConversionTest.class);
+        suite.addTestSuite(MessagePropertyTest.class);
         return suite;
     }
 
