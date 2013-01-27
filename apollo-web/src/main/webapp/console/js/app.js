@@ -867,6 +867,7 @@ App.AceView = Ember.View.extend({
 
     editor.renderer.setShowPrintMargin(true);
     editor.renderer.setShowGutter(true);
+    editor.setHighlightActiveLine(false);
     var session = editor.getSession();
     session.setUseSoftTabs(true);
     session.setTabSize(2);
@@ -894,6 +895,8 @@ App.AceView = Ember.View.extend({
     if (editor && code && code !== this._codeFromEditor) {
       this._codeFromUpdate = code;
       editor.setValue(code);
+      editor.clearSelection();
+      editor.focus();
     }
     this._updating = false
   }.observes('code', 'editor'),
