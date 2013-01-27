@@ -43,7 +43,6 @@ class JerseyServlet extends ServletContainer {
     settings.put("com.sun.jersey.config.feature.ImplicitViewables", "true")
     settings.put("com.sun.jersey.config.property.MediaTypeMappings", """
         html : text/html,
-        xml : application/xml,
         json : application/json
         """)
 

@@ -75,11 +75,22 @@ Ember.Handlebars.registerHelper('memory', function(property, options) {
   return Ember.Handlebars.helpers.bind(property, options);
 });
 
+$(window).resize(function() {
+ App.set("window_size", {
+  height:$(window).height(),
+  width:$(window).width(),
+ })
+});
+
 App = Em.Application.create({
+  window_size:{
+    height:$(window).height(),
+    width:$(window).width(),
+  },
   ready: function() {
     setInterval(function() {
       if( App.LoginController.get('is_logged_in') ) {
-//        App.auto_refresh();
+        App.auto_refresh();
       }
     }, 2000);
     this._super();
@@ -91,6 +102,7 @@ App = Em.Application.create({
     App.BrokerController.auto_refresh();
     App.VirtualHostController.auto_refresh();
     App.ConnectorController.auto_refresh();
+    App.ConfigurationController.auto_refresh();
     Ember.run(function(){
       $(".tooltip-link").tooltip();
     });
@@ -100,6 +112,7 @@ App = Em.Application.create({
     App.BrokerController.refresh();
     App.VirtualHostController.refresh();
     App.ConnectorController.refresh();
+    App.ConfigurationController.refresh();
   },
 
   default_error_handler:function(xhr, status, thrown) {
@@ -151,7 +164,7 @@ function date_to_string(v) {
 }
 
 App.MainController = Em.Controller.create({
-  tabs:["Virtual Hosts","Connectors","Operating Environment"],
+  tabs:["Virtual Hosts","Connectors","Operating Environment","Configuration"],
   selected_tab:"Virtual Hosts",
   is_virtual_hosts_selected:function() {
     return this.get("selected_tab") == "Virtual Hosts"
@@ -161,6 +174,9 @@ App.MainController = Em.Controller.create({
   }.property("selected_tab"),
   is_operating_environment_selected:function() {
     return this.get("selected_tab") == "Operating Environment"
+  }.property("selected_tab"),
+  is_configuration_selected:function() {
+    return this.get("selected_tab") == "Configuration"
   }.property("selected_tab"),
 });
 
@@ -692,6 +708,212 @@ App.MessagesController = Ember. ArrayController.create({
   },
 
 });
+
+App.ConfigurationController = Ember.Controller.create({
+
+  offline:false,
+  files:[],
+  selected:"apollo.xml",
+  actual_selected:"apollo.xml",
+  buffer:null,
+  original:null,
+  buffers:{},
+
+  selected_ace_mode: function(){
+    var selected = this.get("actual_selected");
+    var re = /(?:\.([^.]+))?$/;
+    var mode = re.exec(selected)[1] || "text"
+    if( mode == "pem" || mode == "p12" || mode == "properties" ||
+        mode=="config" || mode == "keystore" || mode=="txt" ) {
+      mode = "text";
+    }
+    return mode;
+  }.property("actual_selected"),
+
+  modified: function() {
+    return this.get("original") != this.get("buffer");
+  }.property("original", "buffer"),
+
+  is_modified: function() {
+    return this.get("original") != this.get("buffer");
+  },
+
+  auto_refresh: function() {
+    if( App.MainController.get("is_configuration_selected")) {
+      this.refresh();
+    }
+    if(App.ConfigurationController.get("buffer")==null ) {
+      this.refresh_selected();
+    }
+  },
+
+  refresh: function() {
+    App.ajax("GET", "/broker/config/files", function(json) {
+      App.ConfigurationController.set("files", json);
+    });
+  },
+
+  refresh_selected: function() {
+    var self = this;
+    var selected = this.get("actual_selected");
+    this.ajax("GET", "/broker/config/files/"+selected, function(buffer) {
+      self.set("original", buffer);
+      self.set("buffer", buffer);
+    }, function(error, a, b, c){
+      self.set("original", null);
+      self.set("buffer", null);
+    });
+  },
+
+  ajax:function(type, path, success, error, data) {
+    $.ajax({
+      type: type,
+      url: "../api/json"+path,
+      headers: {
+        AuthPrompt:'false',
+      },
+      headers: {
+        "Accept":"application/octet-stream",
+      },
+      dataType: 'text',
+      success: function(data, textStatus, jqXHR){
+        App.BrokerController.set("offline", false);
+        if( success ) {
+          success(data, textStatus, jqXHR)
+        }
+      },
+      error: error,
+      data:data,
+      processData:false,
+      contentType:"application/octet-stream",
+    });
+  },
+
+  on_selected_change:function() {
+    var self = this;
+    var actual_selected = this.get("actual_selected");
+    var selected = this.get("selected");
+    if( actual_selected == selected ) {
+      return;
+    }
+    if( !this.is_modified() ) {
+      this.set("actual_selected", selected);
+    } else {
+      Bootstrap.ModalPane.popup({
+        heading: "Are you sure?",
+        message: "Switching files will cause you to loose the current edits you have made to the current file.",
+        primary: "OK",
+        secondary: "Cancel",
+        showBackdrop: true,
+        callback: function(opts, event) {
+          if (opts.primary) {
+            self.set("actual_selected", selected);
+          } else {
+            self.set("selected", actual_selected);
+          }
+        }
+      });
+    }
+  }.observes("selected"),
+
+  on_actual_selected_change:function() {
+    this.refresh_selected();
+  }.observes("actual_selected"),
+
+  save: function() {
+    var self = this;
+    var selected = this.get("actual_selected");
+    this.ajax("POST", "/broker/config/files/"+selected, function(buffer) {
+      self.set("original", buffer);
+      Bootstrap.AlertMessage.create({
+        type:"info",
+        message:"File "+selected+" saved."
+      }).appendTo("#notifications")
+    }, function(error, a, b, c){
+      Bootstrap.AlertMessage.create({
+        type:"warning",
+        message:"File "+selected+" could not be saved: "+a
+      }).appendTo("#notifications")
+    }, this.get("buffer"));
+  },
+
+});
+
+App.AceView = Ember.View.extend({
+
+  editor: null,
+  mode:"xml",
+  onModeChange:function(){
+    var editor = this.get("editor")
+    var mode = this.get("mode")
+    if( editor!=null ) {
+      editor.getSession().setMode("ace/mode/"+mode);
+    }
+  }.observes('editor', 'mode'),
+
+  theme:"monokai",
+  onThemeChange:function(){
+    var editor = this.get("editor")
+    var theme = "ace/theme/"+this.get("theme")
+    if( editor!=null ) {
+      editor.setTheme(theme);
+    }
+  }.observes('editor', 'theme'),
+
+  didInsertElement: function() {
+    var self = this;
+    var id = this.$().attr('id');
+    var editor = ace.edit(id);
+
+    editor.renderer.setShowPrintMargin(true);
+    editor.renderer.setShowGutter(true);
+    var session = editor.getSession();
+    session.setUseSoftTabs(true);
+    session.setTabSize(2);
+    session.on('change', function (e) {
+      self.onEditorTextChange(session, e);
+    });
+    this.set('editor', editor);
+  },
+
+  onStyleChange: function() {
+    var editor = this.get('editor');
+    if( editor!=null ) {
+      var div = this.$()
+      div.css("height", $(window).height()-(div.offset().top+40));
+      editor.resize();
+    }
+  }.observes('editor', 'App.window_size'),
+
+  onViewChange: function() {
+    if( this._updating )
+      return;
+    var editor = this.get('editor');
+    var code = this.get('code');
+    this._updating = true
+    if (editor && code && code !== this._codeFromEditor) {
+      this._codeFromUpdate = code;
+      editor.setValue(code);
+    }
+    this._updating = false
+  }.observes('code', 'editor'),
+
+  onEditorTextChange: function(session, e) {
+    if( this._updating )
+      return;
+    var self = this;
+    var code = session.getValue();
+    if (code !== self._codeFromUpdate) {
+      this._updating = true;
+      this._codeFromEditor = code;
+        console.log("Setting: ["+code+"]");
+        self.set('code', code);
+        console.log("Done");
+      this._updating = false;
+    }
+  }
+});
+
 
 Ember.View.create({
   templateName: 'notifications',

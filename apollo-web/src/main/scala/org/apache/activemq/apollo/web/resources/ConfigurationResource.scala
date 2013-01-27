@@ -134,7 +134,8 @@ class ConfigurationResource extends Resource {
   }
 
   @POST
-  @Consumes(Array(WILDCARD))
+  @Produces(Array(APPLICATION_OCTET_STREAM))
+  @Consumes(Array(APPLICATION_OCTET_STREAM))
   @Path("/files/{name}")
   @ApiOperation(value = "Updates the contents of the configuration file.")
   def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
@@ -143,7 +144,7 @@ class ConfigurationResource extends Resource {
       result(NOT_FOUND)
     }
     file.write_bytes(config)
-    result(strip_resolve("."))
+    result(OK)
   }
 
   @POST

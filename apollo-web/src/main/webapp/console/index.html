@@ -504,6 +504,27 @@
         </div>
       </div>
       {{/if}}
+      {{#if App.MainController.is_configuration_selected}}
+      <div class="row">
+        <div class="span12" style="padding-bottom:1em">
+          {{view Ember.Select
+                 class="nomargin"
+                 contentBinding="App.ConfigurationController.files"
+                 valueBinding="App.ConfigurationController.selected"
+          }}
+          {{#if App.ConfigurationController.modified}}
+          <button class="btn btn-small" {{action "save" target="App.ConfigurationController" on="click"}}><i class="icon-save"></i> Save</button>
+          <button class="btn btn-small" {{action "refresh_selected" target="App.ConfigurationController" on="click"}}><i class="icon-undo"></i> Revert</button>
+          {{/if}}
+        </div>
+      </div>
+      <div class="row">
+        {{view App.AceView
+            class="span12"
+            modeBinding="App.ConfigurationController.selected_ace_mode"
+            codeBinding="App.ConfigurationController.buffer"}}
+      </div>
+      {{/if}}
     </div>
     {{/unless}}
     </script>
@@ -519,6 +540,8 @@
 </footer>
 
 <script src="js/jquery-1.7.2.min.js"></script>
+<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<!--<script src="js/ace/ace.js" type="text/javascript" charset="utf-8"></script>-->
 <!--<script src="js/excanvas.min.js"></script>-->
 <!--<script src="js/jquery.flot.js"></script>-->
 <!--<script src="js/jquery.flot.pie.js"></script>-->
