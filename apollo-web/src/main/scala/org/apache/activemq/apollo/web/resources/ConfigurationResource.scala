@@ -26,6 +26,7 @@ import javax.ws.rs.core.MediaType._
 import org.apache.activemq.apollo.util.FutureResult
 import FutureResult._
 import com.wordnik.swagger.annotations.{ApiOperation, Api}
+import org.apache.activemq.apollo.util._
 
 case class EditConfig(file:String, config:String, can_write:Boolean)
 case class ListConfigs(files:Array[String])
@@ -67,11 +68,21 @@ class ConfigurationResource extends Resource {
     }
   }
 
+  def if_allowed[T](func: =>T):T = {
+    with_broker[T]{ broker =>
+      admining[T](broker) {
+        sync[T](broker) {
+          func
+        }
+      }
+    }
+  }
+
   @GET
   @Path("runtime")
 //  @Produces(Array(APPLICATION_JSON, APPLICATION_XML, TEXT_XML))
 //  @ApiOperation(value = "Returns a BrokerDTO object with runtime configuraiton of the broker.")
-  def runtime = {
+  def runtime = if_allowed {
 
     // Encode/Decode the runtime config so that we can get a copy that
     // we can modify..
@@ -92,7 +103,7 @@ class ConfigurationResource extends Resource {
   @Path("/files")
   @ApiOperation(value = "Returns the list of configuration files.")
   @Produces(Array(APPLICATION_JSON))
-  def list() = {
+  def list() = if_allowed {
     etc_directory.listFiles().flatMap { file =>
       if( file.canRead ) {
         Some(file.getName)
@@ -106,7 +117,7 @@ class ConfigurationResource extends Resource {
   @Produces(Array(TEXT_HTML))
   @Path("/files")
   @ApiOperation(value = "Returns the list of configuration files.")
-  def list_html() = {
+  def list_html() = if_allowed {
     ListConfigs(list())
   }
 
@@ -114,7 +125,7 @@ class ConfigurationResource extends Resource {
   @Produces(Array(APPLICATION_OCTET_STREAM))
   @Path("/files/{name}")
   @ApiOperation(value = "Returns the contents of the configuration file.")
-  def get(@PathParam("name") name:String) = {
+  def get(@PathParam("name") name:String) = if_allowed {
     val file = etc_directory / name
     if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
       result(NOT_FOUND)
@@ -125,7 +136,7 @@ class ConfigurationResource extends Resource {
   @GET
   @Produces(Array(TEXT_HTML))
   @Path("/files/{name}")
-  def edit_html(@PathParam("name") name:String) = {
+  def edit_html(@PathParam("name") name:String) = if_allowed {
     val file = etc_directory / name
     if( !file.exists() || !file.canRead || file.getParentFile != etc_directory ) {
       result(NOT_FOUND)
@@ -138,7 +149,7 @@ class ConfigurationResource extends Resource {
   @Consumes(Array(APPLICATION_OCTET_STREAM))
   @Path("/files/{name}")
   @ApiOperation(value = "Updates the contents of the configuration file.")
-  def put(@PathParam("name") name:String, config:Array[Byte]):Unit = {
+  def put(@PathParam("name") name:String, config:Array[Byte]):Unit = if_allowed {
     val file = etc_directory / name
     if( !file.exists() || !file.canWrite || file.getParentFile != etc_directory ) {
       result(NOT_FOUND)
@@ -151,7 +162,7 @@ class ConfigurationResource extends Resource {
   @Path("/files/{name}")
   @Consumes(Array(APPLICATION_FORM_URLENCODED))
   @Produces(Array(APPLICATION_JSON, APPLICATION_XML,TEXT_XML, TEXT_HTML))
-  def edit_post(@PathParam("name") name:String, @FormParam("config") config:String):Unit = {
+  def edit_post(@PathParam("name") name:String, @FormParam("config") config:String):Unit = if_allowed {
     put(name, config.getBytes("UTF-8"))
     result(strip_resolve("."))
   }
