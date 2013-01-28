@@ -545,6 +545,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
       }
     }
 
+    var write_failed = false
     def write(buf: ByteBuffer):Int = {
       dispatchQueue.assertExecuting
       val remaining = buf.remaining()
@@ -555,12 +556,22 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         outbound_capacity_remaining -= remaining;
         var buffer = new Buffer(buf.array(), buf.arrayOffset(), buf.remaining())
         outbound_executor {
-          if( !binary_transfers ) {
-            connection.sendMessage(buffer.ascii().toString)
-          } else {
-            connection.sendMessage(buffer.data, buffer.offset, buffer.length)
+          if( service_state.is_starting_or_started || !write_failed) {
+            try {
+              if (!binary_transfers) {
+                connection.sendMessage(buffer.ascii().toString)
+              } else {
+                connection.sendMessage(buffer.data, buffer.offset, buffer.length)
+              }
+              outbound_executor.outbound_drained += remaining
+            } catch {
+              case e:IOException =>
+                write_failed = true
+                dispatch_queue {
+                  transportListener.onTransportFailure(e)
+                }
+            }
           }
-          outbound_executor.outbound_drained += remaining
         }
         buf.position(buf.position()+ remaining);
         return remaining
