@@ -1178,6 +1178,7 @@ class LevelDBClient(store: LevelDBStore) {
 
     // Lets compact the leveldb index if it looks like we need to.
     if( index.compact_needed ) {
+      info("Compacting the leveldb index at: "+dirty_index_file)
       index.compact
     }
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
