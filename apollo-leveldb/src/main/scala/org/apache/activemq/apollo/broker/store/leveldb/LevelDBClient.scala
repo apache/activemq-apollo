@@ -1134,12 +1134,47 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
+
+  def detect_if_compact_needed = {
+    // APLO-245: lets try to detect when leveldb needs a compaction..
+
+    // How much space is the dirty index using??
+    var index_usage = 0L
+    for( file <- dirty_index_file.recursive_list ) {
+      if(!file.isDirectory) {
+        index_usage += file.length()
+      }
+    }
+    // Lets use the log_refs to get a rough estimate on how many entries are store in leveldb.
+    var index_queue_entries=0L
+    for ( (_, count) <- log_refs ) {
+      index_queue_entries += count.get()
+    }
+
+    if ( index_queue_entries > 0 ) {
+      val ratio = (index_usage*1.0f/index_queue_entries)
+      // println("usage: index_usage:%d, index_queue_entries:%d, ratio: %f".format(index_usage, index_queue_entries, ratio))
+
+      // After running some load we empirically found that a healthy ratio is between 12 and 25 bytes per entry.
+      // lets compact if we go way over the healthy ratio.
+      if( ratio > 50 ) {
+        index.compact_needed = true
+      }
+    } else if( index_usage > 1024*1024*5 )  {
+      // at most the index should have 1 full level file.
+      index.compact_needed = true
+    }
+
+  }
+
   def gc: Unit = {
 
     // TODO:
     // Perhaps we should snapshot_index if the current snapshot is old.
     //
     import collection.JavaConversions._
+
+    detect_if_compact_needed
 
     // Lets compact the leveldb index if it looks like we need to.
     if( index.compact_needed ) {
