@@ -108,12 +108,6 @@ http://code.google.com/p/snappy-java/
 
 -------------------------------------------------------------------------
 
-This product includes software (Bootstrap, from Twitter) developed at
-http://twitter.github.com/bootstrap/
-
-
--------------------------------------------------------------------------
-
 This product includes software (stomp-websocket) developed at
 https://github.com/jmesnil/stomp-websocket
 
@@ -121,3 +115,31 @@ https://github.com/jmesnil/stomp-websocket
 
 This product includes software (swagger) developed at
 Wordnik (http://swagger.wordnik.com/).
+
+-------------------------------------------------------------------------
+
+This product includes software (Twitter Bootstrap) developed at
+Twitter Inc. (http://twitter.github.com/bootstrap/)
+
+-----------------------------------------------------------------------
+
+This product includes software (Ember.js) developed by
+Yehuda Katz, Tom Dale, Charles Jolley and Ember.js contributors. 
+(https://github.com/emberjs/ember.js).
+
+-----------------------------------------------------------------------
+
+This product includes software (The ACE Editor) developed at
+http://ace.ajax.org/ (http://ace.ajax.org/).
+
+-------------------------------------------------------------------------
+
+This product includes software (Open Sans Web Font) developed by
+Steve Matteson, (https://profiles.google.com/107777320916704234605/about).
+
+-------------------------------------------------------------------------
+
+This product includes software (Font Awesome) developed by
+Dave Gandy, (http://fortawesome.github.com/Font-Awesome.).
+
+-------------------------------------------------------------------------
