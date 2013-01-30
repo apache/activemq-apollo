@@ -70,7 +70,7 @@ class ConfigurationResource extends Resource {
 
   def if_allowed[T](func: =>T):T = {
     with_broker[T]{ broker =>
-      admining[T](broker) {
+      configing[T](broker) {
         sync[T](broker) {
           func
         }

@@ -116,22 +116,17 @@ App = Em.Application.create({
   },
 
   default_error_handler:function(xhr, status, thrown) {
-    if( xhr.status == 0 ) {
-      App.BrokerController.set("offline", true);
+    if( xhr.status == 401 ) {
+      Bootstrap.AlertMessage.create({
+        type:"warning",
+        message:"Action not authorized."
+      }).appendTo("#notifications")
+      App.LoginController.refresh();
     } else {
-      App.BrokerController.set("offline", false);
-      if( xhr.status == 401 ) {
-        Bootstrap.AlertMessage.create({
-          type:"warning",
-          message:"Action not authorized."
-        }).appendTo("#notifications")
-        App.LoginController.refresh();
-      } else {
-        Bootstrap.AlertMessage.create({
-          type:"error",
-          message:xhr.status+": "+thrown
-        }).appendTo("#notifications")
-      }
+      Bootstrap.AlertMessage.create({
+        type:"error",
+        message:xhr.status+": "+thrown
+      }).appendTo("#notifications")
     }
   },
 
@@ -152,7 +147,14 @@ App = Em.Application.create({
           success(data, textStatus, jqXHR)
         }
       },
-      error: error,
+      error: function(xhr, status, thrown) {
+        if( xhr.status == 0 ) {
+          App.BrokerController.set("offline", true);
+        } else {
+          App.BrokerController.set("offline", false);
+          error(xhr, status, thrown)
+        }
+      },
     });
   },
 
@@ -164,7 +166,17 @@ function date_to_string(v) {
 }
 
 App.MainController = Em.Controller.create({
-  tabs:["Virtual Hosts","Connectors","Operating Environment","Configuration"],
+  tabs: function() {
+    var files = App.ConfigurationController.get("files")
+    var rc = [];
+    rc.push("Virtual Hosts")
+    rc.push("Connectors")
+    rc.push("Operating Environment")
+    if( files && files.length > 0 ) {
+      rc.push("Configuration")
+    }
+    return rc;
+  }.property("App.ConfigurationController.files"),
   selected_tab:"Virtual Hosts",
   is_virtual_hosts_selected:function() {
     return this.get("selected_tab") == "Virtual Hosts"
@@ -712,7 +724,7 @@ App.MessagesController = Ember. ArrayController.create({
 App.ConfigurationController = Ember.Controller.create({
 
   offline:false,
-  files:[],
+  files:null,
   selected:"apollo.xml",
   actual_selected:"apollo.xml",
   buffer:null,
@@ -741,16 +753,23 @@ App.ConfigurationController = Ember.Controller.create({
   auto_refresh: function() {
     if( App.MainController.get("is_configuration_selected")) {
       this.refresh();
-    }
-    if(App.ConfigurationController.get("buffer")==null ) {
-      this.refresh_selected();
+      if(App.ConfigurationController.get("buffer")==null ) {
+        this.refresh_selected();
+      }
     }
   },
 
   refresh: function() {
     App.ajax("GET", "/broker/config/files", function(json) {
       App.ConfigurationController.set("files", json);
-    });
+    },
+    function(xhr, status, thrown) {
+      if( xhr.status == 401 ) {
+        App.ConfigurationController.set("files", null);
+      } else {
+        App.default_error_handler(xhr, status, thrown)
+      }
+   });
   },
 
   refresh_selected: function() {
