@@ -150,6 +150,9 @@ App = Em.Application.create({
       headers: {
         AuthPrompt:'false',
       },
+      xhrFields: {
+        withCredentials: true
+      },
       dataType: 'json',
       success: function(data, textStatus, jqXHR){
         App.BrokerController.set("offline", false);
@@ -218,6 +221,9 @@ App.LoginController = Em.Controller.create({
       url: "../api/json/session/signin",
       headers: {
         AuthPrompt:'false',
+      },
+      xhrFields: {
+        withCredentials: true
       },
       data:{
         username: username,
@@ -800,6 +806,9 @@ App.ConfigurationController = Ember.Controller.create({
       url: "../api/json"+path,
       headers: {
         AuthPrompt:'false',
+      },
+      xhrFields: {
+        withCredentials: true
       },
       headers: {
         "Accept":"application/octet-stream",

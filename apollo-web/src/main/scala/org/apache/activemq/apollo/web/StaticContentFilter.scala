@@ -78,6 +78,10 @@ class StaticContentFilter extends Filter {
             if (static_content_exists(req)) {
               static_content_servlet.service(req, res)
             } else {
+              // not static content? then it must be dynamic, lets default
+              // headers so that results are not cached by the browser.
+              res.setHeader("Cache-Control", "max-age=0, no-cache, must-revalidate, proxy-revalidate, private")
+              res.setHeader("Pragma", "no-cache")
               chain.doFilter(req, res)
             }
           case _ => chain.doFilter(req, res)
