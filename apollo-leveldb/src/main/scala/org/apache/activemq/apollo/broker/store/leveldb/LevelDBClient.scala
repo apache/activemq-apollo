@@ -351,7 +351,14 @@ class LevelDBClient(store: LevelDBStore) {
           }
       }
 
-      index = new RichDB(factory.open(dirty_index_file, index_options));
+      try {
+        index = new RichDB(factory.open(dirty_index_file, index_options))
+      } catch {
+        case e:DBException =>
+          // lets try to recover by repairing the index file.
+          factory.repair(dirty_index_file, index_options)
+          index = new RichDB(factory.open(dirty_index_file, index_options))
+      }
 
       try {
         load_log_refs
