@@ -2,6 +2,11 @@
   padding: 8px 35px 8px 14px;
 }
 
+.btn { color: #333; }
+.btn:hover { color: #222; }
+.btn-primary { color: #fff; }
+.btn-primary:hover { color: #fff; }
+
 .well-title {
   padding-bottom: .2em;
   margin-bottom: 1em;
