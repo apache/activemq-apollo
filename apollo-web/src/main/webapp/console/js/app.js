@@ -87,14 +87,24 @@ App = Em.Application.create({
     height:$(window).height(),
     width:$(window).width(),
   },
+
+  refresh_interval:2,
+
   ready: function() {
-    setInterval(function() {
+    this.schedule_refresh();
+    this._super();
+    App.LoginController.refresh();
+  },
+
+  schedule_refresh: function() {
+    var refresh_interval = App.get("refresh_interval");
+    refresh_interval = Math.min(Math.max(1,refresh_interval), 360);
+    setTimeout(function() {
       if( App.LoginController.get('is_logged_in') ) {
         App.auto_refresh();
       }
-    }, 2000);
-    this._super();
-    App.LoginController.refresh();
+      App.schedule_refresh();
+    }, refresh_interval*1000);
   },
 
   auto_refresh: function() {
@@ -858,6 +868,14 @@ App.ConfigurationController = Ember.Controller.create({
 
 });
 
+App.NumberField = Ember.TextField.extend({
+    _validation: function() {
+      var value = this.get('value');
+      value = value.toString().replace(/[^\d.]/g, "");
+      this.set('value', value);
+    }.observes('value')
+});
+
 App.AceView = Ember.View.extend({
 
   editor: null,
@@ -948,6 +966,21 @@ Ember.View.create({
 Ember.View.create({
   templateName: 'content',
 }).appendTo("#content-holder");
+
+App.SettingsView = Ember.View.create({
+  templateName: 'settings',
+  classNames:["modal", "hide", "fade"],
+  show: function(){
+    var id = this.$().attr('id');
+    $("#"+id).modal("show");
+  },
+  hide: function(){
+    var id = this.$().attr('id');
+    $("#"+id).modal("hide");
+  }
+})
+App.SettingsView.appendTo("#content-holder")
+
 
 App.ApplicationController = Ember.Controller.extend();
 App.ApplicationView = Ember.View.extend();

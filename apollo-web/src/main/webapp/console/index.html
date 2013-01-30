@@ -49,6 +49,7 @@
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="icon-user"></i>{{App.LoginController.user_name}}<b class="caret"></b></a>
             <ul class="dropdown-menu">
+              <li><a href="#" {{action "show" target="App.SettingsView" on="click"}}>Settings</a></li>
               <li><a href="#" {{action "logout" target="App.LoginController" on="click"}}>Logout</a></li>
             </ul>
           </li>
@@ -60,6 +61,25 @@
   </script>
 </div>
 <div class="container" style="padding-top:52px;">
+  <script type="text/x-handlebars" data-template-name="settings">
+    <div class="modal-header">
+      <button type="button" class="close" {{action "hide" target="App.SettingsView" on="click"}}>&times;</button>
+      <h3>Settings</h3>
+    </div>
+    <div class="modal-body">
+      <form class="form-horizontal">
+       <div class="control-group">
+         <label class="control-label">Refresh Interval</label>
+         <div class="controls">
+           {{view App.NumberField valueBinding="App.refresh_interval"}}
+         </div>
+       </div>
+     </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#" class="btn" {{action "hide" target="App.SettingsView" on="click"}}>Close</a>
+    </div>
+  </script>
   <div class="row" id="notifications" style="padding-top: 1em;" >
     <script type="text/x-handlebars" data-template-name="notifications">
     {{#if App.BrokerController.offline}}
