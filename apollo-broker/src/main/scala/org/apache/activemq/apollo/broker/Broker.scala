@@ -380,6 +380,7 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
     }
     schedule_reoccurring(1, SECONDS) {
       virtualhost_maintenance
+      connection_maintenance
       roll_current_period
       tune_send_receive_buffers
     }
@@ -471,6 +472,13 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
           host.router.remove_temp_destinations(active_sessions)
         }
       }
+    }
+  }
+
+  def connection_maintenance = {
+    val time = now
+    for ( c <- connections.values ) {
+      c.maintenance(time)
     }
   }
 

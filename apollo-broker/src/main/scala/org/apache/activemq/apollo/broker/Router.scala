@@ -204,6 +204,7 @@ object DeliveryProducerRoute extends Log
 abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with BindableDeliveryProducer {
   import DeliveryProducerRoute._
 
+  var last_send = Broker.now
   val reained_base = new BaseRetained
   def release = reained_base.release
   def retain = reained_base.retain
@@ -281,7 +282,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     if( full ) {
       false
     } else {
-
+      last_send = Broker.now
       // Do we need to store the message if we have a matching consumer?
       pendingAck = delivery.ack
       val copy = delivery.copy

@@ -673,14 +673,6 @@ class StompProtocolHandler extends ProtocolHandler {
   var closed = false
   var consumers = Map[AsciiBuffer, StompConsumer]()
 
-  var producerRoutes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
-    override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
-      host.dispatch_queue {
-        host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
-      }
-    }
-  }
-
   var host:VirtualHost = null
 
   private def queue = connection.dispatch_queue
@@ -1149,8 +1141,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  class StompProducerRoute(dest: AsciiBuffer) extends DeliveryProducerRoute(host.router) {
-
+  class StompProducerRoute(val dest: AsciiBuffer) extends DeliveryProducerRoute(host.router) {
     val addresses = decode_addresses(dest)
     val key = addresses.toList
 
@@ -1165,6 +1156,29 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
+  override def maintenance(now:Long) = dispatchQueue {
+    import collection.JavaConversions._
+    val expired = ListBuffer[StompProducerRoute]()
+    for( route <- producerRoutes.values() ) {
+      if( (now - route.last_send) > 2000 ) {
+        expired += route
+      }
+    }
+    for( route <- expired ) {
+      producerRoutes.remove(route.dest)
+      host.dispatch_queue {
+        host.router.disconnect(route.addresses, route)
+      }
+    }
+  }
+
+  var producerRoutes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
+    override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
+      host.dispatch_queue {
+        host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+      }
+    }
+  }
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
     val dest = get(frame.headers, DESTINATION).get
@@ -1293,6 +1307,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def send_via_route(addresses: Array[SimpleAddress], route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
     var storeBatch:StoreUOW=null
+
     // User might be asking for ack that we have processed the message..
     val receipt = frame.header(RECEIPT_REQUESTED)
 
