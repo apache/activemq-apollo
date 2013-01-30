@@ -1164,7 +1164,7 @@ class LevelDBClient(store: LevelDBStore) {
 
       // After running some load we empirically found that a healthy ratio is between 12 and 25 bytes per entry.
       // lets compact if we go way over the healthy ratio.
-      if( ratio > 50 ) {
+      if( ratio > 100 ) {
         index.compact_needed = true
       }
     } else if( index_usage > 1024*1024*5 )  {
@@ -1187,6 +1187,7 @@ class LevelDBClient(store: LevelDBStore) {
     if( index.compact_needed ) {
       info("Compacting the leveldb index at: "+dirty_index_file)
       index.compact
+      info("Compaction completed")
     }
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 
