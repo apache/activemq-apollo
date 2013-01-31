@@ -40,24 +40,24 @@ jar -xvf apache-apollo-${project_version}-windows-distro.zip
 {pygmentize_and_compare}
 
 The distribution will be extracted into a directory called, `apache-apollo-${project_version}`.
-The rest of dis document will refer the full path to this directory as `${APOLLO_HOME}`.
+The rest of this document will refer to the full path to this directory as `${APOLLO_HOME}`.
 
 ### Optional Windows Prerequisites
 
-If your on Windows Vista, Server 2008, or later you should install the MS VC++ 2010 Redistributable
+If you're on Windows Vista, Server 2008, or later you should install the MS VC++ 2010 Redistributable
 package so that Apollo can use the JNI implementation of LevelDB.  
 
-* If your running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
-* If your running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
+* If you're running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
+* If you're running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
 
 ### Creating a Broker Instance
 
 A broker instance is the directory containing all the configuration and runtime
-data such as logs and data files associated with a broker process.  It is recommended that
+data, such as logs and data files, associated with a broker process.  It is recommended that
 you do *not* create the instance directory under `${APOLLO_HOME}`.  This separation is
 encouraged so that you can more easily upgrade when the next version of Apollo is released.
 
-On unix systems, it is a common convention to store this kind of runtime data under 
+On Unix systems, it is a common convention to store this kind of runtime data under 
 the `/var/lib` directory.  For example, to create an instance at '/var/lib/mybroker', run:
 
     cd /var/lib
