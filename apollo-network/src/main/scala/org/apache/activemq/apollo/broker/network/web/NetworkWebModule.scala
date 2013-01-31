@@ -35,22 +35,16 @@ import com.wordnik.swagger.annotations.{ApiOperation, Api}
 
 
 object NetworkWebModule extends WebModule {
-
-  def priority: Int = 101
-
   override def web_resources = Set(
     classOf[NetworkResourceJSON],
     classOf[NetworkResourceHelp]
   )
-
-  def root_redirect: String = "broker"
-
 }
 
 @Path(          "/api/docs/network{ext:(\\.json)?}")
 @Api(value =    "/api/json/network",
   listingPath = "/api/docs/network",
-  listingClass = "org.apache.activemq.apollo.web.resources.NetworkResourceJSON")
+  listingClass = "org.apache.activemq.apollo.broker.network.web.NetworkResourceJSON")
 class NetworkResourceHelp extends HelpResourceJSON
 
 /**

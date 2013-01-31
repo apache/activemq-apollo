@@ -23,12 +23,7 @@ import org.apache.activemq.apollo.web.WebModule
  */
 
 object JmxWebModule  extends WebModule {
-
-  def root_redirect: String = "broker"
-  def priority: Int = 50
-
   override def web_resources = Set(
     classOf[JmxResource]
   )
-
 }

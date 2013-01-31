@@ -24,9 +24,9 @@ import org.fusesource.scalate.jersey._
 import com.wordnik.swagger.jaxrs.ApiHelpMessageBodyWriter
 
 trait WebModule {
-  def priority:Int
+  def priority = 50
   def web_resources: Set[Class[_]]
-  def root_redirect:String
+  def root_redirect:String = null
 }
 
 /**
@@ -41,19 +41,20 @@ object WebModule {
 
   val (root_redirect, web_resources) = {
     // sort by priority.  Highest priority wins.
-    val sorted = finder.singletons.sortBy( _.priority )
+    var sorted = finder.singletons.sortBy( _.priority )
     val web_resources = LinkedHashMap[Class[_], Class[_]]()
     for( provider <- sorted; resource <- provider.web_resources ) {
       web_resources.put(resource,resource)
     }
-    (sorted.last.root_redirect, web_resources.keySet)
+    val last_root_redirect = (sorted.flatMap{x=> Option(x.root_redirect)}).last
+    (last_root_redirect, web_resources.keySet)
   }
 
 }
 
 object DefaultWebModule extends WebModule {
 
-  def priority: Int = 100
+  override def priority: Int = 100
 
   override def web_resources = Set(
     classOf[RootResource],
@@ -80,6 +81,6 @@ object DefaultWebModule extends WebModule {
 
   )
 
-  def root_redirect: String = "console/index.html"
+  override def root_redirect: String = "console/index.html"
 
 }
