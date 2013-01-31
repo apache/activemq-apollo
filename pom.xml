@@ -34,7 +34,7 @@
   <properties>
 
     <!-- base url for site deployment.  See distribution management for full url.  Override this in settings.xml for staging -->
-    <website-base-url>scp://people.apache.org/x1/www/activemq.apache.org/apollo</website-base-url>
+    <website-base-url>svn:https://svn.apache.org/repos/infra/websites/production/activemq/content/apollo</website-base-url>
 
     <target-dir>target</target-dir>
     <projectName>Apache Apollo</projectName>
@@ -243,6 +243,14 @@
 
   <build>
   
+    <extensions>
+      <extension>
+        <groupId>com.google.code.maven-svn-wagon</groupId>
+        <artifactId>maven-svn-wagon</artifactId>
+        <version>1.4</version>
+      </extension>
+    </extensions>
+    
     <!-- to allow the eclipse profile to use a different target directory -->
     <outputDirectory>${basedir}/${target-dir}/classes</outputDirectory>
     <testOutputDirectory>${basedir}/${target-dir}/test-classes</testOutputDirectory>
