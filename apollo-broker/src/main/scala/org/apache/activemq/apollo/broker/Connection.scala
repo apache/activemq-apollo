@@ -111,11 +111,6 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
   var protocol_handler: ProtocolHandler = null;
 
   def session_id = Option(protocol_handler).flatMap(_.session_id)
-  def maintenance(now:Long) = {
-    if ( protocol_handler!=null ) {
-      protocol_handler.maintenance(now)
-    }
-  }
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Task) = {

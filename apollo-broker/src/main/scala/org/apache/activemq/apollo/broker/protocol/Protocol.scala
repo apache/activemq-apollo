@@ -84,8 +84,6 @@ trait ProtocolHandler {
 
   def protocol:String
 
-  def maintenance(now:Long) = {}
-
   def session_id:Option[String]
 
   var connection:BrokerConnection = null;

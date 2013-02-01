@@ -1156,7 +1156,26 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  override def maintenance(now:Long) = dispatchQueue {
+  var maintenance_scheduled = false
+  def schedule_maintenance:Unit = {
+    if(!maintenance_scheduled && !producerRoutes.isEmpty) {
+      maintenance_scheduled = true
+      dispatchQueue.after(2, TimeUnit.SECONDS) {
+        maintenance_scheduled = false
+        if( !producerRoutes.isEmpty ) {
+          try {
+            producer_maintenance
+          } finally {
+            schedule_maintenance
+          }
+        }
+      }
+    }
+  }
+
+  def producer_maintenance = dispatchQueue {
+    println("doing route maint...")
+    val now = Broker.now
     import collection.JavaConversions._
     val expired = ListBuffer[StompProducerRoute]()
     for( route <- producerRoutes.values() ) {
@@ -1166,6 +1185,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
     for( route <- expired ) {
       producerRoutes.remove(route.dest)
+      println("Expired route to: "+route.dest)
       host.dispatch_queue {
         host.router.disconnect(route.addresses, route)
       }
@@ -1199,6 +1219,7 @@ class StompProtocolHandler extends ProtocolHandler {
                 if (!connection.stopped) {
                   resume_read
                   producerRoutes.put(trimmed_dest, route)
+                  schedule_maintenance
                   send_via_route(route.addresses, route, frame, uow)
                 }
             }
