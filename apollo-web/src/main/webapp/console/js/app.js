@@ -377,8 +377,7 @@ App.ConnectionsController = Ember. ArrayController.create({
     var fields = ['id', 'remote_address', 'protocol', 'user', 'read_counter', 'write_counter', 'messages_received', 'messages_sent'];
 
     App.ajax("GET", "/broker/connections?q=connector='"+connector+"'&ps=10000&f="+fields.join("&f="), function(data) {
-      App.ConnectionsController.set('content', data.rows);
-      updateArrayController(App.ConnectionsController, data.rows, function(item){ return item.id; });
+      updateArrayController(App.ConnectionsController, data.rows, function(item){ return item[0]; });
     });
   }.observes("connector"),
 
@@ -389,6 +388,11 @@ App.ConnectionsController = Ember. ArrayController.create({
       item.set('checked', all_checked);
     });
   }.observes("all_checked"),
+  has_checked: function() {
+    return this.get('content').find(function(item){
+      return item.get('checked')==true;
+    }) != null;
+  }.property("content.@each.checked"),
 
   remove: function() {
     var content = this.get('content');
@@ -506,13 +510,17 @@ App.DestinationsController = Ember. ArrayController.create({
   },
 
   all_checked:false,
-
   check_all_toggle: function() {
     var all_checked= this.get("all_checked");
     this.get('content').forEach(function(item){
       item.set('checked', all_checked);
     });
   }.observes("all_checked"),
+  has_checked: function() {
+    return this.get('content').find(function(item){
+      return item.get('checked')==true;
+    }) != null;
+  }.property("content.@each.checked"),
 
   remove: function() {
     var virtual_host = this.get('virtual_host');
@@ -603,11 +611,15 @@ function updateArrayController(controller, data, keyFn) {
 
       var new_content = [];
       data.forEach(function(item){
-        var obj = keyIndex[item.entry.seq];
+        var obj = keyIndex[keyFn(item)];
         if( obj ) {
           obj.setProperties(item);
         } else {
-          obj = Ember.Object.create(item);
+          if( Object.prototype.toString.call(item) == '[object Array]' ) {
+            obj = item;
+          } else {
+            obj = Ember.Object.create(item);
+          }
         }
         new_content.push(obj);
       });

@@ -4,8 +4,12 @@
 
 .btn { color: #333; }
 .btn:hover { color: #222; }
-.btn-primary { color: #fff; }
-.btn-primary:hover { color: #fff; }
+
+.btn-primary:hover, .btn-primary,
+.btn-success:hover, .btn-success,
+.btn-warning:hover, .btn-warning,
+.btn-danger:hover, .btn-danger
+{ color: #fff; }
 
 .well-title {
   padding-bottom: .2em;

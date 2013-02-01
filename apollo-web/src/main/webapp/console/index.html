@@ -77,7 +77,7 @@
      </form>
     </div>
     <div class="modal-footer">
-      <a href="#" class="btn" {{action "hide" target="App.SettingsView" on="click"}}>Close</a>
+      <a href="#" class="btn btn-primary" {{action "hide" target="App.SettingsView" on="click"}}>Close</a>
     </div>
   </script>
   <div class="row" id="notifications" style="padding-top: 1em;" >
@@ -173,9 +173,11 @@
                 {{/each}}
                 </tbody>
               </table>
+              {{#if App.DestinationsController.has_checked}}
               <div style="padding:.5em 0">
-                <button class="btn btn-small" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
+                <button class="btn btn-small btn-danger" {{action "remove" target="App.DestinationsController" on="click"}}>Delete</button>
               </div>
+              {{/if}}
               {{else}}
                 <div style="padding-left:2em;">No {{App.VirtualHostController.selected_tab}} have been created yet.</div>
               {{/if}}
@@ -412,9 +414,9 @@
             <div class="controls">
               {{view Ember.Select contentBinding="App.broker.connectors" selectionBinding="App.ConnectorController.selected"}}
               {{#if App.connector.paused}}
-              <button class="btn" {{action "start" target="App.ConnectorController" on="click"}}><i class="icon-play"></i> Start</button>
+              <button class="btn btn-success" {{action "start" target="App.ConnectorController" on="click"}}><i class="icon-play"></i> Start</button>
               {{else}}
-              <button class="btn" {{action "stop" target="App.ConnectorController" on="click"}}><i class="icon-stop"></i> Stop</button>
+              <button class="btn btn-warning" {{action "stop" target="App.ConnectorController" on="click"}}><i class="icon-stop"></i> Stop</button>
               {{/if}}
             </div>
           </div>
@@ -428,7 +430,7 @@
                 <tr><td><strong>{{App.connector.state_label}} Since: </strong>{{App.connector.state_date}}</td></tr>
                 <tr><td><strong>Bound to: </strong>{{App.connector.local_address}}</td></tr>
                 <tr><td><strong>Protocol: </strong>{{App.connector.protocol}}</td></tr>
-                <tr><td><strong>Currently Connected: </strong>{{App.connector.connection_counter}}</td></tr>
+                <tr><td><strong>Currently Connected: </strong>{{App.connector.connected}}</td></tr>
                 <tr><td><strong>Connection Counter: </strong>{{App.connector.connection_counter}}</td></tr>
                 <tr><td><strong>Outbound Messages: </strong>{{App.connector.messages_sent}}</td></tr>
                 <tr><td><strong>Inbound Messages: </strong>{{App.connector.messages_received}}</td></tr>
@@ -461,9 +463,11 @@
               {{/each}}
               </tbody>
             </table>
+            {{#if App.ConnectionsController.has_checked}}
             <div style="padding:.5em 0">
-              <button class="btn btn-small" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
+              <button class="btn btn-small btn-danger" {{action "remove" target="App.ConnectionsController" on="click"}}>Disconnect</button>
             </div>
+            {{/if}}
             {{else}}
               <div style="padding-left:2em;">No connections exist at this time.</div>
             {{/if}}
