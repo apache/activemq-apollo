@@ -1174,7 +1174,6 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def producer_maintenance = dispatchQueue {
-    println("doing route maint...")
     val now = Broker.now
     import collection.JavaConversions._
     val expired = ListBuffer[StompProducerRoute]()
@@ -1185,7 +1184,6 @@ class StompProtocolHandler extends ProtocolHandler {
     }
     for( route <- expired ) {
       producerRoutes.remove(route.dest)
-      println("Expired route to: "+route.dest)
       host.dispatch_queue {
         host.router.disconnect(route.addresses, route)
       }
