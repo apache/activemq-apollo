@@ -40,4 +40,9 @@ public interface Service {
      */
     void stop(Task onComplete) throws Exception;
 
+    /**
+     * @return the error that caused the service to not start.
+     */
+    public Throwable service_failure();
+
 }

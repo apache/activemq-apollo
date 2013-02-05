@@ -65,8 +65,8 @@ trait BaseService extends Service with Dispatched {
   def service_state = _service_state
 
   @volatile
-  protected var _serviceFailure:Exception = null
-  def serviceFailure = _serviceFailure
+  protected var _service_failure:Throwable = null
+  def service_failure = _service_failure
 
   private val pending_actions = ListBuffer[Task]()
 
@@ -93,7 +93,7 @@ trait BaseService extends Service with Dispatched {
         catch {
           case e:Exception =>
             error(e, "Start failed due to %s", e)
-            _serviceFailure = e
+            _service_failure = e
             _service_state = new FAILED
             done
         }
@@ -142,7 +142,7 @@ trait BaseService extends Service with Dispatched {
           catch {
             case e:Exception =>
               error(e, "Stop failed due to: %s", e)
-              _serviceFailure = e
+              _service_failure = e
               _service_state = new FAILED
               done
           }

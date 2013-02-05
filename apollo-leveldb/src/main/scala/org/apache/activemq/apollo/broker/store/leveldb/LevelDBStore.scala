@@ -117,11 +117,12 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
           client.start()
           next_msg_key.set(client.getLastMessageKey + 1)
           next_queue_key.set(client.get_last_queue_key + 1)
-          on_completed.run
         } catch {
           case e: Throwable =>
-            e.printStackTrace()
-            LevelDBStore.error(e, "Store client startup failure: " + e)
+            _service_failure = e
+            LevelDBStore.error(e, "Store startup failure: " + e)
+        } finally {
+          on_completed.run
         }
       }
     }

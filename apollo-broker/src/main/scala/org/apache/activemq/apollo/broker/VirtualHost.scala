@@ -186,7 +186,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
       val task = tracker.task("store startup")
       console_log.info("Starting store: "+store)
       store.start {
-        {
+        if( store.service_failure ==null) {
           val task = tracker.task("store get last queue key")
           store.get_last_queue_key{ key=>
             key match {
@@ -204,29 +204,35 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
               task.run
             }
           }
+        } else {
+          _service_failure = store.service_failure
+          store = null
         }
         task.run
       }
     }
 
     tracker.callback {
-
       val tracker = new LoggingTracker("virtual host startup", console_log)
+      if( _service_failure==null ) {
 
-      // The default host handles persisting the connection id counter.
-      if(store!=null) {
-        if(session_counter.get == 0) {
-          val task = tracker.task("load session counter")
-          session_counter.init(store) {
-            task.run()
+        // The default host handles persisting the connection id counter.
+        if(store!=null) {
+          if(session_counter.get == 0) {
+            val task = tracker.task("load session counter")
+            session_counter.init(store) {
+              task.run()
+            }
+          } else {
+            session_counter.connect(store)
           }
-        } else {
-          session_counter.connect(store)
         }
+        tracker.start(router)
       }
-
-      tracker.start(router)
       tracker.callback(on_completed)
+      if( _service_failure!=null ) {
+        stop(NOOP)
+      }
     }
 
   }

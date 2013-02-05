@@ -330,6 +330,7 @@ class LevelDBClient(store: LevelDBStore) {
     snapshots.filterNot(_._1 == last_index_snapshot_pos).foreach(_._2.recursive_delete)
     temp_index_file.recursive_delete // usually does not exist.
 
+    var reportedFailure:Throwable = null
     retry {
 
       // Delete the dirty indexes
@@ -351,16 +352,8 @@ class LevelDBClient(store: LevelDBStore) {
           }
       }
 
-      try {
+      def recover = {
         index = new RichDB(factory.open(dirty_index_file, index_options))
-      } catch {
-        case e:DBException =>
-          // lets try to recover by repairing the index file.
-          factory.repair(dirty_index_file, index_options)
-          index = new RichDB(factory.open(dirty_index_file, index_options))
-      }
-
-      try {
         load_log_refs
         index.put(dirty_index_key, TRUE)
 
@@ -480,13 +473,31 @@ class LevelDBClient(store: LevelDBStore) {
         }
         // delete obsolete files..
         gc
+      }
+
+      try {
+        recover
 
       } catch {
         case e: Throwable =>
-          // replay failed.. good thing we are in a retry block...
-          index.close
-          throw e;
+          if( reportedFailure == null ) {
+            reportedFailure = e
+            // replay failed.. good thing we are in a retry block...
+            if( index!=null) {
+              index.close
+              index = null
+            }
+            // Lets do a repair for shits and giggles..
+            factory.repair(dirty_index_file, index_options)
+            throw e;
+          } else {
+            reportedFailure = e
+          }
       }
+    }
+
+    if( reportedFailure!=null ) {
+      throw reportedFailure;
     }
   }
 
@@ -1013,7 +1024,7 @@ class LevelDBClient(store: LevelDBStore) {
 
   def list_queues: Seq[Long] = {
     val rc = ListBuffer[Long]()
-    retry_using_index {
+    using_index {
       val ro = new ReadOptions
       ro.verifyChecksums(verify_checksums)
       ro.fillCache(false)
