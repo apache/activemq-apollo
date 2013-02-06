@@ -201,7 +201,7 @@ object DeliveryProducerRoute extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with BindableDeliveryProducer {
+abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with BindableDeliveryProducer with DeferringDispatched {
   import DeliveryProducerRoute._
 
   var last_send = Broker.now
@@ -217,7 +217,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     null
   }
 
-  def connected() = dispatch_queue {
+  def connected() = defer {
     on_connected
   }
 
@@ -235,7 +235,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
   def connect(x:DeliveryConsumer) = x.connect(this)
 
-  def unbind(targets:List[DeliveryConsumer]) = dispatch_queue {
+  def unbind(targets:List[DeliveryConsumer]) = defer {
     this.targets = this.targets.filterNot { x=>
       val rc = targets.contains(x.consumer)
       if( rc ) {
@@ -253,7 +253,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     targets.foreach(_.release)
   }
 
-  def disconnected() = dispatch_queue {
+  def disconnected() = defer {
     this.targets.foreach { x=>
       debug("producer route detaching from consumer.")
       x.close
@@ -270,7 +270,6 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
   // Dispatch.
   //
 
-  var pendingAck: (DeliveryResult, StoreUOW)=>Unit = null
   var overflow:Delivery=null
   var overflowSessions = List[DeliverySession]()
   var refiller:Task=null
@@ -283,10 +282,32 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       false
     } else {
       last_send = Broker.now
+
       // Do we need to store the message if we have a matching consumer?
-      pendingAck = delivery.ack
+      var matching_targets = 0
+      val original_ack = delivery.ack
       val copy = delivery.copy
-      
+
+        if ( original_ack!=null ) {
+        copy.ack = (result, uow)=> {
+          defer {
+            matching_targets -= 1
+            if ( matching_targets<= 0 && copy.ack!=null ) {
+              copy.ack = null
+              if (delivery.uow != null) {
+                delivery.uow.on_complete {
+                  defer {
+                    original_ack(Consumed, null)
+                  }
+                }
+              } else {
+                original_ack(Consumed, null)
+              }
+            }
+          }
+        }
+      }
+
       if(copy.message!=null) {
         copy.message.retain
       }
@@ -295,7 +316,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
         // only deliver to matching consumers
         if( target.consumer.matches(copy) ) {
-
+          matching_targets += 1
           if ( target.consumer.is_persistent && copy.persistent && store != null) {
 
             if (copy.uow == null) {
@@ -314,29 +335,21 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         }
       }
 
+      if ( matching_targets == 0 && original_ack!=null ) {
+        original_ack(Consumed, null)
+      }
+
       if( overflowSessions!=Nil ) {
         overflow = copy
       } else {
-        delivered(copy)
+        release(copy)
       }
       true
     }
   }
 
 
-  private def delivered(delivery: Delivery): Unit = {
-    if (pendingAck != null) {
-      if (delivery.uow != null) {
-        val ack = pendingAck
-        delivery.uow.on_complete {
-          ack(Consumed, null)
-        }
-
-      } else {
-        pendingAck(Consumed, null)
-      }
-      pendingAck==null
-    }
+  private def release(delivery: Delivery): Unit = {
     if (delivery.uow != null) {
       delivery.uow.release
     }
@@ -355,7 +368,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         }
       }
       if( overflowSessions==Nil ) {
-        delivered(overflow)
+        release(overflow)
         overflow = null
         if(refiller!=null)
           refiller.run

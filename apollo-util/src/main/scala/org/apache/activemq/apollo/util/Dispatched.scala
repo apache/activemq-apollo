@@ -27,7 +27,20 @@ import org.fusesource.hawtdispatch._
  */
 trait Dispatched {
   def dispatch_queue:DispatchQueue
-
   def assert_executing = dispatch_queue.assertExecuting()
+}
 
+trait DeferringDispatched extends Dispatched {
+
+  def defer(func: =>Unit) = {
+    dispatch_queue_task_source.merge(new Task(){
+      def run() {
+        func
+      }
+    })
+  }
+
+  val dispatch_queue_task_source = createSource(new ListEventAggregator[Task](), dispatch_queue)
+  dispatch_queue_task_source.setEventHandler(^{ dispatch_queue_task_source.getData.foreach(_.run()) });
+  dispatch_queue_task_source.resume()
 }

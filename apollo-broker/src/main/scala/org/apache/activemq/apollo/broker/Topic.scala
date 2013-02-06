@@ -103,6 +103,9 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
           retained_message = null;
         case _ =>
       }
+      if( value.ack != null ) {
+        value.ack(Consumed, value.uow)
+      }
       true
     }
 
@@ -149,12 +152,24 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     def producer = session.producer
     def consumer = session.consumer
 
+    val ack_pass_through = proxy.link.kind == "dsub"
+
     def offer(value: Delivery) = {
       val copy = value.copy();
-      copy.uow = value.uow
-      copy.ack = value.ack
       copy.sender ::= address
-      downstream.offer(copy)
+      if ( ack_pass_through ) {
+        copy.ack = value.ack
+        copy.uow = value.uow
+      }
+
+      val accepted = downstream.offer(copy)
+
+      // If we don't ack now, then the sender's ack will
+      // wait for the consumers ack which might be a nice option to give folks.
+      if( accepted && !ack_pass_through && value.ack!=null ) {
+        value.ack(Consumed, value.uow)
+      }
+      accepted
     }
   }
 
@@ -399,10 +414,9 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       if (r != null) {
         val copy = r.copy()
         copy.sender ::= address
-
         val producer = new  DeliveryProducerRoute(router) {
           refiller = NOOP
-          val dispatch_queue = createQueue()
+          def dispatch_queue = Topic.this.dispatch_queue
           override protected def on_connected = {
             copy.ack = (d,x) => consumer.dispatch_queue {
               unbind(consumer :: Nil)

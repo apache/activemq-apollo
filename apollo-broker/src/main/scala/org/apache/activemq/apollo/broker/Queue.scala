@@ -737,6 +737,10 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           }
         }
 
+        if( delivery.ack!=null ) {
+          delivery.ack(Consumed, queue_delivery.uow)
+        }
+
         // release the store batch...
         if (persisted) {
           queue_delivery.uow.release

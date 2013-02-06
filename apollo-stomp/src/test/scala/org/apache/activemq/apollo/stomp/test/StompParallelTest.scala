@@ -1618,4 +1618,34 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   }
 
+
+  test("STOMP flow control.") {
+    val dest = next_id("/queue/quota.flow_control")
+
+    // start a sub client /w a small credit window.
+    val sub = connect("1.1")
+    subscribe("my-sub-name", dest, "client", headers="credit:1,0\n")
+
+    val sent = new AtomicInteger(0)
+    val body = "x"*1024*10
+    Broker.BLOCKABLE_THREAD_POOL {
+      for( i <- 1 to 10 ) {
+        println("sending: "+i)
+        val client = connect("1.1", new StompClient)
+        async_send(dest, body, c=client)
+        disconnect(client)
+        sent.incrementAndGet()
+      }
+    }
+
+    for( i <- 1 to 10 ) {
+      within(1, SECONDS) {
+        sent.get should be(i)
+      }
+      assert_received(body)(true)
+      Thread.sleep(200)
+    }
+
+  }
+
 }

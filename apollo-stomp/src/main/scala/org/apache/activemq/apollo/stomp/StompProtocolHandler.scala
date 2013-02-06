@@ -814,9 +814,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       // TODO: if there are too many open connections we should just close the connection
       // without waiting for the error to get sent to the client.
-      queue.after(die_delay, TimeUnit.MILLISECONDS) {
-        connection.stop(NOOP)
-      }
+      disconnect(true)
     }
     throw new Break()
   }
@@ -848,11 +846,15 @@ class StompProtocolHandler extends ProtocolHandler {
     if( !closed ) {
       suspend_read("shutdown")
       connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
+      disconnect(false)
     }
-    connection.stop(NOOP)
   }
 
-  override def on_transport_disconnected() = {
+  override def on_transport_disconnected {
+    disconnect(false)
+  }
+
+  def disconnect(delay: =>Boolean) = {
     if( !closed ) {
       heart_beat_monitor.stop
       closed=true;
@@ -866,12 +868,12 @@ class StompProtocolHandler extends ProtocolHandler {
       }
       transactions.clear()
 
-      producerRoutes.values().foreach{ route=>
+      producer_routes.values().foreach{ route=>
         host.dispatch_queue {
           host.router.disconnect(route.addresses, route)
         }
       }
-      producerRoutes.clear
+      producer_routes.clear
       consumers.foreach { case (_,consumer)=>
         val addresses = consumer.addresses
         host.dispatch_queue {
@@ -886,6 +888,15 @@ class StompProtocolHandler extends ProtocolHandler {
         }
       })
       trace("stomp protocol resources released")
+      on_routing_empty {
+        if( delay ) {
+          queue.after(die_delay, TimeUnit.MILLISECONDS) {
+            connection.stop(NOOP)
+          }
+        } else {
+          connection.stop(NOOP)
+        }
+      }
     }
   }
 
@@ -946,21 +957,8 @@ class StompProtocolHandler extends ProtocolHandler {
                 on_stomp_unsubscribe(frame.headers)
               case NACK =>
                 on_stomp_nack(frame)
-
               case DISCONNECT =>
-
-                val delay = send_receipt(frame.headers)!=null
-                on_transport_disconnected
-                if( delay ) {
-                  queue.after(die_delay, TimeUnit.MILLISECONDS) {
-                    connection.stop(NOOP)
-                  }
-                } else {
-                  // no point in delaying the connection shutdown
-                  // if the client does not want a receipt..
-                  connection.stop(NOOP)
-                }
-
+                disconnect(send_receipt(frame.headers)!=null)
               case _ =>
                 die("Invalid STOMP frame command: "+frame.action);
             }
@@ -1141,6 +1139,16 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
+  var routing_size = 0L
+  var pending_routing_empty_callbacks = ListBuffer[()=>Unit]()
+  def on_routing_empty(func: => Unit) = {
+    if( routing_size== 0 ) {
+      func
+    } else {
+      pending_routing_empty_callbacks.append( func _ )
+    }
+  }
+
   class StompProducerRoute(val dest: AsciiBuffer) extends DeliveryProducerRoute(host.router) {
     val addresses = decode_addresses(dest)
     val key = addresses.toList
@@ -1151,18 +1159,43 @@ class StompProtocolHandler extends ProtocolHandler {
 
     override def dispatch_queue = queue
 
+
     refiller = ^ {
       resume_read
     }
+
+
+    override def offer(delivery: Delivery): Boolean = {
+      if( full )
+        return false
+      routing_size += delivery.size
+      val original_ack = delivery.ack
+      delivery.ack = (result, uow) => {
+        dispatch_queue.assertExecuting()
+        if ( original_ack!=null ) {
+          original_ack(result, uow)
+        }
+        routing_size -= delivery.size
+        if( routing_size==0 && !pending_routing_empty_callbacks.isEmpty) {
+          val t = pending_routing_empty_callbacks
+          pending_routing_empty_callbacks = ListBuffer()
+          for ( func <- t ) {
+            func()
+          }
+        }
+      }
+      super.offer(delivery)
+    }
   }
+
 
   var maintenance_scheduled = false
   def schedule_maintenance:Unit = {
-    if(!maintenance_scheduled && !producerRoutes.isEmpty) {
+    if(!maintenance_scheduled && !producer_routes.isEmpty) {
       maintenance_scheduled = true
       dispatchQueue.after(2, TimeUnit.SECONDS) {
         maintenance_scheduled = false
-        if( !producerRoutes.isEmpty ) {
+        if( !producer_routes.isEmpty ) {
           try {
             producer_maintenance
           } finally {
@@ -1177,20 +1210,20 @@ class StompProtocolHandler extends ProtocolHandler {
     val now = Broker.now
     import collection.JavaConversions._
     val expired = ListBuffer[StompProducerRoute]()
-    for( route <- producerRoutes.values() ) {
+    for( route <- producer_routes.values() ) {
       if( (now - route.last_send) > 2000 ) {
         expired += route
       }
     }
     for( route <- expired ) {
-      producerRoutes.remove(route.dest)
+      producer_routes.remove(route.dest)
       host.dispatch_queue {
         host.router.disconnect(route.addresses, route)
       }
     }
   }
 
-  var producerRoutes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
+  var producer_routes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
     override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
       host.dispatch_queue {
         host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
@@ -1200,7 +1233,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
     val dest = get(frame.headers, DESTINATION).get
-    producerRoutes.get(dest) match {
+    producer_routes.get(dest) match {
       case null =>
         // Deep copy to avoid holding onto a 64k buffer
         val trimmed_dest = dest.deepCopy().ascii()
@@ -1216,7 +1249,7 @@ class StompProtocolHandler extends ProtocolHandler {
               case None =>
                 if (!connection.stopped) {
                   resume_read
-                  producerRoutes.put(trimmed_dest, route)
+                  producer_routes.put(trimmed_dest, route)
                   schedule_maintenance
                   send_via_route(route.addresses, route, frame, uow)
                 }
