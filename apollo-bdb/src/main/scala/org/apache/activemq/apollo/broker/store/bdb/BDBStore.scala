@@ -58,11 +58,10 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
 
   protected def store(uows: Seq[DelayableUOW])(callback: =>Unit) = {
     write_executor {
-      client.store(uows, ^{
-        dispatch_queue {
-          callback
-        }
-      })
+      client.store(uows)
+      dispatch_queue {
+        callback
+      }
     }
   }
 

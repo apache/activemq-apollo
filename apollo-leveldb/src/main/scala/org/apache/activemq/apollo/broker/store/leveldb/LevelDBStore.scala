@@ -79,11 +79,10 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
 
   protected def store(uows: Seq[DelayableUOW])(callback: => Unit) = {
     write_executor {
-      client.store(uows, ^ {
-        dispatch_queue {
-          callback
-        }
-      })
+      client.store(uows)
+      dispatch_queue {
+        callback
+      }
     }
   }
 

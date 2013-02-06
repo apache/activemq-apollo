@@ -341,7 +341,7 @@ class BDBClient(store: BDBStore) {
     callback.run
   }
 
-  def store(uows: Seq[BDBStore#DelayableUOW], callback:Runnable) {
+  def store(uows: Seq[BDBStore#DelayableUOW]) {
     val sync = uows.find( _.flush_sync ).isDefined
     with_ctx(sync) { ctx=>
       import ctx._
@@ -393,7 +393,6 @@ class BDBClient(store: BDBStore) {
         direct_buffer_allocator.sync
       }
     }
-    callback.run
   }
 
   def listQueues: Seq[Long] = {

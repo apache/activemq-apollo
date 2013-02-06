@@ -831,7 +831,7 @@ class LevelDBClient(store: LevelDBStore) {
     callback.run
   }
 
-  def store(uows: Seq[LevelDBStore#DelayableUOW], callback: Runnable) {
+  def store(uows: Seq[LevelDBStore#DelayableUOW]) {
     retry_using_index {
       log.appender {
         appender =>
@@ -947,7 +947,6 @@ class LevelDBClient(store: LevelDBStore) {
           }
       }
     }
-    callback.run
   }
 
   val metric_load_from_index_counter = new TimeCounter
