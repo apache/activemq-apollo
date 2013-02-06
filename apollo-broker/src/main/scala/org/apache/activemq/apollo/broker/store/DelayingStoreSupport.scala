@@ -513,8 +513,9 @@ trait DelayingStoreSupport extends Store with BaseService {
       flush_latency_counter.start { end=>
         flush_source.suspend
         store(uows) {
-          store_completed(uows)
+          assert_executing
           flush_source.resume
+          store_completed(uows)
           dispatch_queue.assertExecuting()
           uows.foreach { uow=>
             uow.actions.foreach { case (msg, action) =>
