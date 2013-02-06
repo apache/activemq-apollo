@@ -504,6 +504,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     var on_swap_out = List[()=>Unit]()
 
+    def fire_swap_out_watchers = if(!on_swap_out.isEmpty) {
+      val t = on_swap_out
+      on_swap_out = Nil
+      for ( task <- t ) {
+        task()
+      }
+    }
+
     def swapped_out(store_wrote_to_disk:Boolean) = {
       assert( state == this )
       storing = false
@@ -529,12 +537,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           queue.loaded_size -= size
         }
 
-        val on_swap_out_copy = on_swap_out
-        on_swap_out = Nil
-        for ( task <- on_swap_out_copy ) {
-          task()
-        }
-
+        fire_swap_out_watchers
       } else {
         if( remove_pending ) {
           delivery.message.release
@@ -551,6 +554,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         this.space += delivery
       }
       swapping_out = false
+      fire_swap_out_watchers
     }
 
     override def remove = {
