@@ -24,6 +24,7 @@ import java.net.{SocketTimeoutException, InetSocketAddress}
 import org.apache.activemq.apollo.stomp.{Stomp, StompProtocolHandler}
 import org.fusesource.hawtdispatch._
 import collection.mutable
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * These tests can be run in parallel against a single Apollo broker.
@@ -365,40 +366,15 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
   test("Setting `from-seq` header to -1 results in subscription starting at end of the queue.") {
     skip_if_using_store
     connect("1.1")
-
-    def send(id: Int) = {
-      client.write(
-        "SEND\n" +
-                "destination:/queue/from-seq-end\n" +
-                "receipt:0\n" +
-                "\n" +
-                "message:" + id + "\n")
-      wait_for_receipt("0")
-    }
-
-    send(1)
-    send(2)
-    send(3)
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/queue/from-seq-end\n" +
-              "receipt:0\n" +
-              "browser:true\n" +
-              "browser-end:false\n" +
-              "id:0\n" +
-              "from-seq:-1\n" +
-              "\n")
-    wait_for_receipt("0")
-
-    send(4)
-
-    def get(seq: Long) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should include("message:" + seq + "\n")
-    }
-    get(4)
+    async_send("/queue/from-seq-end", 1)
+    async_send("/queue/from-seq-end", 2)
+    sync_send("/queue/from-seq-end", 3)
+    subscribe("0", "/queue/from-seq-end", headers=
+                  "browser:true\n" +
+                  "browser-end:false\n" +
+                  "from-seq:-1\n" )
+    async_send("/queue/from-seq-end", 4)
+    assert_received(4)
   }
 
   test("The `browser-end:false` can be used to continously browse a queue.") {
@@ -1352,29 +1328,13 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
   test("Temp Queue Send Receive") {
     connect("1.1")
 
-    def put(msg: String) = {
-      client.write(
-        "SEND\n" +
-                "destination:/temp-queue/test\n" +
-                "reply-to:/temp-queue/test\n" +
-                "receipt:0\n" +
-                "\n" +
-                "message:" + msg + "\n")
-      wait_for_receipt("0")
-    }
-
-    put("1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/temp-queue/test\n" +
-              "id:1\n" +
-              "\n")
+    sync_send("/temp-queue/test", "1", "reply-to:/temp-queue/test\n")
+    subscribe("my-sub-name", "/temp-queue/test")
 
     def get(dest: String) = {
       val frame = client.receive()
       frame should startWith("MESSAGE\n")
-      frame should endWith("\n\nmessage:%s\n".format(dest))
+      frame should endWith("\n\n%s".format(dest))
 
       // extract headers as a map of values.
       Map((frame.split("\n").reverse.flatMap {
@@ -1396,33 +1356,27 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     message.get("reply-to") should be === (message.get("destination"))
 
     // Different connection should be able to send a message to the temp destination..
-    var other = new StompClient
-    connect("1.1", other)
-    other.write(
-      "SEND\n" +
-              "destination:" + actual_temp_dest_name + "\n" +
-              "receipt:0\n" +
-              "\n")
-    wait_for_receipt("0", other)
+    var other = connect("1.1", new StompClient)
+    sync_send(actual_temp_dest_name, "2", c=other)
 
-    // First client chould get the message.
-    var frame = client.receive()
-    frame should startWith("MESSAGE\n")
+    // First client should get the message.
+    assert_received("2", "my-sub-name")
 
     // But not consume from it.
     other.write(
       "SUBSCRIBE\n" +
-              "destination:" + actual_temp_dest_name + "\n" +
-              "id:1\n" +
-              "receipt:0\n" +
-              "\n")
-    frame = other.receive()
+      "destination:" + actual_temp_dest_name + "\n" +
+      "id:1\n" +
+      "receipt:0\n" +
+      "\n")
+
+    val frame = other.receive()
     frame should startWith("ERROR\n")
     frame should include regex ("""message:Not authorized to receive from the temporary destination""")
     other.close()
 
     // Check that temp queue is deleted once the client disconnects
-    put("2")
+    async_send("/temp-queue/test", "3", "reply-to:/temp-queue/test\n")
     expect(true)(queue_exists(actual_temp_dest_name.stripPrefix("/queue/")))
     client.close();
 
@@ -1434,16 +1388,12 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
   test("Temp Topic Send Receive") {
     connect("1.1")
 
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/temp-topic/test\n" +
-              "id:1\n" +
-              "\n")
+    subscribe("my-sub-name", "/temp-topic/test")
 
     def get(dest: String) = {
       val frame = client.receive()
       frame should startWith("MESSAGE\n")
-      frame should endWith("\n\nmessage:%s\n".format(dest))
+      frame should endWith("\n\n%s".format(dest))
 
       // extract headers as a map of values.
       Map((frame.split("\n").reverse.flatMap {
@@ -1457,17 +1407,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       }): _*)
     }
 
-    def put(msg: String) = {
-      client.write(
-        "SEND\n" +
-                "destination:/temp-topic/test\n" +
-                "reply-to:/temp-topic/test\n" +
-                "receipt:0\n" +
-                "\n" +
-                "message:" + msg + "\n")
-      wait_for_receipt("0", client)
-    }
-    put("1")
+    async_send("/temp-topic/test", "1", "reply-to:/temp-topic/test\n")
 
     // The destination and reply-to headers should get updated with actual
     // Queue names
@@ -1477,18 +1417,11 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     message.get("reply-to") should be === (message.get("destination"))
 
     // Different connection should be able to send a message to the temp destination..
-    var other = new StompClient
-    connect("1.1", other)
-    other.write(
-      "SEND\n" +
-              "destination:" + actual_temp_dest_name + "\n" +
-              "receipt:0\n" +
-              "\n")
-    wait_for_receipt("0", other)
+    var other = connect("1.1", new StompClient)
+    sync_send(actual_temp_dest_name, "2", c=other)
 
     // First client chould get the message.
-    var frame = client.receive()
-    frame should startWith("MESSAGE\n")
+    assert_received("2")
 
     // But not consume from it.
     other.write(
@@ -1497,21 +1430,19 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
               "id:1\n" +
               "receipt:0\n" +
               "\n")
-    frame = other.receive()
+    val frame = other.receive()
     frame should startWith("ERROR\n")
     frame should include regex ("""message:Not authorized to receive from the temporary destination""")
     other.close()
 
     // Check that temp queue is deleted once the client disconnects
-    put("2")
+    async_send("/temp-topic/test", "3", "reply-to:/temp-topic/test\n")
     expect(true)(topic_exists(actual_temp_dest_name.stripPrefix("/topic/")))
     client.close();
 
     within(10, SECONDS) {
       expect(false)(topic_exists(actual_temp_dest_name.stripPrefix("/topic/")))
     }
-
-
   }
 
   test("Odd reply-to headers do not cause errors") {

@@ -188,24 +188,9 @@ class StompLevelDBParallelTest extends StompParallelTest with BrokerParallelTest
 
   test("Can create dsubs with dots in them") {
     connect("1.1")
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/topic/sometopic\n" +
-              "id:sub.1\n" +
-              "persistent:true\n" +
-              "receipt:0\n" +
-              "\n")
-    wait_for_receipt("0")
-
-    client.write(
-      "SEND\n" +
-              "destination:/dsub/sub.1\n" +
-              "receipt:0\n" +
-              "\n" +
-              "content\n")
-    wait_for_receipt("0")
-
+    subscribe("sub.1", "/topic/sometopic", headers="persistent:true\n")
+    unsubscribe("sub.1")
+    sync_send("/dsub/sub.1", 1)
   }
 
   test("Duplicate SUBSCRIBE updates durable subscription bindings") {
