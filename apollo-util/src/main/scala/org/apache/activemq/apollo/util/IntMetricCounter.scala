@@ -31,11 +31,15 @@ class IntMetricCounter extends MetricProducer[IntMetric] {
   private var count = 0
 
   def apply(reset: Boolean):IntMetric = {
-    val rc = IntMetric(count, total, min, max)
-    if (reset) {
-      clear()
+    if( count == 0 ) {
+      IntMetric(0, 0, 0, 0)
+    } else {
+      val rc = IntMetric(count, total, min, max)
+      if (reset) {
+        clear()
+      }
+      rc
     }
-    rc
   }
 
   def clear() = {
