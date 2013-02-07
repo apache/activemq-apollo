@@ -410,7 +410,7 @@ trait DelayingStoreSupport extends Store with BaseService {
 
                   if( prev_uow.state.stage >= UowDelayed.stage ) {
                     // if the message is not in any queues.. we can gc it..
-                    if( prev_action.enqueues == Nil && prev_action.message_record !=null ) {
+                    if( prev_action.enqueues.isEmpty && prev_action.message_record !=null ) {
                       pending_stores.remove(msg)
                       prev_action.message_record = null
                       prev_uow.delayable_actions -= 1
