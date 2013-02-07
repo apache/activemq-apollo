@@ -35,6 +35,8 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
   var default_connection: Connection = _
   var connections = List[Connection]()
 
+  val receive_timeout = 10*1000
+
   override protected def afterEach() {
     super.afterEach()
     for ( connection <- connections ) {

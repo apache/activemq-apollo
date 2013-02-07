@@ -196,7 +196,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be (null)
+    exclusiveConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 
@@ -219,7 +219,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be (null)
+    exclusiveConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 
@@ -244,7 +244,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer1.receive(100) should not be (null)
+    exclusiveConsumer1.receive(receive_timeout) should not be (null)
     exclusiveConsumer2.receive(100) should be(null)
     fallbackConsumer.receive(100) should be(null)
 
@@ -255,7 +255,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 2"))
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created First - 3"))
 
-    exclusiveConsumer2.receive(100) should not be (null)
+    exclusiveConsumer2.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 
@@ -280,7 +280,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     Thread.sleep(100)
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer1.receive(100) should not be (null)
+    exclusiveConsumer1.receive(receive_timeout) should not be (null)
     exclusiveConsumer2.receive(100) should be(null)
     fallbackConsumer.receive(100) should be(null)
 
@@ -291,7 +291,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 2"))
     producer.send(senderSession.createTextMessage("Failover To Another Exclusive Consumer Created After - 3"))
 
-    exclusiveConsumer2.receive(100) should not be (null)
+    exclusiveConsumer2.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 
@@ -312,10 +312,8 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
 
     producer.send(senderSession.createTextMessage("Failover To NonExclusive Consumer - 1"))
 
-    Thread.sleep(100)
-
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be (null)
+    exclusiveConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
 
     // Close the exclusive consumer to verify the non-exclusive consumer
@@ -323,7 +321,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     exclusiveConsumer.close()
 
     producer.send(senderSession.createTextMessage("Failover To NonExclusive Consumer - 2"))
-    fallbackConsumer.receive(100) should not be (null)
+    fallbackConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.close()
   }
 
@@ -341,10 +339,8 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
 
     producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 1"))
 
-    Thread.sleep(100)
-
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(200) should not be (null)
+    exclusiveConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(200) should be(null)
 
     Thread.sleep(100)
@@ -354,7 +350,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     exclusiveConsumer.close()
 
     producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 2"))
-    fallbackConsumer.receive(100) should not be (null)
+    fallbackConsumer.receive(receive_timeout) should not be (null)
 
     // Create exclusive consumer to determine if it will start receiving
     // the messages.
@@ -363,7 +359,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     producer.send(senderSession.createTextMessage("Fallback To Exclusive Consumer - 3"))
 
     // Verify exclusive consumer receives the message.
-    exclusiveConsumer.receive(100) should not be (null)
+    exclusiveConsumer.receive(receive_timeout) should not be (null)
     fallbackConsumer.receive(100) should be(null)
   }
 
@@ -509,7 +505,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
 
     // Consume the message...
     var consumer = session.createConsumer(queue)
-    var msg = consumer.receive(1000)
+    var msg = consumer.receive(receive_timeout)
     msg should not be (null)
 
     Thread.sleep(1000)
@@ -572,7 +568,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     producer.send(outbound(1));
     producer.send(outbound(2));
 
-    consumer.receive(200) should be(outbound(0))
+    consumer.receive(receive_timeout) should be(outbound(0))
 
     consumer.close();
 
@@ -599,9 +595,9 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     // Re-open the consumer.
     consumer = session.createConsumer(dest);
     // Receive the second.
-    consumer.receive(200) should be(outbound(1))
+    consumer.receive(receive_timeout) should be(outbound(1))
     // Receive the third.
-    consumer.receive(200) should be(outbound(2))
+    consumer.receive(receive_timeout) should be(outbound(2))
     consumer.close()
   }
 
@@ -631,7 +627,7 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     enumeration.nextElement() should be(outbound(0))
 
     // Receive the first message.
-    consumer.receive(100) should be(outbound(0))
+    consumer.receive(receive_timeout) should be(outbound(0))
   }
 
   //  test("Queue Browser With 2 Consumers") {
@@ -716,9 +712,9 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     val consumer = session.createConsumer(destination)
 
     // Receive the first message.
-    consumer.receive(1000) should equal(outbound(0))
-    consumer.receive(1000) should equal(outbound(1))
-    consumer.receive(1000) should equal(outbound(2))
+    consumer.receive(receive_timeout) should equal(outbound(0))
+    consumer.receive(receive_timeout) should equal(outbound(1))
+    consumer.receive(receive_timeout) should equal(outbound(2))
   }
 
   test("Unsubscribe invalid durable sub") {
