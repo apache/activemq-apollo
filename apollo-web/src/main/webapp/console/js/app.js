@@ -178,6 +178,37 @@ function date_to_string(v) {
   return d.toLocaleDateString()+" "+d.toLocaleTimeString();
 }
 
+App.PagedArrayController = Ember. ArrayController.extend({
+  page:1,
+  total_pages:1,
+
+  is_on_first: function() {
+    return this.get("page") == 1;
+  }.property("page"),
+
+  is_on_last: function() {
+    var page = this.get("page");
+    var total_pages = this.get("total_pages");
+    return page == total_pages;
+  }.property("page", "total_pages"),
+
+  first:function() {
+    this.set("page", 1)
+  },
+  last:function() {
+    this.set("page", this.get("total_pages"))
+  },
+  next:function() {
+    var total_pages = this.get("total_pages");
+    var page = this.get("page");
+    this.set("page", Math.max(total_pages, page+1))
+  },
+  prev:function() {
+    var page = this.get("page");
+    this.set("page", Math.max(1, page-1))
+  },
+});
+
 App.MainController = Em.Controller.create({
   tabs: function() {
     var files = App.ConfigurationController.get("files")
@@ -360,7 +391,7 @@ App.ConnectorController = Em.ArrayController.create({
 });
 
 
-App.ConnectionsController = Ember. ArrayController.create({
+App.ConnectionsController = App.PagedArrayController.create({
   connectorBinding: "App.ConnectorController.selected",
   content:[],
 
@@ -375,11 +406,14 @@ App.ConnectionsController = Ember. ArrayController.create({
     }
     var kind = this.get('kind')
     var fields = ['id', 'remote_address', 'protocol', 'user', 'read_counter', 'write_counter', 'messages_received', 'messages_sent'];
-
-    App.ajax("GET", "/broker/connections?q=connector='"+connector+"'&ps=10000&f="+fields.join("&f="), function(data) {
-      updateArrayController(App.ConnectionsController, data.rows, function(item){ return item[0]; });
+    var page = this.get('page')
+    var self = this;
+    App.ajax("GET", "/broker/connections?p="+(page-1)+"&ps=25&o=id&q=connector='"+connector+"'&f="+fields.join("&f="), function(data) {
+      updateArrayController(self, data.rows, function(item){ return item[0]; });
+      self.set("page", data.page+1);
+      self.set("total_pages", data.total_pages);
     });
-  }.observes("connector"),
+  }.observes("connector", "page"),
 
   all_checked:false,
   check_all_toggle: function() {
@@ -430,6 +464,7 @@ App.VirtualHostController = Em.ArrayController.create({
       var dest = App.get("destination");
       if( dest == null ) {
         App.VirtualHostController.refresh();
+        App.DestinationsController.refresh();
       } else {
         App.DestinationController.refresh();
       }
@@ -458,7 +493,7 @@ App.VirtualHostController = Em.ArrayController.create({
   }.observes("selected")
 });
 
-App.DestinationsController = Ember. ArrayController.create({
+App.DestinationsController = App.PagedArrayController.create({
   virtual_hostBinding: "App.VirtualHostController.selected",
   create_name: "",
 
@@ -488,11 +523,15 @@ App.DestinationsController = Ember. ArrayController.create({
       App.DestinationsController.set('content', []);
     }
     var kind = this.get('kind')
+    var page = this.get('page')
     var fields = ['id', 'metrics.queue_items', 'metrics.queue_size', 'metrics.producer_count', 'metrics.consumer_count'];
-    App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"?ps=10000&f="+fields.join("&f="), function(data) {
-      App.DestinationsController.set('content', data.rows);
+    var self = this;
+    App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"?p="+(page-1)+"&ps=25&o=id&f="+fields.join("&f="), function(data) {
+      updateArrayController(self, data.rows, function(item){ return item[0]; });
+      self.set("page", data.page+1);
+      self.set("total_pages", data.total_pages);
     });
-  }.observes("virtual_host", "kind"),
+  }.observes("virtual_host", "kind", "page"),
 
   show_create_box: function(){
     var kind = this.get('kind');

@@ -154,6 +154,21 @@
               {{/if}}
 
               {{#if App.DestinationsController.firstObject }}
+
+              <div class="well">
+                <div class="form-inline">
+                  Page {{App.DestinationsController.page}} of {{App.DestinationsController.total_pages}}:
+                  {{#unless App.DestinationsController.is_on_first}}
+                  <button class="btn" {{action "first" target="App.DestinationsController" on="click"}}>First</button>
+                  <button class="btn" {{action "prev"  target="App.DestinationsController" on="click"}}>Prev</button>
+                  {{/unless}}
+                  {{#unless App.DestinationsController.is_on_last}}
+                  <button class="btn" {{action "next"  target="App.DestinationsController" on="click"}}>Next</button>
+                  <button class="btn" {{action "last"  target="App.DestinationsController" on="click"}}>Last</button>
+                  {{/unless}}
+                </div>
+              </div>
+
               <table class="details table table-bordered table-striped" style="">
                 <tbody>
                 <tr>
@@ -443,6 +458,19 @@
           <div class="span8">
             <h3>Connections</h3>
             {{#if App.ConnectionsController.firstObject}}
+            <div class="well">
+              <div class="form-inline">
+                Page {{App.DestinationsController.page}} of {{App.ConnectionsController.total_pages}}:
+                {{#unless App.ConnectionsController.is_on_first}}
+                <button class="btn" {{action "first" target="App.ConnectionsController" on="click"}}>First</button>
+                <button class="btn" {{action "prev"  target="App.ConnectionsController" on="click"}}>Prev</button>
+                {{/unless}}
+                {{#unless App.ConnectionsController.is_on_last}}
+                <button class="btn" {{action "next"  target="App.ConnectionsController" on="click"}}>Next</button>
+                <button class="btn" {{action "last"  target="App.ConnectionsController" on="click"}}>Last</button>
+                {{/unless}}
+              </div>
+            </div>
             <table class="details table table-bordered table-striped" style="">
               <tbody>
               <tr>
