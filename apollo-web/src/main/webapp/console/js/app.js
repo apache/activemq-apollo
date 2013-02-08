@@ -613,7 +613,9 @@ App.DestinationController = Em.Controller.create({
         });
         data.consumers.forEach(function(value){
           value.enqueue_date = date_to_string(value.enqueue_ts);
-          value.ack_item_rate = value.ack_item_rate.toFixed(2);
+          if( value.ack_item_rate ) {
+            value.ack_item_rate = value.ack_item_rate.toFixed(2);
+          }
         });
         App.set('destination', data);
         App.MessagesController.auto_refresh();

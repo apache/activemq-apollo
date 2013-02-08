@@ -183,7 +183,7 @@
                 <tr>
                   <td>{{view Ember.Checkbox checkedBinding="checked"}}</td>
                   <td><a href="#" {{action "select" . target="App.DestinationsController" on="click"}}><i class=" icon-zoom-in"></i> {{[0]}}</a></td>
-                  <td>{{[1]}}</td><td>{{[2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
+                  <td>{{[1]}}</td><td>{{memory [2]}}</td><td>{{[3]}}</td><td>{{[4]}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
@@ -310,7 +310,7 @@
                         <td>{{expiration}}</td>
                         <td>{{entry.is_prefetched}}</td>
                         <td>{{entry.acquirer}}</td>
-                        <td>{{entry.size}}</td>
+                        <td>{{memory entry.size}}</td>
                       </tr>
                       {{#if show_details}}
                       <tr>

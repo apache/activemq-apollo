@@ -669,7 +669,7 @@ class BrokerResource() extends Resource {
   }
   @GET @Path("/virtual-hosts/{id}/queues/{name:.*}/messages")
   @ApiOperation(value = "Gets a list of messages that exist on the queue.")
-  def queue_messagesx(@PathParam("id") id : String, @PathParam("name") name : String,
+  def queue_messages(@PathParam("id") id : String, @PathParam("name") name : String,
                       @QueryParam("from") _from:java.lang.Long,
                       @QueryParam("to") _to:java.lang.Long,
                       @QueryParam("max") _max:java.lang.Long,
@@ -812,7 +812,7 @@ class BrokerResource() extends Resource {
     }
   }
 
-  @GET @Path("/virtual-hosts/{id}/dsub/{name:.*}/messages")
+  @GET @Path("/virtual-hosts/{id}/dsubs/{name:.*}/messages")
   @ApiOperation(value = "Gets a list of the messages that exist on the durable sub.")
   def dsub_messages(@PathParam("id") id : String, @PathParam("name") name : String,
              @QueryParam("from") _from:java.lang.Long,
