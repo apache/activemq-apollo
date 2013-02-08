@@ -4,7 +4,7 @@ App = Em.Application.create({
     width:$(window).width(),
   },
 
-  refresh_interval:30,
+  refresh_interval:2,
 
   ready: function() {
     this.schedule_refresh();
