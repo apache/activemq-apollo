@@ -220,16 +220,16 @@
                   {{/if}}
                   <tr><td><strong>Queue Size: </strong>{{App.destination.metrics.queue_items}} messages</td></tr>
                   <tr><td><strong>Enqueued: </strong>{{App.destination.metrics.enqueue_item_counter}} items / {{memory App.destination.metrics.enqueue_size_counter}}
-                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.enqueue_date"}}><i class="icon-time"></i></a>
+                    {{#view App.Tooltip titleBinding="App.destination.metrics.enqueue_date"}}<i class="icon-time"></i>{{/view}}
                   </td></tr>
                   <tr><td><strong>Dequeued: </strong>{{App.destination.metrics.dequeue_item_counter}} / {{memory App.destination.metrics.dequeue_size_counter}}
-                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.dequeue_date"}}><i class="icon-time"></i></a>
+                    {{#view App.Tooltip titleBinding="App.destination.metrics.dequeue_date"}}<i class="icon-time"></i>{{/view}}
                     </td></tr>
                   <tr><td><strong>Nacked: </strong>{{App.destination.metrics.nack_item_counter}} / {{memory App.destination.metrics.nack_size_counter}}
-                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.nack_date"}}><i class="icon-time"></i></a>
+                    {{#view App.Tooltip titleBinding="App.destination.metrics.nack_date"}}<i class="icon-time"></i>{{/view}}
                     </td></tr>
                   <tr><td><strong>Expired: </strong>{{App.destination.metrics.expired_item_counter}} / {{memory App.destination.metrics.expired_size_counter}}
-                    <a class="tooltip-link" href="#" {{bindAttr title="App.destination.metrics.expired_date"}}><i class="icon-time"></i></a>
+                    {{#view App.Tooltip titleBinding="App.destination.metrics.expired_date"}}<i class="icon-time"></i>{{/view}}
                     </td></tr>
                   <tr><td><strong>Enqueue Rate Throttle: </strong>{{App.destination.metrics.max_enqueue_rate}}</td></tr>
                   <tr><td><strong>Swapped In: </strong>{{App.destination.metrics.swapped_in_items}} msgs {{memory App.destination.metrics.swapped_in_size}}</td></tr>
@@ -244,7 +244,7 @@
 
             <div class="span7">
               <ul class="nav nav-tabs">
-                <li class="active"><a href="#TAB_Messages" data-toggle="tab">Messages ({{App.destination.metrics.queue_items}})</a></li>
+                <li class="active"><a href="#TAB_Messages" data-toggle="tab">Messages ({{App.DestinationController.browse_count}})</a></li>
                 <li><a href="#TAB_Producers" data-toggle="tab">Producers ({{App.destination.producers.length}})</a></li>
                 <li><a href="#TAB_Consumers" data-toggle="tab">Consumers ({{App.destination.consumers.length}})</a></li>
               </ul>
@@ -304,12 +304,12 @@
                           {{/if}}
                           </a>
                         </td>
-                        <td>{{entry.seq}}:{{count}}</td>
+                        <td>{{entry.seq}}</td>
                         <td>{{codec}}</td>
                         <td>{{persistent}}</td>
                         <td>{{expiration}}</td>
                         <td>{{entry.is_prefetched}}</td>
-                        <td>{{entry.acquirer}}</td>
+                        <td>{{entry.acquirer.kind}} {{entry.acquirer.label}}</td>
                         <td>{{memory entry.size}}</td>
                       </tr>
                       {{#if show_details}}
@@ -354,22 +354,21 @@
                       <tbody>
                       <tr>
                         <th>Name</th>
-                        <th>Kind</th>
                         <div style="padding:.5em 0">
                           <!--<button class="btn btn-small" {{action "remove" target="App.MessagesController" on="click"}}>Delete</button>-->
                           &nbsp;
                         </div>
                         <th>Transfers</th>
                         <th>Size</th>
-                        <th>Last Transfer</th>
                       </tr>
                       {{#each App.destination.producers}}
                       <tr>
-                        <td>{{label}}</td>
-                        <td>{{kind}}</td>
-                        <td>{{enqueue_item_counter}}</td>
+                        <td>{{kind}}: {{label}}</td>
+                        <td>
+                          {{enqueue_item_counter}}
+                          {{#view App.Tooltip titleBinding="enqueue_date"}}<i class="icon-time"></i>{{/view}}
+                        </td>
                         <td>{{memory enqueue_size_counter}}</td>
-                        <td>{{enqueue_date}}</td>
                       </tr>
                       {{/each}}
                       </tbody>
@@ -383,11 +382,9 @@
                     <table class="details table table-bordered table-striped" style="">
                       <tbody>
                       <tr>
-                        <th>Kind</th>
                         <th>Name</th>
                         <th>Transfers</th>
                         <th>Size</th>
-                        <th>Last Transfer</th>
                         <th>Acks</th>
                         <th>Nacks</th>
                         <th>Ack Rate</th>
@@ -395,11 +392,11 @@
                       </tr>
                       {{#each App.destination.consumers}}
                       <tr>
-                        <td>{{kind}}</td>
-                        <td>{{label}}</td>
-                        <td>{{enqueue_item_counter}}</td>
+                        <td>{{kind}}: {{label}}</td>
+                        <td>{{enqueue_item_counter}}
+                            {{#view App.Tooltip titleBinding="enqueue_date"}}<i class="icon-time"></i>{{/view}}
+                        </td>
                         <td>{{memory enqueue_size_counter}}</td>
-                        <td>{{enqueue_date}}</td>
                         <td>{{total_ack_count}}</td>
                         <td>{{total_nack_count}}</td>
                         <td>{{ack_item_rate}} msgs/sec {{memory ack_size_rate}}/sec</td>

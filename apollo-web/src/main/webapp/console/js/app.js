@@ -1,94 +1,10 @@
-
-// Install a base64 decoding function if one is not available.
-if( !window.atob ) {
-  window.atob = function(text){
-    text = text.replace(/\s/g,"");
-    if(!(/^[a-z0-9\+\/\s]+\={0,2}$/i.test(text)) || text.length % 4 > 0){
-      throw new Error("Not a base64-encoded string.");
-    }
-    var digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-      cur, prev, digitNum,
-      i=0,
-      result = [];
-    text = text.replace(/=/g, "");
-    while(i < text.length){
-      cur = digits.indexOf(text.charAt(i));
-      digitNum = i % 4;
-      switch(digitNum){
-        case 1:
-          result.push(String.fromCharCode(prev << 2 | cur >> 4));
-          break;
-        case 2:
-          result.push(String.fromCharCode((prev & 0x0f) << 4 | cur >> 2));
-          break;
-        case 3:
-          result.push(String.fromCharCode((prev & 3) << 6 | cur));
-          break;
-      }
-      prev = cur;
-      i++;
-    }
-    return result.join("");
-  }
-}
-
-Ember.Handlebars.registerHelper("key_value", function(name, fn) {
-  var obj = this[name];
-  var buffer = "", key;
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      buffer += fn({key: key, value: obj[key]});
-    }
-  }
-  return buffer;
-});
-
-Ember.Handlebars.registerHelper('memory', function(property, options) {
-  options.fn = function(size) {
-    if( (typeof size)=="number" ) {
-      var units = "bytes"
-      if( size > 1024 ) {
-        size = size / 1024;
-        units = "kb"
-        if( size > 1024 ) {
-          size = size / 1024;
-          units = "mb"
-          if( size > 1024 ) {
-            size = size / 1024;
-            units = "gb"
-            if( size > 1024 ) {
-              size = size / 1024;
-              units = "tb"
-            }
-          }
-        }
-        size = size.toFixed(2);
-      } else {
-        if( (""+size).indexOf(".") !== -1 ) {
-          size = size.toFixed(2);
-        }
-      }
-      return size+" "+units;
-    }
-    return size;
-  }
-  return Ember.Handlebars.helpers.bind(property, options);
-});
-
-$(window).resize(function() {
- App.set("window_size", {
-  height:$(window).height(),
-  width:$(window).width(),
- })
-});
-
 App = Em.Application.create({
   window_size:{
     height:$(window).height(),
     width:$(window).width(),
   },
 
-  refresh_interval:2,
+  refresh_interval:30,
 
   ready: function() {
     this.schedule_refresh();
@@ -113,9 +29,6 @@ App = Em.Application.create({
     App.VirtualHostController.auto_refresh();
     App.ConnectorController.auto_refresh();
     App.ConfigurationController.auto_refresh();
-    Ember.run(function(){
-      $(".tooltip-link").tooltip();
-    });
   },
 
   refresh: function() {
@@ -588,6 +501,7 @@ App.DestinationController = Em.Controller.create({
 
   tabs:["Messages","Producers","Consumers"],
   selected_tab:"Messages",
+  browse_count:0,
 
   destinationBinding:"App.destination",
   selectedBinding:"App.DestinationsController.selected",
@@ -603,6 +517,12 @@ App.DestinationController = Em.Controller.create({
       var virtual_host = App.DestinationsController.get("virtual_host");
       var kind = App.DestinationsController.get("kind");
       App.ajax("GET", "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected+"?consumers=true&producers=true", function(data) {
+
+        if( kind == "topics ") {
+          App.set('browse_count', data.retained);
+        } else {
+          App.set('browse_count', data.metrics.queue_items);
+        }
         data.state_date = date_to_string(data.state_since);
         data.metrics.enqueue_date = date_to_string(data.metrics.enqueue_ts);
         data.metrics.dequeue_date = date_to_string(data.metrics.dequeue_ts);
@@ -730,9 +650,10 @@ App.MessagesController = Ember. ArrayController.create({
   auto_refresh:function() {
     var virtual_host = App.DestinationsController.get("virtual_host");
     var kind = App.DestinationsController.get("kind");
+    var content = this.get("content");
     var selected = App.DestinationController.get("selected")
     var destination_path = "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected;
-    if( destination_path != this.get("destination_path") ) {
+    if( destination_path != this.get("destination_path") || content.get("length")==0 ) {
       this.refresh();
     }
   },
@@ -745,7 +666,8 @@ App.MessagesController = Ember. ArrayController.create({
     var from = this.get("from");
     var max = this.get("max");
     var destination_path = "/broker/virtual-hosts/"+virtual_host+"/"+kind+"/"+selected;
-    App.ajax("GET", destination_path+"/messages?from="+from+"&max="+max+"&max_body="+max_body, function(data) {
+    App.ajax("GET", destination_path+"/messages?from="+from+"&max="+max+"&max_body="+max_body, function(page) {
+      var data = page.messages;
       data.forEach(function(item, index){
         if( item.base64_body ) {
           var rc = atob(item.base64_body);
@@ -938,6 +860,25 @@ App.NumberField = Ember.TextField.extend({
     }.observes('value')
 });
 
+App.Tooltip = Ember.View.extend({
+  tagName:'a',
+  attributeBindings: ['href', 'title'],
+  href:'#',
+  title:'Example',
+  didInsertElement: function() {
+    this.$().tooltip();
+  },
+  click: function(event){
+    this.$().tooltip('toggle')
+  },
+  mouseEnter: function(event){
+    this.$().tooltip('show')
+  },
+  mouseLeave: function(event){
+    this.$().tooltip('hide')
+  },
+});
+
 App.AceView = Ember.View.extend({
 
   editor: null,
@@ -1080,4 +1021,89 @@ App.Router = Ember.Router.extend({
     }),
   })
 })
+
+
+// Install a base64 decoding function if one is not available.
+if( !window.atob ) {
+  window.atob = function(text){
+    text = text.replace(/\s/g,"");
+    if(!(/^[a-z0-9\+\/\s]+\={0,2}$/i.test(text)) || text.length % 4 > 0){
+      throw new Error("Not a base64-encoded string.");
+    }
+    var digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+      cur, prev, digitNum,
+      i=0,
+      result = [];
+    text = text.replace(/=/g, "");
+    while(i < text.length){
+      cur = digits.indexOf(text.charAt(i));
+      digitNum = i % 4;
+      switch(digitNum){
+        case 1:
+          result.push(String.fromCharCode(prev << 2 | cur >> 4));
+          break;
+        case 2:
+          result.push(String.fromCharCode((prev & 0x0f) << 4 | cur >> 2));
+          break;
+        case 3:
+          result.push(String.fromCharCode((prev & 3) << 6 | cur));
+          break;
+      }
+      prev = cur;
+      i++;
+    }
+    return result.join("");
+  }
+}
+
+Ember.Handlebars.registerHelper("key_value", function(name, fn) {
+  var obj = this[name];
+  var buffer = "", key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      buffer += fn({key: key, value: obj[key]});
+    }
+  }
+  return buffer;
+});
+
+Ember.Handlebars.registerHelper('memory', function(property, options) {
+  options.fn = function(size) {
+    if( (typeof size)=="number" ) {
+      var units = "bytes"
+      if( size > 1024 ) {
+        size = size / 1024;
+        units = "kb"
+        if( size > 1024 ) {
+          size = size / 1024;
+          units = "mb"
+          if( size > 1024 ) {
+            size = size / 1024;
+            units = "gb"
+            if( size > 1024 ) {
+              size = size / 1024;
+              units = "tb"
+            }
+          }
+        }
+        size = size.toFixed(2);
+      } else {
+        if( (""+size).indexOf(".") !== -1 ) {
+          size = size.toFixed(2);
+        }
+      }
+      return size+" "+units;
+    }
+    return size;
+  }
+  return Ember.Handlebars.helpers.bind(property, options);
+});
+
+$(window).resize(function() {
+ App.set("window_size", {
+  height:$(window).height(),
+  width:$(window).width(),
+ })
+});
+
 App.initialize();

@@ -123,6 +123,8 @@ object RouterListenerFactory {
   }
 }
 
+case class BrowseResult(first_seq:Long, last_seq:Long, total_entries:Long, entries:Array[(EntryStatusDTO, Delivery)])
+
 /**
  * <p>
  * </p>
@@ -134,6 +136,9 @@ trait DomainDestination extends SecuredResource {
   def address:DestinationAddress
   def id = address.id
   def virtual_host:VirtualHost
+
+
+  def browse(from_seq:Long, to:Option[Long], max:Long)(func: (BrowseResult)=>Unit):Unit
 
 
   def bind (bind_address:BindAddress, consumer:DeliveryConsumer):Unit

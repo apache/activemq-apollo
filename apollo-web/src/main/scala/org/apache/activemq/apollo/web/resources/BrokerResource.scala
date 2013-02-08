@@ -618,17 +618,24 @@ class BrokerResource() extends Resource {
   def topic_messages(@PathParam("id") id : String, @PathParam("name") name : String,
                      @QueryParam("from") _from:java.lang.Long,
                      @QueryParam("max") _max:java.lang.Long,
-                     @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+                     @QueryParam("max_body") _max_body:java.lang.Integer):BrowsePageDTO = {
     var from = OptionSupport(_from).getOrElse(0L)
     var max = OptionSupport(_max).getOrElse(100L)
     var max_body = OptionSupport(_max_body).getOrElse(0)
     with_virtual_host(id) { host =>
-      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val rc = FutureResult[BrowsePageDTO]()
       val router: LocalRouter = host
       val node = router.local_topic_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       monitoring(node) {
-        node.browse(from, max) { deliveries =>
-          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        node.browse(from, None, max) { browse_result =>
+          val page = new BrowsePageDTO()
+          for( entry <- browse_result.entries ) {
+            page.messages.add(message_convert(max_body, entry))
+          }
+          page.first_seq = browse_result.first_seq
+          page.last_seq = browse_result.last_seq
+          page.total_messages = browse_result.total_entries
+          rc.set(Success(page))
         }
       }
       rc
@@ -673,18 +680,25 @@ class BrokerResource() extends Resource {
                       @QueryParam("from") _from:java.lang.Long,
                       @QueryParam("to") _to:java.lang.Long,
                       @QueryParam("max") _max:java.lang.Long,
-                      @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+                      @QueryParam("max_body") _max_body:java.lang.Integer):BrowsePageDTO = {
     var from = OptionSupport(_from).getOrElse(0L)
     var to = OptionSupport(_to)
     var max = OptionSupport(_max).getOrElse(100L)
     var max_body = OptionSupport(_max_body).getOrElse(0)
     with_virtual_host(id) { host =>
-      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val rc = FutureResult[BrowsePageDTO]()
       val router: LocalRouter = host
       val node = router.local_queue_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       monitoring(node) {
-        node.browse(from, to, max) { deliveries =>
-          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        node.browse(from, to, max) { browe_result =>
+          val page = new BrowsePageDTO()
+          for( entry <- browe_result.entries ) {
+            page.messages.add(message_convert(max_body, entry))
+          }
+          page.first_seq = browe_result.first_seq
+          page.last_seq = browe_result.last_seq
+          page.total_messages = browe_result.total_entries
+          rc.set(Success(page))
         }
       }
       rc
@@ -742,6 +756,7 @@ class BrokerResource() extends Resource {
     rc.codec = delivery.message.codec.id()
     rc.headers = delivery.message.headers_as_json;
     rc.expiration = delivery.expiration
+    rc.persistent = delivery.persistent
     rc.entry = entry
 
     if( max_body > 0 ) {
@@ -818,19 +833,26 @@ class BrokerResource() extends Resource {
              @QueryParam("from") _from:java.lang.Long,
              @QueryParam("to") _to:java.lang.Long,
              @QueryParam("max") _max:java.lang.Long,
-             @QueryParam("max_body") _max_body:java.lang.Integer):Array[MessageStatusDTO] = {
+             @QueryParam("max_body") _max_body:java.lang.Integer):BrowsePageDTO = {
     var from = OptionSupport(_from).getOrElse(0L)
     var to = OptionSupport(_to)
     var max = OptionSupport(_max).getOrElse(100L)
     var max_body = OptionSupport(_max_body).getOrElse(0)
 
     with_virtual_host(id) { host =>
-      val rc = FutureResult[Array[MessageStatusDTO]]()
+      val rc = FutureResult[BrowsePageDTO]()
       val router: LocalRouter = host
       val node = router.local_dsub_domain.destination_by_id.get(name).getOrElse(result(NOT_FOUND))
       monitoring(node) {
-        node.browse(from, to, max) { deliveries =>
-          rc.set(Success(deliveries.map(message_convert(max_body, _))))
+        node.browse(from, to, max) { browse_result =>
+          val page = new BrowsePageDTO()
+          for( entry <- browse_result.entries ) {
+            page.messages.add(message_convert(max_body, entry))
+          }
+          page.first_seq = browse_result.first_seq
+          page.last_seq = browse_result.last_seq
+          page.total_messages = browse_result.total_entries
+          rc.set(Success(page))
         }
       }
       rc

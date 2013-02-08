@@ -370,6 +370,8 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
         return
       }
 
+      val next = entry.getNext
+
       total_ack_count += 1
       total_ack_size += entry.size
       entry.dequeue(uow)
@@ -383,11 +385,11 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Deliv
       // we may now be able to prefetch some messages..
       acquired_size -= entry.size
 
-      val next = entry.nextOrTail
       entry.remove // entry size changes to 0
-
       queue.trigger_swap
-      next.task.run
+      if( next!=null ) {
+        next.task.run
+      }
       check_drained
 
     }

@@ -36,6 +36,9 @@ public class TopicStatusDTO extends ServiceStatusDTO {
     @XmlElement
     public TopicDTO config;
 
+    @XmlElement(name="retained")
+    public long retained;
+
     /**
      * Ids of all connections that are producing to the destination
      */

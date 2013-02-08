@@ -332,14 +332,14 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc
   }
 
-  def browse(from_seq:Long, to:Option[Long], max:Long)(func: (Array[(EntryStatusDTO, Delivery)])=>Unit):Unit = {
+  def browse(from_seq:Long, to:Option[Long], max:Long)(func: (BrowseResult)=>Unit):Unit = {
     var result = ListBuffer[(EntryStatusDTO, Delivery)]()
     def load_from(start:Long):Unit = {
       assert_executing
       var cur = head_entry.getNext
       while(true) {
         if( cur == null || result.size >= max || ( to.isDefined && cur.seq > to.get) ) {
-          func(result.toArray)
+          func(BrowseResult(head_entry.seq, head_entry.getPreviousCircular.seq, enqueue_item_counter, result.toArray))
           return
         }
         val next = cur.getNext

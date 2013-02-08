@@ -279,6 +279,10 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       add_enqueue_counters(rc.metrics, link)
     }
 
+    if( retained_message!=null ) {
+      rc.retained = 1
+    }
+
     if( !show_producers ) {
       rc.producers = null
     }
@@ -337,17 +341,17 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     }
   }
 
-  def browse(from_seq:Long, max:Long)(func: (Array[(EntryStatusDTO, Delivery)])=>Unit):Unit = {
+  def browse(from_seq:Long, to:Option[Long], max:Long)(func: (BrowseResult)=>Unit):Unit = {
     val msg = retained_message
     if ( msg==null ) {
-      func(Array())
+      func(BrowseResult(0, 0, 0, Array()))
     } else {
       val status = new EntryStatusDTO()
       status.seq = retained_message.seq
       status.size = retained_message.size
       status.state = "loaded"
       status.is_prefetched = true;
-      func(Array((status, retained_message)))
+      func(BrowseResult(status.seq, status.seq, 1, Array((status, retained_message))))
     }
   }
 

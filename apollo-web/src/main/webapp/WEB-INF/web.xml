@@ -72,5 +72,9 @@
     <extension>woff</extension>
     <mime-type>font/woff</mime-type>
   </mime-mapping>
+  <mime-mapping>
+    <extension>ttf</extension>
+    <mime-type>font/ttf</mime-type>
+  </mime-mapping>
 
 </web-app>
