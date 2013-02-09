@@ -373,6 +373,10 @@ App.VirtualHostController = Em.ArrayController.create({
     }
   }.property("App.destination"),
 
+  toggle_show_store: function(event) {
+    this.set("show_store", !this.get("show_store"));
+  },
+
   auto_refresh: function() {
     if( App.MainController.get("is_virtual_hosts_selected")) {
       var dest = App.get("destination");
@@ -387,19 +391,22 @@ App.VirtualHostController = Em.ArrayController.create({
 
   refresh: function() {
     var selected = this.get("selected")
+    var self = this;
     if( selected ) {
       App.ajax("GET", "/broker/virtual-hosts/"+selected, function(host) {
         host.state_date = date_to_string(host.state_since);
         App.virtual_host.setProperties(host);
         if( host.store ) {
-          App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
-            if( App.virtual_host_store.get("kind") == store.kind) {
-              App.virtual_host_store.setProperties(store);
-            } else {
-              App.set("virtual_host_store", Ember.Object.create(store));
-            }
-          });
-        } 
+          if( self.get("show_store") ) {
+            App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
+              if( App.virtual_host_store.get("kind") == store.kind) {
+                App.virtual_host_store.setProperties(store);
+              } else {
+                App.set("virtual_host_store", Ember.Object.create(store));
+              }
+            });
+          }
+        }
       });
     }
 

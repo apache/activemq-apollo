@@ -137,7 +137,17 @@
             </div>
             {{#if App.virtual_host.store}}
             <div class="well" style="padding: 8px 8px">
-              <div class="well-title">{{App.virtual_host_store.kind}} Store Status</div>
+              <div class="well-title" {{action "toggle_show_store" target="App.VirtualHostController" on="click"}}>
+                <a>
+                {{#if App.VirtualHostController.show_store}}
+                <i class="icon-caret-down"></i>
+                {{else}}
+                <i class="icon-caret-right"></i>
+                {{/if}}
+                </a>
+                {{App.virtual_host_store.kind}} Store Status
+              </div>
+              {{#if App.VirtualHostController.show_store}}
               <table class="details table table-bordered table-striped">
                 <tbody>
                 <tr><td><strong>Location: </strong>{{App.virtual_host_store.location}}</td></tr>
@@ -199,6 +209,7 @@
                 </td></tr>
                 </tbody>
               </table>
+              {{/if}}
             </div>
             {{/if}}
           </div>
