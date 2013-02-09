@@ -132,12 +132,74 @@
                   {{/each}}
                   </ul>
                 </td></tr>
-                {{#if App.virtual_host.store}}
-                <tr><td><strong>Store: </strong>{{App.virtual_host_store.id}}</td></tr>
-                {{/if}}
                 </tbody>
               </table>
             </div>
+            {{#if App.virtual_host.store}}
+            <div class="well" style="padding: 8px 8px">
+              {{#if App.VirtualHostController.store_is_leveldb}}
+              <div class="well-title">LevelDB Store Status</div>
+              <table class="details table table-bordered table-striped">
+                <tbody>
+                <tr><td><strong>Location: </strong>{{App.virtual_host_store.id}}</td></tr>
+                <tr><td><strong>Disk Usage: </strong>{{App.virtual_host_store.disk_usage}}</td></tr>
+                <tr><td><strong>Messages Stored:</strong>
+                  <table class="details table table-bordered table-striped">
+                    <tbody>
+                      <tr><td><strong>Pending: </strong>{{App.virtual_host_store.pending_stores}}</td></tr>
+                      <tr><td><strong>Canceled: </strong>{{App.virtual_host_store.canceled_message_counter}}</td></tr>
+                      <tr><td><strong>Flushed: </strong>{{App.virtual_host_store.flushed_message_counter}}</td></tr>
+                    </tbody>
+                  </table>
+                </td></tr>
+                <tr><td><strong>Enqueues Stored:</strong>
+                  <table class="details table table-bordered table-striped">
+                    <tbody>
+                      <tr><td><strong>Canceled: </strong>{{App.virtual_host_store.canceled_enqueue_counter}}</td></tr>
+                      <tr><td><strong>Flushed: </strong>{{App.virtual_host_store.flushed_enqueue_counter}}</td></tr>
+                    </tbody>
+                  </table>
+                </td></tr>
+                <tr><td><strong>Index snapshot at: </strong>{{hex App.virtual_host_store.index_snapshot_pos}}</td></tr>
+                <tr><td><strong>Log append position: </strong>{{hex App.virtual_host_store.log_append_pos}}</td></tr>
+                <tr><td style="max-width:100px"><strong>Log Details: </strong>
+                    <pre style="color:#333; font-size:80%; overflow:auto; word-wrap: normal; white-space:pre;">{{App.virtual_host_store.log_stats}}</pre>
+                </td></tr>
+                <tr><td style="max-width:100px"><strong>Index Details: </strong>
+                  <pre style="color:#333; font-size:80%; overflow:auto; word-wrap: normal; white-space:pre;">{{App.virtual_host_store.index_stats}}</pre>
+                </td></tr>
+                <tr><td><strong>Message Load Latency: </strong>
+                  <table class="details table table-bordered table-striped">
+                    <tbody>
+                      <tr><td><strong>Count: </strong>{{App.virtual_host_store.message_load_latency.count}}</td></tr>
+                      <tr><td><strong>Total: </strong>{{App.virtual_host_store.message_load_latency.total}} ms</td></tr>
+                      <tr><td><strong>Max: </strong>{{App.virtual_host_store.message_load_latency.max}} ms</td></tr>
+                      <tr><td><strong>Min: </strong>{{App.virtual_host_store.message_load_latency.min}} ms</td></tr>
+                    </tbody>
+                  </table>
+                </td></tr>
+                <tr><td><strong>Message Flush Latency: </strong>
+                  <table class="details table table-bordered table-striped">
+                    <tbody>
+                      <tr><td><strong>Count: </strong>{{App.virtual_host_store.flush_latency.count}}</td></tr>
+                      <tr><td><strong>Total: </strong>{{App.virtual_host_store.flush_latency.total}} ms</td></tr>
+                      <tr><td><strong>Max: </strong>{{App.virtual_host_store.flush_latency.max}} ms</td></tr>
+                      <tr><td><strong>Min: </strong>{{App.virtual_host_store.flush_latency.min}} ms</td></tr>
+                    </tbody>
+                  </table>
+                </td></tr>
+                </tbody>
+              </table>
+              {{else}}
+              <div class="well-title">Store</div>
+              <table class="details table table-bordered table-striped">
+                <tbody>
+                <tr><td><strong>Name: </strong>{{App.virtual_host_store.id}}</td></tr>
+                </tbody>
+              </table>
+              {{/if}}
+            </div>
+            {{/if}}
           </div>
           <div class="span8">
             {{view Bootstrap.Tabs contentBinding="App.VirtualHostController.tabs" selectionBinding="App.VirtualHostController.selected_tab"}}

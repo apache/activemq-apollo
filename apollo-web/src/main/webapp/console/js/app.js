@@ -399,11 +399,17 @@ App.VirtualHostController = Em.ArrayController.create({
     }
 
   },
+
   onSelectedChange: function() {
     App.set("destination", null)
     App.MessagesController.clear();
     this.refresh();
-  }.observes("selected")
+  }.observes("selected"),
+
+  store_is_leveldb: function(){
+   var clazz = App.get("virtual_host_store.@class")
+   return clazz == "leveldb_store_status";
+  }.property("App.virtual_host_store.@class"),
 });
 
 App.DestinationsController = App.PagedArrayController.create({
@@ -1093,6 +1099,15 @@ Ember.Handlebars.registerHelper('memory', function(property, options) {
         }
       }
       return size+" "+units;
+    }
+    return size;
+  }
+  return Ember.Handlebars.helpers.bind(property, options);
+});
+Ember.Handlebars.registerHelper('hex', function(property, options) {
+  options.fn = function(size) {
+    if( (typeof size)=="number" ) {
+      return "0x"+size.toString(16);
     }
     return size;
   }
