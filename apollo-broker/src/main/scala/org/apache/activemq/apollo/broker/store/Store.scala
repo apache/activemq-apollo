@@ -113,6 +113,10 @@ case class ImportStreamManager(source:InputStream) {
  */
 trait Store extends ServiceTrait {
 
+  def kind:String
+
+  def location:String
+
   def get_store_status(callback:(StoreStatusDTO)=>Unit)
 
   /**

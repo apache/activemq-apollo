@@ -137,11 +137,10 @@
             </div>
             {{#if App.virtual_host.store}}
             <div class="well" style="padding: 8px 8px">
-              {{#if App.VirtualHostController.store_is_leveldb}}
-              <div class="well-title">LevelDB Store Status</div>
+              <div class="well-title">{{App.virtual_host_store.kind}} Store Status</div>
               <table class="details table table-bordered table-striped">
                 <tbody>
-                <tr><td><strong>Location: </strong>{{App.virtual_host_store.id}}</td></tr>
+                <tr><td><strong>Location: </strong>{{App.virtual_host_store.location}}</td></tr>
                 <tr><td><strong>Disk Usage: </strong>{{memory App.virtual_host_store.disk_usage}}</td></tr>
                 <tr><td><strong>Messages Stored:</strong>
                   <table class="details table table-bordered table-striped">
@@ -160,14 +159,24 @@
                     </tbody>
                   </table>
                 </td></tr>
+
+                {{#if App.virtual_host_store.index_snapshot_pos}}
                 <tr><td><strong>Index snapshot at: </strong>{{hex App.virtual_host_store.index_snapshot_pos}}</td></tr>
+                {{/if}}
+                {{#if App.virtual_host_store.log_append_pos}}
                 <tr><td><strong>Log append position: </strong>{{hex App.virtual_host_store.log_append_pos}}</td></tr>
+                {{/if}}
+                {{#if App.virtual_host_store.log_stats}}
                 <tr><td style="max-width:100px"><strong>Log Details: </strong>
                     <pre style="color:#333; font-size:80%; overflow:auto; word-wrap: normal; white-space:pre;">{{App.virtual_host_store.log_stats}}</pre>
                 </td></tr>
+                {{/if}}
+                {{#if App.virtual_host_store.index_stats}}
                 <tr><td style="max-width:100px"><strong>Index Details: </strong>
                   <pre style="color:#333; font-size:80%; overflow:auto; word-wrap: normal; white-space:pre;">{{App.virtual_host_store.index_stats}}</pre>
                 </td></tr>
+                {{/if}}
+
                 <tr><td><strong>Message Load Latency: </strong>
                   <table class="details table table-bordered table-striped">
                     <tbody>
@@ -190,14 +199,6 @@
                 </td></tr>
                 </tbody>
               </table>
-              {{else}}
-              <div class="well-title">Store</div>
-              <table class="details table table-bordered table-striped">
-                <tbody>
-                <tr><td><strong>Name: </strong>{{App.virtual_host_store.id}}</td></tr>
-                </tbody>
-              </table>
-              {{/if}}
             </div>
             {{/if}}
           </div>

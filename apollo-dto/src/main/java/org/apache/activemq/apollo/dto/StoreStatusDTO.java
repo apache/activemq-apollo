@@ -32,13 +32,25 @@ import javax.xml.bind.annotation.XmlType;
 @JsonTypeInfo(use=JsonTypeInfo.Id.CUSTOM, include=JsonTypeInfo.As.PROPERTY, property="@class")
 @JsonTypeIdResolver(ApolloTypeIdResolver.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public abstract class StoreStatusDTO extends StringIdDTO {
+public abstract class StoreStatusDTO {
 
     /**
      * The state of the service.
      */
 	@XmlAttribute
 	public String state;
+
+    /**
+     * The kind of store it is.
+     */
+	@XmlAttribute(name="kind")
+	public String kind;
+
+    /**
+     * The kind of store it is.
+     */
+	@XmlAttribute(name="location")
+	public String location;
 
     /**
      * The amount of disk space the store is using.

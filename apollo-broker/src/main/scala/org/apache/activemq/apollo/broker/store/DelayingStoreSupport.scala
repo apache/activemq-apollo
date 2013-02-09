@@ -334,7 +334,8 @@ trait DelayingStoreSupport extends Store with BaseService {
   var canceled_enqueue:Long = 0
 
   protected def fill_store_status(rc: StoreStatusDTO) {
-    rc.id = this.toString
+    rc.kind = this.kind
+    rc.location = this.location
     rc.state = service_state.toString
     rc.state_since = service_state.since
 

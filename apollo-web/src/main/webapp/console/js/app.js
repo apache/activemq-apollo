@@ -357,6 +357,7 @@ App.ConnectionsController = App.PagedArrayController.create({
 });
 
 App.virtual_host = Ember.Object.create({});
+
 App.virtual_host_store = Ember.Object.create({});
 App.VirtualHostController = Em.ArrayController.create({
   tabs:["Queues","Topics","Durable Subs"],
@@ -392,7 +393,11 @@ App.VirtualHostController = Em.ArrayController.create({
         App.virtual_host.setProperties(host);
         if( host.store ) {
           App.ajax("GET", "/broker/virtual-hosts/"+selected+"/store", function(store) {
-            App.virtual_host_store.setProperties(store);
+            if( App.virtual_host_store.get("kind") == store.kind) {
+              App.virtual_host_store.setProperties(store);
+            } else {
+              App.set("virtual_host_store", Ember.Object.create(store));
+            }
           });
         } 
       });
@@ -409,6 +414,11 @@ App.VirtualHostController = Em.ArrayController.create({
   store_is_leveldb: function(){
    var clazz = App.get("virtual_host_store.@class")
    return clazz == "leveldb_store_status";
+  }.property("App.virtual_host_store.@class"),
+
+  store_is_bdb: function(){
+   var clazz = App.get("virtual_host_store.@class")
+   return clazz == "bdb_store_status";
   }.property("App.virtual_host_store.@class"),
 });
 

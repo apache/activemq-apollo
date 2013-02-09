@@ -271,6 +271,9 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
     message_load_batch_size = message_load_batch_size_counter(true)
   }
 
+  def kind = "LevelDB"
+  def location = config.directory.toString
+
   def get_store_status(callback: (StoreStatusDTO) => Unit) = dispatch_queue {
     val rc = new LevelDBStoreStatusDTO
     fill_store_status(rc)

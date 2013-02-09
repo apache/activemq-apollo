@@ -222,6 +222,9 @@ class BDBStore(var config:BDBStoreDTO) extends DelayingStoreSupport {
     dispatch_queue.executeAfter(1, TimeUnit.SECONDS, ^{ displayStats })
   }
 
+  def kind = "BDB"
+  def location = config.directory.toString
+
   def get_store_status(callback:(StoreStatusDTO)=>Unit) = dispatch_queue {
     val rc = new BDBStoreStatusDTO
     fill_store_status(rc)
