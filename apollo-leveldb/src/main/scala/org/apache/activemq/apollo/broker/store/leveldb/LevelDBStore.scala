@@ -283,6 +283,8 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
       }
     }
     rc.message_load_batch_size = message_load_batch_size
+    import collection.JavaConversions._
+    val pending_status = detailed_pending_status
     write_executor {
       client.using_index {
         rc.index_stats = client.index.getProperty("leveldb.stats")
@@ -311,6 +313,7 @@ class LevelDBStore(val config: LevelDBStoreDTO) extends DelayingStoreSupport {
             }.mkString("")
         }
       }
+      rc.log_stats += pending_status
       callback(rc)
     }
   }

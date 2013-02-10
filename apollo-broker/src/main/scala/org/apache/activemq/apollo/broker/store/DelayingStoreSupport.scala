@@ -27,6 +27,7 @@ import org.apache.activemq.apollo.dto.{StoreStatusDTO, TimeMetricDTO, IntMetricD
 import org.fusesource.hawtbuf.Buffer
 import java.lang.ref.WeakReference
 import language.implicitConversions
+import java.io.{PrintWriter, StringWriter}
 
 object DelayingStoreSupport extends Log
 
@@ -347,12 +348,20 @@ trait DelayingStoreSupport extends Store with BaseService {
     rc.flushed_message_counter = metric_flushed_message_counter
     rc.flushed_enqueue_counter = metric_flushed_enqueue_counter
     rc.pending_stores = pending_stores.size
+  }
 
-//    import collection.JavaConversions._
-//    println("--------------")
-//    pending_stores.valuesIterator.foreach{ action =>
-//      println(action.uow.state+": "+action.uow.uow_id+" "+action.uow.delayable)
-//    }
+  def detailed_pending_status = {
+    import collection.JavaConversions._
+
+    val writer = new StringWriter();
+    val out = new PrintWriter(writer);
+
+    out.println("--- Pending Stores Details ---")
+    out.println("flush_source suspended: "+flush_source.isSuspended)
+    pending_stores.valuesIterator.foreach{ action =>
+      out.println("uow: %d, state:%s, delayable:%s, canceled:%s".format(action.uow.uow_id, action.uow.state, action.uow.delayable, action.uow.canceled))
+    }
+    writer.toString
   }
 
   def key(x:QueueEntryRecord) = (x.queue_key, x.entry_seq)
