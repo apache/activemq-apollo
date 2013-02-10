@@ -145,11 +145,12 @@
                 <i class="icon-caret-right"></i>
                 {{/if}}
                 </a>
-                {{App.virtual_host_store.kind}} Store Status
+                Store Status
               </div>
               {{#if App.VirtualHostController.show_store}}
               <table class="details table table-bordered table-striped">
                 <tbody>
+                <tr><td><strong>Store Type: </strong>{{App.virtual_host_store.kind}}</td></tr>
                 <tr><td><strong>Location: </strong>{{App.virtual_host_store.location}}</td></tr>
                 <tr><td><strong>Disk Usage: </strong>{{memory App.virtual_host_store.disk_usage}}</td></tr>
                 <tr><td><strong>Messages Stored:</strong>
