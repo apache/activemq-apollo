@@ -14,18 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.jmx
-
-import org.apache.activemq.apollo.web.WebModule
 
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ * The JAXB POJOs for the
+ * <a href="http://activemq.apache.org/schema/activemq/apollo/xml-configuration.html">XML Configuration</a>
+ * of the ActiveMQ Broker.
  */
+@javax.xml.bind.annotation.XmlSchema(
+        namespace = "http://activemq.apache.org/schema/activemq/apollo",
+        elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
+package org.apache.activemq.apollo.broker.jmx.dto;
 
-object JmxWebModule  extends WebModule {
-  override def web_resources = Set(
-    classOf[JmxResource],
-    classOf[JolokiaResource]
-  )
-}

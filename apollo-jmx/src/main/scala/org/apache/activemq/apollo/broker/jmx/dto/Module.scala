@@ -14,18 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.broker.jmx
+package org.apache.activemq.apollo.broker.jmx.dto
 
-import org.apache.activemq.apollo.web.WebModule
-
+import org.apache.activemq.apollo.util.DtoModule
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-
-object JmxWebModule  extends WebModule {
-  override def web_resources = Set(
-    classOf[JmxResource],
-    classOf[JolokiaResource]
-  )
+class Module extends DtoModule {
+  def dto_package = "org.apache.activemq.apollo.broker.jmx.dto"
+  def extension_classes = Array(classOf[JmxDTO])
 }

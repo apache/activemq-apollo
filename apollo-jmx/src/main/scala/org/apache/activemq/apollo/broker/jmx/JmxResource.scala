@@ -35,9 +35,13 @@ import org.fusesource.hawtdispatch._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 
+@Path("/hawtio/jolokia")
+@Produces(Array(APPLICATION_JSON))
+class JolokiaResource extends JmxResource
+
 @Path("/jmx")
 @Produces(Array(APPLICATION_JSON))
-case class JmxResource()extends Resource() {
+class JmxResource extends Resource {
 
   @GET @Path("{path:.*}")
   def get(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse, @PathParam("path") path:String) = invoke(ctx, req, resp, path)

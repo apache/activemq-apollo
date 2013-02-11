@@ -321,7 +321,7 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
 
   val dispatch_queue = createQueue("broker")
 
-  def id = "default"
+  var id = "default"
 
   val connection_id_counter = new LongCounter
 
@@ -370,6 +370,7 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
   override def _start(on_completed:Task) = {
 
     // create the runtime objects from the config
+    this.id = Option(config.id).getOrElse("default")
     init_logs
     log_versions
     check_file_limit
@@ -664,6 +665,14 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
     }
 
 
+  }
+
+  def web_admin_url = {
+    if( config.web_admins.isEmpty ) {
+      null
+    } else {
+      config.web_admins.get(0).bind
+    }
   }
 
   private def log_versions = {

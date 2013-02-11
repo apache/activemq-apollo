@@ -32,6 +32,9 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BrokerDTO {
 
+    @XmlAttribute
+    public String id;
+
     /**
      * Used to store any configuration notes.
      */
