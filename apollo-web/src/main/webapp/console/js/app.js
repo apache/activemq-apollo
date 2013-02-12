@@ -114,7 +114,7 @@ App.PagedArrayController = Ember. ArrayController.extend({
   next:function() {
     var total_pages = this.get("total_pages");
     var page = this.get("page");
-    this.set("page", Math.max(total_pages, page+1))
+    this.set("page", Math.min(total_pages, page+1))
   },
   prev:function() {
     var page = this.get("page");
