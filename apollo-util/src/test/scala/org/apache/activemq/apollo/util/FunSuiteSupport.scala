@@ -58,15 +58,33 @@ abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBefore
 
   def skip(check:Boolean=true):Unit = if(check) throw new SkipTestException()
 
+
+  var _log:Log = null
+  override protected def log: Log = {
+    if( _log == null ) {
+      super.log
+    } else {
+      _log
+    }
+  }
+
   override protected def test(testName: String, testTags: Tag*)(testFun: => Unit) {
     super.test(testName, testTags:_*) {
       try {
+        _log = Log(getClass.getName.stripSuffix("$")+":"+testName)
         testFun
       } catch {
         case e:SkipTestException =>
+        case e:Throwable =>
+          onTestFailure(e)
+          throw e
+      } finally {
+        _log = null
       }
     }
   }
+
+  def onTestFailure(e:Throwable) = {}
 
   /**
    * Returns the base directory of the current project

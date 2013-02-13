@@ -26,6 +26,10 @@ import collection.immutable.HashMap
 import java.io.File
 import org.scalatest.{ParallelTestExecution, OneInstancePerTest}
 import java.util
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.fusesource.hawtbuf.{ByteArrayOutputStream, Buffer}
+import com.fasterxml.jackson.annotation.JsonInclude
+import util.concurrent.CountDownLatch
 
 object BrokerTestSupport {
   import FutureResult._
@@ -166,6 +170,51 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     super.afterAll()
   }
 
+  override def onTestFailure(e:Throwable) = {
+    info("====== broker state dump start ======")
+    val c = new CountDownLatch(1)
+    broker.dispatch_queue {
+      info(" -- Connections -- ")
+      for(connection <- broker.connections.values) {
+        info(json(connection.get_connection_status))
+      }
+
+      val router = broker.default_virtual_host.local_router
+      router.dispatch_queue {
+        info(" -- Topics -- ")
+        router.topic_domain.destination_by_id.map {
+          case (id, d: Topic) =>
+            d.dispatch_queue.future {
+              info(id+"="+json(d.status(true, true)))
+            }
+        }
+        info(" -- Queues -- ")
+        Future.all(
+          router.queue_domain.destination_by_id.map {
+            case (id, d: Queue) =>
+              d.dispatch_queue.future {
+                info(id+"="+json(d.status(true, true, true)))
+              }
+          }
+        ).onComplete { x=>
+          info(" -- DSubs -- ")
+          Future.all(
+            router.dsub_domain.destination_by_id.map {
+              case (id, d: Queue) =>
+                d.dispatch_queue.future {
+                  info(id+"="+json(d.status(true, true, true)))
+                }
+            }
+          ).onComplete { x=>
+            c.countDown()
+          }
+        }
+      }
+    }
+    c.await()
+    info("====== broker state dump emd ======")
+  }
+
   def connector_port(connector: String) = BrokerTestSupport.connector_port(broker, connector)
   def queue_exists(name: String) = BrokerTestSupport.queue_exists(broker, name)
   def delete_queue(name: String) = BrokerTestSupport.delete_queue(broker, name)
@@ -179,7 +228,12 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
   def dsub_status(name: String) = BrokerTestSupport.dsub_status(broker, name)
   def webadmin_uri(scheme:String = "http") = BrokerTestSupport.webadmin_uri(broker, scheme)
 
-  def json(value:Any) = org.apache.activemq.apollo.dto.JsonCodec.encode(value).ascii().toString;
+
+  def json(value:Any) = {
+    val mapper: ObjectMapper = new ObjectMapper
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    mapper.writerWithDefaultPrettyPrinter().writeValueAsString(value)
+  }
 
 }
 
