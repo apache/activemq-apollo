@@ -41,7 +41,7 @@ class NetworkTest extends MultiBrokerTestSupport with ShouldMatchers with Before
       try {
         c.close()
       } catch {
-        case ignore =>
+        case ignore:Throwable =>
       }
     }
     connections.clear()
