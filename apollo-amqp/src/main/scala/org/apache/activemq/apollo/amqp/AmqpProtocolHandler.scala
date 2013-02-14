@@ -787,13 +787,10 @@ class AmqpProtocolHandler extends ProtocolHandler {
   class AmqpProducerRoute(val id:Long, val receiver: Receiver, val addresses: Array[SimpleAddress]) extends DeliveryProducerRoute(host.router) with ProducerSupport {
 
     val key = addresses.toList
-    var is_connected = false
 
     override def send_buffer_size = buffer_size
 
     override def connection = Some(AmqpProtocolHandler.this.connection)
-
-    override def connected() = is_connected = true
 
     override def dispatch_queue = queue
 

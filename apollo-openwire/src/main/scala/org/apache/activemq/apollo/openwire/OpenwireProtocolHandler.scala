@@ -632,8 +632,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
     override def connection = Some(OpenwireProtocolHandler.this.connection)
     override def dispatch_queue = queue
+    var suspended = false
+
     refiller = ^ {
-      resume_read
+      if( suspended ) {
+        suspended = false
+        resume_read
+      }
     }
   }
 
@@ -645,6 +650,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         val addresses = to_destination_dto(msg.getDestination, this)
         val route = OpenwireDeliveryProducerRoute(addresses)
 
+        if( uow!=null ) {
+          uow.retain()
+        }
         // don't process frames until producer is connected...
         suspend_read("connecting producer route")
         host.dispatch_queue {
@@ -660,6 +668,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
                   send_via_route(route, msg, uow)
                 }
             }
+            if( uow!=null ) {
+              uow.release()
+            }
           }
         }
 
@@ -670,7 +681,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def send_via_route(route:DeliveryProducerRoute, message:ActiveMQMessage, uow:StoreUOW) = {
+  def send_via_route(route:OpenwireDeliveryProducerRoute, message:ActiveMQMessage, uow:StoreUOW) = {
     if( !route.targets.isEmpty ) {
 
       // We may need to add some headers..
@@ -701,6 +712,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more messages
         // until it's not full anymore.
+        route.suspended = true
         suspend_read("blocked destination: "+route.overflowSessions.mkString(", "))
       }
 
