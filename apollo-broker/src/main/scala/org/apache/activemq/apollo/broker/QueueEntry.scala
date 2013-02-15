@@ -298,7 +298,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Is the entry acquired by a subscription.
      */
     def is_acquired = acquiring_subscription!=null
-    def acquiring_subscription:Subscription = null
+    def acquiring_subscription:Acquirer = null
 
     /**
      * @returns true if the entry is either swapped or swapping.
@@ -396,17 +396,17 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * The entry is in this state while a message is loaded in memory.  A message must be in this state
    * before it can be dispatched to a subscription.
    */
-  class Loaded(val delivery: Delivery, var stored:Boolean, var space:MemorySpace) extends EntryState {
+  class Loaded(val delivery: Delivery, var enqueue_stored:Boolean, var space:MemorySpace) extends EntryState {
 
     assert( delivery!=null, "delivery cannot be null")
 
-    var acquirer:Subscription = _
+    var acquirer:Acquirer = _
     override def acquiring_subscription = acquirer
 
     override def memory_space = space
 
     var swapping_out = false
-    var storing = false
+    var storing_enqueue = false
 
     queue.loaded_items += 1
     queue.loaded_size += size
@@ -422,7 +422,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       rc
     }
 
-    override def toString = { "loaded:{ stored: "+stored+", swapping_out: "+swapping_out+", acquired: "+acquirer+", size:"+size+"}" }
+    override def toString = { "loaded:{ enqueue_stored: "+enqueue_stored+", swapping_out: "+swapping_out+", acquired: "+acquirer+", size:"+size+"}" }
 
     override def count = 1
     override def size = delivery.size
@@ -442,11 +442,11 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override  def as_loaded = this
 
-    def store = {
-      // We should no longer be storing stuff if stopped.
+    def store_enqueue = {
       assert(queue.service_state.is_starting_or_started)
-      if(!stored && !storing) {
-        storing = true
+      if(!enqueue_stored && !storing_enqueue) {
+        storing_enqueue = true
+        assert( delivery.uow!=null )
         delivery.uow.enqueue(toQueueEntryRecord)
         queue.swapping_out_size+=size
         delivery.uow.on_flush { canceled =>
@@ -463,37 +463,31 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override def swap_out(asap:Boolean) = {
       if( queue.tune_swap && !swapping_out ) {
-        swapping_out=true
-
-        if( stored ) {
-          swapped_out(false)
+        if( enqueue_stored ) {
+          switch_to_swapped
         } else {
-
-          // The storeBatch is only set when called from the messages.offer method
+          swapping_out=true
           if( delivery.uow!=null ) {
+            assert( delivery.storeKey != -1 )
             if( asap ) {
               delivery.uow.complete_asap
             }
           } else {
-
             // Are we swapping out a non-persistent message?
-            if( !storing ) {
-              assert( delivery.storeKey == -1 )
-
+            if( delivery.storeKey == -1 ) {
               val uow = queue.create_uow
               delivery.uow = uow
               delivery.storeLocator = new AtomicReference[Object]()
               delivery.storeKey = uow.store(delivery.createMessageRecord )
-              store
+              store_enqueue
               if( asap ) {
                 uow.complete_asap
               }
-              uow.release
-              delivery.uow = null
-
+              uow.release()
             } else {
+              store_enqueue
               if( asap ) {
-                queue.virtual_host.store.flush_message(message_key) {
+                queue.virtual_host.store.flush_message(delivery.storeKey) {
                 }
               }
             }
@@ -512,31 +506,26 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       }
     }
 
-    def swapped_out(store_wrote_to_disk:Boolean) = {
+    def swapped_out(not_canceled:Boolean) = {
       assert( state == this )
-      storing = false
-      stored = true
+      assert( delivery.storeKey != -1 )
+      storing_enqueue = false
+
+      if( not_canceled ) {
+        enqueue_stored = true
+      } else {
+        delivery.storeKey = -1
+      }
+
       delivery.uow = null
+
       if( swapping_out ) {
         swapping_out = false
-        space -= delivery
-
-        if( store_wrote_to_disk ) {
+        if( not_canceled ) {
           queue.swap_out_size_counter += size
           queue.swap_out_item_counter += 1
+          switch_to_swapped
         }
-
-        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
-        if( can_combine_with_prev ) {
-          getPrevious.as_swapped_range.combineNext
-        }
-        if( remove_pending ) {
-          state.remove
-        } else {
-          queue.loaded_items -= 1
-          queue.loaded_size -= size
-        }
-
         fire_swap_out_watchers
       } else {
         if( remove_pending ) {
@@ -544,6 +533,20 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           space -= delivery
           super.remove
         }
+      }
+    }
+
+    def switch_to_swapped = {
+      space -= delivery
+      state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
+      if( remove_pending ) {
+        state.remove
+      } else {
+        if( can_combine_with_prev ) {
+          getPrevious.as_swapped_range.combineNext
+        }
+        queue.loaded_items -= 1
+        queue.loaded_size -= size
       }
     }
 
@@ -562,7 +565,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         queue.loaded_items -= 1
         queue.loaded_size -= size
       }
-      if( storing | remove_pending ) {
+      if( storing_enqueue | remove_pending ) {
         remove_pending = true
       } else {
         delivery.message.release
@@ -720,7 +723,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription, override  val sender:List[DestinationAddress]) extends EntryState {
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Acquirer, override  val sender:List[DestinationAddress]) extends EntryState {
+
+    assert( message_key!= -1 )
 
     queue.individual_swapped_items += 1
 

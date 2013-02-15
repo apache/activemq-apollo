@@ -216,8 +216,18 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
   } else {
     null
   }
+  var is_connected = false
 
   def connected() = defer {
+    is_connected = true
+    if( overflow!=null ) {
+      val t = overflow
+      overflow = null
+      _offer(t)
+      if( refiller!=null && !full ) {
+        refiller.run()
+      }
+    }
     on_connected
   }
 
@@ -258,6 +268,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       debug("producer route detaching from consumer.")
       x.close
     }
+    is_connected = false
   }
 
   protected def on_connected = {}
@@ -276,76 +287,89 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
   def full = overflow!=null
 
-  def offer(delivery:Delivery) = {
+  def offer(delivery:Delivery):Boolean = {
     dispatch_queue.assertExecuting()
     if( full ) {
       false
     } else {
-      last_send = Broker.now
-
-      // Do we need to store the message if we have a matching consumer?
-      var matching_targets = 0
-      val original_ack = delivery.ack
-      val copy = delivery.copy
-
-        if ( original_ack!=null ) {
-        copy.ack = (result, uow)=> {
-          defer {
-            matching_targets -= 1
-            if ( matching_targets<= 0 && copy.ack!=null ) {
-              copy.ack = null
-              if (delivery.uow != null) {
-                delivery.uow.on_complete {
-                  defer {
-                    original_ack(Consumed, null)
-                  }
-                }
-              } else {
-                original_ack(Consumed, null)
-              }
-            }
-          }
-        }
+      if (delivery.uow != null) {
+        delivery.uow.retain()
       }
-
-      if(copy.message!=null) {
-        copy.message.retain
-      }
-      
-      targets.foreach { target=>
-
-        // only deliver to matching consumers
-        if( target.consumer.matches(copy) ) {
-          matching_targets += 1
-          if ( target.consumer.is_persistent && copy.persistent && store != null) {
-
-            if (copy.uow == null) {
-              copy.uow = store.create_uow
-            }
-
-            if( copy.storeKey == -1L ) {
-              copy.storeLocator = new AtomicReference[Object]()
-              copy.storeKey = copy.uow.store(copy.createMessageRecord)
-            }
-          }
-
-          if( !target.offer(copy) ) {
-            overflowSessions ::= target
-          }
-        }
-      }
-
-      if ( matching_targets == 0 && original_ack!=null ) {
-        original_ack(Consumed, null)
-      }
-
-      if( overflowSessions!=Nil ) {
-        overflow = copy
+      if ( !is_connected ) {
+        overflow = delivery
       } else {
-        release(copy)
+        _offer(delivery)
       }
-      true
+      return true
     }
+  }
+
+  private def _offer(delivery:Delivery):Boolean = {
+    last_send = Broker.now
+
+    // Do we need to store the message if we have a matching consumer?
+    var matching_targets = 0
+    val original_ack = delivery.ack
+    val copy = delivery.copy
+    copy.uow = delivery.uow
+
+    if ( original_ack!=null ) {
+      copy.ack = (result, uow)=> {
+        defer {
+          matching_targets -= 1
+          if ( matching_targets<= 0 && copy.ack!=null ) {
+            copy.ack = null
+            if (delivery.uow != null) {
+              delivery.uow.on_complete {
+                defer {
+                  original_ack(Consumed, null)
+                }
+              }
+            } else {
+              original_ack(Consumed, null)
+            }
+          }
+        }
+      }
+    }
+
+    if(copy.message!=null) {
+      copy.message.retain
+    }
+
+    targets.foreach { target=>
+
+      // only deliver to matching consumers
+      if( target.consumer.matches(copy) ) {
+        matching_targets += 1
+        if ( target.consumer.is_persistent && copy.persistent && store != null) {
+
+          if (copy.uow == null) {
+            copy.uow = store.create_uow
+          }
+
+          if( copy.storeKey == -1L ) {
+            copy.storeLocator = new AtomicReference[Object]()
+            copy.storeKey = copy.uow.store(copy.createMessageRecord)
+          }
+        }
+
+        if( !target.offer(copy) ) {
+          overflowSessions ::= target
+        }
+      }
+    }
+
+    if ( matching_targets == 0 && original_ack!=null ) {
+      original_ack(Consumed, null)
+    }
+
+    if( overflowSessions!=Nil ) {
+      overflow = copy
+    } else {
+      release(copy)
+    }
+    true
   }
 
 
@@ -359,19 +383,23 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
   }
 
   val drainer = ^{
-    if( overflow!=null ) {
-      val original = overflowSessions;
-      overflowSessions = Nil
-      original.foreach { target=>
-        if( !target.offer(overflow) ) {
-          overflowSessions ::= target
+    if( is_connected ) {
+      if( overflow!=null ) {
+        val original = overflowSessions;
+        overflowSessions = Nil
+        original.foreach { target=>
+          if( !target.offer(overflow) ) {
+            overflowSessions ::= target
+          }
         }
-      }
-      if( overflowSessions==Nil ) {
-        release(overflow)
-        overflow = null
-        if(refiller!=null)
-          refiller.run
+        if( overflowSessions==Nil ) {
+          release(overflow)
+          overflow = null
+          if(refiller!=null)
+            refiller.run
+        }
+      } else if(refiller!=null) {
+        refiller.run
       }
     }
   }
