@@ -938,31 +938,11 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     connect("1.1")
 
     // Connect to subscribers
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/queue/mirrored.b\n" +
-              "id:1\n" +
-              "receipt:0\n" +
-              "\n")
-    wait_for_receipt("0")
-
-    def put(id: Int) = {
-      client.write(
-        "SEND\n" +
-                "destination:/topic/mirrored.b\n" +
-                "\n" +
-                "message:" + id + "\n")
+    subscribe("1", "/queue/mirrored.b")
+    for( i <- 1 to 10 ) {
+      async_send("/topic/mirrored.b", i)
+      assert_received(i)
     }
-
-    put(1)
-
-    def get(id: Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should endWith regex ("\n\nmessage:" + id + "\n")
-    }
-    get(1)
-
   }
 
   test("Queue does not get copies from topic until it's first created") {
