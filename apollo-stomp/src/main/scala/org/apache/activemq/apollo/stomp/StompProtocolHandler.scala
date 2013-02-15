@@ -1244,7 +1244,7 @@ class StompProtocolHandler extends ProtocolHandler {
         val route = new StompProducerRoute(trimmed_dest)   // don't process frames until producer is connected...
         suspend_read("Connecting to destination")
         if( uow !=null ) {
-          uow.retain()
+          uow.retain(toString+":connecting")
         }
         host.dispatch_queue {
           val rc = host.router.connect(route.addresses, route, security_context)
@@ -1261,7 +1261,7 @@ class StompProtocolHandler extends ProtocolHandler {
                 }
             }
             if( uow !=null ) {
-              uow.release()
+              uow.release(toString+":connecting")
             }
           }
         }
@@ -1696,14 +1696,14 @@ class StompProtocolHandler extends ProtocolHandler {
 
     def commit(on_complete: => Unit) = {
       if( host.store!=null ) {
-        val uow = host.store.create_uow
+        val uow = host.store.create_uow(toString+":commit")
 //        println("UOW starting: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
         uow.on_complete {
 //          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
           on_complete
         }
         queue.foreach{ _._1(uow) }
-        uow.release
+        uow.release(toString+":commit")
       } else {
         queue.foreach{ _._1(null) }
         on_complete

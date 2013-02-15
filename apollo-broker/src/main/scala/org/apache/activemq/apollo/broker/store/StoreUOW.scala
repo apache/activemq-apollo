@@ -35,7 +35,10 @@ import org.fusesource.hawtbuf.Buffer
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-trait StoreUOW extends Retained {
+trait StoreUOW {
+
+  def release(owner:String);
+  def retain(owner:String);
 
   /**
    * Stores a message.  Messages a reference counted, so make sure you also

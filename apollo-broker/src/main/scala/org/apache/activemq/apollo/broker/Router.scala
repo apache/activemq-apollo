@@ -293,7 +293,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       false
     } else {
       if (delivery.uow != null) {
-        delivery.uow.retain()
+        delivery.uow.retain("route:"+dispatch_queue.getLabel+":offer")
       }
       if ( !is_connected ) {
         overflow = delivery
@@ -345,7 +345,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         if ( target.consumer.is_persistent && copy.persistent && store != null) {
 
           if (copy.uow == null) {
-            copy.uow = store.create_uow
+            copy.uow = store.create_uow("route:"+dispatch_queue.getLabel+":offer")
           }
 
           if( copy.storeKey == -1L ) {
@@ -375,7 +375,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
   private def release(delivery: Delivery): Unit = {
     if (delivery.uow != null) {
-      delivery.uow.release
+      delivery.uow.release("route:"+dispatch_queue.getLabel+":offer")
     }
     if( delivery.message!=null ) {
       delivery.message.release

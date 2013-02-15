@@ -108,9 +108,25 @@ trait DelayingStoreSupport extends Store with BaseService {
   // Implementation of the StoreBatch interface
   //
   /////////////////////////////////////////////////////////////////////
-  def create_uow() = new DelayableUOW
+  def create_uow(owner:String) = {
+    val rc = new DelayableUOW
+    rc.owners.add(owner)
+    rc
+  }
 
   class DelayableUOW extends BaseRetained with StoreUOW {
+
+    val owners = scala.collection.mutable.HashSet[String]()
+
+    def release(owner: String) {
+      owners.remove(owner)
+      super.release()
+    }
+
+    def retain(owner: String) {
+      owners.add(owner)
+      super.retain()
+    }
 
     class MessageAction {
 
@@ -359,7 +375,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     out.println("--- Pending Stores Details ---")
     out.println("flush_source suspended: "+flush_source.isSuspended)
     pending_stores.valuesIterator.foreach{ action =>
-      out.println("uow: %d, state:%s, delayable:%s, canceled:%s".format(action.uow.uow_id, action.uow.state, action.uow.delayable, action.uow.canceled))
+      out.println("uow: %d, state:%s, owners:%s".format(action.uow.uow_id, action.uow.state, action.uow.owners))
     }
     writer.toString
   }
@@ -508,6 +524,9 @@ trait DelayingStoreSupport extends Store with BaseService {
         None
       } else {
         uow.state = UowFlushing
+        if(!( !locator_based || uow.have_locators )) {
+          println("crap")
+        }
         assert( !locator_based || uow.have_locators )
         // It will not be possible to cancel the UOW anymore..
         uow.actions.foreach { case (_, action) =>

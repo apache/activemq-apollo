@@ -110,7 +110,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
   }
 
   def populate(queue_key:Long, messages:List[String], first_seq:Long=1) = {
-    var batch = store.create_uow
+    var batch = store.create_uow("")
     var msg_keys = ListBuffer[(Long, AtomicReference[Object], Long)]()
     var next_seq = first_seq
 
@@ -125,7 +125,7 @@ abstract class StoreFunSuiteSupport extends FunSuiteSupport with BeforeAndAfterE
 
     val task = tracker.task("uow complete")
     batch.on_complete(task.run)
-    batch.release
+    batch.release("")
 
     msg_keys.foreach { msgKey =>
       store.flush_message(msgKey._1) {}
