@@ -23,9 +23,6 @@ import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.util.list._
 import org.apache.activemq.apollo.dto.QueueConsumerLinkDTO
 
-trait Acquirer
-object DeadLetterHandler extends Acquirer
-
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
@@ -38,7 +35,7 @@ object Subscription extends Log
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Acquirer with DeliveryProducer with Dispatched with StallCheckSupport {
+class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends DeliveryProducer with Dispatched with StallCheckSupport {
   import Subscription._
 
   def dispatch_queue = queue.dispatch_queue
@@ -369,18 +366,14 @@ class Subscription(val queue:Queue, val consumer:DeliveryConsumer) extends Acqui
     def ack(uow:StoreUOW):Unit = {
       assert_executing
       if(!isLinked) {
-        debug("Unexpected ack: message seq already acked: "+entry.seq)
+        debug("Unexpected ack: message seq allready acked: "+entry.seq)
         return
       }
 
+      val next = entry.getNext
+
       total_ack_count += 1
       total_ack_size += entry.size
-      remove(uow)
-    }
-
-    def remove(uow:StoreUOW):Unit = {
-      assert_executing
-      val next = entry.getNext
       entry.dequeue(uow)
 
       // removes this entry from the acquired list.

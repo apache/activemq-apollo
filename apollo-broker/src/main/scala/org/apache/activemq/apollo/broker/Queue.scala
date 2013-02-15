@@ -439,9 +439,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     rc.consumer_count = cur.parked.size
     rc.is_prefetched = cur.prefetched
     rc.state = cur.label
-    rc.acquirer = cur.acquiring_subscription match {
-      case sub:Subscription => sub.create_link_dto(false)
-      case _ => null
+    if( cur.acquiring_subscription != null ) {
+      rc.acquirer = cur.acquiring_subscription.create_link_dto(false)
     }
     rc
   }
@@ -701,12 +700,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         queue_delivery.seq = entry.seq
         entry.init(queue_delivery)
         
-        val uow = if( tune_persistent ) {
-          delivery.uow
-        } else {
-          null
+        if( tune_persistent ) {
+          queue_delivery.uow = delivery.uow
         }
-        queue_delivery.uow = uow
 
         entries.addLast(entry)
         enqueue_item_counter += 1
@@ -717,7 +713,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         enqueue_remaining_take(entry.size)
 
         // Do we need to do a persistent enqueue???
-        if (uow != null) {
+        val persisted = queue_delivery.uow != null
+        if (persisted) {
           entry.state match {
             case state:entry.Loaded => state.store
             case state:entry.Swapped => delivery.uow.enqueue(entry.toQueueEntryRecord)
@@ -733,7 +730,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         if( entry.isLinked ) {
           if( !consumers_keeping_up_historically  ) {
             entry.swap(true)
-          } else if( entry.is_acquired && uow != null) {
+          } else if( entry.as_loaded.is_acquired && persisted) {
             // If the message as dispatched and it's marked to get persisted anyways,
             // then it's ok if it falls out of memory since we won't need to load it again.
             entry.swap(false)
@@ -745,8 +742,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         }
 
         // release the store batch...
-        if (uow != null) {
-          uow.release
+        if (persisted) {
+          queue_delivery.uow.release
           queue_delivery.uow = null
         }
 
@@ -1073,27 +1070,19 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     override def connection = None
     override def dispatch_queue = Queue.this.dispatch_queue
   }
-
   var dlq_route:DlqProducerRoute = _
-  var dlq_overflow:OverflowSink[(Delivery, (StoreUOW)=>Unit)] = _
-
+  
   def dead_letter(original_uow:StoreUOW, entry:QueueEntry)(removeFunc: (StoreUOW)=>Unit) = {
     assert_executing
     if( config.dlq==null ) {
-      removeFunc(null)
+      removeFunc(original_uow)
     } else {
 
-      def complete(original_delivery:Delivery) = {
-        assert_executing
-        val delivery = original_delivery.copy()
-        delivery.uow = if(delivery.storeKey == -1) {
-          null
-        } else {
-          if( original_uow == null ) {
-            create_uow
-          } else {
-            original_uow.retain()
-            original_uow
+      def complete(delivery:Delivery) = {
+        delivery.uow = original_uow
+        delivery.ack = (result, uow) => {
+          dispatch_queue {
+            removeFunc(uow)
           }
         }
         delivery.expiration=0
@@ -1104,47 +1093,34 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           router.virtual_host.dispatch_queue {
             val rc = router.connect(dlq_route.addresses, dlq_route, null)
             assert( rc == None ) // Not expecting this to ever fail.
-          }
-
-          dlq_overflow = new OverflowSink[(Delivery, (StoreUOW)=>Unit)](dlq_route.flatMap{ x =>
-            Some(x._1)
-          }) {
-            override protected def onDelivered(value: (Delivery, (StoreUOW) => Unit)) {
-              val (delivery, callback) = value;
-              callback(delivery.uow)
-              if( delivery.uow!=null ) {
-                delivery.uow.release()
-              }
+            dlq_route.dispatch_queue {
+              dlq_route.offer(delivery)
             }
           }
+        } else {
+          dlq_route.offer(delivery)
         }
-        dlq_overflow.offer((delivery, removeFunc))
       }
 
       entry.state match {
         case x:entry.Loaded=>
           if( x.swapping_out ) {
-            x.acquirer = DeadLetterHandler
             x.on_swap_out ::=( ()=> {
-              complete(entry.state match {
-                case state:entry.Swapped=>
-                  state.to_delivery
-                case state:entry.Loaded =>
-                  state.delivery
-                case state => sys.error("Unexpected type: "+state)
-              })
+              complete(entry.state.asInstanceOf[entry.Swapped].to_delivery)
             })
           } else {
-            complete(x.delivery)
+            complete(x.delivery.copy())
           }
         case x:entry.Swapped=>
           complete(x.to_delivery)
         case _ =>
           throw new Exception("Invalid queue entry state, it cannot be DQLed.")
       }
+
     }
   }
-
+  
+  
   def drain_acks = might_unfill {
     val end = System.nanoTime()
     ack_source.getData.foreach {
@@ -1169,7 +1145,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             var limit = dlq_nak_limit
             if( limit>0 && entry.entry.redelivery_count >= limit ) {
               dead_letter(uow, entry.entry) { uow =>
-                entry.remove(uow)
+                entry.ack(uow)
               }
             } else {
               entry.nack

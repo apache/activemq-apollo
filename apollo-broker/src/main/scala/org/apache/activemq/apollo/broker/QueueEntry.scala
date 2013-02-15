@@ -72,7 +72,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       state = new Swapped(delivery.storeKey, delivery.storeLocator, delivery.size, delivery.expiration, 0, null, delivery.sender)
     } else {
       queue.producer_swapped_in += delivery
-      state = new Loaded(delivery, delivery.storeKey != -1, queue.producer_swapped_in)
+      state = new Loaded(delivery, false, queue.producer_swapped_in)
     }
     this
   }
@@ -298,7 +298,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
      * Is the entry acquired by a subscription.
      */
     def is_acquired = acquiring_subscription!=null
-    def acquiring_subscription:Acquirer = null
+    def acquiring_subscription:Subscription = null
 
     /**
      * @returns true if the entry is either swapped or swapping.
@@ -400,7 +400,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     assert( delivery!=null, "delivery cannot be null")
 
-    var acquirer:Acquirer = _
+    var acquirer:Subscription = _
     override def acquiring_subscription = acquirer
 
     override def memory_space = space
@@ -471,7 +471,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
           // The storeBatch is only set when called from the messages.offer method
           if( delivery.uow!=null ) {
-            assert( delivery.storeKey != -1 )
             if( asap ) {
               delivery.uow.complete_asap
             }
@@ -520,29 +519,22 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       delivery.uow = null
       if( swapping_out ) {
         swapping_out = false
+        space -= delivery
 
         if( store_wrote_to_disk ) {
-
-          space -= delivery
           queue.swap_out_size_counter += size
           queue.swap_out_item_counter += 1
+        }
 
-          state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
-
-          if( remove_pending ) {
-            state.remove
-          } else {
-
-            if( can_combine_with_prev ) {
-              getPrevious.as_swapped_range.combineNext
-            }
-
-            queue.loaded_items -= 1
-            queue.loaded_size -= size
-          }
-
+        state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
+        if( can_combine_with_prev ) {
+          getPrevious.as_swapped_range.combineNext
+        }
+        if( remove_pending ) {
+          state.remove
         } else {
-          delivery.storeKey = -1
+          queue.loaded_items -= 1
+          queue.loaded_size -= size
         }
 
         fire_swap_out_watchers
@@ -728,9 +720,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
    * entry is persisted, it can move into this state.  This state only holds onto the
    * the massage key so that it can reload the message from the store quickly when needed.
    */
-  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Acquirer, override  val sender:List[DestinationAddress]) extends EntryState {
-
-    assert( message_key!= -1 )
+  class Swapped(override val message_key:Long, override val message_locator:AtomicReference[Object], override val size:Int, override val expiration:Long, var _redeliveries:Short, var acquirer:Subscription, override  val sender:List[DestinationAddress]) extends EntryState {
 
     queue.individual_swapped_items += 1
 

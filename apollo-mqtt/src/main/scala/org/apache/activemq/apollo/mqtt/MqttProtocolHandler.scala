@@ -863,16 +863,9 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
     override def send_buffer_size = handler.codec.getReadBufferSize
     override def connection = Some(handler.connection)
     override def dispatch_queue = queue
-
-    var suspended = false
-
-    refiller = ^ {
-      if( suspended ) {
-        suspended = false
-        handler.resume_read
-      }
+    refiller = ^{
+      handler.resume_read
     }
-
   }
 
   def on_mqtt_publish(publish:PUBLISH):Unit = {
@@ -914,7 +907,7 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
     }
   }
 
-  def send_via_route(route:MqttProducerRoute, publish:PUBLISH):Unit = {
+  def send_via_route(route:DeliveryProducerRoute, publish:PUBLISH):Unit = {
     queue.assertExecuting()
 
     def at_least_once_ack(r:DeliveryResult, uow:StoreUOW):Unit = queue {
@@ -959,7 +952,6 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
       route.offer(delivery)
       if( route.full ) {
         // but once it gets full.. suspend to flow control the producer.
-        route.suspended = true
         handler.get.suspend_read("blocked sending to: "+route.overflowSessions.mkString(", "))
       }
 

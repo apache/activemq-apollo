@@ -26,14 +26,14 @@ class DeadLetterQueueLoadTest extends StompTestSupport with BrokerParallelTestEx
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-bdb.xml"
 
   for (i <- 1 to 16 )
-  test("naker.load."+i) {
+  test("naker."+i) {
     connect("1.1")
     val dlq_client = connect("1.1", new StompClient)
-    subscribe("0", "/queue/nacker.load."+i, "client", false, "", false)
-    subscribe("dlq", "/queue/dlq.nacker.load."+i, "client", false, "", false, c=dlq_client)
+    subscribe("0", "/queue/nacker."+i, "client", false, "", false)
+    subscribe("dlq", "/queue/dlq.nacker."+i, "auto", false, "", false, c=dlq_client)
 
     for( j <- 1 to 1000 ) {
-      async_send("/queue/nacker.load."+i, j)
+      async_send("/queue/nacker."+i, j)
       assert_received(j, "0")(false)
       assert_received(j, "0")(false)
       // It should be sent to the DLQ after the 2nd nak

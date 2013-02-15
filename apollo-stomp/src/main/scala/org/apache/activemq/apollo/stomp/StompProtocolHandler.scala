@@ -1158,13 +1158,10 @@ class StompProtocolHandler extends ProtocolHandler {
     override def connection = Some(StompProtocolHandler.this.connection)
 
     override def dispatch_queue = queue
-    var suspended = false
+
 
     refiller = ^ {
-      if( suspended ) {
-        resume_read
-        suspended = false
-      }
+      resume_read
     }
 
 
@@ -1242,10 +1239,7 @@ class StompProtocolHandler extends ProtocolHandler {
         val trimmed_dest = dest.deepCopy().ascii()
         // create the producer route...
         val route = new StompProducerRoute(trimmed_dest)   // don't process frames until producer is connected...
-        suspend_read("Connecting to destination")
-        if( uow !=null ) {
-          uow.retain()
-        }
+        connection.transport.suspendRead
         host.dispatch_queue {
           val rc = host.router.connect(route.addresses, route, security_context)
           dispatchQueue {
@@ -1259,9 +1253,6 @@ class StompProtocolHandler extends ProtocolHandler {
                   schedule_maintenance
                   send_via_route(route.addresses, route, frame, uow)
                 }
-            }
-            if( uow !=null ) {
-              uow.release()
             }
           }
         }
@@ -1366,7 +1357,7 @@ class StompProtocolHandler extends ProtocolHandler {
     rc
   }
 
-  def send_via_route(addresses: Array[SimpleAddress], route:StompProducerRoute, frame:StompFrame, uow:StoreUOW) = {
+  def send_via_route(addresses: Array[SimpleAddress], route:DeliveryProducerRoute, frame:StompFrame, uow:StoreUOW) = {
     var storeBatch:StoreUOW=null
 
     // User might be asking for ack that we have processed the message..
@@ -1411,7 +1402,6 @@ class StompProtocolHandler extends ProtocolHandler {
       if( route.full ) {
         // but once it gets full.. suspend, so that we get more stomp messages
         // until it's not full anymore.
-        route.suspended = true
         suspend_read("blocked sending to: "+route.overflowSessions.mkString(", "))
       }
 
