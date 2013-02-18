@@ -254,6 +254,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     }
 
     def enqueue(entry: QueueEntryRecord) = {
+      assert( !locator_based || entry.message_locator!=null )
       val a = this.synchronized {
         val a = action(entry.message_key)
         a.enqueues += entry

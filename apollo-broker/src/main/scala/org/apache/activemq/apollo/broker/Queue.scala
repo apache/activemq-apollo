@@ -701,13 +701,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         queue_delivery.seq = entry.seq
         entry.init(queue_delivery)
         
-        val uow = if( tune_persistent ) {
-          delivery.uow
-        } else {
-          null
-        }
-        queue_delivery.uow = uow
-
         entries.addLast(entry)
         enqueue_item_counter += 1
         enqueue_size_counter += entry.size
@@ -717,11 +710,15 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         enqueue_remaining_take(entry.size)
 
         // Do we need to do a persistent enqueue???
-        if (uow != null) {
+        val uow = if( queue_delivery.persistent && tune_persistent ) {
+          queue_delivery.uow = create_uow(binding.binding_kind+":"+id+":offer", delivery.uow)
           entry.state match {
             case state:entry.Loaded => state.store_enqueue
-            case state:entry.Swapped => delivery.uow.enqueue(entry.toQueueEntryRecord)
+            case state:entry.Swapped => queue_delivery.uow.enqueue(entry.toQueueEntryRecord)
           }
+          queue_delivery.uow
+        } else {
+          null
         }
 
         if( entry.hasSubs ) {
@@ -1224,7 +1221,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         if( delivery.message!=null ) {
           delivery.message.retain
         }
-        if( tune_persistent && delivery.uow!=null ) {
+        if( delivery.persistent && tune_persistent && delivery.uow!=null ) {
           delivery.uow.retain(binding.binding_kind+":"+id+":offer")
         }
         val rc = downstream.offer(delivery)

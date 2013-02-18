@@ -465,31 +465,25 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           switch_to_swapped
         } else {
           swapping_out=true
-          if( delivery.uow!=null ) {
-            assert( delivery.storeKey != -1 )
-            if( asap ) {
+          delivery.uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":swap_out", delivery.uow)
+
+          // Are we swapping out a non-persistent message?
+          val flush = if( delivery.storeKey == -1 ) {
+            delivery.storeLocator = new AtomicReference[Object]()
+            delivery.storeKey = delivery.uow.store(delivery.createMessageRecord )
+            false
+          } else {
+            true
+          }
+          store_enqueue
+          if( asap ) {
+            if ( flush ) {
+              queue.virtual_host.store.flush_message(delivery.storeKey) {}
+            } else {
               delivery.uow.complete_asap
             }
-          } else {
-            // Are we swapping out a non-persistent message?
-            if( delivery.storeKey == -1 ) {
-              val uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":swap_out")
-              delivery.uow = uow
-              delivery.storeLocator = new AtomicReference[Object]()
-              delivery.storeKey = uow.store(delivery.createMessageRecord )
-              store_enqueue
-              if( asap ) {
-                uow.complete_asap
-              }
-              uow.release(queue.binding.binding_kind+":"+queue.id+":swap_out")
-            } else {
-              store_enqueue
-              if( asap ) {
-                queue.virtual_host.store.flush_message(delivery.storeKey) {
-                }
-              }
-            }
           }
+          delivery.uow.release(queue.binding.binding_kind+":"+queue.id+":swap_out")
         }
       }
     }
