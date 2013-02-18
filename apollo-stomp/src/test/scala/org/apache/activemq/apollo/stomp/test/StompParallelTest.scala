@@ -1628,4 +1628,36 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   }
 
+  test("Transaction commit order") {
+    connect("1.1")
+    val dest = next_id("/queue/send_transaction-")
+
+    async_send(dest, "m1")
+
+    client.write(
+      "BEGIN\n" +
+      "transaction:x\n" +
+      "\n")
+
+    async_send(dest, "t1", "transaction:x\n")
+    async_send(dest, "m2")
+    async_send(dest, "t2", "transaction:x\n")
+
+    client.write(
+      "COMMIT\n" +
+      "transaction:x\n" +
+      "receipt:0\n"+
+      "\n")
+    wait_for_receipt("0")
+
+    async_send(dest, "m3")
+
+    subscribe("mysub",dest)
+
+    assert_received("m1")
+    assert_received("m2")
+    assert_received("t1")
+    assert_received("t2")
+    assert_received("m3")
+  }
 }
