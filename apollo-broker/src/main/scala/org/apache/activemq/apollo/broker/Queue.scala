@@ -1087,12 +1087,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         delivery.uow = if(delivery.storeKey == -1) {
           null
         } else {
-          if( original_uow == null ) {
-            create_uow(id)
-          } else {
-            original_uow.retain(binding.binding_kind+":"+id+":dlq")
-            original_uow
-          }
+          create_uow(binding.binding_kind+":"+id+":dlq", original_uow)
         }
         delivery.expiration=0
 
@@ -1112,6 +1107,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
               callback(delivery.uow)
               if( delivery.uow!=null ) {
                 delivery.uow.release(binding.binding_kind+":"+id+":dlq")
+                delivery.uow = null
               }
             }
           }
