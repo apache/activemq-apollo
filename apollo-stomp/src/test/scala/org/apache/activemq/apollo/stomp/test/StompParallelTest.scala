@@ -1628,36 +1628,39 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   }
 
-  test("Transaction commit order") {
-    connect("1.1")
-    val dest = next_id("/queue/send_transaction-")
+  for( kind <- Array("/queue/", "/topic/", "/topic/queued.")) {
+    test("Transaction commit order on "+kind) {
 
-    async_send(dest, "m1")
+      val dest = next_id(kind+"send_transaction-")
 
-    client.write(
-      "BEGIN\n" +
-      "transaction:x\n" +
-      "\n")
+      val receiver = connect("1.1", new StompClient)
+      subscribe("mysub",dest,c=receiver)
 
-    async_send(dest, "t1", "transaction:x\n")
-    async_send(dest, "m2")
-    async_send(dest, "t2", "transaction:x\n")
+      connect("1.1")
+      async_send(dest, "m1")
 
-    client.write(
-      "COMMIT\n" +
-      "transaction:x\n" +
-      "receipt:0\n"+
-      "\n")
-    wait_for_receipt("0")
+      client.write(
+        "BEGIN\n" +
+        "transaction:x\n" +
+        "\n")
 
-    async_send(dest, "m3")
+      async_send(dest, "t1", "transaction:x\n")
+      async_send(dest, "m2")
+      async_send(dest, "t2", "transaction:x\n")
 
-    subscribe("mysub",dest)
+      client.write(
+        "COMMIT\n" +
+        "transaction:x\n" +
+        "receipt:0\n"+
+        "\n")
+      wait_for_receipt("0")
+      async_send(dest, "m3")
 
-    assert_received("m1")
-    assert_received("m2")
-    assert_received("t1")
-    assert_received("t2")
-    assert_received("m3")
+      assert_received("m1",c=receiver)
+      assert_received("m2",c=receiver)
+      assert_received("t1",c=receiver)
+      assert_received("t2",c=receiver)
+      assert_received("m3",c=receiver)
+    }
   }
 }
