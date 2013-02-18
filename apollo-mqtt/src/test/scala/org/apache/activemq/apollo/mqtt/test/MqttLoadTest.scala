@@ -21,6 +21,7 @@ import org.fusesource.mqtt.client._
 import org.apache.activemq.apollo.broker.Broker
 import org.fusesource.hawtdispatch._
 import java.util.concurrent.{TimeUnit, CountDownLatch}
+import java.util.concurrent.atomic.AtomicReference
 
 class MqttLoadTest extends MqttTestSupport {
 
@@ -31,15 +32,21 @@ class MqttLoadTest extends MqttTestSupport {
       val topic = prefix+"/load"
 
       val receiver = create_client
+      val error = new AtomicReference[Throwable]()
       connect(receiver)
       subscribe(topic, QoS.AT_LEAST_ONCE, receiver)
 
       val done = new CountDownLatch(1)
       Broker.BLOCKABLE_THREAD_POOL {
-        for(i <- 1 to 1000) {
-          should_receive("%0256d".format(i), topic, receiver)
+        try {
+          for (i <- 1 to 1000) {
+            should_receive("%0256d".format(i), topic, receiver)
+          }
+        } catch {
+          case e:Throwable => error.set(e)
+        } finally {
+          done.countDown()
         }
-        done.countDown()
       }
 
       connect()
@@ -48,6 +55,9 @@ class MqttLoadTest extends MqttTestSupport {
       }
 
       done.await(30, TimeUnit.SECONDS) should be(true)
+      if( error.get() != null ) {
+        throw error.get()
+      }
     }
 
   }

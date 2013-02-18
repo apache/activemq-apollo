@@ -711,7 +711,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
         // Do we need to do a persistent enqueue???
         val uow = if( queue_delivery.persistent && tune_persistent ) {
-          queue_delivery.uow = create_uow(binding.binding_kind+":"+id+":offer", delivery.uow)
+          assert(delivery.uow !=null)
+          queue_delivery.uow = delivery.uow
           entry.state match {
             case state:entry.Loaded => state.store_enqueue
             case state:entry.Swapped => queue_delivery.uow.enqueue(entry.toQueueEntryRecord)
@@ -1221,8 +1222,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         if( delivery.message!=null ) {
           delivery.message.retain
         }
-        if( delivery.persistent && tune_persistent && delivery.uow!=null ) {
-          delivery.uow.retain(binding.binding_kind+":"+id+":offer")
+        if( delivery.persistent && tune_persistent ) {
+          delivery.uow = create_uow(binding.binding_kind+":"+id+":offer", delivery.uow)
         }
         val rc = downstream.offer(delivery)
         assert(rc, "session should accept since it was not full")
