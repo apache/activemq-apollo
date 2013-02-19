@@ -1663,4 +1663,24 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       assert_received("m3",c=receiver)
     }
   }
+
+  for( kind <- Array("/queue/", "/topic/", "/topic/queued.")) {
+    test("Sending already expired message to "+kind) {
+
+      val dest = next_id(kind+"expired-")
+
+      val receiver = connect("1.1", new StompClient)
+      subscribe("mysub",dest,c=receiver)
+
+      connect("1.1")
+
+      async_send(dest, "m1", "persistent:true\n")
+      val exp = System.currentTimeMillis()-1000
+      async_send(dest, "e1", "persistent:true\nexpires:"+exp+"\n")
+      async_send(dest, "m2", "persistent:true\n")
+
+      assert_received("m1",c=receiver)
+      assert_received("m2",c=receiver)
+    }
+  }
 }

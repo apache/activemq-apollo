@@ -690,8 +690,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           if( delivery.ack!=null ) {
             delivery.ack(if ( expired ) Expired else Undelivered, delivery.uow)
           }
-          if( delivery.uow!=null ) {
-            delivery.uow.release(binding.binding_kind+":"+id)
+          if( delivery.persistent && tune_persistent ) {
+            assert(delivery.uow!=null)
+            delivery.uow.release(binding.binding_kind+":"+id+":offer")
           }
           return true
         }
