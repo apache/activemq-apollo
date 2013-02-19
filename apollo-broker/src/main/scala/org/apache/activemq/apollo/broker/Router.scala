@@ -161,7 +161,7 @@ trait Router extends Service {
 
   def get_queue(dto:Long):Option[Queue]
 
-  def bind(destinations:Array[_ <: BindAddress], consumer:DeliveryConsumer, security:SecurityContext): Option[String]
+  def bind(destinations:Array[_ <: BindAddress], consumer:DeliveryConsumer, security:SecurityContext)(cb: (Option[String])=>Unit)
 
   def unbind(destinations:Array[_ <: BindAddress], consumer:DeliveryConsumer, persistent:Boolean, security:SecurityContext)
 
@@ -188,7 +188,7 @@ trait BindableDeliveryProducer extends DeliveryProducer with Retained {
 
   def dispatch_queue:DispatchQueue
 
-  def bind(targets:List[DeliveryConsumer]):Unit
+  def bind(targets:List[DeliveryConsumer], on_bind:()=>Unit):Unit
   def unbind(targets:List[DeliveryConsumer]):Unit
 
   def connected():Unit
@@ -231,7 +231,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
     on_connected
   }
 
-  def bind(consumers:List[DeliveryConsumer]) = {
+  def bind(consumers:List[DeliveryConsumer], on_bind:()=>Unit) = {
     consumers.foreach(_.retain)
     dispatch_queue {
       consumers.foreach{ x=>
@@ -240,6 +240,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         target.refiller = drainer
         targets ::= target
       }
+      on_bind();
     }
   }
 

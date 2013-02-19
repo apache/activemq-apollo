@@ -1520,16 +1520,17 @@ class StompProtocolHandler extends ProtocolHandler {
     consumers += (id -> consumer)
 
     host.dispatch_queue {
-      val rc = host.router.bind(addresses, consumer, security_context)
-      dispatchQueue {
-        rc match {
-          case Some(reason)=>
-            consumers -= id
-            consumer.release
-            async_die(reason)
-          case None =>
-            send_receipt(headers)
-            consumer.supply_initial_credit
+      host.router.bind(addresses, consumer, security_context) { rc =>
+        dispatchQueue {
+          rc match {
+            case Some(reason)=>
+              consumers -= id
+              consumer.release
+              async_die(reason)
+            case None =>
+              send_receipt(headers)
+              consumer.supply_initial_credit
+          }
         }
       }
     }

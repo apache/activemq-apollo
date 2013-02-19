@@ -588,19 +588,20 @@ class AmqpProtocolHandler extends ProtocolHandler {
       consumers += (id -> consumer)
 
       host.dispatch_queue {
-        val rc = host.router.bind(consumer.addresses, consumer, security_context)
-        queue {
-          rc match {
-            case Some(reason) =>
-              consumers -= id
-              consumer.release
-              sender.setSource(null)
-              close_with_error(sender, "amqp:not-found", reason)
-              onComplete.run()
-            case None =>
-              set_attachment(sender, consumer)
-              sender.open()
-              onComplete.run()
+        host.router.bind(consumer.addresses, consumer, security_context) { rc =>
+          queue {
+            rc match {
+              case Some(reason) =>
+                consumers -= id
+                consumer.release
+                sender.setSource(null)
+                close_with_error(sender, "amqp:not-found", reason)
+                onComplete.run()
+              case None =>
+                set_attachment(sender, consumer)
+                sender.open()
+                onComplete.run()
+            }
           }
         }
       }

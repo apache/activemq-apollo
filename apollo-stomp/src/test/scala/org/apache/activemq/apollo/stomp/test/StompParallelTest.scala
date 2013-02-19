@@ -540,10 +540,6 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     subscribe("1", "/queue/load-balanced")
     subscribe("2", "/queue/load-balanced")
 
-    // Lets sleep a little to make sure the subscriptions are full
-    // established before we start sending messages to them.
-    Thread.sleep(500)
-
     for (i <- 0 until 4) {
       async_send("/queue/load-balanced", "message:" + i)
     }
@@ -603,9 +599,6 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     subscribe("1", dest)
     subscribe("2", dest)
 
-    // Give the subs time to setup..
-    Thread.sleep(500L)
-
     var actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
 
     def send_receive = {
@@ -639,8 +632,6 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     // Add another subscriber, the groups should re-balance
     subscribe("3", dest)
-    // Give the sub time to setup..
-    Thread.sleep(500L)
 
     actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
     send_receive
@@ -786,33 +777,13 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
   test("Queue order preserved") {
     connect("1.1")
-
-    def put(id: Int) = {
-      client.write(
-        "SEND\n" +
-                "destination:/queue/example\n" +
-                "\n" +
-                "message:" + id + "\n")
-    }
-    put(1)
-    put(2)
-    put(3)
-
-    client.write(
-      "SUBSCRIBE\n" +
-              "destination:/queue/example\n" +
-              "id:0\n" +
-              "\n")
-
-    def get(id: Int) = {
-      val frame = client.receive()
-      frame should startWith("MESSAGE\n")
-      frame should include("subscription:0\n")
-      frame should endWith regex ("\n\nmessage:" + id + "\n")
-    }
-    get(1)
-    get(2)
-    get(3)
+    async_send("/queue/example", 1)
+    async_send("/queue/example", 2)
+    async_send("/queue/example", 3)
+    subscribe("0", "/queue/example")
+    assert_received(1, "0")
+    assert_received(2, "0")
+    assert_received(3, "0")
   }
 
   test("Topic drops messages sent before before subscription is established") {

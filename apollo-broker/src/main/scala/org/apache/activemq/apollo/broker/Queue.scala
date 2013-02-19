@@ -1240,23 +1240,24 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   def connected() = {}
 
-  def bind(value: DeliveryConsumer, ctx:SecurityContext): Result[Zilch, String] = {
+  def bind(value: DeliveryConsumer, ctx:SecurityContext, cb: (Result[Zilch, String])=>Unit):Unit = {
     if( ctx!=null ) {
       if( value.browser ) {
         if( !virtual_host.authorizer.can(ctx, "receive", this) ) {
-          return new Failure("Not authorized to browse the queue")
+          cb(new Failure("Not authorized to browse the queue"))
+          return
         }
       } else {
         if( !virtual_host.authorizer.can(ctx, "consume", this) ) {
-          return new Failure("Not authorized to consume from the queue")
+          cb(new Failure("Not authorized to consume from the queue"))
+          return
         }
       }
     }
-    bind(value::Nil)
-    Success(Zilch)
+    bind(value::Nil, ()=>{ cb(Success(Zilch)) })
   }
 
-  def bind(values: List[DeliveryConsumer]) = {
+  def bind(values: List[DeliveryConsumer], on_bind:()=>Unit) = {
     values.foreach(_.retain)
     dispatch_queue {
       for (consumer <- values) {
@@ -1264,6 +1265,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         sub.open
         consumer.release()
       }
+      on_bind()
     }
   }
 
@@ -1279,8 +1281,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   def disconnected() = throw new RuntimeException("unsupported")
 
-  def bind(bind_address:BindAddress, consumer: DeliveryConsumer) = {
-    bind(consumer::Nil)
+  def bind(bind_address:BindAddress, consumer: DeliveryConsumer, on_bind:()=>Unit) = {
+    bind(consumer::Nil, on_bind)
   }
   def unbind(consumer: DeliveryConsumer, persistent:Boolean):Unit = {
     unbind(consumer::Nil)
@@ -1297,7 +1299,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         producers += producer
         check_idle
       }
-      producer.bind(this::Nil)
+      producer.bind(this::Nil, ()=>{})
     }
   }
 

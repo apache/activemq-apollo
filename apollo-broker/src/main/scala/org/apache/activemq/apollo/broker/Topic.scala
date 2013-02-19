@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import org.fusesource.hawtdispatch._
 import collection.mutable.{HashSet, HashMap, ListBuffer}
 import security.SecuredResource
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * <p>
@@ -411,7 +412,14 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
 
   var topic_queue:Queue = null
 
-  def bind(address: BindAddress, consumer:DeliveryConsumer):Unit = {
+  def bind(address: BindAddress, consumer:DeliveryConsumer, on_bind:()=>Unit):Unit = {
+
+    val remaining = new AtomicInteger(1)
+    var bind_release:()=>Unit = ()=> {
+      if( remaining.decrementAndGet() == 0 ) {
+        on_bind()
+      }
+    }
 
     def send_retained = {
       val r = retained_message
@@ -428,7 +436,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             offer(copy) // producer supports 1 message overflow.
           }
         }
-        producer.bind(consumer :: Nil)
+        producer.bind(consumer :: Nil, ()=>{})
         producer.connected()
       }
     }
@@ -445,7 +453,8 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             if ( topic_queue==null ) {
               topic_queue = router._create_queue(new TempQueueBinding(id, Topic.this.address, Option(config.subscription).getOrElse(new QueueSettingsDTO)))
               producers.keys.foreach({ r=>
-                r.bind(List(topic_queue))
+                remaining.incrementAndGet()
+                r.bind(List(topic_queue), bind_release)
               })
             }
             val proxy = new DeliveryConsumerFilter(consumer) {
@@ -456,7 +465,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
               override def exclusive = false
             }
             topic_queue_consumers.put(consumer, proxy)
-            topic_queue.bind(List(proxy))
+            topic_queue.bind(List(proxy), bind_release)
             send_retained
             return
 
@@ -500,8 +509,10 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     topic_metrics.consumer_counter += 1
     val list = proxy :: Nil
     producers.keys.foreach({ r=>
-      r.bind(list)
+      remaining.incrementAndGet()
+      r.bind(list, bind_release)
     })
+    bind_release()
     check_idle
   }
 
@@ -556,7 +567,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   def bind_durable_subscription(address: SubscriptionAddress, queue:Queue)  = {
     if( !durable_subscriptions.contains(queue) ) {
       durable_subscriptions += queue
-      bind(address, queue)
+      bind(address, queue, ()=>{})
     }
     check_idle
   }
@@ -586,7 +597,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     if( topic_queue !=null ) {
       targets ::= topic_queue
     }
-    producer.bind(targets )
+    producer.bind(targets, ()=>{})
     check_idle
   }
 

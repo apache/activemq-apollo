@@ -932,13 +932,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
 
       host.dispatch_queue {
-        val rc = host.router.bind(addresses, this, security_context)
-        dispatchQueue {
-          rc match {
-            case None =>
-              ack(info)
-            case Some(reason) =>
-              fail(reason, info)
+        host.router.bind(addresses, this, security_context) { rc =>
+          dispatchQueue {
+            rc match {
+              case None =>
+                ack(info)
+              case Some(reason) =>
+                fail(reason, info)
+            }
           }
         }
       }

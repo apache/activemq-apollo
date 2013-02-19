@@ -23,12 +23,12 @@ import path._
 import path.PathParser.PathException
 import java.util.concurrent.TimeUnit
 import scala.Array
-import java.util.ArrayList
 import collection.{Iterable, JavaConversions}
 import security.SecuredResource.{TopicKind, QueueKind}
 import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
 import scala.collection.mutable.{HashSet, HashMap, LinkedHashMap}
+import java.util.concurrent.atomic.AtomicInteger
 
 object DestinationMetricsSupport {
 
@@ -141,7 +141,7 @@ trait DomainDestination extends SecuredResource {
   def browse(from_seq:Long, to:Option[Long], max:Long)(func: (BrowseResult)=>Unit):Unit
 
 
-  def bind (bind_address:BindAddress, consumer:DeliveryConsumer):Unit
+  def bind (bind_address:BindAddress, consumer:DeliveryConsumer, on_bind:()=>Unit):Unit
   def unbind (consumer:DeliveryConsumer, persistent:Boolean):Unit
 
   def connect (connect_address:ConnectAddress, producer:BindableDeliveryProducer):Unit
@@ -288,7 +288,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       consumers_by_path.get( path ).foreach { case (consumer_context, bind_address)=>
         if( authorizer.can(consumer_context.security, bind_action(consumer_context.consumer), dest) ) {
           consumer_context.matched_destinations += dest
-          dest.bind(bind_address, consumer_context.consumer)
+          dest.bind(bind_address, consumer_context.consumer, ()=>{})
         }
       }
       producers_by_path.get( path ).foreach { x=>
@@ -374,7 +374,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       None
     }
 
-    def bind(bind_address:BindAddress, consumer:DeliveryConsumer, security:SecurityContext):Unit = {
+    def bind(bind_address:BindAddress, consumer:DeliveryConsumer, security:SecurityContext, on_bind:()=>Unit):Unit = {
 
       val context = consumers.getOrElseUpdate(consumer, new ConsumerContext[D](consumer))
       context.security = security
@@ -388,15 +388,26 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
         matches --= context.matched_destinations
         context.matched_destinations ++= matches
 
+        val remaining = new AtomicInteger(1)
+        var bind_release:()=>Unit = ()=> {
+          if( remaining.decrementAndGet() == 0 ) {
+            on_bind()
+          }
+        }
+
         matches.foreach { dest=>
           if( authorizer.can(security, bind_action(consumer), dest) ) {
-            dest.bind(bind_address, consumer)
+            remaining.incrementAndGet()
+            dest.bind(bind_address, consumer, bind_release)
             for( l <- router_listeners) {
               l.on_bind(dest, consumer, security)
             }
           }
         }
+        bind_release()
 
+      } else {
+        on_bind()
       }
 
     }
@@ -694,7 +705,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       "consume"
     }
 
-    override def bind(bind_address: BindAddress, consumer: DeliveryConsumer, security: SecurityContext) {
+    override def bind(bind_address: BindAddress, consumer: DeliveryConsumer, security: SecurityContext, on_bind: ()=>Unit) {
       destination_by_id.get(bind_address.id).foreach { queue =>
 
         // We may need to update the bindings...
@@ -716,12 +727,21 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
           case _ =>
         }
 
+        val remaining = new AtomicInteger(1)
+        var bind_release:()=>Unit = ()=> {
+          if( remaining.decrementAndGet() == 0 ) {
+            on_bind()
+          }
+        }
+
         if( authorizer.can(security, bind_action(consumer), queue) ) {
-          queue.bind(bind_address, consumer)
+          remaining.incrementAndGet()
+          queue.bind(bind_address, consumer, bind_release)
           for( l <- router_listeners) {
             l.on_bind(queue, consumer, security)
           }
         }
+        bind_release();
       }
     }
 
@@ -748,7 +768,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( queue.mirrored ) {
         // hook up the queue to be a subscriber of the topic.
         val topic = local_topic_domain.get_or_create_destination(SimpleAddress("topic", path), null).success
-        topic.bind(SimpleAddress("queue", path), queue)
+        topic.bind(SimpleAddress("queue", path), queue, ()=>{})
       }
     }
 
@@ -1012,25 +1032,26 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
   def topic_domain:Domain[_ <: DomainDestination] = local_topic_domain
   def dsub_domain:Domain[_ <: DomainDestination] = local_dsub_domain
 
-  def bind(addresses: Array[_ <: BindAddress], consumer: DeliveryConsumer, security: SecurityContext):Option[String] = {
+  def bind(addresses: Array[_ <: BindAddress], consumer: DeliveryConsumer, security: SecurityContext)(cb: (Option[String])=>Unit):Unit = {
     dispatch_queue.assertExecuting()
     if(!virtual_host.service_state.is_started) {
-      return Some("virtual host stopped.")
+      cb(Some("virtual host stopped."))
+      return
     } else {
       try {
         val actions = addresses.map { address =>
           address.domain match {
             case "topic" =>
               val allowed = topic_domain.can_bind_all(address, consumer, security)
-              def perform() = topic_domain.bind(address, consumer, security)
+              def perform(on_bind:()=>Unit) = topic_domain.bind(address, consumer, security, on_bind)
               (allowed, perform _)
             case "queue" =>
               val allowed = queue_domain.can_bind_all(address, consumer, security)
-              def perform() = queue_domain.bind(address, consumer, security)
+              def perform(on_bind:()=>Unit) = queue_domain.bind(address, consumer, security, on_bind)
               (allowed, perform _)
             case "dsub" =>
               val allowed = dsub_domain.can_bind_all(address, consumer, security)
-              def perform() = dsub_domain.bind(address, consumer, security)
+              def perform(on_bind:()=>Unit) = dsub_domain.bind(address, consumer, security, on_bind)
               (allowed, perform _)
             case _ => sys.error("Unknown domain: "+address.domain)
           }
@@ -1038,14 +1059,23 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
         val failures = actions.flatMap(_._1)
         if( !failures.isEmpty ) {
-          return Some(failures.mkString("; "))
+          cb(Some(failures.mkString("; ")))
+          return
         } else {
-          actions.foreach(_._2())
-          return None
+          val remaining = new AtomicInteger(actions.length+1)
+          var bind_release:()=>Unit = ()=> {
+            if( remaining.decrementAndGet() == 0 ) {
+              cb(None)
+            }
+          }
+          actions.foreach(_._2(bind_release))
+          bind_release()
+          return
         }
       } catch {
         case x:PathException =>
-          return Some(x.getMessage)
+          cb(Some(x.getMessage))
+          return
       }
     }
   }

@@ -1059,8 +1059,9 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
 
     host.dispatch_queue {
       addresses.foreach { address=>
-        host.router.bind(Array[BindAddress](address), mqtt_consumer, security_context)
+        host.router.bind(Array[BindAddress](address), mqtt_consumer, security_context) { result =>
         // MQTT ignores subscribe failures.
+        }
       }
       on_subscribed
     }
@@ -1093,7 +1094,8 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
           host.router.unbind(Array(session_state.durable_sub), mqtt_consumer, true, security_context)
           session_state.durable_sub = null
         } else {
-          host.router.bind(Array(session_state.durable_sub), mqtt_consumer, security_context)
+          host.router.bind(Array(session_state.durable_sub), mqtt_consumer, security_context) { result =>
+          }
         }
       }
       queue {

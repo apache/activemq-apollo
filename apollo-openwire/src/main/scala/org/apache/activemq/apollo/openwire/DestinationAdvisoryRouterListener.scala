@@ -121,7 +121,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
             super.on_connected
           }
         }
-        producer.bind(consumer::Nil)
+        producer.bind(consumer::Nil, ()=>{})
         producer.connected()
         for( info <- destination_advisories.values ) {
           producer.overflow_sink.offer(info)
