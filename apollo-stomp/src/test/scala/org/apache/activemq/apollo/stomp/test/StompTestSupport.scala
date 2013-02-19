@@ -76,7 +76,10 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     close(c)
   }
 
-  def close(c: StompClient = client) = c.close()
+  def close(c: StompClient = client) = {
+    c.close()
+    clients = clients.filterNot(_ == c)
+  }
 
   val receipt_counter = new AtomicLong()
 
