@@ -856,7 +856,9 @@ case class MqttSession(host_state:HostState, client_id:UTF8Buffer, session_state
   /////////////////////////////////////////////////////////////////////
   var producerRoutes = new LRUCache[UTF8Buffer, MqttProducerRoute](10) {
     override def onCacheEviction(eldest: Entry[UTF8Buffer, MqttProducerRoute]) = {
-      host.router.disconnect(Array(eldest.getValue.address), eldest.getValue)
+      host.dispatch_queue {
+        host.router.disconnect(Array(eldest.getValue.address), eldest.getValue)
+      }
     }
   }
   case class MqttProducerRoute(address:SimpleAddress, handler:MqttProtocolHandler) extends DeliveryProducerRoute(host.router) {

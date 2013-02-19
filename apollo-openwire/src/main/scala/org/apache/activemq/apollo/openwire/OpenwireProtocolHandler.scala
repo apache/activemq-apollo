@@ -97,7 +97,9 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   var producerRoutes = new LRUCache[ActiveMQDestination, OpenwireDeliveryProducerRoute](10) {
     override def onCacheEviction(eldest: Entry[ActiveMQDestination, OpenwireDeliveryProducerRoute]) = {
-      host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+      host.dispatch_queue {
+        host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
+      }
     }
   }
 
