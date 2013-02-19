@@ -519,12 +519,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           switch_to_swapped
         }
         fire_swap_out_watchers
-      } else {
-        if( remove_pending ) {
-          delivery.message.release
-          space -= delivery
-          super.remove
-        }
+      }
+      if( remove_pending ) {
+        remove_pending = false
+        delivery.message.release
+        space -= delivery
+        super.remove
       }
     }
 
@@ -532,6 +532,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       space -= delivery
       state = new Swapped(delivery.storeKey, delivery.storeLocator, size, expiration, redelivery_count, acquirer, sender)
       if( remove_pending ) {
+        remove_pending = false
         state.remove
       } else {
         if( can_combine_with_prev ) {

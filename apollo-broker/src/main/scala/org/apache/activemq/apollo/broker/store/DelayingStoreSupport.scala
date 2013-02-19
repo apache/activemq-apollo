@@ -116,6 +116,8 @@ trait DelayingStoreSupport extends Store with BaseService {
 
   class DelayableUOW extends BaseRetained with StoreUOW {
 
+    override def toString: String = uow_id.toString
+
     val owners = scala.collection.mutable.HashSet[String]()
 
     def release(owner: String) {
@@ -530,9 +532,6 @@ trait DelayingStoreSupport extends Store with BaseService {
         None
       } else {
         uow.state = UowFlushing
-        if(!( !locator_based || uow.have_locators )) {
-          println("crap")
-        }
         assert( !locator_based || uow.have_locators )
         // It will not be possible to cancel the UOW anymore..
         uow.actions.foreach { case (_, action) =>
