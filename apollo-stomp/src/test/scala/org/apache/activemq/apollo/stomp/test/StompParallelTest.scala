@@ -603,6 +603,9 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     subscribe("1", dest)
     subscribe("2", dest)
 
+    // Give the subs time to setup..
+    Thread.sleep(500L)
+
     var actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
 
     def send_receive = {
@@ -636,6 +639,8 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     // Add another subscriber, the groups should re-balance
     subscribe("3", dest)
+    // Give the sub time to setup..
+    Thread.sleep(500L)
 
     actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
     send_receive
