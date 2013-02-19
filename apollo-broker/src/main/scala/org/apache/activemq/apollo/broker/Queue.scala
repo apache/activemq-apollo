@@ -30,6 +30,7 @@ import security.{SecuredResource, SecurityContext}
 import org.apache.activemq.apollo.dto._
 import java.util.regex.Pattern
 import collection.mutable.ListBuffer
+import org.fusesource.hawtbuf.Buffer
 
 object Queue extends Log {
   val subscription_counter = new AtomicInteger(0)
@@ -712,12 +713,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         // Do we need to do a persistent enqueue???
         val uow = if( queue_delivery.persistent && tune_persistent ) {
           assert(delivery.uow !=null)
-          queue_delivery.uow = delivery.uow
+          val uow = delivery.uow
           entry.state match {
-            case state:entry.Loaded => state.store_enqueue
-            case state:entry.Swapped => queue_delivery.uow.enqueue(entry.toQueueEntryRecord)
+            case state:entry.Loaded => state.store_enqueue(uow)
+            case state:entry.Swapped => uow.enqueue(entry.toQueueEntryRecord)
           }
-          queue_delivery.uow
+          uow
         } else {
           null
         }
@@ -739,13 +740,12 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         }
 
         if( delivery.ack!=null ) {
-          delivery.ack(Consumed, queue_delivery.uow)
+          delivery.ack(Consumed, uow)
         }
 
         // release the store batch...
         if (uow != null) {
           uow.release(binding.binding_kind+":"+id+":offer")
-          queue_delivery.uow = null
         }
 
         

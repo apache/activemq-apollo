@@ -440,14 +440,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
     override  def as_loaded = this
 
-    def store_enqueue = {
+    def store_enqueue(uow:StoreUOW) = {
       assert(queue.service_state.is_starting_or_started)
       if(!enqueue_stored && !storing_enqueue) {
         storing_enqueue = true
-        assert( delivery.uow!=null )
-        delivery.uow.enqueue(toQueueEntryRecord)
+        assert( uow!=null )
+        uow.enqueue(toQueueEntryRecord)
         queue.swapping_out_size+=size
-        delivery.uow.on_flush { canceled =>
+        uow.on_flush { canceled =>
           queue.swap_out_completes_source.merge(^{
             this.swapped_out(!canceled)
             queue.swapping_out_size-=size
@@ -465,25 +465,25 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           switch_to_swapped
         } else {
           swapping_out=true
-          delivery.uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":swap_out", delivery.uow)
+          val uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":swap_out")
 
           // Are we swapping out a non-persistent message?
           val flush = if( delivery.storeKey == -1 ) {
             delivery.storeLocator = new AtomicReference[Object]()
-            delivery.storeKey = delivery.uow.store(delivery.createMessageRecord )
+            delivery.storeKey = uow.store(delivery.createMessageRecord )
             false
           } else {
             true
           }
-          store_enqueue
+          store_enqueue(uow)
           if( asap ) {
             if ( flush ) {
               queue.virtual_host.store.flush_message(delivery.storeKey) {}
             } else {
-              delivery.uow.complete_asap
+              uow.complete_asap
             }
           }
-          delivery.uow.release(queue.binding.binding_kind+":"+queue.id+":swap_out")
+          uow.release(queue.binding.binding_kind+":"+queue.id+":swap_out")
         }
       }
     }
@@ -508,8 +508,6 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       } else {
         delivery.storeKey = -1
       }
-
-      delivery.uow = null
 
       if( swapping_out ) {
         swapping_out = false
