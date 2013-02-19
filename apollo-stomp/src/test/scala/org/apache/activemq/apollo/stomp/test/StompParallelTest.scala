@@ -540,6 +540,10 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     subscribe("1", "/queue/load-balanced")
     subscribe("2", "/queue/load-balanced")
 
+    // Lets sleep a little to make sure the subscriptions are full
+    // established before we start sending messages to them.
+    Thread.sleep(500)
+
     for (i <- 0 until 4) {
       async_send("/queue/load-balanced", "message:" + i)
     }
