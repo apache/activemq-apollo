@@ -22,12 +22,12 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>1.6</version>
+    <version>99-trunk-SNAPSHOT</version>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-scala</artifactId>
-  <version>1.6</version>
+  <version>99-trunk-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>${project.artifactId}</name>
