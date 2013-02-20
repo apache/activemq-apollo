@@ -1619,21 +1619,12 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       connect("1.1")
       async_send(dest, "m1")
 
-      client.write(
-        "BEGIN\n" +
-        "transaction:x\n" +
-        "\n")
-
-      async_send(dest, "t1", "transaction:x\n")
+      val tx = begin()
+      async_send(dest, "t1", "transaction:"+tx+"\n")
       async_send(dest, "m2")
-      async_send(dest, "t2", "transaction:x\n")
+      async_send(dest, "t2", "transaction:"+tx+"\n")
+      commit(tx)
 
-      client.write(
-        "COMMIT\n" +
-        "transaction:x\n" +
-        "receipt:0\n"+
-        "\n")
-      wait_for_receipt("0")
       async_send(dest, "m3")
 
       assert_received("m1",c=receiver)
@@ -1643,6 +1634,62 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       assert_received("m3",c=receiver)
     }
   }
+
+  for( kind <- Array("/queue/", "/topic/", "/topic/queued.")) {
+    test("Transaction commit acks on "+kind) {
+
+      val dest = next_id(kind+"tx-commit-acks-")
+
+      val receiver = connect("1.1", new StompClient)
+      subscribe("mysub",dest,mode="client",c=receiver)
+
+      connect("1.1")
+
+      async_send(dest, "m1")
+      async_send(dest, "m2")
+      async_send(dest, "m3")
+      async_send(dest, "m4")
+
+      val tx = begin(c=receiver)
+      assert_received("m1",c=receiver)(true)
+      assert_received("m2",c=receiver, txid=tx)(true)
+      assert_received("m3",c=receiver)(true)
+      assert_received("m4",c=receiver, txid=tx)(true)
+      commit(tx, c=receiver)
+
+      async_send(dest, "m5")
+      assert_received("m5",c=receiver)
+    }
+  }
+
+  for( kind <- Array("/queue/", "/topic/", "/topic/queued.")) {
+    test("Transaction abort acks on "+kind) {
+
+      val dest = next_id(kind+"tx-abort-acks-")
+
+      val receiver = connect("1.1", new StompClient)
+      subscribe("mysub",dest,mode="client",c=receiver)
+
+      connect("1.1")
+
+      async_send(dest, "m1")
+      async_send(dest, "m2")
+      async_send(dest, "m3")
+      async_send(dest, "m4")
+
+      val tx = begin(c=receiver)
+      assert_received("m1",c=receiver)(true)
+      assert_received("m2",c=receiver, txid=tx)(true)
+      assert_received("m3",c=receiver)(true)
+      assert_received("m4",c=receiver, txid=tx)(true)
+      abort(tx, c=receiver)
+
+      // aborting a tx does not cause a redelivery to occur.
+      async_send(dest, "m5")
+      assert_received("m5",c=receiver)
+    }
+  }
+
 
   for( kind <- Array("/queue/", "/topic/", "/topic/queued.")) {
     test("Sending already expired message to "+kind) {
@@ -1663,4 +1710,5 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       assert_received("m2",c=receiver)
     }
   }
+
 }

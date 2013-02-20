@@ -104,6 +104,38 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
               body)
   }
 
+  def begin(txid: String="x", c: StompClient = client) = {
+    c.write(
+      "BEGIN\n" +
+      "transaction:"+txid+"\n" +
+      "\n")
+    txid
+  }
+
+  def abort(txid: String="x", sync:Boolean=true, c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    c.write(
+      "ABORT\n" +
+      "transaction:"+txid+"\n" +
+      (if (sync) "receipt:" + rid + "\n" else "") +
+      "\n")
+    if (sync) {
+      wait_for_receipt("" + rid, c)
+    }
+  }
+
+  def commit(txid: String="x", sync:Boolean=true, c: StompClient = client) = {
+    val rid = receipt_counter.incrementAndGet()
+    c.write(
+      "COMMIT\n" +
+      "transaction:"+txid+"\n" +
+      (if (sync) "receipt:" + rid + "\n" else "") +
+      "\n")
+    if (sync) {
+      wait_for_receipt("" + rid, c)
+    }
+  }
+
   def subscribe(id: String, dest: String, mode: String = "auto", persistent: Boolean = false, headers: String = "", sync: Boolean = true, c: StompClient = client) = {
     val rid = receipt_counter.incrementAndGet()
     c.write(
