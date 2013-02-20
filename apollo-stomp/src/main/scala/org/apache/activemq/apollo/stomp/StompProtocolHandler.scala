@@ -1169,17 +1169,20 @@ class StompProtocolHandler extends ProtocolHandler {
       }
     }
 
+    var routing_items = 0
 
     override def offer(delivery: Delivery): Boolean = {
       if( full )
         return false
       routing_size += delivery.size
+      routing_items += 1
       val original_ack = delivery.ack
       delivery.ack = (result, uow) => {
         dispatch_queue.assertExecuting()
         if ( original_ack!=null ) {
           original_ack(result, uow)
         }
+        routing_items -= 1
         routing_size -= delivery.size
         if( routing_size==0 && !pending_routing_empty_callbacks.isEmpty) {
           val t = pending_routing_empty_callbacks
@@ -1216,7 +1219,7 @@ class StompProtocolHandler extends ProtocolHandler {
     import collection.JavaConversions._
     val expired = ListBuffer[StompProducerRoute]()
     for( route <- producer_routes.values() ) {
-      if( (now - route.last_send) > 2000 ) {
+      if( (now - route.last_send) > 2000 && route.routing_items==0 ) {
         expired += route
       }
     }
