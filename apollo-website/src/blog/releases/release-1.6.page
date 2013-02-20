@@ -15,27 +15,34 @@
 # limitations under the License.
 
 blog_post: true
-title: Apollo 1.4
+title: Apollo 1.6
 author: Hiram Chirino
 author_url: http://fusesource.com
-created_at: 2012-09-05 12:06:40 -0000
+created_at: 2013-02-24 12:06:40 -0000
 --- 
 
 The [Apache ActiveMQ Project](http://activemq.apache.org) is pleased to announce the 
-availability of Apollo 1.4. ActiveMQ Apollo is a faster, more reliable, easier 
+availability of Apollo 1.6. ActiveMQ Apollo is a faster, more reliable, easier 
 to maintain messaging broker built from the foundations of the original ActiveMQ. 
 
 This release fixes several bugs especially around Openwire and WebSockets and introduces a few
 improvements like:
 
-* [APLO-206] - Load balance of job queues when 'credit:1,0' is used on the consumer.
-* [APLO-212] - Allow topic deletion via the REST API
+* [APLO-275] - Add AMQP 1.0 Protocol Support
+* [APLO-273] - STOMP 1.1 Over WebSocket
+* [APLO-268] - Examples for stompest Python STOMP client
+* [APLO-280] - Clarification about message groups
+* [APLO-19]  - Support message groups
+* [APLO-271] - Integrate jolokia into Apollo for nice REST based access to JMX.
+* [APLO-272] - Support creating topics and queues via the REST management api.
+* [APLO-274] - Support accessing environment variables via \${env.*} references in the the config file.
+* [APLO-278] - Support option on queues to control if a round robin message distribution strategy should be used when multiple consumer are attached to the queue.
 
 For further information see:
 
 * [Download](${website_base_url}/download.html)
-* [Issues Fixed](https://issues.apache.org/jira/secure/ReleaseNote.jspa?version=12320770&styleName=Text&projectId=12311310&Create=Create)
-* [Documentation](${website_base_url}/versions/1.4/website/documentation)
+* [Issues Fixed](https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12311310&version=12322470)
+* [Documentation](${website_base_url}/versions/1.6/website/documentation)
 
 [Feedback](http://activemq.apache.org/community/index.html) is always welcomed! 
 
