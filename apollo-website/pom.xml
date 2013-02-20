@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.6</version>
     <relativePath>..</relativePath>
   </parent>
   
@@ -182,7 +182,7 @@
             <configuration>
               <tasks>
                 <mkdir dir="${basedir}/target/sitegen/documentation/schema" />
-                <copy file="${basedir}/../apollo-dto/target/schema/org/apache/activemq/apollo/dto/apollo.xsd" tofile="${basedir}/target/sitegen/documentation/schema/apollo.xsd"/>
+                <copy file="${basedir}/../apollo-dto/target/schema/org/apache/activemq/apollo/dto/apollo.xsd" tofile="${basedir}/target/sitegen/documentation/schema/apollo.xsd" />
               </tasks>
             </configuration>
             <goals>
