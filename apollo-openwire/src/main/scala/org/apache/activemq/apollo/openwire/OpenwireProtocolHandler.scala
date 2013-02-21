@@ -653,7 +653,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         val route = OpenwireDeliveryProducerRoute(addresses)
 
         if( uow!=null ) {
-          uow.retain(toString)
+          uow.retain
         }
         // don't process frames until producer is connected...
         suspend_read("connecting producer route")
@@ -671,7 +671,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
                 }
             }
             if( uow!=null ) {
-              uow.release(toString)
+              uow.release
             }
           }
         }
@@ -1243,7 +1243,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     def commit(onComplete: => Unit) = {
 
       val uow = if( host.store!=null ) {
-        host.store.create_uow(toString)
+        host.store.create_uow
       } else {
         null
       }
@@ -1254,7 +1254,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       if( uow!=null ) {
         uow.on_complete(dispatchQueue{ onComplete })
-        uow.release(toString)
+        uow.release
       } else {
         onComplete
       }

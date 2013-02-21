@@ -1231,7 +1231,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  var producer_routes = new LRUCache[AsciiBuffer, StompProducerRoute](10) {
+  var producer_routes = new LRUCache[AsciiBuffer, StompProducerRoute](1) {
     override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
       host.dispatch_queue {
         host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
@@ -1249,7 +1249,7 @@ class StompProtocolHandler extends ProtocolHandler {
         val route = new StompProducerRoute(trimmed_dest)   // don't process frames until producer is connected...
         suspend_read("Connecting to destination")
         if( uow !=null ) {
-          uow.retain(toString+":connecting")
+          uow.retain
         }
         host.dispatch_queue {
           val rc = host.router.connect(route.addresses, route, security_context)
@@ -1266,7 +1266,7 @@ class StompProtocolHandler extends ProtocolHandler {
                 }
             }
             if( uow !=null ) {
-              uow.release(toString+":connecting")
+              uow.release
             }
           }
         }
@@ -1703,14 +1703,14 @@ class StompProtocolHandler extends ProtocolHandler {
 
     def commit(on_complete: => Unit) = {
       if( host.store!=null ) {
-        val uow = host.store.create_uow(toString+":commit")
+        val uow = host.store.create_uow
 //        println("UOW starting: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
         uow.on_complete {
 //          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
           on_complete
         }
         queue.foreach{ _._1(uow) }
-        uow.release(toString+":commit")
+        uow.release
       } else {
         queue.foreach{ _._1(null) }
         on_complete

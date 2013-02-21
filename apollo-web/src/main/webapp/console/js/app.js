@@ -229,9 +229,24 @@ App.LoginController = Em.Controller.create({
     var was_logged_in = this.get('is_logged_in')
     var kind = this.get('kind')
     App.ajax("GET", "/session/whoami", function(data) {
-        App.LoginController.set('content', data);
-        if( App.LoginController.get('is_logged_in') ) {
-          App.refresh();
+        if( data.length==0 ) {
+          App.ajax("GET", "/broker", function(broker) {
+            data.push({kind:"UserPrincipal", name:"<anonymous>"});
+            App.LoginController.set('content', data);
+            if( App.LoginController.get('is_logged_in') ) {
+              App.refresh();
+            }
+          }, function(error){
+            App.LoginController.set('content', data);
+            if( App.LoginController.get('is_logged_in') ) {
+              App.refresh();
+            }
+          });
+        } else {
+          App.LoginController.set('content', data);
+          if( App.LoginController.get('is_logged_in') ) {
+            App.refresh();
+          }
         }
       },
       function(xhr, status, thrown) {
@@ -778,7 +793,7 @@ App.ConfigurationController = Ember.Controller.create({
       App.ConfigurationController.set("files", json);
     },
     function(xhr, status, thrown) {
-      if( xhr.status == 401 ) {
+      if( xhr.status == 401 || xhr.status == 404 ) {
         App.ConfigurationController.set("files", null);
       } else {
         App.default_error_handler(xhr, status, thrown)

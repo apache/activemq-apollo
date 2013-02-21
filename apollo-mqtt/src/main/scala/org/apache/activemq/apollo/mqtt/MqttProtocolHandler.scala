@@ -466,7 +466,7 @@ object MqttSessionManager {
     case class StoreStrategy(store:Store, client_id:UTF8Buffer) extends StorageStrategy {
       val session_key = new UTF8Buffer("mqtt:"+client_id)
       def update(cb: =>Unit) = {
-        val uow = store.create_uow(toString)
+        val uow = store.create_uow
         val session_pb = new SessionPB.Bean
         session_pb.setClientId(client_id)
         received_message_ids.foreach(session_pb.addReceivedMessageIds(_))
@@ -485,11 +485,11 @@ object MqttSessionManager {
             cb
           }
         }
-        uow.release(toString)
+        uow.release
       }
 
       def destroy(cb: =>Unit) {
-        val uow = store.create_uow(toString)
+        val uow = store.create_uow
         uow.put(session_key, null)
         val current = getCurrentQueue
         uow.on_complete {
@@ -498,7 +498,7 @@ object MqttSessionManager {
             cb
           }
         }
-        uow.release(toString)
+        uow.release
       }
       def create(store:Store, client_id:UTF8Buffer) = {
       }

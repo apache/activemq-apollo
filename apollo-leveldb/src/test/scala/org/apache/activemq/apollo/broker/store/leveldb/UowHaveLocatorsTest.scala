@@ -45,7 +45,7 @@ class UowHaveLocatorsTest extends StoreFunSuiteSupport {
 
   test("APLO-201: Persistent Store: UOW with message locator and no message (previously flushed)"){
     val queue = add_queue("A")
-    val batch = store.create_uow("")
+    val batch = store.create_uow
     val m1 = add_message(batch, "Hello!")
     val queueEntryRecord: QueueEntryRecord =  entry(queue, 1, m1)
     batch.enqueue(queueEntryRecord)
@@ -53,7 +53,7 @@ class UowHaveLocatorsTest extends StoreFunSuiteSupport {
     var tracker = new TaskTracker("uknown", 0)
     var task = tracker.task("uow complete")
     batch.on_complete(task.run)
-    batch.release("")
+    batch.release
 
     assert(queueEntryRecord.message_locator.get() == null)
 
@@ -62,13 +62,13 @@ class UowHaveLocatorsTest extends StoreFunSuiteSupport {
     }
     assert(queueEntryRecord.message_locator.get() != null)
 
-    val batch2 = store.create_uow("")
+    val batch2 = store.create_uow
     batch2.enqueue(queueEntryRecord)
 
     tracker = new TaskTracker("uknown", 0)
     task = tracker.task("uow complete")
     batch2.on_complete(task.run)
-    batch2.release("")
+    batch2.release
 
     expect(true) {
       tracker.await(2, TimeUnit.SECONDS)

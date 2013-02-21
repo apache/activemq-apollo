@@ -86,11 +86,11 @@ case class PersistentLongCounter(name:String, increment:Long=1000) {
   def update(value: Long)(on_complete: =>Unit) {
     val s = store
     if (s!=null) {
-      val uow = s.create_uow(toString)
+      val uow = s.create_uow
       uow.put(key, encode(value))
       uow.complete_asap()
       uow.on_complete(on_complete)
-      uow.release(toString)
+      uow.release
     }
   }
 

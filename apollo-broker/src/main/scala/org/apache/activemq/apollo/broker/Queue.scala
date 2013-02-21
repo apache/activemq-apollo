@@ -591,8 +591,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
 
   def is_topic_queue = resource_kind eq TopicQueueKind
-  def create_uow(owner:String):StoreUOW = if(virtual_host.store==null) null else virtual_host.store.create_uow(owner)
-  def create_uow(owner:String, uow:StoreUOW):StoreUOW = if(uow==null) create_uow(owner) else {uow.retain(owner); uow}
+  def create_uow:StoreUOW = if(virtual_host.store==null) null else virtual_host.store.create_uow
+  def create_uow(uow:StoreUOW):StoreUOW = if(uow==null) create_uow else {uow.retain; uow}
 
   object messages extends Sink[(Session[Delivery], Delivery)] {
     def stall_check = {}
@@ -692,7 +692,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           }
           if( delivery.persistent && tune_persistent ) {
             assert(delivery.uow!=null)
-            delivery.uow.release(binding.binding_kind+":"+id+":offer")
+            delivery.uow.release
           }
           return true
         }
@@ -746,7 +746,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
         // release the store batch...
         if (uow != null) {
-          uow.release(binding.binding_kind+":"+id+":offer")
+          uow.release
         }
 
         
@@ -844,7 +844,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // remove the expired message if it has not been
             // acquired.
             if( !state.is_acquired ) {
-              val uow = create_uow(binding.binding_kind+":"+id+":swap")
+              val uow = create_uow
               entry.dequeue(uow)
               expired(uow, entry) {
                 if( entry.isLinked ) {
@@ -856,7 +856,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             // remove the expired message if it has not been
             // acquired.
             if( !state.is_acquired ) {
-              val uow = create_uow(binding.binding_kind+":"+id+":swap")
+              val uow = create_uow
               entry.dequeue(uow)
               expired(uow, entry) {
                 if( entry.isLinked ) {
@@ -1088,7 +1088,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
         delivery.uow = if(delivery.storeKey == -1) {
           null
         } else {
-          create_uow(binding.binding_kind+":"+id+":dlq", original_uow)
+          create_uow(original_uow)
         }
         delivery.expiration=0
 
@@ -1107,7 +1107,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
               val (delivery, callback) = value;
               callback(delivery.uow)
               if( delivery.uow!=null ) {
-                delivery.uow.release(binding.binding_kind+":"+id+":dlq")
+                delivery.uow.release
                 delivery.uow = null
               }
             }
@@ -1148,11 +1148,11 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           case Consumed =>
             entry.ack(uow)
           case Expired=>
-            val actual = create_uow(binding.binding_kind+":"+id+":ack", uow)
+            val actual = create_uow(uow)
             expired(actual, entry.entry) {
               entry.ack(actual)
             }
-            actual.release(binding.binding_kind+":"+id+":ack")
+            actual.release
           case Delivered =>
             entry.increment_nack
             entry.entry.redelivered
@@ -1172,7 +1172,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             }
         }
         if( uow!=null ) {
-          uow.release(binding.binding_kind+":"+id+":ack-merge:"+entry.entry.seq)
+          uow.release
         }
     }
   }
@@ -1220,7 +1220,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           delivery.message.retain
         }
         if( delivery.persistent && tune_persistent ) {
-          delivery.uow = create_uow(binding.binding_kind+":"+id+":offer", delivery.uow)
+          delivery.uow = create_uow(delivery.uow)
         }
         val rc = downstream.offer(delivery)
         assert(rc, "session should accept since it was not full")

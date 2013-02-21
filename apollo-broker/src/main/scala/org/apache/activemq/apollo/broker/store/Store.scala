@@ -123,7 +123,7 @@ trait Store extends ServiceTrait {
    * Creates a store uow which is used to perform persistent
    * operations as unit of work.
    */
-  def create_uow(owner:String):StoreUOW
+  def create_uow:StoreUOW
 
   /**
    * Removes all previously stored data.

@@ -1250,14 +1250,14 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     def commit(on_complete: => Unit) = {
       if( host.store!=null ) {
-        val uow = host.store.create_uow(toString)
+        val uow = host.store.create_uow
 //        println("UOW starting: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
         uow.on_complete {
 //          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
           on_complete
         }
         queue.foreach{ _._1(uow) }
-        uow.release(toString)
+        uow.release
       } else {
         queue.foreach{ _._1(null) }
         on_complete

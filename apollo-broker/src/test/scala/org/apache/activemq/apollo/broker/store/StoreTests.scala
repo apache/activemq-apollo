@@ -119,7 +119,7 @@ abstract class StoreTests extends StoreFunSuiteSupport {
   test("batch completes after a delay") {x}
   def x = {
     val A = add_queue("A")
-    var batch = store.create_uow("")
+    var batch = store.create_uow
 
     val m1 = add_message(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))
@@ -127,7 +127,7 @@ abstract class StoreTests extends StoreFunSuiteSupport {
     val tracker = new TaskTracker("unknown", 0)
     val task = tracker.task("uow complete")
     batch.on_complete(task.run)
-    batch.release("")
+    batch.release
 
     expect(false) {
       tracker.await(3, TimeUnit.SECONDS)
@@ -139,7 +139,7 @@ abstract class StoreTests extends StoreFunSuiteSupport {
 
   test("flush cancels the delay") {
     val A = add_queue("A")
-    var batch = store.create_uow("")
+    var batch = store.create_uow
 
     val m1 = add_message(batch, "message 1")
     batch.enqueue(entry(A, 1, m1))
@@ -147,7 +147,7 @@ abstract class StoreTests extends StoreFunSuiteSupport {
     val tracker = new TaskTracker("unknown", 0)
     val task = tracker.task("uow complete")
     batch.on_complete(task.run)
-    batch.release("")
+    batch.release
 
     store.flush_message(m1._1) {}
 

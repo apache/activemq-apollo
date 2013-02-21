@@ -108,36 +108,11 @@ trait DelayingStoreSupport extends Store with BaseService {
   // Implementation of the StoreBatch interface
   //
   /////////////////////////////////////////////////////////////////////
-  def create_uow(owner:String) = {
-    val rc = new DelayableUOW
-    rc.owners.add(owner)
-    rc
-  }
+  def create_uow = new DelayableUOW
 
   class DelayableUOW extends BaseRetained with StoreUOW {
 
     override def toString: String = uow_id.toString
-
-    val owners = scala.collection.mutable.HashSet[String]()
-
-    def release(owner: String) {
-      this.synchronized {
-        if( !owners.remove(owner) ) {
-          warn("UOW owner already removed! "+owner)
-        }
-      }
-      super.release()
-    }
-
-    def retain(owner: String) {
-      this.synchronized {
-        if( !owners.add(owner) ) {
-          warn("UOW owner already added! "+owner)
-        }
-      }
-      owners.add(owner)
-      super.retain()
-    }
 
     class MessageAction {
 
@@ -387,7 +362,7 @@ trait DelayingStoreSupport extends Store with BaseService {
     out.println("--- Pending Stores Details ---")
     out.println("flush_source suspended: "+flush_source.isSuspended)
     pending_stores.valuesIterator.foreach{ action =>
-      out.println("uow: %d, state:%s, owners:%s".format(action.uow.uow_id, action.uow.state, action.uow.owners))
+      out.println("uow: %d, state:%s".format(action.uow.uow_id, action.uow.state))
     }
     writer.toString
   }

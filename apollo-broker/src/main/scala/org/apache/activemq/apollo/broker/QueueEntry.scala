@@ -205,9 +205,9 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
   def dequeue(uow: StoreUOW) = {
     if ( queued ) {
       if (messageKey != -1) {
-        val actual_uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":dequeue", uow)
+        val actual_uow = queue.create_uow(uow)
         actual_uow.dequeue(toQueueEntryRecord)
-        actual_uow.release(queue.binding.binding_kind+":"+queue.id+":dequeue")
+        actual_uow.release
       }
       queue.dequeue_item_counter += 1
       queue.dequeue_size_counter += size
@@ -465,7 +465,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           switch_to_swapped
         } else {
           swapping_out=true
-          val uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":swap_out")
+          val uow = queue.create_uow
 
           // Are we swapping out a non-persistent message?
           val flush = if( delivery.storeKey == -1 ) {
@@ -483,7 +483,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
               uow.complete_asap
             }
           }
-          uow.release(queue.binding.binding_kind+":"+queue.id+":swap_out")
+          uow.release
         }
       }
     }
@@ -570,14 +570,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       queue.assert_executing
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
-        val uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":dispatch-expired")
+        val uow = queue.create_uow
         entry.dequeue(uow)
         queue.expired(uow, entry) {
           if( isLinked ) {
             remove
           }
         }
-        uow.release(queue.binding.binding_kind+":"+queue.id+":dispatch-expired")
+        uow.release
         return true
       }
 
@@ -669,7 +669,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
                 acquiredDelivery.ack = (consumed, uow)=> {
                   if( uow!=null ) {
-                    uow.retain(queue.binding.binding_kind+":"+queue.id+":ack-merge:"+seq)
+                    uow.retain
                   }
                   queue.ack_source.merge((acquiredQueueEntry, consumed, uow))
                 }
@@ -840,14 +840,14 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
       queue.assert_executing
 
       if( !is_acquired && expiration != 0 && expiration <= queue.now ) {
-        val uow = queue.create_uow(queue.binding.binding_kind+":"+queue.id+":expire")
+        val uow = queue.create_uow
         entry.dequeue(uow)
         queue.expired(uow, entry) {
           if( isLinked ) {
             remove
           }
         }
-        uow.release(queue.binding.binding_kind+":"+queue.id+":expire")
+        uow.release
         return true
       }
 
