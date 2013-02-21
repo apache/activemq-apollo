@@ -639,6 +639,11 @@ A `leveldb_store` element may be configured with the following attributes:
    Can be `snappy` or `none`. The value defaults to `snappy`.
 * `log_compression` : The type of compression to apply to the log records.  
    Can be `snappy` or `none`. The value defaults to `snappy`.
+* `auto_compaction_ratio`: This ratio is used to determine when to compact 
+   the leveldb indexes.  When you take the ratio of disk space used by the leveldb 
+   indexes to the number queue entries and it exceeds the configured 
+   `auto_compaction_ratio` then the leveldb index will be scheduled for compaction.
+   If set to 0, then auto compactions are disabled.  The value defaults to 100.
 
 ### Support Platforms
 

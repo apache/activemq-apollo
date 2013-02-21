@@ -78,6 +78,9 @@ public class LevelDBStoreDTO extends StoreDTO {
     @XmlAttribute(name="index_factory")
     public String index_factory;
 
+    @XmlAttribute(name="auto_compaction_ratio")
+    public Integer auto_compaction_ratio;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

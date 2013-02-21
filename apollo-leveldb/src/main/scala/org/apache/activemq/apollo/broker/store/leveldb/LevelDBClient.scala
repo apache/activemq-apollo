@@ -71,6 +71,7 @@ object LevelDBClient extends Log {
 
   final val LOG_SUFFIX = ".log"
   final val INDEX_SUFFIX = ".index"
+  var auto_compaction_ratio = 100
 
   def bytes(value: String) = value.getBytes("UTF-8")
 
@@ -251,6 +252,7 @@ class LevelDBClient(store: LevelDBStore) {
     index_options.createIfMissing(true);
     val paranoid_checks = config.paranoid_checks.getOrElse(false)
 
+    auto_compaction_ratio = OptionSupport(config.auto_compaction_ratio).getOrElse(100)
     config.index_max_open_files.foreach(index_options.maxOpenFiles(_))
     config.index_block_restart_interval.foreach(index_options.blockRestartInterval(_))
     index_options.paranoidChecks(paranoid_checks)
@@ -1151,9 +1153,13 @@ class LevelDBClient(store: LevelDBStore) {
     }
   }
 
+  // APLO-245: lets try to detect when leveldb needs a compaction..
+  def detect_if_compact_needed:Unit = {
 
-  def detect_if_compact_needed = {
-    // APLO-245: lets try to detect when leveldb needs a compaction..
+    // auto compaction might be disabled...
+    if ( auto_compaction_ratio <= 0 ) {
+      return
+    }
 
     // How much space is the dirty index using??
     var index_usage = 0L
@@ -1174,7 +1180,7 @@ class LevelDBClient(store: LevelDBStore) {
 
       // After running some load we empirically found that a healthy ratio is between 12 and 25 bytes per entry.
       // lets compact if we go way over the healthy ratio.
-      if( ratio > 100 ) {
+      if( ratio > auto_compaction_ratio ) {
         index.compact_needed = true
       }
     } else if( index_usage > 1024*1024*5 )  {
@@ -1195,9 +1201,11 @@ class LevelDBClient(store: LevelDBStore) {
 
     // Lets compact the leveldb index if it looks like we need to.
     if( index.compact_needed ) {
-      info("Compacting the leveldb index at: "+dirty_index_file)
+      debug("Compacting the leveldb index at: %s", dirty_index_file)
+      val start = System.nanoTime()
       index.compact
-      info("Compaction completed")
+      val duration = System.nanoTime() - start;
+      info("Compacted the leveldb index at: %s in %.2f ms", dirty_index_file, (duration / 1000000.0))
     }
     val empty_journals = log.log_infos.keySet.toSet -- log_refs.keySet
 
