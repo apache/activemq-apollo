@@ -1172,7 +1172,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
             }
         }
         if( uow!=null ) {
-          uow.release(binding.binding_kind+":"+id+":ack-merge")
+          uow.release(binding.binding_kind+":"+id+":ack-merge:"+entry.entry.seq)
         }
     }
   }

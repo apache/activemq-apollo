@@ -669,7 +669,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
 
                 acquiredDelivery.ack = (consumed, uow)=> {
                   if( uow!=null ) {
-                    uow.retain(queue.binding.binding_kind+":"+queue.id+":ack-merge")
+                    uow.retain(queue.binding.binding_kind+":"+queue.id+":ack-merge:"+seq)
                   }
                   queue.ack_source.merge((acquiredQueueEntry, consumed, uow))
                 }
