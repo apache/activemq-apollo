@@ -121,15 +121,19 @@ trait DelayingStoreSupport extends Store with BaseService {
     val owners = scala.collection.mutable.HashSet[String]()
 
     def release(owner: String) {
-      if( !owners.remove(owner) ) {
-        warn("UOW owner already removed! "+owner)
+      this.synchronized {
+        if( !owners.remove(owner) ) {
+          warn("UOW owner already removed! "+owner)
+        }
       }
       super.release()
     }
 
     def retain(owner: String) {
-      if( !owners.add(owner) ) {
-        warn("UOW owner already added! "+owner)
+      this.synchronized {
+        if( !owners.add(owner) ) {
+          warn("UOW owner already added! "+owner)
+        }
       }
       owners.add(owner)
       super.retain()
