@@ -90,7 +90,7 @@ configure it to use this [apollo.xsd](schema/apollo.xsd) file.
 The simplest valid `apollo.xml` defines a single virtual host and a
 single connector.
 
-{pygmentize:: xml}
+{pygmentize:: xml}                           s
 <broker xmlns="http://activemq.apache.org/schema/activemq/apollo">
 
   <virtual_host id="default">
@@ -161,10 +161,12 @@ A `connector` element can be configured with the following attributes
    supported protocols can connect via this transport.
 
 * `receive_buffer_size` : Sets the size of the internal socket receive 
-   buffer (aka setting the socket's SO_RCVBUF).  
+   buffer (aka setting the socket's SO_RCVBUF) to a fixed value, and auto
+   tuning will not be used.
 
 * `send_buffer_size` : Sets the size of the internal socket send buffer
-  (aka setting the socket's SO_SNDBUF).  
+  (aka setting the socket's SO_SNDBUF) to a fixed value, and auto-tuning
+  will not be used.
 
 When the `receive_buffer_size` or `send_buffer_size` attributes are not set, 
 then the broker will 'auto-tune' them to be between '64k' and '2k' based on the
@@ -211,7 +213,7 @@ and port to determine to which local interfaces to bind.  For example:
 * `tcp://127.0.0.1:0` binds to the loopback interface on a dynamic port
 
 The TCP URI also supports several query parameters to fine tune the
-settings used on the socket.  The supported parameters are:
+settings used on the socket at the time of creation.  The supported parameters are:
 
 * `backlog` : Sets the listen backlog size.  Defaults to 100.
 
@@ -229,6 +231,10 @@ settings used on the socket.  The supported parameters are:
 * `max_write_rate` : Sets the maximum bytes per second that this transport will
   send data at.  This setting throttles writes so that the rate is not exceeded.
   Defaults to 0 which disables throttling.
+* `receive_buffer_size` : Sets the size of the internal socket receive
+  buffer (aka setting the socket's SO_RCVBUF)
+* `send_buffer_size` : Sets the size of the internal socket send buffer
+  (aka setting the socket's SO_SNDBUF)
   
 Example which uses a couple of options:
 
@@ -237,7 +243,10 @@ Example which uses a couple of options:
 {pygmentize}
 
 Note that `&amp;` was used to separate the option values instead of just `&` since the 
-URI being written within an XML file.
+URI being written within an XML file. Also note that using `receive_buffer_size` and `send_buffer_size`
+in the URI string is slightly different than as an attribute of the `<connectors>` element. In the URI
+string, we specify what the buffer sizes should be when the socket is created, while when set on the
+`<connector>` element, we specify the value to use instead of relying on auto-tuning.
 
 ##### WebSocket Transports
 
