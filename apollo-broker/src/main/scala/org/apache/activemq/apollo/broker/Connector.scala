@@ -137,6 +137,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
   var dead_messages_received:Long = 0
   var dead_read_counter:Long = 0
   var dead_write_counter:Long = 0
+  var receive_buffer_auto_tune = true;
+  var send_buffer_auto_tune = true;
 
   def status = {
     val result = new ConnectorStatusDTO
@@ -235,8 +237,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     def mem_size(value:String) = Option(value).map(MemoryPropertyEditor.parse(_).toInt)
 
     assert(config!=null, "Connector must be configured before it is started.")
-    send_buffer_size = mem_size(config.send_buffer_size)
-    receive_buffer_size = mem_size(config.receive_buffer_size)
+    receive_buffer_auto_tune = config.receive_buffer_auto_tune
+    send_buffer_auto_tune = config.send_buffer_auto_tune
 
     accepted.set(0)
     connected.set(0)
@@ -282,22 +284,28 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     transport_server match {
       case transport_server: TcpTransportServer =>
 
-        val next_receive_buffer_size = receive_buffer_size.getOrElse(broker.auto_tuned_send_receiver_buffer_size)
-        if( next_receive_buffer_size!=last_receive_buffer_size ) {
-          debug("%s connector receive_buffer_size set to: %d", id, next_receive_buffer_size)
+        if(receive_buffer_auto_tune){
+          val next_receive_buffer_size = broker.auto_tuned_send_receiver_buffer_size
+          if( next_receive_buffer_size!=last_receive_buffer_size ) {
+            debug("%s connector receive_buffer_size set to: %d", id, next_receive_buffer_size)
 
-          // lets avoid updating the socket settings each period.
-          transport_server.setReceiveBufferSize(next_receive_buffer_size)
-          last_receive_buffer_size = next_receive_buffer_size
+            // lets avoid updating the socket settings each period.
+            transport_server.setReceiveBufferSize(next_receive_buffer_size)
+            last_receive_buffer_size = next_receive_buffer_size
+          }
         }
 
-        val next_send_buffer_size = send_buffer_size.getOrElse(broker.auto_tuned_send_receiver_buffer_size)
-        if( next_send_buffer_size!=last_send_buffer_size ) {
-          debug("%s connector send_buffer_size set to: %d", id, next_send_buffer_size)
-          // lets avoid updating the socket settings each period.
-          transport_server.setSendBufferSize(next_send_buffer_size)
-          last_send_buffer_size = next_send_buffer_size
+
+        if(send_buffer_auto_tune){
+          val next_send_buffer_size = broker.auto_tuned_send_receiver_buffer_size
+          if( next_send_buffer_size!=last_send_buffer_size ) {
+            debug("%s connector send_buffer_size set to: %d", id, next_send_buffer_size)
+            // lets avoid updating the socket settings each period.
+            transport_server.setSendBufferSize(next_send_buffer_size)
+            last_send_buffer_size = next_send_buffer_size
+          }
         }
+
 
       case _ =>
     }

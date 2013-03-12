@@ -160,18 +160,18 @@ A `connector` element can be configured with the following attributes
 * `protocol` : Defaults to `any` which means that any of the broker's 
    supported protocols can connect via this transport.
 
-* `receive_buffer_size` : Sets the size of the internal socket receive 
-   buffer (aka setting the socket's SO_RCVBUF) to a fixed value, and auto
-   tuning will not be used.
+* `receive_buffer_size_auto_tune` : Sets whether or not to auto tune the internal
+  socket receive buffer (aka the socket's SO_RCVBUF). Auto tuning happens
+  every 1 second. Default is true
 
-* `send_buffer_size` : Sets the size of the internal socket send buffer
-  (aka setting the socket's SO_SNDBUF) to a fixed value, and auto-tuning
-  will not be used.
+* `send_buffer_size_auto_tune` : Sets whether or not to auto tune the internal
+  socket send buffer (aka the socket's SO_SNDBUF). Auto tuning happens
+  every 1 second. Default is true
 
-When the `receive_buffer_size` or `send_buffer_size` attributes are not set, 
-then the broker will 'auto-tune' them to be between '64k' and '2k' based on the
-max number of connections established against the broker in the last 5 minutes 
-and the size of the JVM heap.
+By default, the broker will 'auto-tune' a connector's transports to be between
+'64k' and '2k' based on the max number of connections established against the
+broker in the last 5 minutes and the size of the JVM heap. Set `receive_buffer_size_auto_tune`
+and `send_buffer_size_auto_tune` to false to disable this auto tuning.
 
 Furthermore, the connector element may contain protocol specific
 configuration elements. For example, to have the broker set the `user_id`
