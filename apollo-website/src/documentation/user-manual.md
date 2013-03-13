@@ -231,9 +231,9 @@ settings used on the socket at the time of creation.  The supported parameters a
 * `max_write_rate` : Sets the maximum bytes per second that this transport will
   send data at.  This setting throttles writes so that the rate is not exceeded.
   Defaults to 0 which disables throttling.
-* `receive_buffer_size` : Sets the size of the internal socket receive
+* `receive_buffer_size` : Sets the initial size of the internal socket receive
   buffer (aka setting the socket's SO_RCVBUF)
-* `send_buffer_size` : Sets the size of the internal socket send buffer
+* `send_buffer_size` : Sets the initial size of the internal socket send buffer
   (aka setting the socket's SO_SNDBUF)
   
 Example which uses a couple of options:
@@ -242,11 +242,10 @@ Example which uses a couple of options:
 <connector id="tcp" bind="tcp://0.0.0.0:61613?receive_buffer_size=1024&amp;max_read_rate=65536"/>
 {pygmentize}
 
-Note that `&amp;` was used to separate the option values instead of just `&` since the 
-URI being written within an XML file. Also note that using `receive_buffer_size` and `send_buffer_size`
-in the URI string is slightly different than as an attribute of the `<connectors>` element. In the URI
-string, we specify what the buffer sizes should be when the socket is created, while when set on the
-`<connector>` element, we specify the value to use instead of relying on auto-tuning.
+Note that {pygmentize:: xml}&amp;{pygmentize}was used to separate the option values instead of just `&` since the
+URI is within an XML file. In the URI string, we specify what the buffer sizes
+should be when the socket is created, but their values can change if auto-tuning is enabled.
+
 
 ##### WebSocket Transports
 
