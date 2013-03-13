@@ -29,7 +29,6 @@ class StompSecurityTest extends StompTestSupport {
 
   override def beforeAll = {
     try {
-      println("before: " + testName)
       val login_file = new java.io.File(getClass.getClassLoader.getResource("login.config").getFile())
       System.setProperty("java.security.auth.login.config", login_file.getCanonicalPath)
     } catch {

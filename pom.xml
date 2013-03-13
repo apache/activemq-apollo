@@ -317,7 +317,7 @@
             </excludes>
             <parallel>classes</parallel>
             <perCoreThreadCount>false</perCoreThreadCount>
-            <threadCount>2</threadCount> 
+            <threadCount>1</threadCount> 
           </configuration>
         </plugin>
         

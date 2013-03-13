@@ -104,21 +104,27 @@ abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBefore
   def is_parallel_test_class = true
 
   override protected def beforeAll(map: Map[String, Any]): Unit = {
-    if ( is_parallel_test_class ) {
-      parallel_test_class_lock.readLock().lock()
-    } else {
-      parallel_test_class_lock.writeLock().lock()
-    }
+    val original_name = Thread.currentThread().getName
+    try {
+      Thread.currentThread().setName(getClass.getName)
+      if ( is_parallel_test_class ) {
+        parallel_test_class_lock.readLock().lock()
+      } else {
+        parallel_test_class_lock.writeLock().lock()
+      }
 
-    _basedir = map.get("basedir") match {
-      case Some(basedir) =>
-        basedir.toString
-      case _ =>
-        System.getProperty("basedir", _basedir)
+      _basedir = map.get("basedir") match {
+        case Some(basedir) =>
+          basedir.toString
+        case _ =>
+          System.getProperty("basedir", _basedir)
+      }
+      System.setProperty("basedir", _basedir)
+      test_data_dir.recursive_delete
+      super.beforeAll(map)
+    } finally {
+      Thread.currentThread().setName(original_name)
     }
-    System.setProperty("basedir", _basedir)
-    test_data_dir.recursive_delete
-    super.beforeAll(map)
   }
 
   override protected def afterAll(configMap: Map[String, Any]) {
