@@ -60,17 +60,17 @@ public class AcceptingConnectorDTO extends ConnectorTypeDTO {
     public String send_buffer_size;
 
     /**
-     * Sets whether or not to auto tune the internal socket receive buffer (aka the socket's SO_RCVBUF)
+     * Sets whether or not to auto tune the internal socket receive buffer (aka the socket's SO_RCVBUF).  Defaults to true.
      */
     @XmlAttribute(name="receive_buffer_auto_tune")
-    public boolean receive_buffer_auto_tune = true;
+    public Boolean receive_buffer_auto_tune;
 
 
     /**
-     * Sets whether or not to auto tune the internal socket send buffer (aka the socket's SO_SNDBUF)
+     * Sets whether or not to auto tune the internal socket send buffer (aka the socket's SO_SNDBUF). Defaults to true.
      */
     @XmlAttribute(name="send_buffer_auto_tune")
-    public boolean send_buffer_auto_tune = true;
+    public Boolean send_buffer_auto_tune;
 
     /**
      * A broker accepts connections via it's configured connectors.

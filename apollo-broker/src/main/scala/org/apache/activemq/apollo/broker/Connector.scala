@@ -237,8 +237,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     def mem_size(value:String) = Option(value).map(MemoryPropertyEditor.parse(_).toInt)
 
     assert(config!=null, "Connector must be configured before it is started.")
-    receive_buffer_auto_tune = config.receive_buffer_auto_tune
-    send_buffer_auto_tune = config.send_buffer_auto_tune
+    receive_buffer_auto_tune = config.receive_buffer_auto_tune.getOrElse(true)
+    send_buffer_auto_tune = config.send_buffer_auto_tune.getOrElse(true)
 
     accepted.set(0)
     connected.set(0)
