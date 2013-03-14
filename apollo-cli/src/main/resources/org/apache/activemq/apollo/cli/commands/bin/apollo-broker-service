@@ -63,12 +63,13 @@ status() {
     # check to see if it's gone...
     ps -p ${pid} > /dev/null
     if [ $? -eq 0 ] ; then
-      return 1
+      return 0
     else
       rm "${PID_FILE}"
+      return 3
     fi
   fi
-  return 0
+  return 3
 }
 
 stop() {
@@ -78,7 +79,7 @@ stop() {
   fi
   for i in 1 2 3 4 5 ; do
     status
-    if [ $? -eq 0 ] ; then
+    if [ $? -ne 0 ] ; then
       return 0
     fi
     sleep 1
@@ -90,7 +91,7 @@ stop() {
 start() {
 
   status
-  if [ $? -eq 1 ] ; then
+  if [ $? -eq 0 ] ; then
     echo "Already running."
     return 1
   fi
@@ -106,7 +107,7 @@ start() {
   # check to see if stays up...
   sleep 1
   status
-  if [ $? -eq 0 ] ; then
+  if [ $? -ne 0 ] ; then
     echo "Could not start ${service}"
     return 1
   fi
@@ -142,12 +143,13 @@ case $1 in
 
   status)
     status
-    if [ $? -eq 0 ] ; then
-      echo "${service} is stopped"
-    else
+    rc=$?
+    if [ $rc -eq 0 ] ; then
       echo "${service} is running (${pid})"
+    else
+      echo "${service} is stopped"
     fi
-    exit 0
+    exit $rc
   ;;
 
   *)
