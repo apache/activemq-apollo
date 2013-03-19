@@ -824,7 +824,8 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
   test("Topic /w Durable sub retains messages.") {
     connect("1.1")
     val dest = next_id("/topic/dsub_test_")
-    subscribe("my-sub-name", dest, persistent=true)
+    val subid = next_id("my-sub-name_")
+    subscribe(subid, dest, persistent=true)
     client.close
 
     // Close him out.. since persistent:true then
@@ -835,17 +836,18 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     async_send(dest, 2)
     async_send(dest, 3)
 
-    subscribe("my-sub-name", dest, persistent=true)
+    subscribe(subid, dest, persistent=true)
 
-    assert_received(1, "my-sub-name")
-    assert_received(2, "my-sub-name")
-    assert_received(3, "my-sub-name")
+    assert_received(1, subid)
+    assert_received(2, subid)
+    assert_received(3, subid)
   }
 
   test("Topic /w Wildcard durable sub retains messages.") {
     connect("1.1")
     val dest = next_id("/topic/dsub_test_")
-    subscribe("my-sub-name", dest+".*", persistent=true)
+    val subid = next_id("my-sub-name_")
+    subscribe(subid, dest+".*", persistent=true)
     client.close
 
     // Close him out.. since persistent:true then
@@ -856,11 +858,11 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     async_send(dest+".2", 2)
     async_send(dest+".3", 3)
 
-    subscribe("my-sub-name", dest, persistent=true)
+    subscribe(subid, dest, persistent=true)
 
-    assert_received(1, "my-sub-name")
-    assert_received(2, "my-sub-name")
-    assert_received(3, "my-sub-name")
+    assert_received(1, subid)
+    assert_received(2, subid)
+    assert_received(3, subid)
   }
 
   test("Queue and a selector") {
