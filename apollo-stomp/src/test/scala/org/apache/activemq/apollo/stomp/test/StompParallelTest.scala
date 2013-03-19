@@ -842,6 +842,27 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     assert_received(3, "my-sub-name")
   }
 
+  test("Topic /w Wildcard durable sub retains messages.") {
+    connect("1.1")
+    val dest = next_id("/topic/dsub_test_")
+    subscribe("my-sub-name", dest+".*", persistent=true)
+    client.close
+
+    // Close him out.. since persistent:true then
+    // the topic subscription will be persistent across client
+    // connections.
+    connect("1.1")
+    async_send(dest+".1", 1)
+    async_send(dest+".2", 2)
+    async_send(dest+".3", 3)
+
+    subscribe("my-sub-name", dest, persistent=true)
+
+    assert_received(1, "my-sub-name")
+    assert_received(2, "my-sub-name")
+    assert_received(3, "my-sub-name")
+  }
+
   test("Queue and a selector") {
     connect("1.1")
 

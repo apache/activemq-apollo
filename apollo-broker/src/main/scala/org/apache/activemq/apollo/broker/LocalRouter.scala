@@ -531,7 +531,7 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
         // Disconnect the durable subs
         for( dsub <- dest.durable_subscriptions ) {
-          dest.unbind_durable_subscription(dsub)
+          dest.unbind(dsub, false)
         }
 
 //        // Delete any consumer temp queues..
@@ -639,22 +639,13 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
 
     def unbind_topics(queue: Queue, topics: Traversable[_ <: BindAddress]) {
       topics.foreach { topic:BindAddress =>
-        var matches = local_topic_domain.get_destination_matches(topic.path)
-        matches.foreach(_.unbind_durable_subscription(queue))
+        topic_domain.unbind(topic, queue, false, null)
       }
     }
 
     def bind_topics(queue: Queue, address: SubscriptionAddress, topics: Traversable[_ <: BindAddress]) {
       topics.foreach { topic:BindAddress =>
-        val wildcard = PathParser.containsWildCards(topic.path)
-        var matches = local_topic_domain.get_destination_matches(topic.path)
-
-        // We may need to create the topic...
-        if (!wildcard && matches.isEmpty) {
-          local_topic_domain.create_destination(topic, null)
-          matches = local_topic_domain.get_destination_matches(topic.path)
-        }
-        matches.foreach(_.bind_durable_subscription(address, queue))
+        topic_domain.bind(topic, queue, null, ()=>{})
       }
     }
 

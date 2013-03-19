@@ -441,11 +441,18 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
       }
     }
 
-    val target = address.domain match {
-      case "queue" | "dsub"=>
-        // durable sub or mirrored queue case.
+    val target = consumer match {
+
+      // Consumer might be a durable sub.
+      case queue:Queue =>
+        if( !durable_subscriptions.contains(queue) ) {
+          durable_subscriptions += queue
+        }
         consumer
-      case "topic"=>
+
+      case _ =>
+
+
         slow_consumer_policy match {
           case "queue" =>
 
@@ -558,24 +565,18 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
             List()
         }
     }
+
+    // consumer might be a durable sub..
+    consumer match {
+      case queue:Queue =>
+        if( durable_subscriptions.contains(queue) ) {
+          durable_subscriptions -= queue
+        }
+      case _ =>
+    }
+
     for( producer <- producers.keys ) {
      producer.unbind(list)
-    }
-    check_idle
-  }
-
-  def bind_durable_subscription(address: SubscriptionAddress, queue:Queue)  = {
-    if( !durable_subscriptions.contains(queue) ) {
-      durable_subscriptions += queue
-      bind(address, queue, ()=>{})
-    }
-    check_idle
-  }
-
-  def unbind_durable_subscription(queue:Queue)  = {
-    if( durable_subscriptions.contains(queue) ) {
-      unbind(queue, false)
-      durable_subscriptions -= queue
     }
     check_idle
   }
