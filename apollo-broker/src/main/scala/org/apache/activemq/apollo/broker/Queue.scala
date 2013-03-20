@@ -199,8 +199,8 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   var swapping_in_size = 0
   var swapping_out_size = 0
 
-  val producer_swapped_in = new MemorySpace
-  val consumer_swapped_in = new MemorySpace
+  val producer_swapped_in = new MemorySpace { override def toString = "producer_swapped_in" }
+  val consumer_swapped_in = new MemorySpace { override def toString = "consumer_swapped_in" }
 
   var swap_out_item_counter = 0L
   var swap_out_size_counter = 0L
