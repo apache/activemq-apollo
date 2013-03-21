@@ -1184,12 +1184,9 @@ class StompProtocolHandler extends ProtocolHandler {
 
     var routing_items = 0
 
-    val deliveries_waiting_for_ack = new util.HashSet[Delivery]()
-
     override def offer(delivery: Delivery): Boolean = {
       if( full )
         return false
-      deliveries_waiting_for_ack.add(delivery)
       routing_size += delivery.size
       routing_items += 1
       val original_ack = delivery.ack
@@ -1200,7 +1197,6 @@ class StompProtocolHandler extends ProtocolHandler {
         }
         routing_items -= 1
         routing_size -= delivery.size
-        deliveries_waiting_for_ack.remove(delivery)
         if( routing_size==0 && !pending_routing_empty_callbacks.isEmpty) {
           val t = pending_routing_empty_callbacks
           pending_routing_empty_callbacks = ListBuffer()
