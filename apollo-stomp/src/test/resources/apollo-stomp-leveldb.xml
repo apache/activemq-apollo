@@ -37,11 +37,12 @@
     <queue id="drop.head.non" full_policy="drop head" tail_buffer="100k" persistent="false"/>
     <queue id="drop.tail.non" full_policy="drop tail" tail_buffer="100k" persistent="false"/>
     <queue id="noroundrobin.**" round_robin="false"/>
+    <queue id="pending_stores.**" swap="false"/>
 
     <leveldb_store directory="${testdatadir}"/>
   </virtual_host>
 
-  <web_admin bind="http://0.0.0.0:61680"/>
+  <!--<web_admin bind="http://0.0.0.0:61680"/>-->
   <connector id="tcp" bind="tcp://0.0.0.0:0"/>
   <connector id="udp" bind="udp://0.0.0.0:0" protocol="udp"/>
   <connector id="stomp-udp" bind="udp://0.0.0.0:0" protocol="stomp-udp"/>

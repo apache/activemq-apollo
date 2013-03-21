@@ -805,7 +805,6 @@ class StompProtocolHandler extends ProtocolHandler {
   private def die[T](headers:HeaderMap, body:String):T = {
     if( !dead ) {
       dead = true
-      waiting_on = ()=>"shutdown"
       connection.transport.resumeRead
 
       if( body.isEmpty ) {
@@ -846,7 +845,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   override def on_transport_failure(error: IOException) = {
     if( !closed ) {
-      suspend_read("shutdown")
+      suspend_read(waiting_on())
       connection_log.info("Shutting connection '%s'  down due to: %s", security_context.remote_address, error)
       disconnect(false)
     }
@@ -870,12 +869,6 @@ class StompProtocolHandler extends ProtocolHandler {
       }
       transactions.clear()
 
-      producer_routes.values().foreach{ route=>
-        host.dispatch_queue {
-          host.router.disconnect(route.addresses, route)
-        }
-      }
-      producer_routes.clear
       consumers.foreach { case (_,consumer)=>
         val addresses = consumer.addresses
         host.dispatch_queue {
@@ -890,8 +883,28 @@ class StompProtocolHandler extends ProtocolHandler {
         }
       })
       trace("stomp protocol resources released")
+
+      waiting_on = ()=> {
+        val routes = producer_routes.values().flatMap { route =>
+          if( route.routing_items > 0 ) {
+            Some(route.dest+"("+route.routing_items+")")
+          } else {
+            None
+          }
+        }.mkString(", ")
+        "Delivery competition to: "+routes
+      }
+
       on_routing_empty {
+        producer_routes.values().foreach{ route=>
+          host.dispatch_queue {
+            host.router.disconnect(route.addresses, route)
+          }
+        }
+        producer_routes.clear
+
         if( delay ) {
+          waiting_on = ()=>"die delay"
           queue.after(die_delay, TimeUnit.MILLISECONDS) {
             connection.stop(NOOP)
           }
@@ -1171,9 +1184,12 @@ class StompProtocolHandler extends ProtocolHandler {
 
     var routing_items = 0
 
+    val deliveries_waiting_for_ack = new util.HashSet[Delivery]()
+
     override def offer(delivery: Delivery): Boolean = {
       if( full )
         return false
+      deliveries_waiting_for_ack.add(delivery)
       routing_size += delivery.size
       routing_items += 1
       val original_ack = delivery.ack
@@ -1184,6 +1200,7 @@ class StompProtocolHandler extends ProtocolHandler {
         }
         routing_items -= 1
         routing_size -= delivery.size
+        deliveries_waiting_for_ack.remove(delivery)
         if( routing_size==0 && !pending_routing_empty_callbacks.isEmpty) {
           val t = pending_routing_empty_callbacks
           pending_routing_empty_callbacks = ListBuffer()
@@ -1231,13 +1248,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  var producer_routes = new LRUCache[AsciiBuffer, StompProducerRoute](1) {
-    override def onCacheEviction(eldest: Entry[AsciiBuffer, StompProducerRoute]) = {
-      host.dispatch_queue {
-        host.router.disconnect(eldest.getValue.addresses, eldest.getValue)
-      }
-    }
-  }
+  var producer_routes = new java.util.HashMap[AsciiBuffer, StompProducerRoute]()
 
   def perform_send(frame:StompFrame, uow:StoreUOW=null): Unit = {
     val dest = get(frame.headers, DESTINATION).get

@@ -84,6 +84,20 @@ class StompClient extends ShouldMatchers {
     throw new EOFException()
   }
 
+  def receive(timeout:Int): String = {
+    val original = socket.getSoTimeout
+    try {
+      socket.setSoTimeout(timeout)
+      receive()
+    } finally {
+      try {
+        socket.setSoTimeout(original)
+      } catch {
+        case _:Throwable =>
+      }
+    }
+  }
+
   def receive(): String = {
     var start = true;
     val buffer = new BAOS()

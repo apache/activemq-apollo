@@ -19,10 +19,65 @@ package org.apache.activemq.apollo.stomp.test
 import java.lang.String
 import java.util.concurrent.TimeUnit._
 import org.apache.activemq.apollo.broker._
+import java.net.SocketTimeoutException
+import java.util.concurrent.CountDownLatch
 
-class StompLevelDBParallelTest extends StompParallelTest with BrokerParallelTestExecution {
+class StompLevelDBParallelTest extends StompParallelTest {
 
   override def broker_config_uri: String = "xml:classpath:apollo-stomp-leveldb.xml"
+
+  def skip_if_not_leveldb = skip(!broker_config_uri.endsWith("-leveldb.xml"))
+
+  test("pending_stores stuck") {
+    skip_if_not_leveldb
+
+    def pending_stores = {
+      var rc = 0
+      val done =new CountDownLatch(1);
+      broker.default_virtual_host.store.get_store_status{ status =>
+        rc = status.pending_stores
+        done.countDown()
+      }
+      done.await()
+      rc
+    }
+
+    run_exclusive {
+      connect("1.1")
+      val dest = next_id("pending_stores.n")
+      var data: String = "x" * 1024
+      var done = false
+
+      within(10, SECONDS) {
+        pending_stores should be (0)
+      }
+
+      var sent = 0
+      while(!done) {
+        async_send("/queue/"+dest, data, "persistent:true\nreceipt:x\n")
+        try {
+          wait_for_receipt("x", timeout = 2000)
+          sent += 1
+        } catch {
+          case e:SocketTimeoutException =>
+            done = true
+        }
+      }
+
+      pending_stores should be (1)
+      close()
+      connect("1.1")
+      subscribe("mysub", "/queue/"+dest)
+      for( i <- 0 until sent) {
+        assert_received(data)
+      }
+
+      within(10, SECONDS) {
+        pending_stores should be (0)
+      }
+    }
+  }
+
 
   test("(APLO-198) Apollo sometimes does not send all the messages in a queue") {
     skip_if_using_store

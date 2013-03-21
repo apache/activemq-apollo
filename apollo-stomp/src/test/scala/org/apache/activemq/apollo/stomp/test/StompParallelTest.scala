@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class StompParallelTest extends StompTestSupport with BrokerParallelTestExecution {
 
   def skip_if_using_store = skip(broker_config_uri.endsWith("-bdb.xml") || broker_config_uri.endsWith("-leveldb.xml"))
+  def skip_if_not_using_store = skip(!(broker_config_uri.endsWith("-bdb.xml") || broker_config_uri.endsWith("-leveldb.xml")))
 
   test("Stomp 1.0 CONNECT") {
     connect("1.0")

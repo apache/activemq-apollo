@@ -24,12 +24,13 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{DestMetricsDTO, AggregateDestMetricsDTO, QueueStatusDTO, TopicStatusDTO}
 import collection.immutable.HashMap
 import java.io.File
-import org.scalatest.{ParallelTestExecution, OneInstancePerTest}
+import org.scalatest.{Tag, FunSuite, ParallelTestExecution, OneInstancePerTest}
 import java.util
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.fusesource.hawtbuf.{ByteArrayOutputStream, Buffer}
 import com.fasterxml.jackson.annotation.JsonInclude
 import util.concurrent.CountDownLatch
+import java.util.concurrent.locks.{ReentrantReadWriteLock, Lock, ReadWriteLock}
 
 object BrokerTestSupport {
   import FutureResult._
@@ -113,8 +114,10 @@ object BrokerTestSupport {
 
 }
 
-trait BrokerParallelTestExecution extends ParallelTestExecution {
+trait BrokerParallelTestExecution extends FunSuite with ParallelTestExecution {
   self: BrokerFunSuiteSupport =>
+
+  var test_rw_lock = new ReentrantReadWriteLock();
 
   override def newInstance = {
     val rc = super.newInstance.asInstanceOf[BrokerFunSuiteSupport]
@@ -124,6 +127,27 @@ trait BrokerParallelTestExecution extends ParallelTestExecution {
     rc
   }
 
+  def run_exclusive(testFun: => Unit):Unit = {
+    test_rw_lock.readLock().unlock()
+    test_rw_lock.writeLock().lock()
+    try {
+      testFun
+    } finally {
+      test_rw_lock.writeLock().unlock()
+      test_rw_lock.readLock().lock()
+    }
+  }
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Unit) {
+    super.test(testName, testTags:_*) {
+      test_rw_lock.readLock().lock()
+      try {
+        testFun
+      } finally {
+        test_rw_lock.readLock().unlock()
+      }
+    }
+  }
 }
 
 /**
