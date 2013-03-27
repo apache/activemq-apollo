@@ -40,6 +40,12 @@ abstract class Connection() extends BaseService with Dispatched {
   private var _dispatch_queue = createQueue()
   def dispatch_queue = _dispatch_queue
 
+  def _set_dispatch_queue(next_queue:DispatchQueue, on_complete:Task) {
+    set_dispatch_queue(next_queue) {
+      on_complete.run()
+    }
+  }
+
   def set_dispatch_queue(next_queue:DispatchQueue)(on_complete: =>Unit) {
     _dispatch_queue {
       if(transport!=null) {

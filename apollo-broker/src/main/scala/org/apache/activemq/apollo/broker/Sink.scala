@@ -331,11 +331,20 @@ trait SessionSink[T] extends Sink[T] {
 }
 
 trait SessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
-  def downstream:SessionSink[T]
+  def downstream: SessionSink[T]
   def enqueue_item_counter = downstream.enqueue_item_counter
   def enqueue_size_counter = downstream.enqueue_size_counter
   def enqueue_ts = downstream.enqueue_ts
   def remaining_capacity = downstream.remaining_capacity
+}
+
+abstract class AbstractSessionSinkFilter[T] extends SessionSink[T] with SinkFilter[T] {
+  def downstream:Sink[T] = downstream_session_sink
+  def downstream_session_sink: SessionSink[T]
+  def enqueue_item_counter = downstream_session_sink.enqueue_item_counter
+  def enqueue_size_counter = downstream_session_sink.enqueue_size_counter
+  def enqueue_ts = downstream_session_sink.enqueue_ts
+  def remaining_capacity = downstream_session_sink.remaining_capacity
 }
 
 /**

@@ -74,6 +74,8 @@ trait DeliveryConsumer extends Retained {
   def is_persistent:Boolean
 }
 
+abstract class AbstractRetainedDeliveryConsumer extends BaseRetained with DeliveryConsumer
+
 class DeliveryConsumerFilter(val next:DeliveryConsumer) extends DeliveryConsumer {
   override def browser: Boolean = next.browser
   override def close_on_drain: Boolean = next.close_on_drain

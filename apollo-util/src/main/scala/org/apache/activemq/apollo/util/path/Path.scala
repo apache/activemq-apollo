@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.util.path
 
 object Path {
   def apply(value:String*):Path = Path(value.toList.map(LiteralPart(_)))
+  def create(value:String):Path = Path(LiteralPart(value)::Nil)
 }
 
 /**

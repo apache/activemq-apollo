@@ -14,15 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.mqtt.dto
+package org.apache.activemq.apollo.mqtt.dto;
 
-import org.apache.activemq.apollo.util.DtoModule
+import org.apache.activemq.apollo.util.DtoModule;
 
 /**
+ * <p>
+ * </p>
+ *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Module extends DtoModule {
-  def dto_package = "org.apache.activemq.apollo.mqtt.dto"
+public class Module implements DtoModule {
 
-  def extension_classes = Array(classOf[MqttDTO], classOf[MqttConnectionStatusDTO])
+    @Override
+    public String dto_package() {
+        return "org.apache.activemq.apollo.mqtt.dto";
+    }
+
+    @Override
+    public Class<?>[] extension_classes() {
+        return new Class<?>[]{ MqttDTO.class, MqttConnectionStatusDTO.class };
+    }
 }

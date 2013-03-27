@@ -32,12 +32,7 @@
 
   <name>${project.artifactId}</name>
   <description>Holds the common Maven settings for Scala based modules.</description>
-  
-  <properties>
-    <scala-plugin-main-goal>compile</scala-plugin-main-goal>
-    <scala-plugin-test-goal>testCompile</scala-plugin-test-goal>
-  </properties>
-  
+
   <dependencies>
 
     <!-- Scala Support: this needs to be copied into every scala project -->
@@ -81,9 +76,10 @@
         <executions>
           <execution>
             <id>compile</id>
-            <phase>compile</phase>
+            <phase>process-resources</phase>
             <goals>
-              <goal>${scala-plugin-main-goal}</goal>
+              <goal>add-source</goal>
+              <goal>compile</goal>
             </goals>
             <configuration>
               <testSourceDir>dontcompile</testSourceDir>
@@ -106,7 +102,7 @@
             <id>test</id>
             <phase>test-compile</phase>
             <goals>
-              <goal>${scala-plugin-test-goal}</goal>
+              <goal>testCompile</goal>
             </goals>
             <configuration>
               <!-- <displayCmd>true</displayCmd> -->
