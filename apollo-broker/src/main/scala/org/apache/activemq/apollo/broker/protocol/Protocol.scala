@@ -107,6 +107,8 @@ trait ProtocolHandler {
 
 }
 
+abstract class AbstractProtocolHandler extends ProtocolHandler
+
 @deprecated(message="Please use the ProtocolFilter2 interface instead", since="1.3")
 trait ProtocolFilter {
   def filter[T](command: T):T
@@ -161,7 +163,11 @@ object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
 }
 
 object ProtocolFilter2 {
-  def create_filters(dtos:List[ProtocolFilterDTO], handler:ProtocolHandler) = {
+  def create_filters(dtos:java.util.List[ProtocolFilterDTO], handler:ProtocolHandler):java.util.List[ProtocolFilter2] = {
+    import collection.JavaConversions._
+    collection.JavaConversions.seqAsJavaList(create_filters(dtos.toList, handler));
+  }
+  def create_filters(dtos:List[ProtocolFilterDTO], handler:ProtocolHandler):List[ProtocolFilter2] = {
     dtos.map(ProtocolFilter2Factory.create(_, handler))
   }
 }

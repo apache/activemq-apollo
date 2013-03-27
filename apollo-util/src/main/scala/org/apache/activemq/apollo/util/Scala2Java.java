@@ -14,15 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.mqtt;
+package org.apache.activemq.apollo.util;
 
-import org.apache.activemq.apollo.util.Log;
-import scala.Function1;
-import scala.Function2;
-import scala.Option;
+import org.apache.activemq.apollo.util.*;
+import org.fusesource.hawtbuf.Buffer;
+import scala.*;
+import scala.collection.JavaConversions$;
+import scala.collection.Seq;
 import scala.collection.immutable.List;
 import scala.runtime.BoxedUnit;
 
+import java.lang.Boolean;
+import java.lang.Long;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -30,8 +33,31 @@ import java.util.Iterator;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class ScalaSupport {
-    private static ScalaSupportHelper$ helper = ScalaSupportHelper$.MODULE$;
+public class Scala2Java {
+    private static Scala2JavaHelper$ helper = Scala2JavaHelper$.MODULE$;
+
+
+    public static int get(Integer value, int defaultValue) {
+        if( value!=null ) {
+            return value.intValue();
+        } else {
+            return defaultValue;
+        }
+    }
+    public static long get(Long value, long defaultValue) {
+        if( value!=null ) {
+            return value.longValue();
+        } else {
+            return defaultValue;
+        }
+    }
+    public static boolean get(Boolean value, boolean defaultValue) {
+        if( value!=null ) {
+            return value.booleanValue();
+        } else {
+            return defaultValue;
+        }
+    }
 
     static final Function1<Object,BoxedUnit> NOOP_FN1 = helper.toScala(new UnitFn1<Object>() {
         @Override
@@ -39,10 +65,20 @@ public class ScalaSupport {
         }
     });
 
+    public static String toString(Object o) {
+        return o == null ? null : o.toString();
+    }
+
     public static <T1> Function1<T1, BoxedUnit> noopFn1() {
         return (Function1<T1, BoxedUnit>) NOOP_FN1;
     }
 
+    public static <R> Function0<R> toScala(Fn0<R> func) {
+        if( func == null ) {
+            return null;
+        }
+        return helper.toScala(func);
+    }
 
     public static <T1, R> Function1<T1, R> toScala(Fn1<T1, R> func) {
         if( func == null ) {
@@ -98,6 +134,9 @@ public class ScalaSupport {
         return helper.toList(s);
     }
 
+    public static <T> Iterable<T> toIterable(Seq<T> entries) {
+        return JavaConversions$.MODULE$.asJavaIterable(entries);
+    }
 
     public static class Logger {
         final Log log;

@@ -14,18 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.mqtt
+package org.apache.activemq.apollo.util
 
-import scala.Function1
 import org.apache.activemq.apollo.util.Log
+import scala.Function1
 import scala.runtime.BoxedUnit
+
+abstract class Fn0[+R] {
+  def apply(): R
+}
+
+class UnitFn0 extends Fn0[BoxedUnit] {
+  def call() = {}
+  def apply() = {
+    call()
+    BoxedUnit.UNIT;
+  }
+}
 
 abstract class Fn1[-T1,+R] {
   def apply(v1: T1): R
 }
 
-class UnitFn1[-T1] extends Fn1[T1, BoxedUnit] {
-  def call(v1: T1) = {}
+abstract class UnitFn1[-T1] extends Fn1[T1, BoxedUnit] {
+  def call(v1: T1)
   def apply(v1: T1) = {
     call(v1)
     BoxedUnit.UNIT;
@@ -51,7 +63,8 @@ class UnitFn2[-T1,-T2] extends Fn2[T1,T2, BoxedUnit] {
  * Time: 3:27 PM
  * To change this template use File | Settings | File Templates.
  */
-object ScalaSupportHelper {
+object Scala2JavaHelper {
+  def toScala[R](func:Fn0[R]):Function0[R] = () => { func.apply() }
   def toScala[T1,R](func:Fn1[T1,R]):Function1[T1,R] = (v1:T1) => { func.apply(v1) }
   def toScala[T1,T2,R](func:Fn2[T1,T2,R]):Function2[T1,T2,R] = (v1:T1, v2:T2) => { func.apply(v1,v2) }
   def none[T]:Option[T] = None

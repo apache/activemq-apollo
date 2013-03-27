@@ -107,6 +107,19 @@ trait SinkMapper[T,X] extends Sink[T] with SinkFilter[X] {
   def passing(value:T):X
 }
 
+abstract class AbstractSinkMapper[T,X] extends Sink[T] with SinkFilter[X] {
+  def offer(value:T) = {
+    if( full ) {
+      false
+    } else {
+      val accepted:Boolean = downstream.offer(passing(value))
+      assert(accepted, "The downstream sink violated it's contract, an offer was not accepted but it had told us it was not full")
+      accepted
+    }
+  }
+  def passing(value:T):X
+}
+
 /**
  * <p>
  * A delivery sink which is connected to a transport. It expects the caller's dispatch
