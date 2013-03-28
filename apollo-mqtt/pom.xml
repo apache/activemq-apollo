@@ -140,6 +140,8 @@
   </dependencies>
 
   <build>
+    <sourceDirectory>src/main/java</sourceDirectory>
+    
     <plugins>
 
       <!-- Generate a test jar for the test cases in this package -->
