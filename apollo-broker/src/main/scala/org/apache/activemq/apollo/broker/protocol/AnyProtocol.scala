@@ -135,8 +135,7 @@ class AnyProtocolHandler extends ProtocolHandler {
 
   var discriminated = false
 
-  def session_id = None
-
+  def session_id = null
   var config:DetectDTO = _
 
   override def on_transport_command(command: AnyRef) = {

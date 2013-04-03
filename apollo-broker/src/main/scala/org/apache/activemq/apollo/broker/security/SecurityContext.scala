@@ -41,8 +41,8 @@ class SecurityContext {
   var local_address:SocketAddress = _
   var remote_address:SocketAddress = _
   var login_context:LoginContext = _
-  var session_id:Option[String] = None
-  var remote_application:Option[String] = None
+  var session_id:String = null
+  var remote_application:String = null
 
   case class Key(user:String,
     password:String,

@@ -329,7 +329,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
 
     def processConnectionOpen(conn: engine.Connection, onComplete: Task) {
-      security_context.remote_application = Some(conn.getRemoteContainer())
+      security_context.remote_application = conn.getRemoteContainer()
 
       suspend_read("host lookup")
       broker.dispatch_queue {
@@ -350,7 +350,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
             connection_log = virtual_host.connection_log
             host = virtual_host
             proton.setLocalContainerId(virtual_host.id)
-            security_context.session_id = Some("%s-%x".format(host.config.id, host.session_counter.incrementAndGet))
+            security_context.session_id = "%s-%x".format(host.config.id, host.session_counter.incrementAndGet)
             //                proton.open()
             //                callback.onSuccess(response)
             if (virtual_host.authenticator != null && virtual_host.authorizer != null) {
@@ -693,7 +693,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       dest =>
         if (dest.domain.startsWith("temp-")) {
           temp_destination_map.getOrElseUpdate(dest, {
-            val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id.get) :: dest.path.parts
+            val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id) :: dest.path.parts
             SimpleAddress(dest.domain.stripPrefix("temp-"), Path(parts))
           })
         } else {
@@ -706,7 +706,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     var dynamic = target.getDynamic()
     if (dynamic) {
       temp_dest_counter += 1
-      val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id.get) :: LiteralPart(temp_dest_counter.toString) :: Nil
+      val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id) :: LiteralPart(temp_dest_counter.toString) :: Nil
       val rc = SimpleAddress("queue", Path(parts))
       val actual = new Target();
       var address = destination_parser.encode_destination(rc)
@@ -728,7 +728,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     var dynamic = source.getDynamic()
     if (dynamic) {
       temp_dest_counter += 1
-      val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id.get) :: LiteralPart(temp_dest_counter.toString) :: Nil
+      val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id) :: LiteralPart(temp_dest_counter.toString) :: Nil
       val rc = SimpleAddress("queue", Path(parts))
       val actual = new Source();
       var address = destination_parser.encode_destination(rc)
@@ -817,7 +817,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       } else {
         dm.getFooter.getValue.asInstanceOf[java.util.Map[AnyRef,AnyRef]]
       }
-      footer_map.put(ORIGIN, session_id.get)
+      footer_map.put(ORIGIN, session_id)
       val message = new AmqpMessage(null, dm)
 
       val d = new Delivery
@@ -941,7 +941,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
       if( delivery.message.codec eq AmqpMessageCodec ) {
         if ( noLocal ) {
           val origin = delivery.message.asInstanceOf[AmqpMessage].getFooterProperty(ORIGIN)
-          if ( origin == session_id.get ) {
+          if ( origin == session_id ) {
             return false
           }
         }
@@ -1045,7 +1045,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
               message_id_counter += 1
 
               val message = new MessageImpl
-              message.setMessageId(session_id.get + message_id_counter)
+              message.setMessageId(session_id + message_id_counter)
               message.setBody(new Data(new Binary(body.data, body.offset, body.length)))
               message.setContentType(content_type)
               message.setDurable(apollo_delivery.persistent)

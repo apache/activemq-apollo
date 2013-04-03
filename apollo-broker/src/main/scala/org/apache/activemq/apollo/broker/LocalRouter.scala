@@ -311,8 +311,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       for(dest <- get_destination_matches(address.path)) {
         if( is_temp(address) ) {
           val owner = temp_owner(address).get
-          for( connection <- security.session_id) {
-            if( (virtual_host.broker.id, connection) != owner ) {
+          if( security.session_id !=null ) {
+            if( (virtual_host.broker.id, security.session_id) != owner ) {
               return Some("Not authorized to destroy the temp %s '%s'. Principals=%s".format(dest.resource_kind.id, dest.id, security.principal_dump))
             }
           }
@@ -338,8 +338,8 @@ class LocalRouter(val virtual_host:VirtualHost) extends BaseService with Router 
       if( is_temp(bind_address) ) {
         temp_owner(bind_address) match {
           case Some(owner) =>
-            for( connection <- security.session_id) {
-              if( (virtual_host.broker.id, connection) != owner ) {
+            if( security.session_id!=null) {
+              if( (virtual_host.broker.id, security.session_id) != owner ) {
                 return Some("Not authorized to receive from the temporary destination. Principals=%s".format(security.principal_dump))
               }
             }

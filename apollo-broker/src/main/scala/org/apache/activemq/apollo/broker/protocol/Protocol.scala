@@ -84,7 +84,7 @@ trait ProtocolHandler {
 
   def protocol:String
 
-  def session_id:Option[String]
+  def session_id: String
 
   var connection:BrokerConnection = null;
   def defer(func: =>Unit) = connection.defer(func)
@@ -110,20 +110,20 @@ trait ProtocolHandler {
 
 abstract class AbstractProtocolHandler extends ProtocolHandler
 
-@deprecated(message="Please use the ProtocolFilter2 interface instead", since="1.3")
+@deprecated(message="Please use the ProtocolFilter3 interface instead", since="1.3")
 trait ProtocolFilter {
   def filter[T](command: T):T
 }
 
-object ProtocolFilter2Factory {
+object ProtocolFilter3Factory {
 
   val providers = new ClassFinder[Provider]("META-INF/services/org.apache.activemq.apollo/protocol-filter-factory.index",classOf[Provider])
 
   trait Provider {
-    def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2
+    def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter3
   }
 
-  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2 = {
+  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter3 = {
     for( p <- providers.singletons ) {
       val rc = p.create(dto, handler)
       if( rc!=null ) {
@@ -134,15 +134,19 @@ object ProtocolFilter2Factory {
   }
 }
 
-object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
-  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter2 = dto match {
+object SimpleProtocolFilter3Factory extends ProtocolFilter3Factory.Provider {
+  def create( dto:ProtocolFilterDTO, handler:ProtocolHandler ):ProtocolFilter3 = dto match {
     case dto:SimpleProtocolFilterDTO =>
       val instance = Broker.class_loader.loadClass(dto.kind).newInstance().asInstanceOf[AnyRef]
       val filter = instance match {
-        case self:ProtocolFilter2 => self
-        case self:ProtocolFilter => new ProtocolFilter2() {
-          override def filter_inbound[T](command: T): Option[T] = Some(self.filter(command))
-          override def filter_outbound[T](command: T): Option[T] = Some(command)
+        case self:ProtocolFilter3 => self
+        case self:ProtocolFilter2 => new ProtocolFilter3() {
+          override def filter_inbound[T<:Object](command: T) = self.filter_inbound(command);
+          override def filter_outbound[T<:Object](command: T) = self.filter_outbound(command);
+        }
+        case self:ProtocolFilter => new ProtocolFilter3() {
+          override def filter_inbound[T<:Object](command: T) = self.filter(command)
+          override def filter_outbound[T<:Object](command: T) = command
         }
         case null => null
         case _ => throw new IllegalArgumentException("Invalid protocol filter type: "+instance.getClass)
@@ -163,13 +167,13 @@ object SimpleProtocolFilter2Factory extends ProtocolFilter2Factory.Provider {
   }
 }
 
-object ProtocolFilter2 {
-  def create_filters(dtos:java.util.List[ProtocolFilterDTO], handler:ProtocolHandler):java.util.List[ProtocolFilter2] = {
+object ProtocolFilter3 {
+  def create_filters(dtos:java.util.List[ProtocolFilterDTO], handler:ProtocolHandler):java.util.List[ProtocolFilter3] = {
     import collection.JavaConversions._
     collection.JavaConversions.seqAsJavaList(create_filters(dtos.toList, handler));
   }
-  def create_filters(dtos:List[ProtocolFilterDTO], handler:ProtocolHandler):List[ProtocolFilter2] = {
-    dtos.map(ProtocolFilter2Factory.create(_, handler))
+  def create_filters(dtos:List[ProtocolFilterDTO], handler:ProtocolHandler):List[ProtocolFilter3] = {
+    dtos.map(ProtocolFilter3Factory.create(_, handler))
   }
 }
 
@@ -177,18 +181,38 @@ object ProtocolFilter2 {
  * A Protocol filter can filter frames being sent/received to and from a client.  It can modify
  * the frame or even drop it.
  */
+@deprecated(message="Please use the ProtocolFilter3 interface instead", since="1.7")
 abstract class ProtocolFilter2 {
 
   /**
    * Filters a command frame received from a client.
    * returns None if the filter wants to drop the frame.
    */
-  def filter_inbound[T](frame: T):Option[T]
+  def filter_inbound[T](frame: T):T
 
   /**
    * Filters a command frame being sent client.
    * returns None if the filter wants to drop the frame.
    */
-  def filter_outbound[T](frame: T):Option[T]
+  def filter_outbound[T](frame: T):T
+}
+
+/**
+ * A Protocol filter can filter frames being sent/received to and from a client.  It can modify
+ * the frame or even drop it.
+ */
+abstract class ProtocolFilter3 {
+
+  /**
+   * Filters a command frame received from a client.
+   * returns None if the filter wants to drop the frame.
+   */
+  def filter_inbound[T<:Object](frame: T):T
+
+  /**
+   * Filters a command frame being sent client.
+   * returns None if the filter wants to drop the frame.
+   */
+  def filter_outbound[T<:Object](frame: T):T
 }
 

@@ -116,7 +116,7 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
 
   var protocol_handler: ProtocolHandler = null;
 
-  def session_id = Option(protocol_handler).flatMap(_.session_id)
+  def session_id = Option(protocol_handler).flatMap(x=> Option(x.session_id))
   override def toString = "id: "+id.toString
 
   protected override  def _start(on_completed:Task) = {
@@ -164,7 +164,7 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
     result.connector = connector.id
     result.remote_address = Option(transport.getRemoteAddress).map(_.toString).getOrElse(null)
     result.local_address = Option(transport.getLocalAddress).map(_.toString).getOrElse(null)
-    result.protocol_session_id = protocol_handler.session_id.getOrElse(null)
+    result.protocol_session_id = protocol_handler.session_id
     val wf = transport.getProtocolCodec
     if( wf!=null ) {
       result.write_counter = wf.getWriteCounter

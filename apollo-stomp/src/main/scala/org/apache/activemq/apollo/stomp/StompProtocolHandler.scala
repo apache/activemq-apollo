@@ -23,7 +23,7 @@ import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.broker._
 import Buffer._
 import java.lang.String
-import protocol.{ProtocolFilter2, ProtocolHandler}
+import protocol.{ProtocolFilter3, ProtocolHandler}
 import security.SecurityContext
 import Stomp._
 import org.apache.activemq.apollo.selector.SelectorParser
@@ -504,7 +504,7 @@ class StompProtocolHandler extends ProtocolHandler {
             case _ => (message.encoded, "protocol/"+message.codec.id())
           }
           message_id_counter += 1
-          var headers =  (MESSAGE_ID -> ascii(session_id.get+message_id_counter)) :: Nil
+          var headers =  (MESSAGE_ID -> ascii(session_id+message_id_counter)) :: Nil
           headers ::= (CONTENT_TYPE -> ascii(content_type))
           headers ::= (CONTENT_LENGTH -> ascii(body.length().toString))
           headers ::= (DESTINATION -> encode_header(destination_parser.encode_destination(delivery.sender.tail)))
@@ -690,7 +690,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var waiting_on = WAITING_ON_CLIENT_REQUEST
   var config:StompDTO = _
 
-  var protocol_filters = List[ProtocolFilter2]()
+  var protocol_filters = List[ProtocolFilter3]()
 
   var destination_parser = Stomp.destination_parser
   var protocol_convert = "full"
@@ -708,7 +708,7 @@ class StompProtocolHandler extends ProtocolHandler {
     rc.map { dest =>
       if( dest.domain.startsWith("temp-") ) {
         temp_destination_map.getOrElseUpdate(dest, {
-          val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id.get) :: dest.path.parts
+          val parts = LiteralPart("temp") :: LiteralPart(broker.id) :: LiteralPart(session_id) :: dest.path.parts
           SimpleAddress(dest.domain.stripPrefix("temp-"), Path(parts))
         })
       } else {
@@ -732,7 +732,7 @@ class StompProtocolHandler extends ProtocolHandler {
     val connector_config = connection.connector.config.asInstanceOf[AcceptingConnectorDTO]
     config = connector_config.protocols.find( _.isInstanceOf[StompDTO]).map(_.asInstanceOf[StompDTO]).getOrElse(new StompDTO)
 
-    protocol_filters = ProtocolFilter2.create_filters(config.protocol_filters.toList, this)
+    protocol_filters = ProtocolFilter3.create_filters(config.protocol_filters.toList, this)
 
     import OptionSupport._
     Option(config.max_data_length).map(MemoryPropertyEditor.parse(_).toInt).foreach( codec.max_data_length = _ )
@@ -830,12 +830,17 @@ class StompProtocolHandler extends ProtocolHandler {
     }
 
     if(!protocol_filters.isEmpty) {
-      filtering_sink = filtering_sink.flatMap {x=>
-        var cur = Option(x)
-        protocol_filters.foreach { filter =>
-          cur = cur.flatMap(filter.filter_outbound(_))
+      filtering_sink = new AbstractSinkFilter[StompFrame, StompFrame]() {
+        val downstream = filtering_sink
+        def filter(value: StompFrame): StompFrame = {
+          var cur = value
+          for(filter <- protocol_filters) {
+            if( cur != null ) {
+              cur = filter.filter_outbound(cur)
+            }
+          }
+          cur
         }
-        cur
       }
     }
 
@@ -939,14 +944,16 @@ class StompProtocolHandler extends ProtocolHandler {
           trace("received frame: %s", f)
 
           val frame = if(!protocol_filters.isEmpty) {
-            var cur = Option(f)
-            protocol_filters.foreach { filter =>
-              cur = cur.flatMap(filter.filter_inbound(_))
+            var cur = f
+            for( filter <- protocol_filters) {
+              if( cur !=null ) {
+                cur = filter.filter_inbound(cur)
+              }
             }
-            cur match {
-              case Some(f) => f
-              case None => return // dropping the frame.
-            } 
+            if( cur == null ) {
+              return // dropping the frame.
+            }
+            cur
           } else {
             f
           }
@@ -1081,7 +1088,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
       connected_headers += SERVER->encode_header("apache-apollo/"+Broker.version)
       connected_headers += HOST_ID->encode_header(host.id)
-      connected_headers += SESSION->encode_header(session_id.get)
+      connected_headers += SESSION->encode_header(session_id)
 
       val outbound_heart_beat_header = ascii("%d,%d".format(outbound_heartbeat,inbound_heartbeat))
       connected_headers += HEART_BEAT->outbound_heart_beat_header
@@ -1114,7 +1121,7 @@ class StompProtocolHandler extends ProtocolHandler {
           async_die(headers, "")
         } else {
           this.host=host
-          security_context.session_id = Some("%s-%x".format(this.host.config.id, this.host.session_counter.incrementAndGet))
+          security_context.session_id = "%s-%x".format(this.host.config.id, this.host.session_counter.incrementAndGet)
           connection_log = host.connection_log
           if( host.authenticator!=null &&  host.authorizer!=null ) {
             suspend_read("authenticating and authorizing connect")
@@ -1349,7 +1356,7 @@ class StompProtocolHandler extends ProtocolHandler {
     // Do we need to add the message id?
     if( get( headers, MESSAGE_ID) == None ) {
       message_id_counter += 1
-      rc ::= (MESSAGE_ID -> ascii(session_id.get+message_id_counter))
+      rc ::= (MESSAGE_ID -> ascii(session_id+message_id_counter))
     }
 
     if( config.add_timestamp_header!=null ) {

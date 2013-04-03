@@ -74,6 +74,26 @@ abstract class Sink[T] {
   }
 }
 
+abstract class AbstractSinkFilter[Y, T <: Object] extends Sink[Y] {
+  def downstream:Sink[T]
+  def refiller:Task = downstream.refiller
+  def refiller_=(value:Task) { downstream.refiller=value }
+  def full: Boolean = downstream.full
+
+  def offer(value:Y) = {
+    if( full ) {
+      false
+    } else {
+      val opt = filter(value)
+      if( opt !=null ) {
+        downstream.offer(opt)
+      }
+      true
+    }
+  }
+  def filter(value:Y):T
+}
+
 case class FullSink[T]() extends Sink[T] {
   def refiller:Task = null
   def refiller_=(value:Task) = {}

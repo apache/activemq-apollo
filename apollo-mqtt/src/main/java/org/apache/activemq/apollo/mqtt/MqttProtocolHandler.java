@@ -18,8 +18,8 @@ package org.apache.activemq.apollo.mqtt;
 
 import org.apache.activemq.apollo.broker.*;
 import org.apache.activemq.apollo.broker.protocol.AbstractProtocolHandler;
-import org.apache.activemq.apollo.broker.protocol.ProtocolFilter2;
-import org.apache.activemq.apollo.broker.protocol.ProtocolFilter2$;
+import org.apache.activemq.apollo.broker.protocol.ProtocolFilter3;
+import org.apache.activemq.apollo.broker.protocol.ProtocolFilter3$;
 import org.apache.activemq.apollo.broker.security.SecurityContext;
 import org.apache.activemq.apollo.dto.AcceptingConnectorDTO;
 import org.apache.activemq.apollo.dto.ProtocolDTO;
@@ -31,7 +31,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.Task;
 import org.fusesource.hawtdispatch.transport.HeartBeatMonitor;
 import org.fusesource.mqtt.codec.*;
-import scala.Option;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -111,14 +110,14 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
         return destination_parser;
     }
 
-    final ArrayList<ProtocolFilter2> protocol_filters = new ArrayList<ProtocolFilter2>();
+    final ArrayList<ProtocolFilter3> protocol_filters = new ArrayList<ProtocolFilter3>();
 
     /////////////////////////////////////////////////////////////////////
     //
     // Bits related setting up a client connection
     //
     /////////////////////////////////////////////////////////////////////
-    public Option<String> session_id() {
+    public String session_id() {
         return security_context.session_id();
     }
 
@@ -146,7 +145,7 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
         codec.setMaxMessageLength(get(config.max_message_length, codec.getMaxMessageLength()));
 
         protocol_filters.clear();
-        protocol_filters.addAll(ProtocolFilter2$.MODULE$.create_filters(config.protocol_filters, this));
+        protocol_filters.addAll(ProtocolFilter3$.MODULE$.create_filters(config.protocol_filters, this));
 
         security_context.local_address_$eq(connection().transport().getLocalAddress());
         security_context.remote_address_$eq(connection().transport().getRemoteAddress());
@@ -172,18 +171,26 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
         };
 
         if (!protocol_filters.isEmpty()) {
-            filtering_sink = filtering_sink.flatMap(toScala(new Fn1<Request, Option<Request>>() {
+            final Sink<Request> downstream  = filtering_sink;
+            filtering_sink = new AbstractSinkFilter<Request, Request>() {
+
                 @Override
-                public Option<Request> apply(Request x) {
-                    Option<Request> cur = some(x);
-                    for (ProtocolFilter2 filter : protocol_filters) {
-                        if (cur.isDefined()) {
-                            cur = filter.filter_outbound(cur.get());
+                public Sink<Request> downstream() {
+                    return downstream;
+                }
+
+                @Override
+                public Request filter(Request value) {
+                    Request cur = value;
+                    for (ProtocolFilter3 filter : protocol_filters) {
+                        cur = filter.filter_outbound(cur);
+                        if(cur == null ) {
+                            break;
                         }
                     }
                     return cur;
                 }
-            }));
+            };
         }
         sink_manager = new SinkMux<Request>(filtering_sink);
         connection_sink = new OverflowSink(sink_manager.open());
@@ -360,11 +367,9 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
     public void on_transport_command(Object command) {
         try {
             if (!protocol_filters.isEmpty()) {
-                for (ProtocolFilter2 filter : protocol_filters) {
-                    Option<Object> opt = filter.filter_inbound(command);
-                    if (opt.isDefined()) {
-                        command = opt.get();
-                    } else {
+                for (ProtocolFilter3 filter : protocol_filters) {
+                    command = filter.filter_inbound(command);
+                    if (command==null) {
                         return; // dropping the frame.
                     }
                 }
@@ -432,7 +437,7 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
         UTF8Buffer client_id = connect_message.clientId();
         security_context.user_$eq(Scala2Java.toString(connect_message.userName()));
         security_context.password_$eq(Scala2Java.toString(connect_message.password()));
-        security_context.session_id_$eq(Scala2Java.some(client_id.toString()));
+        security_context.session_id_$eq(client_id.toString());
 
         final short keep_alive = connect_message.keepAlive();
         if (keep_alive > 0) {

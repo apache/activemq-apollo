@@ -434,7 +434,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       security_context.certificates = connection.certificates
       security_context.user = Option(info.getUserName).map(_.toString).getOrElse(null)
       security_context.password = Option(info.getPassword).map(_.toString).getOrElse(null)
-      security_context.session_id = Some(info.getConnectionId.toString)
+      security_context.session_id = info.getConnectionId.toString
 
       if( host.authenticator!=null &&  host.authorizer!=null ) {
         suspend_read("authenticating and authorizing connect")

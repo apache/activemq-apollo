@@ -124,7 +124,8 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
   def configClass:Class[ConfigTypeDTO]
 
   def protocol = "udp"
-  var session_id:Option[String] = None
+  var session_id:String = null
+
 
   var buffer_size = 640*1024
   var connection_log:Log = _
@@ -146,7 +147,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
   override def on_transport_connected = {
     connection.transport.resumeRead
     import collection.JavaConversions._
-    session_id = Some("%s-%x".format(broker.default_virtual_host.config.id, broker.default_virtual_host.session_counter.incrementAndGet))
+    session_id = "%s-%x".format(broker.default_virtual_host.config.id, broker.default_virtual_host.session_counter.incrementAndGet)
 
     configure(connection.connector.config match {
       case connector_config:AcceptingConnectorDTO =>

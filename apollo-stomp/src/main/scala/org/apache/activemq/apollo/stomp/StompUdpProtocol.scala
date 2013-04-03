@@ -40,7 +40,7 @@ class StompUdpProtocol extends UdpProtocol {
 
     var config:ConfigTypeDTO = _
     var destination_parser = Stomp.destination_parser
-    var protocol_filters = List[ProtocolFilter2]()
+    var protocol_filters = List[ProtocolFilter3]()
     var message_id_counter = 0L
     var default_virtual_host:VirtualHost = _
 
@@ -48,7 +48,7 @@ class StompUdpProtocol extends UdpProtocol {
       config = c.getOrElse(new ConfigTypeDTO)
       import collection.JavaConversions._
       default_virtual_host = broker.default_virtual_host
-      protocol_filters = ProtocolFilter2.create_filters(config.protocol_filters.toList, this)
+      protocol_filters = ProtocolFilter3.create_filters(config.protocol_filters.toList, this)
 
 
 //      Option(config.max_data_length).map(MemoryPropertyEditor.parse(_).toInt).foreach( codec.max_data_length = _ )
@@ -119,17 +119,16 @@ class StompUdpProtocol extends UdpProtocol {
 
       try {
         var frame = StompCodec.decode_frame(new Buffer(udp.buffer))
-        frame = if(!protocol_filters.isEmpty) {
-          var cur = Option(frame)
-          protocol_filters.foreach { filter =>
-            cur = cur.flatMap(filter.filter_inbound(_))
+
+        if(!protocol_filters.isEmpty) {
+          for( filter <- protocol_filters) {
+            if( frame !=null ) {
+              frame = filter.filter_inbound(frame)
+            }
           }
-          cur match {
-            case Some(frame) => frame
-            case None => return None
+          if( frame == null ) {
+            return None
           }
-        } else {
-          frame
         }
 
         val virtual_host = get(frame.headers, HOST) match {
@@ -188,7 +187,7 @@ class StompUdpProtocol extends UdpProtocol {
       // Do we need to add the message id?
       if( get( headers, MESSAGE_ID) == None ) {
         message_id_counter += 1
-        rc ::= (MESSAGE_ID -> ascii(session_id.get+message_id_counter))
+        rc ::= (MESSAGE_ID -> ascii(session_id+message_id_counter))
       }
 
       if( config.add_timestamp_header!=null ) {
