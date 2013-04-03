@@ -206,18 +206,31 @@ class StompTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with Be
     })
   }
 
-  def wait_for_receipt(id: String, c: StompClient = client, discard_others: Boolean = false, timeout:Int=10000): Unit = {
+  def wait_for_receipt(id: String=null, c: StompClient = client, discard_others: Boolean = false, timeout:Int=10000): String = {
     if (!discard_others) {
       val frame = c.receive(timeout)
       frame should startWith("RECEIPT\n")
-      frame should include("receipt-id:" + id + "\n")
+      if( id !=null ) {
+        frame should include("receipt-id:" + id + "\n")
+        return id;
+      } else {
+        var pos = frame.indexOf("receipt-id:");
+        if ( pos >= 0) {
+          pos += "receipt-id:".length;
+          val pos2 = frame.indexOf("\n", pos);
+          if ( pos2 >= 0) {
+            return frame.substring(pos, pos2);
+          }
+        }
+      }
     } else {
       while (true) {
         val frame = c.receive(timeout)
         if (frame.startsWith("RECEIPT\n") && frame.indexOf("receipt-id:" + id + "\n") >= 0) {
-          return
+          return id;
         }
       }
     }
+    return null;
   }
 }
