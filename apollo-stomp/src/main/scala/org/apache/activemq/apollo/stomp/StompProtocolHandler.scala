@@ -547,7 +547,7 @@ class StompProtocolHandler extends ProtocolHandler {
       override def time_stamp = broker.now
     }
 
-    override def dispose() = dispatchQueue {
+    override def dispose() = defer {
       ack_handler.close
       credit_window_filter.disable
       sink_manager.close(consumer_sink, (frame)=>{
@@ -669,7 +669,8 @@ class StompProtocolHandler extends ProtocolHandler {
 
 //  var session_manager:SessionSinkMux[StompFrame] = null
   var sink_manager:SinkMux[StompFrame] = null
-  var connection_sink:Sink[StompFrame] = null
+  var connection_sink:OverflowSink[StompFrame] = null
+  var connection_sink_read_suspended = false
 
   var dead = false
   var closed = false
@@ -840,6 +841,13 @@ class StompProtocolHandler extends ProtocolHandler {
 
     sink_manager = new SinkMux[StompFrame](filtering_sink)
     connection_sink = new OverflowSink(sink_manager.open());
+    connection_sink.refiller =  ^ {
+      if( connection_sink_read_suspended ) {
+        connection_sink_read_suspended = false
+        println("connection_sink: resume_read")
+        resume_read()
+      }
+    }
     resume_read
   }
 
@@ -1096,7 +1104,7 @@ class StompProtocolHandler extends ProtocolHandler {
         case None=> broker.default_virtual_host
         case Some(host)=> broker.get_virtual_host(host)
       }
-      dispatchQueue {
+      defer {
         resume_read
         if(host==null) {
           async_die("Invalid virtual host: "+host_header.get)
@@ -1111,7 +1119,7 @@ class StompProtocolHandler extends ProtocolHandler {
           if( host.authenticator!=null &&  host.authorizer!=null ) {
             suspend_read("authenticating and authorizing connect")
             host.authenticator.authenticate(security_context) { auth_failure=>
-              dispatchQueue {
+              defer {
                 if( auth_failure!=null ) {
                   async_die("%s. Credentials=%s".format(auth_failure, security_context.credential_dump))
                 } else if( !host.authorizer.can(security_context, "connect", connection.connector) ) {
@@ -1227,7 +1235,7 @@ class StompProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def producer_maintenance = dispatchQueue {
+  def producer_maintenance = defer {
     val now = Broker.now
     import collection.JavaConversions._
     val expired = ListBuffer[StompProducerRoute]()
@@ -1260,7 +1268,7 @@ class StompProtocolHandler extends ProtocolHandler {
         }
         host.dispatch_queue {
           val rc = host.router.connect(route.addresses, route, security_context)
-          dispatchQueue {
+          defer {
             rc match {
               case Some(failure) =>
                 async_die(failure)
@@ -1411,8 +1419,8 @@ class StompProtocolHandler extends ProtocolHandler {
       if( receipt!=null ) {
         val trimmed_receipt = receipt.deepCopy().ascii()
         delivery.ack = { (consumed, uow) =>
-          dispatchQueue <<| ^{
-            connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, trimmed_receipt))))
+          defer {
+            send_receipt(trimmed_receipt)
           }
         }
       }
@@ -1430,7 +1438,7 @@ class StompProtocolHandler extends ProtocolHandler {
     } else {
       // info("Dropping message.  No consumers interested in message.")
       if( receipt!=null ) {
-        connection_sink.offer(StompFrame(RECEIPT, List((RECEIPT_ID, receipt))))
+        send_receipt(receipt)
       }
     }
     frame.release
@@ -1531,7 +1539,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
     host.dispatch_queue {
       host.router.bind(addresses, consumer, security_context) { rc =>
-        dispatchQueue {
+        defer {
           rc match {
             case Some(reason)=>
               consumers -= id
@@ -1573,11 +1581,13 @@ class StompProtocolHandler extends ProtocolHandler {
             var addresses = Array[DestinationAddress](SubscriptionAddress(destination_parser.decode_path(decode_header(id)), null, Array[BindAddress]()))
             host.router.delete(addresses, security_context) match {
               case Some(error)=>
-                dispatchQueue {
+                defer {
                   async_die(error)
                 }
               case None =>
-                send_receipt(headers)
+                defer {
+                  send_receipt(headers)
+                }
             }
           }
         } else {
@@ -1590,7 +1600,9 @@ class StompProtocolHandler extends ProtocolHandler {
         host.dispatch_queue {
           host.router.unbind(consumer.addresses, consumer, persistent, security_context)
           consumer.release()
-          send_receipt(headers)
+          defer {
+            send_receipt(headers)
+          }
         }
     }
   }
@@ -1684,19 +1696,27 @@ class StompProtocolHandler extends ProtocolHandler {
     send_receipt(headers)
   }
 
-
-  def send_receipt(headers:HeaderMap) = {
+  def send_receipt(headers:HeaderMap):StompFrame = {
     get(headers, RECEIPT_REQUESTED) match {
       case Some(receipt)=>
-        val frame = StompFrame(RECEIPT, List((RECEIPT_ID, receipt)))
-        dispatchQueue <<| ^{
-          connection_sink.offer(frame)
-        }
-        frame
+        send_receipt(receipt)
       case None=>
         null
     }
   }
+
+  def send_receipt(receipt:AsciiBuffer):StompFrame = {
+    dispatchQueue.assertExecuting()
+    val frame = StompFrame(RECEIPT, List((RECEIPT_ID, receipt)))
+    connection_sink.offer(frame)
+    if( connection_sink.overflow.size() > 1000 && !connection_sink_read_suspended) {
+      connection_sink_read_suspended = true
+      println("connection_sink: suspend_read")
+      suspend_read("client to drain receipts")
+    }
+    frame
+  }
+
 
   class TransactionQueue {
     // TODO: eventually we want to back this /w a broker Queue which
@@ -1714,7 +1734,9 @@ class StompProtocolHandler extends ProtocolHandler {
 //        println("UOW starting: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
         uow.on_complete {
 //          println("UOW completed: "+uow.asInstanceOf[DelayingStoreSupport#DelayableUOW].uow_id)
-          on_complete
+          defer {
+            on_complete
+          }
         }
         queue.foreach{ _._1(uow) }
         uow.release

@@ -87,6 +87,7 @@ trait ProtocolHandler {
   def session_id:Option[String]
 
   var connection:BrokerConnection = null;
+  def defer(func: =>Unit) = connection.defer(func)
 
   def set_connection(brokerConnection:BrokerConnection) = {
     this.connection = brokerConnection

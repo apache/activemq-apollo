@@ -24,7 +24,8 @@ import java.net.{SocketTimeoutException, InetSocketAddress}
 import org.apache.activemq.apollo.stomp.{Stomp, StompProtocolHandler}
 import org.fusesource.hawtdispatch._
 import collection.mutable
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean, AtomicInteger}
+import java.util.concurrent.{CountDownLatch, ConcurrentHashMap}
 
 /**
  * These tests can be run in parallel against a single Apollo broker.
@@ -1734,5 +1735,67 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       assert_received("m2",c=receiver)
     }
   }
+
+  test("APLO-315: Evil producers that don't read thier sockets for receipts") {
+    val pending = new ConcurrentHashMap[String, java.lang.Long]()
+    val start = System.currentTimeMillis();
+    val producer_counter = new AtomicLong(0);
+
+    var producer_done = new AtomicBoolean(false)
+    var producer_shutdown = new CountDownLatch(15*2);
+
+    val client = connect("1.1", new StompClient());
+
+    // use one thread to send..
+    val producer = new BlockingTask() {
+      def run() {
+        var i = 0;
+        while(!done.get()) {
+          val receipt_id = "-"+i;
+          i += 1
+          pending.put(receipt_id, new java.lang.Long(System.nanoTime()));
+          async_send("/topic/APLO-315", "This is message "+i, headers="receipt:"+receipt_id+"\npersistent:true\n", c=client);
+          producer_counter.incrementAndGet();
+        }
+      }
+    }
+
+    // The producer should block since he's not draining his receipts..
+    within(10, SECONDS) {
+      val start = producer_counter.get()
+      Thread.sleep(1000)
+      producer_counter.get() should be (start)
+    }
+
+    producer.stop
+
+    // Start draining those receipts..
+    val drainer = new BlockingTask() {
+      def run() {
+        var i = 0;
+        while(!pending.isEmpty) {
+          if( done.get() ) {
+            return;
+          }
+          try {
+            var r = wait_for_receipt(c = client, timeout = 500);
+            if (r != null) {
+              val start = pending.remove(r);
+              if (start == null) {
+                fail("Got unexpected receipt: " + r)
+              }
+              val latency = System.nanoTime() - start.longValue();
+            }
+          } catch {
+            case e:SocketTimeoutException =>
+          }
+        }
+      }
+    }
+
+    producer.await
+    drainer.await
+  }
+
 
 }

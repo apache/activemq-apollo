@@ -23,7 +23,7 @@ import protocol.{ProtocolHandler}
 import org.apache.activemq.apollo.filter.BooleanExpression
 import org.fusesource.hawtdispatch.transport._
 import org.apache.activemq.apollo.dto._
-import org.apache.activemq.apollo.util.{Dispatched, Log, BaseService}
+import org.apache.activemq.apollo.util.{DeferringDispatched, Dispatched, Log, BaseService}
 import scala.Some
 import java.security.cert.X509Certificate
 
@@ -34,7 +34,7 @@ object Connection extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class Connection() extends BaseService with Dispatched {
+abstract class Connection() extends BaseService with DeferringDispatched {
   import Connection._
 
   private var _dispatch_queue = createQueue()

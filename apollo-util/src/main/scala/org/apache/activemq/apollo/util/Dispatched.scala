@@ -40,7 +40,10 @@ trait DeferringDispatched extends Dispatched {
     })
   }
 
-  val dispatch_queue_task_source = createSource(new ListEventAggregator[Task](), dispatch_queue)
-  dispatch_queue_task_source.setEventHandler(^{ dispatch_queue_task_source.getData.foreach(_.run()) });
-  dispatch_queue_task_source.resume()
+  lazy val dispatch_queue_task_source = {
+    val x = createSource(new ListEventAggregator[Task](), dispatch_queue)
+    x.setEventHandler(^{ x.getData.foreach(_.run()) });
+    x.resume()
+    x
+  }
 }

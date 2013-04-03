@@ -31,6 +31,7 @@ import org.fusesource.hawtbuf.{ByteArrayOutputStream, Buffer}
 import com.fasterxml.jackson.annotation.JsonInclude
 import util.concurrent.CountDownLatch
 import java.util.concurrent.locks.{ReentrantReadWriteLock, Lock, ReadWriteLock}
+import java.util.concurrent.atomic.AtomicBoolean
 
 object BrokerTestSupport {
   import FutureResult._
@@ -167,6 +168,24 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     val props = new java.util.Properties(System.getProperties)
     props.setProperty("testdatadir", test_data_dir.getCanonicalPath)
     BrokerFactory.createBroker(broker_config_uri, props)
+  }
+
+  abstract case class BlockingTask(done:AtomicBoolean = new AtomicBoolean(false), shutdown:CountDownLatch=new CountDownLatch(1)) extends Task {
+
+    def stop = {
+      done.set(true)
+      this
+    }
+
+    def await = shutdown.await()
+
+    Broker.BLOCKABLE_THREAD_POOL {
+      try {
+        this.run();
+      } finally {
+        shutdown.countDown();
+      }
+    }
   }
 
   override def beforeAll() = {
