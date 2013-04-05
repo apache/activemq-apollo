@@ -27,9 +27,12 @@ import org.apache.log4j.PropertyConfigurator
 import java.io.{FileInputStream, File}
 import java.util.logging.LogManager
 import org.apache.activemq.apollo.dto.BrokerDTO
-import collection.mutable.ListBuffer
+import scala.collection.mutable.ListBuffer
 import java.lang.Thread.UncaughtExceptionHandler
 import java.lang.Throwable
+import java.security.{Security, Provider}
+import scala._
+import scala.AnyRef
 
 /**
  * The apollo run command
@@ -88,6 +91,17 @@ class Run extends Action {
       Apollo.print_banner(session.getConsole)
 
       def println(value:String) = session.getConsole.println(value)
+
+      // Use bouncycastle if it's installed.
+      try {
+        var loader: ClassLoader = getClass.getClassLoader
+        var clazz: Class[_] = loader.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider")
+        val bouncycastle_provider = clazz.newInstance().asInstanceOf[Provider]
+        Security.insertProviderAt(bouncycastle_provider, 2)
+        println("Loaded the Bouncy Castle security provider.")
+      } catch {
+        case e:Throwable => // ignore, we can live without bouncycastle
+      }
 
       // Load the configs and start the brokers up.
       println("Loading configuration file '%s'.".format(conf))

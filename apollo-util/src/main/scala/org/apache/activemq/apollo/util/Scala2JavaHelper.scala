@@ -16,7 +16,6 @@
  */
 package org.apache.activemq.apollo.util
 
-import org.apache.activemq.apollo.util.Log
 import scala.Function1
 import scala.runtime.BoxedUnit
 
