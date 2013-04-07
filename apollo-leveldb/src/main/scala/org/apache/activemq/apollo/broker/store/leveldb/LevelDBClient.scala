@@ -682,10 +682,16 @@ class LevelDBClient(store: LevelDBStore) {
 
     try {
 
-      // Hard link all the index files.
-      dirty_index_file.list_files.foreach {
-        file =>
-          link(file, tmp_dir / file.getName)
+      // Copy/Hard link all the index files.
+      for( file <- dirty_index_file.list_files ) {
+        val name: String = file.getName
+        if( name == "CURRENT" || name.startsWith("MANIFEST-") ) {
+          /// These might not be append only files, so avoid hard linking just to be safe.
+          copyLinkStrategy(file, tmp_dir / name)
+        } else {
+          // These are append only files, safe to hard line.
+          link(file, tmp_dir / name)
+        }
       }
 
       // Rename to signal that the snapshot is complete.
