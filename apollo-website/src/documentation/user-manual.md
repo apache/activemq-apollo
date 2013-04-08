@@ -703,6 +703,14 @@ A `bdb_store` element may be configured with the following attributes:
 
 ### Security
 
+### Working Around Java 7 SSL Bugs
+
+As noted by issue [APLO-287](https://issues.apache.org/jira/browse/APLO-287), 
+it seems some versions of Java 7 have problems with SSL sessions that need
+to use the Diffie-Hellman cypher suite.   If you run into this issue,
+just copy the Bouncy Castle [bcprov-jdk15on-148.jar](http://www.bouncycastle.org/download/bcprov-jdk15on-148.jar)
+to Apollo's lib directory and restart your broker.
+
 #### The SSL/TLS Transport
 
 ${project_name} supports SSL/TLS for transport level security to avoid 3rd

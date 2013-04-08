@@ -92,19 +92,19 @@ class Run extends Action {
 
       def println(value:String) = session.getConsole.println(value)
 
+      // Load the configs and start the brokers up.
+      println("Loading configuration file '%s'.".format(conf))
+
       // Use bouncycastle if it's installed.
       try {
         var loader: ClassLoader = getClass.getClassLoader
         var clazz: Class[_] = loader.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider")
         val bouncycastle_provider = clazz.newInstance().asInstanceOf[Provider]
         Security.insertProviderAt(bouncycastle_provider, 2)
-        println("Loaded the Bouncy Castle security provider.")
+        Broker.info("Loaded the Bouncy Castle security provider.")
       } catch {
         case e:Throwable => // ignore, we can live without bouncycastle
       }
-
-      // Load the configs and start the brokers up.
-      println("Loading configuration file '%s'.".format(conf))
 
       val broker = new Broker()
 
