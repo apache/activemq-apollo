@@ -201,7 +201,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
     amqp_connection.pumpOut()
   }
 
-  override def on_transport_connected() = sys.error("should not get called")
+  override def on_transport_connected() = {} // should not get called
   override def on_transport_command(command: AnyRef): Unit = sys.error("should not get called")
 
   override def set_connection(connection: BrokerConnection) = {
