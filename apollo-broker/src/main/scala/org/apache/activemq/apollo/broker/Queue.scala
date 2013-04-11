@@ -692,7 +692,7 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           }
           if( delivery.persistent && tune_persistent ) {
             assert(delivery.uow!=null)
-            delivery.uow.release
+            delivery.uow.release()
           }
           return true
         }
