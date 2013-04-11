@@ -562,7 +562,7 @@ public class MqttSession {
             if (route.full()) {
                 // but once it gets full.. suspend to flow control the producer.
                 route.suspended = true;
-                handler._suspend_read("blocked sending to: " + route.overflowSessions().mkString(", "));
+                handler._suspend_read("blocked sending to: " + route.dispatch_sessions().mkString(", "));
             }
 
         } else {

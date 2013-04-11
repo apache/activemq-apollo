@@ -646,11 +646,12 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
   def perform_send(msg:ActiveMQMessage, uow:StoreUOW=null): Unit = {
 
-    producerRoutes.get(msg.getDestination) match {
+    val route = producerRoutes.get(msg.getDestination) match {
       case null =>
         // create the producer route...
         val addresses = to_destination_dto(msg.getDestination, this)
         val route = OpenwireDeliveryProducerRoute(addresses)
+        producerRoutes.put(msg.getDestination, route)
 
         if( uow!=null ) {
           uow.retain
@@ -663,66 +664,56 @@ class OpenwireProtocolHandler extends ProtocolHandler {
             resume_read
             rc match {
               case Some(failure) =>
+                producerRoutes.remove(msg.getDestination)
+                if( route.suspended ) {
+                  route.suspended = false
+                  resume_read()
+                }
                 fail(failure, msg)
               case None =>
-                if (!connection.stopped) {
-                  producerRoutes.put(msg.getDestination, route)
-                  send_via_route(route, msg, uow)
-                }
             }
             if( uow!=null ) {
               uow.release
             }
           }
         }
+        route
 
-      case route =>
-        // we can re-use the existing producer route
-        send_via_route(route, msg, uow)
-
+      case route => route
     }
+    send_via_route(route, msg, uow)
   }
 
   def send_via_route(route:OpenwireDeliveryProducerRoute, message:ActiveMQMessage, uow:StoreUOW) = {
-    if( !route.targets.isEmpty ) {
+    // We may need to add some headers..
+    val delivery = new Delivery
+    delivery.message = new OpenwireMessage(message)
+    delivery.expiration = message.getExpiration
+    delivery.persistent = message.isPersistent
+    delivery.size = {
+      val rc = message.getEncodedSize
+      if( rc != 0 )
+        rc
+      else
+        message.getSize
+    }
+    delivery.uow = uow
 
-      // We may need to add some headers..
-      val delivery = new Delivery
-      delivery.message = new OpenwireMessage(message)
-      delivery.expiration = message.getExpiration
-      delivery.persistent = message.isPersistent
-      delivery.size = {
-        val rc = message.getEncodedSize
-        if( rc != 0 )
-          rc
-        else
-          message.getSize
-      }
-      delivery.uow = uow
-
-      if( message.isResponseRequired ) {
-        delivery.ack = { (consumed, uow) =>
-          dispatchQueue <<| ^{
-            ack(message)
-          }
+    if( message.isResponseRequired ) {
+      delivery.ack = { (consumed, uow) =>
+        dispatchQueue <<| ^{
+          ack(message)
         }
       }
-
-      // routes can always accept at least 1 delivery...
-      assert( !route.full )
-      route.offer(delivery)
-      if( route.full ) {
-        // but once it gets full.. suspend, so that we get more messages
-        // until it's not full anymore.
-        route.suspended = true
-        suspend_read("blocked destination: "+route.overflowSessions.mkString(", "))
-      }
-
-    } else {
-      // info("Dropping message.  No consumers interested in message.")
-      ack(message)
     }
-    //    message.release
+
+    route.offer(delivery)
+    if( route.full && !route.suspended) {
+      // but once it gets full.. suspend, so that we get more messages
+      // until it's not full anymore.
+      route.suspended = true
+      suspend_read("blocked destination: "+route.dispatch_sessions.mkString(", "))
+    }
   }
 
   def on_message_ack(info:MessageAck) = {

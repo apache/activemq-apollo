@@ -63,7 +63,7 @@ case class GroupBucket(sub:Subscription) {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with Dispatched with SecuredResource {
+class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) extends BaseRetained with BindableDeliveryProducer with DeliveryConsumer with BaseService with DomainDestination with DeferringDispatched with SecuredResource {
   override def toString = binding.toString
 
   def virtual_host = router.virtual_host
@@ -716,8 +716,21 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           assert(delivery.uow !=null)
           val uow = delivery.uow
           entry.state match {
-            case state:entry.Loaded => state.store_enqueue(uow)
-            case state:entry.Swapped => uow.enqueue(entry.toQueueEntryRecord)
+            case state:entry.Loaded =>
+              // Little hack to expand the producer memory window for persistent
+              // messages until the uow completes.  Sender might be sending a very
+              // larger UOW which does not fit in the window and then the UOW does
+              // not finish.
+              producer_swapped_in.size_max += delivery.size
+              uow.on_flush { canceled =>
+                defer {
+                  producer_swapped_in.size_max -= delivery.size
+                }
+              }
+
+              state.store_enqueue(uow)
+            case state:entry.Swapped =>
+              uow.enqueue(entry.toQueueEntryRecord)
           }
           uow
         } else {

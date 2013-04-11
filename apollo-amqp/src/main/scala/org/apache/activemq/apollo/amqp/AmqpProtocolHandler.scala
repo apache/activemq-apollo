@@ -795,14 +795,13 @@ class AmqpProtocolHandler extends ProtocolHandler {
 
     override def dispatch_queue = queue
 
-    val producer_overflow = new OverflowSink[Delivery](this) {
-      /**
-       * Called for each value what is passed on to the down stream sink.
-       */
-      override protected def onDelivered(value: Delivery) {
-        receiver.flow(1)
-        pump_out
-      }
+
+    /**
+     * Called for each value what is passed on to the down stream sink.
+     */
+    override protected def onDelivered(value: Delivery) {
+      receiver.flow(1)
+      pump_out
     }
 
     def onMessage(receiver:Receiver, delivery: DeliveryImpl, m: AmqpMessage) = {
@@ -861,7 +860,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
             case Some(tx) =>
               tx.add((uow)=>{
                 d.uow = uow
-                val accepted = producer_overflow.offer(d)
+                val accepted = this.offer(d)
                 assert(accepted)
               })
             case None =>
@@ -869,7 +868,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
           }
           receiver.advance();
         case _ =>
-          val accepted = producer_overflow.offer(d)
+          val accepted = this.offer(d)
           assert(accepted)
           receiver.advance();
       }

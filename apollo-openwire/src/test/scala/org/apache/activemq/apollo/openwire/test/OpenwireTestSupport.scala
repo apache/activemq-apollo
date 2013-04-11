@@ -74,6 +74,13 @@ class OpenwireTestSupport extends BrokerFunSuiteSupport with ShouldMatchers with
     }
     connection
   }
+  def disconnect(connection:Connection=default_connection) = {
+    connection.close()
+    if (connection == default_connection) {
+      default_connection = null
+    }
+    connections = connections.filterNot(_ == connection)
+  }
 
   def receive_text(consumer:MessageConsumer) = consumer.receive().asInstanceOf[TextMessage].getText
 

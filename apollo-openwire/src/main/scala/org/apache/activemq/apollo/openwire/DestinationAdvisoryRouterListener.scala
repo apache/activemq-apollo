@@ -62,13 +62,6 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
 
   class ProducerRoute extends DeliveryProducerRoute(router) {
-    val sink_switcher = new MutableSink[Delivery]
-    val overflow_sink = new OverflowSink(sink_switcher)
-
-    override protected def on_connected = {
-      sink_switcher.downstream = Some(this)
-    }
-
     override def dispatch_queue = router.virtual_host.dispatch_queue
   }
 
@@ -108,23 +101,11 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
       // replay the destination advisories..
       enabled = true
       if( !destination_advisories.isEmpty ) {
-        val producer = new ProducerRoute {
-          override def on_connected = {
-            overflow_sink.refiller = ^{
-              // once the sink is not overflowed.. then we can disconnect
-              if(!overflow_sink.overflowed) {
-                unbind(consumer::Nil)
-                overflow_sink.refiller = NOOP
-              }
-            }
-            overflow_sink.refiller.run()
-            super.on_connected
-          }
-        }
+        val producer = new ProducerRoute
         producer.bind(consumer::Nil, ()=>{})
         producer.connected()
         for( info <- destination_advisories.values ) {
-          producer.overflow_sink.offer(info)
+          producer.offer(info)
         }
       }
     }
@@ -195,7 +176,7 @@ class DestinationAdvisoryRouterListener(router: Router) extends RouterListener {
 
         case route => route
       }
-      route.overflow_sink.offer(delivery)
+      route.offer(delivery)
     }
   }
 

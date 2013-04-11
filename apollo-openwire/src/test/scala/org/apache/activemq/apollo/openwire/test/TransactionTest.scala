@@ -16,7 +16,7 @@
  */
 package org.apache.activemq.apollo.openwire.test
 
-import javax.jms.{TextMessage, Message, MessageListener, Session}
+import javax.jms._
 
 
 /**
@@ -94,10 +94,38 @@ class TransactionTest extends OpenwireTestSupport {
     m3.getText should equal(messages(2).getText)
 
   }
-
 }
 
 class OpenwireLevelDBTransactionTest extends TransactionTest {
   override def broker_config_uri = "xml:classpath:apollo-openwire-leveldb.xml"
+
+  test("Large Transaction Test"){
+//    for( i <- 1 to 1000 ) {
+    connect()
+    val dest = queue(next_id("example"))
+    val message_count = 100
+    val producer_session = default_connection.createSession(true, Session.SESSION_TRANSACTED)
+    val producer = producer_session.createProducer(dest)
+    producer.setDeliveryMode(DeliveryMode.PERSISTENT)
+
+    for( i <- 1 to message_count) {
+      val x = producer_session.createTextMessage("x" * (1024*64))
+      x.setIntProperty("i", i)
+      producer.send(x)
+    }
+
+    // commit so consumer can see it
+    producer_session.commit()
+
+    val consumer_session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val consumer = consumer_session.createConsumer(dest)
+
+    for( i <- 1 to message_count) {
+      val m = consumer.receive(1000).asInstanceOf[TextMessage]
+      m should not be (null)
+      m.getIntProperty("i") should be (i)
+    }
+//    disconnect() }
+  }
 
 }

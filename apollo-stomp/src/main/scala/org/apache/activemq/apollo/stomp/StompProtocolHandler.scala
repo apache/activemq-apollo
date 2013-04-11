@@ -849,7 +849,6 @@ class StompProtocolHandler extends ProtocolHandler {
     connection_sink.refiller =  ^ {
       if( connection_sink_read_suspended ) {
         connection_sink_read_suspended = false
-        println("connection_sink: resume_read")
         resume_read()
       }
     }
@@ -1399,54 +1398,43 @@ class StompProtocolHandler extends ProtocolHandler {
     // User might be asking for ack that we have processed the message..
     val receipt = frame.header(RECEIPT_REQUESTED)
 
-    if( !route.targets.isEmpty ) {
+    // We may need to add some headers..
+    var message = updated_headers(addresses, frame.headers) match {
+      case Nil=>
+        StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous))
+      case updated_headers =>
+        StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous, updated_headers))
+    }
 
-      // We may need to add some headers..
-      var message = updated_headers(addresses, frame.headers) match {
-        case Nil=>
-          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous))
-        case updated_headers =>
-          StompFrameMessage(StompFrame(MESSAGE, frame.headers, frame.content, frame.contiguous, updated_headers))
+    val delivery = new Delivery
+    delivery.message = message
+    delivery.expiration = message.expiration
+    delivery.persistent = message.persistent
+    delivery.size = message.frame.size
+    delivery.uow = uow
+    get(frame.headers, RETAIN).foreach { retain =>
+      delivery.retain = retain match {
+        case SET => RetainSet
+        case REMOVE => RetainRemove
+        case _ => RetainIgnore
       }
+    }
 
-      val delivery = new Delivery
-      delivery.message = message
-      delivery.expiration = message.expiration
-      delivery.persistent = message.persistent
-      delivery.size = message.frame.size
-      delivery.uow = uow
-      get(frame.headers, RETAIN).foreach { retain =>
-        delivery.retain = retain match {
-          case SET => RetainSet
-          case REMOVE => RetainRemove
-          case _ => RetainIgnore
+    if( receipt!=null ) {
+      val trimmed_receipt = receipt.deepCopy().ascii()
+      delivery.ack = { (consumed, uow) =>
+        defer {
+          send_receipt(trimmed_receipt)
         }
       }
+    }
 
-      if( receipt!=null ) {
-        val trimmed_receipt = receipt.deepCopy().ascii()
-        delivery.ack = { (consumed, uow) =>
-          defer {
-            send_receipt(trimmed_receipt)
-          }
-        }
-      }
-
-      // routes can always accept at least 1 delivery...
-      assert( !route.full )
-      route.offer(delivery)
-      if( route.full ) {
-        // but once it gets full.. suspend, so that we get more stomp messages
-        // until it's not full anymore.
-        route.suspended = true
-        suspend_read("blocked sending to: "+route.overflowSessions.mkString(", "))
-      }
-
-    } else {
-      // info("Dropping message.  No consumers interested in message.")
-      if( receipt!=null ) {
-        send_receipt(receipt)
-      }
+    route.offer(delivery)
+    if( route.full && !route.suspended ) {
+      // but once it gets full.. suspend, so that we get more stomp messages
+      // until it's not full anymore.
+      route.suspended = true
+      suspend_read("blocked sending to: "+route.dispatch_sessions.mkString(", "))
     }
     frame.release
   }
@@ -1718,7 +1706,6 @@ class StompProtocolHandler extends ProtocolHandler {
     connection_sink.offer(frame)
     if( connection_sink.overflow.size() > 1000 && !connection_sink_read_suspended) {
       connection_sink_read_suspended = true
-      println("connection_sink: suspend_read")
       suspend_read("client to drain receipts")
     }
     frame

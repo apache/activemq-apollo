@@ -201,10 +201,11 @@ object DeliveryProducerRoute extends Log
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with BindableDeliveryProducer with DeferringDispatched {
+abstract class DeliveryProducerRoute(router:Router) extends AbstractOverflowSink[Delivery] with BindableDeliveryProducer with DeferringDispatched {
   import DeliveryProducerRoute._
 
   var last_send = Broker.now
+
   val reained_base = new BaseRetained
   def release = reained_base.release
   def retain = reained_base.retain
@@ -220,12 +221,12 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
 
   def connected() = defer {
     is_connected = true
-    if( overflow!=null ) {
-      val t = overflow
-      overflow = null
+    if( dispatch_delivery!=null ) {
+      val t = dispatch_delivery
+      dispatch_delivery = null
       _offer(t)
-      if( refiller!=null && !full ) {
-        refiller.run()
+      if( downstream.refiller!=null && !full ) {
+        downstream.refiller.run()
       }
     }
     on_connected
@@ -251,9 +252,9 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       val rc = targets.contains(x.consumer)
       if( rc ) {
         debug("producer route detaching from consumer.")
-        if( !overflowSessions.isEmpty ) {
-          overflowSessions = overflowSessions.filterNot( _ == x )
-          if( overflowSessions.isEmpty ) {
+        if( !dispatch_sessions.isEmpty ) {
+          dispatch_sessions = dispatch_sessions.filterNot( _ == x )
+          if( dispatch_sessions.isEmpty ) {
             drainer.run
           }
         }
@@ -281,28 +282,35 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
   // when one of the down stream sinks cannot accept the offered
   // Dispatch.
   //
+  var dispatch_delivery:Delivery=null
+  var dispatch_sessions = List[DeliverySession]()
 
-  var overflow:Delivery=null
-  var overflowSessions = List[DeliverySession]()
-  var refiller:Task=null
+  // This the sink that the overflow goes to.
 
-  def full = overflow!=null
+  object downstream extends Sink[Delivery] {
+    var refiller:Task=null
+    def full = dispatch_delivery!=null
 
-  def offer(delivery:Delivery):Boolean = {
-    dispatch_queue.assertExecuting()
-    if( full ) {
-      false
-    } else {
-      if (delivery.uow != null) {
-        delivery.uow.retain
-      }
-      if ( !is_connected ) {
-        overflow = delivery
+    def offer(delivery:Delivery):Boolean = {
+      if( full ) {
+        false
       } else {
-        _offer(delivery)
+        if ( !is_connected ) {
+          dispatch_delivery = delivery
+        } else {
+          _offer(delivery)
+        }
+        return true
       }
-      return true
     }
+  }
+
+  override def offer(delivery: Delivery): Boolean = {
+    dispatch_queue.assertExecuting()
+    if (delivery.uow != null) {
+      delivery.uow.retain
+    }
+    super.offer(delivery)
   }
 
   private def _offer(delivery:Delivery):Boolean = {
@@ -356,7 +364,7 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
         }
 
         if( !target.offer(copy) ) {
-          overflowSessions ::= target
+          dispatch_sessions ::= target
         }
       }
     }
@@ -365,8 +373,8 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
       original_ack(Consumed, null)
     }
 
-    if( overflowSessions!=Nil ) {
-      overflow = copy
+    if( dispatch_sessions!=Nil ) {
+      dispatch_delivery = copy
     } else {
       release(copy)
     }
@@ -384,23 +392,24 @@ abstract class DeliveryProducerRoute(router:Router) extends Sink[Delivery] with 
   }
 
   val drainer = ^{
+    dispatch_queue.assertExecuting()
     if( is_connected ) {
-      if( overflow!=null ) {
-        val original = overflowSessions;
-        overflowSessions = Nil
+      if( dispatch_delivery!=null ) {
+        val original = dispatch_sessions;
+        dispatch_sessions = Nil
         original.foreach { target=>
-          if( !target.offer(overflow) ) {
-            overflowSessions ::= target
+          if( !target.offer(dispatch_delivery) ) {
+            dispatch_sessions ::= target
           }
         }
-        if( overflowSessions==Nil ) {
-          release(overflow)
-          overflow = null
-          if(refiller!=null)
-            refiller.run
+        if( dispatch_sessions==Nil ) {
+          release(dispatch_delivery)
+          dispatch_delivery = null
+          if(downstream.refiller!=null)
+            downstream.refiller.run
         }
-      } else if(refiller!=null) {
-        refiller.run
+      } else if(downstream.refiller!=null) {
+        downstream.refiller.run
       }
     }
   }

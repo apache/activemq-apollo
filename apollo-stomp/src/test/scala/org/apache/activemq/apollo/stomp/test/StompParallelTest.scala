@@ -183,7 +183,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 
     val udp_port: Int = connector_port("stomp-udp").get
     val channel = DatagramChannel.open();
-    println("The UDP port is: "+udp_port)
+    info("The UDP port is: "+udp_port)
 
     val target = new InetSocketAddress("127.0.0.1", udp_port)
     channel.send(new AsciiBuffer(
@@ -623,7 +623,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     send_receive
 
     var expected_mapping = actual_mapping
-    println(expected_mapping)
+    info(expected_mapping.toString())
     expected_mapping.get("1").get.intersect(expected_mapping.get("2").get).isEmpty should be(true)
 
     actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
@@ -638,7 +638,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     actual_mapping = mutable.HashMap[String, mutable.HashSet[Char]]()
     send_receive
     expected_mapping = actual_mapping
-    println(expected_mapping)
+    info(expected_mapping.toString())
 
     expected_mapping.get("1").get.intersect(expected_mapping.get("2").get).isEmpty should be(true)
     expected_mapping.get("2").get.intersect(expected_mapping.get("3").get).isEmpty should be(true)
@@ -1596,7 +1596,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
       }
 
       val expired = (msg_count-received)
-      println("expired: "+expired)
+      info("expired: "+expired)
       expired should not be(0)
 
     }
@@ -1615,7 +1615,7 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     val body = "x"*1024*10
     Broker.BLOCKABLE_THREAD_POOL {
       for( i <- 1 to 10 ) {
-        println("sending: "+i)
+        info("sending: "+i)
         val client = connect("1.1", new StompClient)
         async_send(dest, body, c=client)
         disconnect(client)

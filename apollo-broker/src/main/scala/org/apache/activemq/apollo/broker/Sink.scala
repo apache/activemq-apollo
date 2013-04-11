@@ -161,7 +161,11 @@ class TransportSink(val transport:Transport) extends Sink[AnyRef] {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class OverflowSink[T](val downstream:Sink[T]) extends Sink[T] {
+class OverflowSink[T](val downstream:Sink[T]) extends AbstractOverflowSink[T]
+
+abstract class AbstractOverflowSink[T] extends Sink[T] {
+
+  def downstream:Sink[T]
 
   var refiller:Task = NOOP
 
