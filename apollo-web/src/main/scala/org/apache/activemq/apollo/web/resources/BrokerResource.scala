@@ -1024,4 +1024,40 @@ class BrokerResource() extends Resource {
     }
   }
 
+  @GET
+  @Path("/hawtdispatch/profile")
+  @ApiOperation(value="Enables or disables profiling")
+  def hawtdispatch_profile(@QueryParam("enabled") enabled : Boolean) = ok {
+    with_broker { broker =>
+      admining(broker) {
+        Dispatch.profile(enabled)
+      }
+    }
+  }
+
+  @GET
+  @Path("/hawtdispatch/metrics")
+  @ApiOperation(value="Enables or disables profiling")
+  def hawtdispatch_metrics(@QueryParam("enabled") enabled : Boolean):Array[DispatchQueueMetrics] = {
+    with_broker { broker =>
+      monitoring(broker) {
+        val m = Dispatch.metrics()
+        m.toArray(new Array[Metrics](m.size())).sortWith{ case (l,r)=> l.totalRunTimeNS > r.totalRunTimeNS }.map { x =>
+          val rc = new DispatchQueueMetrics
+          rc.queue = x.queue.getLabel
+          rc.duration = x.durationNS
+
+          rc.waiting = (x.enqueued - x.dequeued).max(0)
+          rc.wait_time_max = x.maxWaitTimeNS
+          rc.wait_time_total = x.totalWaitTimeNS
+
+          rc.execute_time_max = x.maxRunTimeNS
+          rc.execute_time_total = x.totalRunTimeNS
+          rc.executed = x.dequeued
+          rc
+        }
+      }
+    }
+  }
+
 }
