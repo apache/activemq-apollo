@@ -393,7 +393,7 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
   }
 
   def check_idle {
-    if (producers.isEmpty && consumers.isEmpty && topic_queue==null) {
+    if (producers.isEmpty && consumers.isEmpty && topic_queue==null && retained_message==null) {
       if (idled_at==0) {
         val previously_idle_at = now
         idled_at = previously_idle_at
