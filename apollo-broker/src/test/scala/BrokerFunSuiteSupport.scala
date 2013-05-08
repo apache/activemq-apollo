@@ -219,7 +219,7 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     broker.dispatch_queue {
       info(" -- Connections -- ")
       for(connection <- broker.connections.values) {
-        info(json(connection.get_connection_status))
+        info(json(connection.get_connection_status(false)))
       }
 
       val router = broker.default_virtual_host.local_router

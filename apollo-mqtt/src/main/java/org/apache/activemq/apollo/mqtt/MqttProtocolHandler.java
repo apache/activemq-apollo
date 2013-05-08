@@ -517,7 +517,7 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
     LongCounter messages_received = new LongCounter(0);
     int subscription_count = 0;
 
-    public MqttConnectionStatusDTO create_connection_status() {
+    public MqttConnectionStatusDTO create_connection_status(boolean debug) {
         MqttConnectionStatusDTO rc = new MqttConnectionStatusDTO();
         rc.protocol_version = "3.1";
         rc.messages_sent = messages_sent.get();

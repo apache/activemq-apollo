@@ -93,7 +93,7 @@ trait ProtocolHandler {
     this.connection = brokerConnection
   }
 
-  def create_connection_status = new ConnectionStatusDTO
+  def create_connection_status(debug:Boolean) = new ConnectionStatusDTO
 
   def on_transport_failure(error:IOException) = {
     trace(error)

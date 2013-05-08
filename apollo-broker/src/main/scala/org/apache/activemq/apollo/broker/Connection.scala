@@ -150,11 +150,11 @@ class BrokerConnection(var connector: Connector, val id:Long) extends Connection
 
   protected override def on_transport_failure(error: IOException) = protocol_handler.on_transport_failure(error)
 
-  def get_connection_status = {
+  def get_connection_status(debug:Boolean=false) = {
     val result = if( protocol_handler==null ) {
       new ConnectionStatusDTO
     } else {
-      protocol_handler.create_connection_status
+      protocol_handler.create_connection_status(debug)
     }
 
     result.id = id.toString

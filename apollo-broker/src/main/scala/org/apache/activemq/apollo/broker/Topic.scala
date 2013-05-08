@@ -73,16 +73,19 @@ class Topic(val router:LocalRouter, val address:DestinationAddress, var config_u
     def matches(message: Delivery) = true
     def is_persistent = false
     def dispatch_queue = null
-    def connect(producer: DeliveryProducer) = ProxyProducerSession(producer)
+    def connect(producer: DeliveryProducer) = new ProxyProducerSession(producer)
 
   }
 
 
-  case class ProxyProducerSession(val producer:DeliveryProducer) extends DeliverySession {
+  class ProxyProducerSession(val producer:DeliveryProducer) extends DeliverySession {
+
 
     dispatch_queue {
       proxy_sessions.add(this)
     }
+
+    override def toString: String = "ProxyProducerSession(topic="+id+")"
 
     def remaining_capacity = 1
     var enqueue_ts = 0L

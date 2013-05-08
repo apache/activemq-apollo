@@ -157,7 +157,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
     for( (id, connection) <- broker.connections if connection.connector eq this ) {
       result.connections.add( new LongIdLabeledDTO(id, connection.transport.getRemoteAddress.toString ) )
-      val status = connection.get_connection_status
+      val status = connection.get_connection_status(false)
       if( status!=null ) {
         result.messages_sent += status.messages_sent
         result.messages_received += status.messages_received
@@ -328,7 +328,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
     val at_limit = at_connection_limit
     if( broker.connections.remove(connection.id).isDefined ) {
       connected.decrementAndGet()
-      val status = connection.get_connection_status
+      val status = connection.get_connection_status(false)
       if( status!=null ) {
         dead_messages_sent += status.messages_sent
         dead_messages_received += status.messages_received

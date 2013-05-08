@@ -127,4 +127,11 @@ public class ConnectionStatusDTO extends ServiceStatusDTO {
      */
     @XmlAttribute(name="subscription_count")
 	public int subscription_count;
+
+    /**
+     * Holds detailed state data used to debug connections.
+     */
+	@XmlAttribute(name="debug")
+	public String debug;
+
 }

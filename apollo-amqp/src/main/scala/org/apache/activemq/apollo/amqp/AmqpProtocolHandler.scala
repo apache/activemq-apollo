@@ -124,7 +124,7 @@ class AmqpProtocolHandler extends ProtocolHandler {
   var messages_sent = 0L
   var messages_received = 0L
 
-  override def create_connection_status = {
+  override def create_connection_status(debug:Boolean) = {
     var rc = new AmqpConnectionStatusDTO
     rc.protocol_version = "1.0.0"
     rc.user = security_context.user

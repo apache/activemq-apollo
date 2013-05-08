@@ -238,7 +238,26 @@ class StompProtocolHandler extends ProtocolHandler {
 //    }
 
 
-    override def toString = "stomp subscription"+subscription_id.map(" id: "+_+",").getOrElse("")+" remote address: "+security_context.remote_address
+    override def toString ={
+      // Lets setup some helpers
+      def b( x:Boolean, y: =>String):String  = if(x) y else ""
+      def h( x:AnyRef, y: =>String):String  = if(x!=null) y else ""
+      def o[T]( x:Option[T], y: =>String):String = if(x.isDefined) y else ""
+
+      "StompConsumer("+
+        o(subscription_id, "subscription_id: "+subscription_id.get+", ")+
+        "addresses: "+addresses.mkString(",")+", "+
+        "ack_mode: "+ack_mode+", "+
+        initial_credit_window+
+        h(selector, ", selector: "+selector._1)+
+        b(browser, ", browser")+
+        b(close_on_drain, ", close_on_drain")+
+        b(exclusive, ", exclusive")+
+        b(from_seq!=0, ", from_seq: "+from_seq)+
+        o(include_seq, ", include_seq: "+include_seq)+
+        ", "+session_manager+
+      ")"
+    }
 
     override def start_from_tail = from_seq == -1
 
@@ -597,7 +616,13 @@ class StompProtocolHandler extends ProtocolHandler {
 
       val downstream = session_manager.open(producer.dispatch_queue)
 
-      override def toString = "connection to "+StompProtocolHandler.this.connection.transport.getRemoteAddress
+      override def toString = {
+        "StompConsumerSession("+
+          "connection to: "+StompProtocolHandler.this.connection.transport.getRemoteAddress+", "
+          "closed: "+closed+", "
+          "downstream: "+downstream
+        ")"
+      }
 
       def consumer = StompConsumer.this
       var closed = false
@@ -768,7 +793,7 @@ class StompProtocolHandler extends ProtocolHandler {
   var messages_sent = 0L
   var messages_received = 0L
 
-  override def create_connection_status = {
+  override def create_connection_status(debug:Boolean) = {
     var rc = new StompConnectionStatusDTO
     rc.protocol_version = if( protocol_version == null ) null else protocol_version.toString
     rc.user = security_context.user
@@ -776,6 +801,25 @@ class StompProtocolHandler extends ProtocolHandler {
     rc.waiting_on = waiting_on()
     rc.messages_sent = messages_sent
     rc.messages_received = messages_received
+    if( debug ) {
+      import collection.JavaConversions._
+      val out = new StringBuilder
+      out.append("\n--- connection ---\n")
+      out.append("  { routing_size:"+routing_size+" }\n")
+      out.append("--- producers ---\n")
+      for( p <- producer_routes.values() ) {
+        out.append("  { "+p+" }\n")
+      }
+      out.append("--- consumers ---\n")
+      for( c <- consumers.values ) {
+        out.append("  { "+c+" }\n")
+      }
+      out.append("--- transactions ---\n")
+      for( t <- transactions.values ) {
+        out.append("  { "+t+" }\n")
+      }
+      rc.debug = out.toString()
+    }
     rc
   }
 
@@ -1221,6 +1265,10 @@ class StompProtocolHandler extends ProtocolHandler {
       }
       super.offer(delivery)
     }
+
+    override def toString = {
+      "addresses:"+key+", routing_items:"+routing_items+", "+super.toString
+    }
   }
 
 
@@ -1434,7 +1482,7 @@ class StompProtocolHandler extends ProtocolHandler {
       // but once it gets full.. suspend, so that we get more stomp messages
       // until it's not full anymore.
       route.suspended = true
-      suspend_read("blocked sending to: "+route.dispatch_sessions.mkString(", "))
+      suspend_read("blocked sending to: "+route.addresses.mkString(", "))
     }
     frame.release
   }
@@ -1717,6 +1765,11 @@ class StompProtocolHandler extends ProtocolHandler {
     // can provides persistence and memory swapping.
 
     val queue = ListBuffer[((StoreUOW)=>Unit, ()=>Unit)]()
+
+
+    override def toString: String = {
+      "{ actions: "+queue.size+" }"
+    }
 
     def add(on_commit:(StoreUOW)=>Unit, on_rollback:()=>Unit=null):Unit = {
       queue += ((on_commit, on_rollback))

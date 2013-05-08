@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import org.fusesource.hawtdispatch._
 import java.nio.channels.{DatagramChannel, WritableByteChannel, ReadableByteChannel}
 import java.net.SocketAddress
-import org.apache.activemq.apollo.dto.{ProtocolDTO, UdpDTO, AcceptingConnectorDTO}
+import org.apache.activemq.apollo.dto.{ConnectionStatusDTO, ProtocolDTO, UdpDTO, AcceptingConnectorDTO}
 import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
 import java.util.Map.Entry
 import org.apache.activemq.apollo.util._
@@ -135,8 +135,8 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
   def broker = connection.connector.broker
   def queue = connection.dispatch_queue
 
-  override def create_connection_status = {
-    var rc = super.create_connection_status
+  override def create_connection_status(debug:Boolean) = {
+    var rc = new ConnectionStatusDTO
     rc.waiting_on = waiting_on
     rc.messages_received = messages_received
     rc

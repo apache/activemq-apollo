@@ -967,7 +967,7 @@ class BrokerResource() extends Resource {
       monitoring(broker) {
 
         val records = sync_all(broker.connections.values) { value =>
-          value.get_connection_status
+          value.get_connection_status(false)
         }
 
         val rc:FutureResult[DataPageDTO] = records.map(narrow(classOf[ConnectionStatusDTO], _, f, q, p, ps, o))
@@ -978,10 +978,10 @@ class BrokerResource() extends Resource {
 
   @GET @Path("/connections/{id}")
   @ApiOperation(value = "Gets that status of a connection.")
-  def connection(@PathParam("id") id : Long):ConnectionStatusDTO = {
+  def connection(@PathParam("id") id : Long, @QueryParam("debug") debug:Boolean):ConnectionStatusDTO = {
     with_connection(id){ connection=>
       monitoring(connection.connector.broker) {
-        connection.get_connection_status
+        connection.get_connection_status(debug)
       }
     }
   }
@@ -1027,10 +1027,11 @@ class BrokerResource() extends Resource {
   @GET
   @Path("/hawtdispatch/profile")
   @ApiOperation(value="Enables or disables profiling")
-  def hawtdispatch_profile(@QueryParam("enabled") enabled : Boolean) = ok {
+  def hawtdispatch_profile(@QueryParam("enabled") enabled : Boolean):String = {
     with_broker { broker =>
       admining(broker) {
         Dispatch.profile(enabled)
+        ""
       }
     }
   }

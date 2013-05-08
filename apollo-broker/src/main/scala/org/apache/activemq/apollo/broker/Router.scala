@@ -414,5 +414,14 @@ abstract class DeliveryProducerRoute(router:Router) extends AbstractOverflowSink
     }
   }
 
+  override def toString = {
+    "last_send: "+last_send+
+    ", retained: "+reained_base.retained()+
+    ", is_connected: "+is_connected+
+    ", dispatch_delivery: "+dispatch_delivery+
+    ", dispatch_sessions: "+dispatch_sessions.size+
+    ", "+super.toString
+    ", targets: "+targets
+  }
 
 }

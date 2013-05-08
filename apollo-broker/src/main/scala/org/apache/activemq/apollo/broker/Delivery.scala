@@ -270,4 +270,19 @@ class Delivery {
 
   def redelivered = redeliveries = ((redeliveries+1).min(Short.MaxValue)).toShort
 
+  override def toString = {
+    "Delivery(" +
+      "sender:"+sender+", "+
+      "size:"+size+", "+
+      "message codec:"+message.codec.id+", "+
+      "expiration:"+expiration+", "+
+      "persistent:"+persistent+", "+
+      "redeliveries:"+redeliveries+", "+
+      "seq:"+seq+", "+
+      "storeKey:"+storeKey+", "+
+      "storeLocator:"+storeLocator+", "+
+      "uow:"+uow+", "+
+      "ack:"+(ack!=null)+
+    ")"
+  }
 }

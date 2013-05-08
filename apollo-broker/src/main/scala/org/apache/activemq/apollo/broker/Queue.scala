@@ -1219,7 +1219,15 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   class QueueDeliverySession(val producer: DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery]{
     retain
 
-    override def toString = Queue.this.toString
+    def odlToString = Queue.this.toString
+    override def toString = {
+      "QueueDeliverySession("+
+        "queue: "+Queue.this.id +
+        ", full:"+full+
+        ", "+downstream+
+      ")"
+    }
+
     override def consumer = Queue.this
 
     val downstream = session_manager.open(producer.dispatch_queue)

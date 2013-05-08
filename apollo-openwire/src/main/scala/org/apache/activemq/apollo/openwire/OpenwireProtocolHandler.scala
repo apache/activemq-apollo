@@ -128,7 +128,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   var messages_received = 0L
   val preferred_wireformat_settings = new WireFormatInfo();
 
-  override def create_connection_status = {
+  override def create_connection_status(debug:Boolean) = {
     var rc = new OpenwireConnectionStatusDTO
     rc.protocol_version = ""+(if (wire_format == null) 0 else wire_format.getVersion)
     rc.user = login.map(_.toString).getOrElse(null)
@@ -712,7 +712,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       // but once it gets full.. suspend, so that we get more messages
       // until it's not full anymore.
       route.suspended = true
-      suspend_read("blocked destination: "+route.dispatch_sessions.mkString(", "))
+      suspend_read("blocked sending to: "+route.addresses.mkString(", ").mkString(", "))
     }
   }
 

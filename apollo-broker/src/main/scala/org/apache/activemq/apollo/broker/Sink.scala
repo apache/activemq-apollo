@@ -56,9 +56,13 @@ abstract class Sink[T] {
   def map[Y](func: Y=>T ):Sink[Y] = new SinkMapper[Y,T] {
     def passing(value: Y) = func(value)
     def downstream = Sink.this
+    override def toString: String = downstream.toString
   }
 
   def flatMap[Y](func: Y=>Option[T]):Sink[Y] = new Sink[Y] with SinkFilter[T] {
+
+    override def toString: String = downstream.toString
+
     def downstream = Sink.this
     def offer(value:Y) = {
       if( full ) {
@@ -152,6 +156,7 @@ class TransportSink(val transport:Transport) extends Sink[AnyRef] {
   var refiller:Task = NOOP
   def full:Boolean = transport.full
   def offer(value:AnyRef) =  transport.offer(value)
+  override def toString: String = "TransportSink(full:"+full+")"
 }
 
 /**
@@ -161,7 +166,14 @@ class TransportSink(val transport:Transport) extends Sink[AnyRef] {
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class OverflowSink[T](val downstream:Sink[T]) extends AbstractOverflowSink[T]
+class OverflowSink[T](val downstream:Sink[T]) extends AbstractOverflowSink[T] {
+  override def toString: String = {
+    "OverflowSink("+
+      super.toString+
+      ", "+downstream+
+    ")"
+  }
+}
 
 abstract class AbstractOverflowSink[T] extends Sink[T] {
 
@@ -170,6 +182,11 @@ abstract class AbstractOverflowSink[T] extends Sink[T] {
   var refiller:Task = NOOP
 
   val overflow = new LinkedList[T]()
+
+  override def toString = {
+    "overflow: "+overflow
+    ", full: "+full
+  }
 
   def overflowed = !overflow.isEmpty
 
@@ -229,7 +246,6 @@ abstract class AbstractOverflowSink[T] extends Sink[T] {
    */
   protected def onDelivered(value:T) = {
   }
-
 }
 
 
@@ -279,6 +295,15 @@ class SinkMux[T](val downstream:Sink[T]) {
 
   class ManagedSink extends Sink[T] {
 
+
+    override def toString: String = {
+      "ManagedSink("+
+        "rejection_handler: "+(rejection_handler)+
+        ", full: "+(full)+
+        ", "+downstream+
+      ")"
+    }
+
     var rejection_handler:(T)=>Unit = _
     var refiller:Task = NOOP
 
@@ -321,12 +346,23 @@ class CreditWindowFilter[T](val downstream:Sink[T], val sizer:Sizer[T]) extends 
 
   var delivery_credits = 0
   var byte_credits = 0
-  var disabled = true
+  var enabled = true
 
-  override def full: Boolean = downstream.full || ( disabled && byte_credits <= 0 && delivery_credits <= 0 )
+
+  override def toString: String = {
+    "CreditWindowFilter("+
+     "enabled:"+enabled+
+      ", delivery_credits:"+delivery_credits+
+      ", byte_credits:"+byte_credits+
+      ", full:"+full+
+      ", "+downstream+
+    ")"
+  }
+
+  override def full: Boolean = downstream.full || ( enabled && byte_credits <= 0 && delivery_credits <= 0 )
 
   def disable = {
-    disabled = false
+    enabled = false
     refiller.run()
   }
 
@@ -399,6 +435,14 @@ class SessionSinkMux[T](val downstream:Sink[(Session[T], T)], val consumer_queue
 
   var sessions = HashSet[Session[T]]()
   var overflowed_sessions = new LinkedNodeList[SessionLinkedNode[T]]()
+
+  override def toString: String = {
+    "SessionSinkMux(" +
+      "sessions: "+sessions.size+
+      ", overflowed_sessions: "+overflowed_sessions.size+
+      ", "+downstream+
+    ")"
+  }
 
   def open(producer_queue:DispatchQueue):SessionSink[T] = {
     val session = new Session[T](this, producer_queue)
@@ -559,6 +603,21 @@ class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extend
   var enqueue_size_counter = 0L
   @volatile
   var enqueue_ts = mux.time_stamp
+
+
+  override def toString: String = {
+    "Session("+
+      "enqueue_item_counter:"+enqueue_item_counter+
+      ", enqueue_size_counter:"+enqueue_size_counter+
+      ", delivery_credits:"+delivery_credits+
+      ", size_credits:"+size_credits+
+      ", size_credits:"+size_credits+
+      ", overflow:"+overflow.size()+
+      ", stall_counter:"+stall_counter+
+      ", size_bonus:"+size_bonus +
+      ", full:"+full+
+    ")"
+  }
 
   def credit(delivery_credits:Int, size_credits:Int) = {
     if( delivery_credits!=0 || size_credits!=0 ) {
