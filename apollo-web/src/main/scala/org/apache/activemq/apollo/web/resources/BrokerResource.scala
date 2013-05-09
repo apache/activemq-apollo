@@ -1041,7 +1041,7 @@ class BrokerResource() extends Resource {
   @GET
   @Path("/hawtdispatch/metrics")
   @ApiOperation(value="Enables or disables profiling")
-  def hawtdispatch_metrics(@QueryParam("enabled") enabled : Boolean):Array[DispatchQueueMetrics] = {
+  def hawtdispatch_metrics():Array[DispatchQueueMetrics] = {
     with_broker { broker =>
       monitoring(broker) {
         val m = Dispatch.metrics()
