@@ -162,6 +162,21 @@ object LevelDBClient extends Log {
     source.copy_to(target)
   }
 
+  def copy_index(from:File, to:File) = {
+    for( file <- from.list_files ) {
+      val name: String = file.getName
+      if( name.endsWith(".sst") ) {
+        // SST files don't change once created, safe to hard link.
+        link(file, to / name)
+      } else if(name == "LOCK")  {
+        // No need to copy the lock file.
+      } else {
+        /// These might not be append only files, so avoid hard linking just to be safe.
+        file.copy_to(to/name)
+      }
+    }
+  }
+
 }
 
 /**
@@ -344,7 +359,13 @@ class LevelDBClient(store: LevelDBStore) {
       dirty_index_file.mkdirs()
 
       for( (id, file) <- last_snapshot_index) {
-        copy_index(file, dirty_index_file)
+        try {
+          copy_index(file, dirty_index_file)
+        } catch {
+          case e: Exception =>
+            warn(e, "Could not recover snapshot of the index: " + e)
+            last_snapshot_index = None
+        }
       }
 
       def recover = {
@@ -674,19 +695,6 @@ class LevelDBClient(store: LevelDBStore) {
       index.put(dirty_index_key, TRUE)
     }
     snapshot_rw_lock.writeLock().unlock()
-  }
-
-  def copy_index(from:File, to:File) = {
-    for( file <- from.list_files ) {
-      val name: String = file.getName
-      if( name.endsWith(".sst") ) {
-        // SST files don't change once created, safe to hard link.
-        link(file, to / name)
-      } else {
-        /// These might not be append only files, so avoid hard linking just to be safe.
-        copyLinkStrategy(file, to / name)
-      }
-    }
   }
 
   def copy_dirty_index_to_snapshot {
