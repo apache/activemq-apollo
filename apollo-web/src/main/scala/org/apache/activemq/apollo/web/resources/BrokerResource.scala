@@ -981,7 +981,9 @@ class BrokerResource() extends Resource {
   def connection(@PathParam("id") id : Long, @QueryParam("debug") debug:Boolean):ConnectionStatusDTO = {
     with_connection(id){ connection=>
       monitoring(connection.connector.broker) {
-        connection.get_connection_status(debug)
+        sync(connection) {
+          connection.get_connection_status(debug)
+        }
       }
     }
   }

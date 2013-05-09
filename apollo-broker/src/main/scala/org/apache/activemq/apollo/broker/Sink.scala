@@ -611,7 +611,6 @@ class Session[T](mux:SessionSinkMux[T], val producer_queue:DispatchQueue) extend
       ", enqueue_size_counter:"+enqueue_size_counter+
       ", delivery_credits:"+delivery_credits+
       ", size_credits:"+size_credits+
-      ", size_credits:"+size_credits+
       ", overflow:"+overflow.size()+
       ", stall_counter:"+stall_counter+
       ", size_bonus:"+size_bonus +
