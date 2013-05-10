@@ -99,7 +99,7 @@
 
     <hawtdispatch-version>1.15</hawtdispatch-version>
     <hawtbuf-version>1.9</hawtbuf-version>
-    <stompjms-version>1.15</stompjms-version>
+    <stompjms-version>1.16-SNAPSHOT</stompjms-version>
     
     <bdb-version>5.0.34</bdb-version>
 
