@@ -1196,7 +1196,7 @@ class LevelDBClient(store: LevelDBStore) {
     // How much space is the dirty index using??
     var index_usage = 0L
     for( file <- dirty_index_file.recursive_list ) {
-      if(!file.isDirectory) {
+      if(!file.isDirectory && file.getName.endsWith(".sst") ) {
         index_usage += file.length()
       }
     }
@@ -1206,20 +1206,23 @@ class LevelDBClient(store: LevelDBStore) {
       index_queue_entries += count.get()
     }
 
-    if ( index_queue_entries > 0 ) {
-      val ratio = (index_usage*1.0f/index_queue_entries)
-      // println("usage: index_usage:%d, index_queue_entries:%d, ratio: %f".format(index_usage, index_queue_entries, ratio))
+    // Don't force compactions until level 0 is full.
+    val SSL_FILE_SIZE = 1024*1024*4L
+    if( index_usage > SSL_FILE_SIZE*10 ) {
+      if ( index_queue_entries > 0 ) {
+        val ratio = (index_usage*1.0f/index_queue_entries)
+        // println("usage: index_usage:%d, index_queue_entries:%d, ratio: %f".format(index_usage, index_queue_entries, ratio))
 
-      // After running some load we empirically found that a healthy ratio is between 12 and 25 bytes per entry.
-      // lets compact if we go way over the healthy ratio.
-      if( ratio > auto_compaction_ratio ) {
+        // After running some load we empirically found that a healthy ratio is between 12 and 25 bytes per entry.
+        // lets compact if we go way over the healthy ratio.
+        if( ratio > auto_compaction_ratio ) {
+          index.compact_needed = true
+        }
+      } else {
+        // at most the index should have 1 full level file.
         index.compact_needed = true
       }
-    } else if( index_usage > 1024*1024*5 )  {
-      // at most the index should have 1 full level file.
-      index.compact_needed = true
     }
-
   }
 
   def gc: Unit = {
