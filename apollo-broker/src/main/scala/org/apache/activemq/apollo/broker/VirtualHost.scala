@@ -321,19 +321,29 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
   def get_dest_metrics:FutureResult[AggregateDestMetricsDTO] = {
     // zero out the enqueue stats on the dsubs since they will already be accounted for in the topic
     // stats.
-    Future.all(List(get_queue_metrics, get_topic_metrics, get_dsub_metrics)).map { x =>
-      val y = x.toArray
-      val (queue, topic, dsub) = (y(0), y(1), y(2))
+    val queue = get_queue_metrics
+    val topic = get_topic_metrics
+    val dsub = get_dsub_metrics
+
+    Future.all(List(queue, topic, dsub)).map { _ =>
+
       var rc = new AggregateDestMetricsDTO
-      for( queue <- queue.success_option;  topic <- topic.success_option; dsub <- dsub.success_option ) {
+      for( queue <- queue.get.success_option ) {
+        DestinationMetricsSupport.add_destination_metrics(rc, queue)
+        rc.objects += queue.objects
+      }
+      for( topic <- topic.get.success_option ) {
+        DestinationMetricsSupport.add_destination_metrics(rc, topic)
+        rc.objects += topic.objects
+      }
+      for(  dsub <- dsub.get.success_option ) {
         dsub.enqueue_item_counter = 0L
         dsub.enqueue_size_counter = 0L
         dsub.enqueue_ts = 0L
-        rc = aggregate_dest_metrics(List(queue, dsub))
-        DestinationMetricsSupport.add_destination_metrics(rc, topic)
-        rc.objects += topic.objects
-        rc.current_time = broker.now
+        DestinationMetricsSupport.add_destination_metrics(rc, dsub)
+        rc.objects += dsub.objects
       }
+      rc.current_time = broker.now
       Success(rc)
     }
   }
