@@ -736,6 +736,40 @@
           </plugins>
         </build>      
     </profile>
+    
+    <!-- If you enable this profile, the console message will have a timestamp -->
+    <profile>
+      <id>consolets</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.fusesource.mvnplugins</groupId>
+            <artifactId>maven-consolets-plugin</artifactId>
+            <version>1.30</version>
+            <configuration>
+              <enabled>true</enabled>
+            </configuration>
+            <executions>
+              <execution>
+                <phase>validate</phase>
+                <goals>
+                  <goal>install</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>com.fusesource.m2</id>
+          <url>http://repo.fusesource.com/nexus/content/groups/public/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+    
   </profiles>
     
   <repositories>
