@@ -448,13 +448,13 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
         uow.enqueue(toQueueEntryRecord)
         queue.swapping_out_size+=size
         uow.on_flush { canceled =>
-          queue.swap_out_completes_source.merge(^{
+          queue.defer {
             this.swapped_out(!canceled)
             queue.swapping_out_size-=size
             if( queue.swapping_out_size==0 ) {
               queue.on_queue_flushed
             }
-          })
+          }
         }
       }
     }
@@ -671,7 +671,7 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
                   if( uow!=null ) {
                     uow.retain
                   }
-                  queue.ack_source.merge((acquiredQueueEntry, consumed, uow))
+                  queue.process_ack(acquiredQueueEntry, consumed, uow)
                 }
 
                 val accepted = sub.offer(acquiredDelivery)
@@ -760,7 +760,12 @@ class QueueEntry(val queue:Queue, val seq:Long) extends LinkedNode[QueueEntry] w
           // pass off to a source so it can aggregate multiple
           // loads to reduce cross thread synchronization
           if( delivery.isDefined ) {
-            queue.store_load_source.merge((this, delivery.get))
+            queue.defer {
+              swapped_in(delivery.get)
+              if( entry.hasSubs ) {
+                entry.task.run
+              }
+            }
           } else {
 
             warn("Queue '%s' detected store dropped message at seq: %d", queue.id, seq)

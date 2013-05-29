@@ -31,6 +31,7 @@ import org.apache.activemq.apollo.dto._
 import java.util.regex.Pattern
 import collection.mutable.ListBuffer
 import org.fusesource.hawtbuf.Buffer
+import org.apache.activemq.apollo.broker.{DeliveryResult, Subscription}
 
 object Queue extends Log {
   val subscription_counter = new AtomicInteger(0)
@@ -102,14 +103,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
   def address = binding.address
 
   debug("created queue: " + id)
-
-  override def dispose: Unit = {
-    ack_source.cancel
-  }
-
-  val ack_source = createSource(new ListEventAggregator[(Subscription#AcquiredQueueEntry, DeliveryResult, StoreUOW)](), dispatch_queue)
-  ack_source.setEventHandler(^ {drain_acks});
-  ack_source.resume
 
   val session_manager = new SessionSinkMux[Delivery](messages, dispatch_queue, Delivery, Integer.MAX_VALUE, 1024*640) {
     override def time_stamp = now
@@ -217,9 +210,17 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
 
   var individual_swapped_items = 0
 
-  val swap_source = createSource(EventAggregators.INTEGER_ADD, dispatch_queue)
-  swap_source.setEventHandler(^{ swap_messages });
-  swap_source.resume
+  var swap_triggered = false
+  def trigger_swap = {
+    dispatch_queue.assertExecuting()
+    if( tune_swap && !swap_triggered ) {
+      swap_triggered = true
+      defer {
+        swap_triggered = false
+        swap_messages
+      }
+    }
+  }
 
   var restored_from_store = false
 
@@ -825,12 +826,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  def trigger_swap = {
-    if( tune_swap ) {
-      swap_source.merge(1)
-    }
-  }
-
   var keep_up_delivery_rate = 0L
   
   def swap_messages:Unit = {
@@ -1168,40 +1163,38 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     }
   }
 
-  def drain_acks = might_unfill {
-    val end = System.nanoTime()
-    ack_source.getData.foreach {
-      case (entry, consumed, uow) =>
-        consumed match {
-          case Consumed =>
-            entry.ack(uow)
-          case Expired=>
-            val actual = create_uow(uow)
-            expired(actual, entry.entry) {
-              entry.ack(actual)
+  def process_ack(entry:Subscription#AcquiredQueueEntry, consumed:DeliveryResult, uow:StoreUOW) = defer {
+    might_unfill {
+      consumed match {
+        case Consumed =>
+          entry.ack(uow)
+        case Expired=>
+          val actual = create_uow(uow)
+          expired(actual, entry.entry) {
+            entry.ack(actual)
+          }
+          actual.release
+        case Delivered =>
+          entry.increment_nack
+          entry.entry.redelivered
+          entry.nack
+        case Undelivered =>
+          entry.nack
+        case Poisoned =>
+          entry.increment_nack
+          entry.entry.redelivered
+          var limit = dlq_nak_limit
+          if( limit>0 && entry.entry.redelivery_count >= limit ) {
+            dead_letter(uow, entry.entry) { uow =>
+              entry.remove(uow)
             }
-            actual.release
-          case Delivered =>
-            entry.increment_nack
-            entry.entry.redelivered
+          } else {
             entry.nack
-          case Undelivered =>
-            entry.nack
-          case Poisoned =>
-            entry.increment_nack
-            entry.entry.redelivered
-            var limit = dlq_nak_limit
-            if( limit>0 && entry.entry.redelivery_count >= limit ) {
-              dead_letter(uow, entry.entry) { uow =>
-                entry.remove(uow)
-              }
-            } else {
-              entry.nack
-            }
-        }
-        if( uow!=null ) {
-          uow.release
-        }
+          }
+      }
+      if( uow!=null ) {
+        uow.release
+      }
     }
   }
 
@@ -1366,35 +1359,6 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
     val rc = message_seq_counter
     message_seq_counter += 1
     rc
-  }
-
-  val swap_out_completes_source = createSource(new ListEventAggregator[Task](), dispatch_queue)
-  swap_out_completes_source.setEventHandler(^ {drain_swap_out_completes});
-  swap_out_completes_source.resume
-
-  def drain_swap_out_completes() = might_unfill {
-    val data = swap_out_completes_source.getData
-    data.foreach { loaded =>
-      loaded.run()
-    }
-  }
-
-  val store_load_source = createSource(new ListEventAggregator[(QueueEntry#Swapped, MessageRecord)](), dispatch_queue)
-  store_load_source.setEventHandler(^ {drain_store_loads});
-  store_load_source.resume
-
-
-  def drain_store_loads() = {
-    val data = store_load_source.getData
-    data.foreach { case (swapped,message_record) =>
-      swapped.swapped_in(message_record)
-    }
-
-    data.foreach { case (swapped,_) =>
-      if( swapped.entry.hasSubs ) {
-        swapped.entry.task.run
-      }
-    }
   }
 
 }
