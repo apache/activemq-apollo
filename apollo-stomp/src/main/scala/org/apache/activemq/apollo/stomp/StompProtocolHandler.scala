@@ -16,30 +16,28 @@
  */
 package org.apache.activemq.apollo.stomp
 
-import _root_.org.fusesource.hawtbuf._
-import dto.{StompConnectionStatusDTO, StompDTO}
-import org.fusesource.hawtdispatch._
-
-import org.apache.activemq.apollo.broker._
-import Buffer._
-import java.lang.String
-import protocol.{ProtocolFilter3, ProtocolHandler}
-import security.SecurityContext
-import Stomp._
-import org.apache.activemq.apollo.selector.SelectorParser
-import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
-import org.apache.activemq.apollo.broker.store._
-import org.apache.activemq.apollo.util._
-import java.util.concurrent.TimeUnit
-import java.util.Map.Entry
+import org.fusesource.hawtbuf._
 import collection.mutable.{ListBuffer, HashMap}
+import dto.{StompConnectionStatusDTO, StompDTO}
 import java.io.IOException
-import org.apache.activemq.apollo.dto._
-import org.fusesource.hawtdispatch.transport.HeartBeatMonitor
-import path.{LiteralPart, Path, PathParser}
-import scala.Some
-import org.apache.activemq.apollo.broker.SubscriptionAddress
+import java.lang.String
 import java.util
+import java.util.concurrent.TimeUnit
+import language.implicitConversions
+import org.apache.activemq.apollo.broker._
+import org.apache.activemq.apollo.broker.store._
+import org.apache.activemq.apollo.dto._
+import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
+import org.apache.activemq.apollo.selector.SelectorParser
+import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.util.path.LiteralPart
+import org.fusesource.hawtdispatch._
+import org.fusesource.hawtdispatch.transport.HeartBeatMonitor
+import org.apache.activemq.apollo.util.path.{Path, PathParser}
+import org.apache.activemq.apollo.broker.protocol.{ProtocolFilter3, ProtocolHandler}
+import org.apache.activemq.apollo.broker.security.SecurityContext
+import org.fusesource.hawtbuf.Buffer._
+import Stomp._
 
 
 case class RichBuffer(self:Buffer) extends Proxy {
@@ -51,7 +49,6 @@ case class RichBuffer(self:Buffer) extends Proxy {
   }
 }
 
-import language.implicitConversions
 object BufferSupport {
   implicit def to_rich_buffer(value:Buffer):RichBuffer = RichBuffer(value)
 }
@@ -153,6 +150,7 @@ object StompProtocolHandler extends Log {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class StompProtocolHandler extends ProtocolHandler {
+
   import StompProtocolHandler._
 
   var connection_log:Log = StompProtocolHandler
@@ -363,14 +361,20 @@ class StompProtocolHandler extends ProtocolHandler {
       def credit(msgid: AsciiBuffer, credit_value: (Int, Int)):Unit = {
         queue.assertExecuting()
         if( initial_credit_window.auto_credit ) {
-          var found = false
-          val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-            if( id == msgid ) {
-              found = true
-              true
-            } else {
-              !found
+
+          val acked = if( !consumer_acks.isEmpty && consumer_acks.headOption.get._1 == msgid ) {
+            Seq(consumer_acks.headOption.get)
+          } else {
+            var found = false
+            val (acked, _) = consumer_acks.partition{ case (id, ack)=>
+              if( id == msgid ) {
+                found = true
+                true
+              } else {
+                !found
+              }
             }
+            acked
           }
 
           for( (id, delivery) <- acked ) {
@@ -391,25 +395,29 @@ class StompProtocolHandler extends ProtocolHandler {
         queue.assertExecuting()
         assert(consumer_acks !=null)
 
-        // session acks ack all previously received messages..
-        var found = false
-        val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-          if( id == msgid ) {
-            found = true
-            true
-          } else {
-            !found
+        val acked = if( !consumer_acks.isEmpty && consumer_acks.headOption.get._1 == msgid ) {
+          Seq(consumer_acks.remove(0))
+        } else {
+          // session acks ack all previously received messages..
+          var found = false
+          val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
+            if( id == msgid ) {
+              found = true
+              true
+            } else {
+              !found
+            }
           }
+          if( !found ) {
+            trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
+          }
+          consumer_acks = not_acked
+          acked
         }
 
-        if( !found ) {
-          trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
-        } else {
-          consumer_acks = not_acked
-          acked.foreach{case (id, delivery)=>
-            if( delivery.ack!=null ) {
-              delivery.ack(consumed, uow)
-            }
+        acked.foreach{case (id, delivery)=>
+          if( delivery.ack!=null ) {
+            delivery.ack(consumed, uow)
           }
         }
 
@@ -751,6 +759,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   override def set_connection(connection: BrokerConnection) = {
     super.set_connection(connection)
+    import OptionSupport._
     import collection.JavaConversions._
 
     codec = connection.protocol_codec(classOf[StompCodec])
@@ -759,7 +768,6 @@ class StompProtocolHandler extends ProtocolHandler {
 
     protocol_filters = ProtocolFilter3.create_filters(config.protocol_filters.toList, this)
 
-    import OptionSupport._
     Option(config.max_data_length).map(MemoryPropertyEditor.parse(_).toInt).foreach( codec.max_data_length = _ )
     Option(config.max_header_length).map(MemoryPropertyEditor.parse(_).toInt).foreach( codec.max_header_length = _ )
     config.max_headers.foreach( codec.max_headers = _ )

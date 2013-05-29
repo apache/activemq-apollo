@@ -1101,14 +1101,20 @@ class OpenwireProtocolHandler extends ProtocolHandler {
             }
           }
         } else {
-          var found = false
-          val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-            if( id == msgid ) {
-              found = true
-              true
-            } else {
-              !found
+
+          val acked = if( !consumer_acks.isEmpty && consumer_acks.headOption.get._1 == msgid ) {
+            Seq(consumer_acks.headOption.get)
+          } else {
+            var found = false
+            val (acked, _) = consumer_acks.partition{ case (id, ack)=>
+              if( id == msgid ) {
+                found = true
+                true
+              } else {
+                !found
+              }
             }
+            acked
           }
 
           for( (id, delivery) <- acked ) {
@@ -1150,25 +1156,29 @@ class OpenwireProtocolHandler extends ProtocolHandler {
             }
           }
         } else {
-          // session acks ack all previously received messages..
-          var found = false
-          val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
-            if( id == msgid ) {
-              found = true
-              true
-            } else {
-              !found
+          val acked = if( !consumer_acks.isEmpty && consumer_acks.headOption.get._1 == msgid ) {
+            Seq(consumer_acks.remove(0))
+          } else {
+            // session acks ack all previously received messages..
+            var found = false
+            val (acked, not_acked) = consumer_acks.partition{ case (id, ack)=>
+              if( id == msgid ) {
+                found = true
+                true
+              } else {
+                !found
+              }
             }
+            if( !found ) {
+              trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
+            }
+            consumer_acks = not_acked
+            acked
           }
 
-          if( !found ) {
-            trace("%s: ACK failed, invalid message id: %s, dest: %s".format(security_context.remote_address, msgid, addresses.mkString(",")))
-          } else {
-            consumer_acks = not_acked
-            acked.foreach{case (id, delivery)=>
-              if( delivery.ack!=null ) {
-                delivery.ack(consumed, uow)
-              }
+          acked.foreach{case (id, delivery)=>
+            if( delivery.ack!=null ) {
+              delivery.ack(consumed, uow)
             }
           }
         }
