@@ -29,11 +29,9 @@ class MqttConnectionTest extends MqttTestSupport {
   test("MQTT Broker times out idle connection") {
 
     val queue = createQueue("test")
-
     client.setKeepAlive(1)
     client.setDispatchQueue(queue)
     client.setReconnectAttemptsMax(0)
-    client.setDispatchQueue(queue);
     client.open("localhost", port)
 
     client.connection.isConnected should be(true)
