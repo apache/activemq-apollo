@@ -88,7 +88,7 @@ class Report {
             "  " + sync_write_size_rate + " megs/second.\n" +
             "\n" +
             "Reads: \n" + "  " + reads + " reads of size " + block_size + " read in " + (read_duration / 1000.0) + " seconds.\n" +
-            "  " + read_rate + " writes/second.\n" +
+            "  " + read_rate + " reads/second.\n" +
             "  " + read_size_rate + " megs/second.\n" +
             "\n" + ""
   }
