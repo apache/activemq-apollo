@@ -85,10 +85,12 @@
       <version>${snakeyaml-version}</version>
     </dependency>
 
+    <!-- for optional XML selectors -->
     <dependency>
       <groupId>xalan</groupId>
       <artifactId>xalan</artifactId>
       <version>2.6.0</version>
+      <optional>true</optional>
     </dependency>
 
     <!-- for optional web admin -->

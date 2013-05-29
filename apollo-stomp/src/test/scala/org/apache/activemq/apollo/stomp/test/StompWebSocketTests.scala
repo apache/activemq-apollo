@@ -19,6 +19,12 @@ package org.apache.activemq.apollo.stomp.test
 import org.openqa.selenium.{By, WebDriver}
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.concurrent.TimeUnit._
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.util.thread.ExecutorThreadPool
+import org.apache.activemq.apollo.broker.Broker
+import org.eclipse.jetty.server.nio.SelectChannelConnector
+import org.eclipse.jetty.webapp.WebAppContext
+import java.io.File
 
 /**
  * <p>
@@ -30,6 +36,7 @@ object StompWebSocketTests {
 
   class ChromeStompWebSocketTest extends StompWebSocketTestBase with ChromeWebDriverTrait
   class FirefoxStompWebSocketTest extends StompWebSocketTestBase with FirefoxWebDriverTrait
+  class SafariStompWebSocketTest extends StompWebSocketTestBase with SafariWebDriverTrait
 
   abstract class StompWebSocketTestBase extends StompTestSupport with WebDriverTrait {
 
@@ -37,17 +44,54 @@ object StompWebSocketTests {
 
     override def broker_config_uri = "xml:classpath:apollo-stomp-websocket.xml"
 
+    var jetty:Server = _
+    var jetty_port = 0
+
+    def start_jetty = {
+      jetty = new Server
+      val connector = new SelectChannelConnector
+      connector.setPort(0)
+
+      test_data_dir.mkdirs()
+
+      var file = new File(getClass.getResource("websocket.html").getPath)
+      file.copy_to(test_data_dir/"websocket.html")
+      new File(file.getParentFile, "../../../../../../../../../apollo-website/src/scripts/jquery.js").getCanonicalFile.copy_to(test_data_dir/"jquery.js")
+      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir/"stomp.js")
+
+      var context = new WebAppContext
+      context.setContextPath("/")
+      context.setWar(test_data_dir.getCanonicalPath)
+      context.setClassLoader(Broker.class_loader)
+
+      jetty.setHandler(context)
+      jetty.setConnectors(Array(connector))
+      jetty.setThreadPool(new ExecutorThreadPool(Broker.BLOCKABLE_THREAD_POOL))
+      jetty.start
+
+      jetty_port = connector.getLocalPort
+    }
+
+    def stop_jetty = {
+      if( jetty!=null ) {
+        jetty.stop()
+        jetty = null
+      }
+    }
+
     override def beforeAll() = {
       try {
         driver = create_web_driver(test_data_dir / "profile")
+        start_jetty
         super.beforeAll()
       } catch {
-        case ignore: Exception =>
+        case ignore: Throwable =>
           println("ignoring tests, could not create web driver: " + ignore)
       }
     }
 
     override def afterAll() = {
+      stop_jetty
       if (driver != null) {
         driver.quit()
         driver = null
@@ -65,7 +109,7 @@ object StompWebSocketTests {
     for( protocol <- Array("ws", "wss") ) {
       test("websocket "+protocol) {
 
-        val url = getClass.getResource("websocket.html")
+        val url = "http://localhost:"+jetty_port+"/websocket.html"
         val ws_port: Int = connector_port(protocol).get
 
         System.out.println("url: " + url)
