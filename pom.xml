@@ -120,7 +120,7 @@
     <swagger-version>1.2.0</swagger-version>
     <jolokia-version>1.0.6</jolokia-version>
 
-    <selenium-version>2.25.0</selenium-version>
+    <selenium-version>2.33.0</selenium-version>
       
     <!-- maven plugin versions -->
 
