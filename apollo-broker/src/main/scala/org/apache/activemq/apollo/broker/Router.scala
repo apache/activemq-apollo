@@ -419,8 +419,8 @@ abstract class DeliveryProducerRoute(router:Router) extends AbstractOverflowSink
     ", retained: "+reained_base.retained()+
     ", is_connected: "+is_connected+
     ", dispatch_delivery: "+dispatch_delivery+
-    ", dispatch_sessions: "+dispatch_sessions.size+
-    ", "+super.toString
+    ", dispatch_sessions: "+dispatch_sessions+
+    ", "+super.toString +
     ", targets: "+targets
   }
 

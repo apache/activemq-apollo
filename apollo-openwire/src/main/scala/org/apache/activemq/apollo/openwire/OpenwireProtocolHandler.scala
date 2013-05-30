@@ -17,34 +17,38 @@
 
 package org.apache.activemq.apollo.openwire
 
-import OpenwireConstants._
+import collection.mutable.{ListBuffer, HashMap}
 
 import org.fusesource.hawtdispatch._
 import org.fusesource.hawtbuf._
-import collection.mutable.{ListBuffer, HashMap}
+import org.fusesource.hawtbuf.Buffer._
 
 import java.io.IOException
-import org.apache.activemq.apollo.selector.SelectorParser
-import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
-import org.apache.activemq.apollo.broker.store._
-import org.apache.activemq.apollo.util._
 import java.util.concurrent.TimeUnit
 import java.util.Map.Entry
 import org.fusesource.hawtdispatch.transport._
-import codec.OpenWireFormat
-import command._
-import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
-import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, TopicDestinationDTO, DurableSubscriptionDestinationDTO, DestinationDTO}
+import org.apache.activemq.apollo.util._
+import org.apache.activemq.apollo.util.path.Path
 import org.apache.activemq.apollo.broker._
-import path.Path
-import protocol._
-import security.SecurityContext
-import DestinationConverter._
-import Buffer._
-import java.net.InetSocketAddress
-import java.security.cert.X509Certificate
+import org.apache.activemq.apollo.broker.store._
+import org.apache.activemq.apollo.broker.protocol._
+import org.apache.activemq.apollo.broker.security.SecurityContext
+import org.apache.activemq.apollo.dto.{AcceptingConnectorDTO, DestinationDTO}
+import org.apache.activemq.apollo.selector.SelectorParser
+import org.apache.activemq.apollo.filter.{BooleanExpression, FilterException}
+import org.apache.activemq.apollo.openwire.codec.OpenWireFormat
+import org.apache.activemq.apollo.openwire.command._
+import org.apache.activemq.apollo.openwire.dto.{OpenwireConnectionStatusDTO,OpenwireDTO}
+import org.apache.activemq.apollo.openwire.DestinationConverter._
+import org.apache.activemq.apollo.openwire.OpenwireConstants._
+
+object ZeroSizer extends Sizer[(Session[Delivery], Delivery)] {
+  def size(value:(Session[Delivery], Delivery)):Int = 0
+}
 
 object OpenwireProtocolHandler extends Log {
+
+
   def unit:Unit = {}
 
   val DEFAULT_DIE_DELAY = 5 * 1000L
@@ -136,6 +140,25 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     rc.messages_sent = messages_sent
     rc.messages_received = messages_received
     rc.waiting_on = waiting_on()
+
+    if( debug ) {
+      import collection.JavaConversions._
+      val out = new StringBuilder
+      out.append("\n--- connection ---\n")
+      out.append("--- producers ---\n")
+      for( p <- producerRoutes.values() ) {
+        out.append("  { "+p+" }\n")
+      }
+      out.append("--- consumers ---\n")
+      for( c <- all_consumers.values ) {
+        out.append("  { "+c+" }\n")
+      }
+      out.append("--- transactions ---\n")
+      for( t <- all_transactions.values ) {
+        out.append("  { "+t+" }\n")
+      }
+      rc.debug = out.toString()
+    }
     rc
   }
 
@@ -642,6 +665,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
         resume_read
       }
     }
+
+    override def toString: String = "addresses: ["+addresses.mkString(", ")+"],"+super.toString
   }
 
   def perform_send(msg:ActiveMQMessage, uow:StoreUOW=null): Unit = {
@@ -832,7 +857,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 //      r.release
 //    }
 
-    override def toString = "openwire consumer id:"+info.getConsumerId+", remote address: "+security_context.remote_address
+    override def toString = "openwire consumer:"+info.getConsumerId+", session_manager: "+session_manager
 
     var selector_expression:BooleanExpression = _
     var addresses:Array[_ <: BindAddress] = _
@@ -854,7 +879,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       }
       messages_sent += 1
       dispatch
-    }, SessionDeliverySizer)
+    }, ZeroSizer)
 
     credit_window_filter.credit(info.getPrefetchSize, 0)
 
@@ -977,6 +1002,8 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     class OpenwireConsumerSession(val producer:DeliveryProducer) extends DeliverySession with SessionSinkFilter[Delivery] {
       producer.dispatch_queue.assertExecuting()
       retain
+
+      override def toString = "openwire consumer session:"+info.getConsumerId+", remote address: "+security_context.remote_address+", downstream: "+downstream
 
       val downstream = session_manager.open(producer.dispatch_queue)
       var closed = false
