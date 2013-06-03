@@ -233,6 +233,21 @@ case class RecordLog(directory: File, logSuffix: String) {
 
     def check_read_flush(end_offset: Long) = {}
 
+    private def read_buffer(data:Buffer, offset:Long) = {
+      var bb = data.toByteBuffer
+      var position = offset
+      while( bb.hasRemaining  ) {
+        var count = channel.read(bb, position)
+        if( count == 0 ) {
+          throw new IOException("zero read at file '%s' offset: %d".format(file, position))
+        }
+        if( count < 0 ) {
+          throw new EOFException("File '%s' offset: %d".format(file, position))
+        }
+        position += count
+      }
+    }
+
     def read(record_position: Long, length: Int) = {
       val offset = record_position - position
       assert(offset >= 0)
@@ -242,9 +257,7 @@ case class RecordLog(directory: File, logSuffix: String) {
       if (verify_checksums) {
 
         val record = new Buffer(LOG_HEADER_SIZE + length)
-        if (channel.read(record.toByteBuffer, offset) != record.length) {
-          throw new IOException("short record at position: " + record_position + " in file: " + file + ", offset: " + offset)
-        }
+        read_buffer(record, offset)
 
         def record_is_not_changing = {
           using(open) {
@@ -282,9 +295,7 @@ case class RecordLog(directory: File, logSuffix: String) {
         data
       } else {
         val record = new Buffer(length)
-        if (channel.read(record.toByteBuffer, offset+LOG_HEADER_SIZE) != record.length) {
-          throw new IOException("short record at position: " + record_position + " in file: " + file + ", offset: " + offset)
-        }
+        read_buffer(record, offset+LOG_HEADER_SIZE)
         record
       }
     }

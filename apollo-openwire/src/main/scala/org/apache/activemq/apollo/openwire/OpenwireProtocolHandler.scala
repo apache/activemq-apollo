@@ -1003,7 +1003,7 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       producer.dispatch_queue.assertExecuting()
       retain
 
-      override def toString = "openwire consumer session:"+info.getConsumerId+", remote address: "+security_context.remote_address+", downstream: "+downstream
+      override def toString = "openwire consumer session:"+info.getConsumerId+", connection: "+OpenwireProtocolHandler.this.connection.id+", "+downstream
 
       val downstream = session_manager.open(producer.dispatch_queue)
       var closed = false

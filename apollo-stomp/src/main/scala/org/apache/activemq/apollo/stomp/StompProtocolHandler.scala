@@ -299,7 +299,6 @@ class StompProtocolHandler extends ProtocolHandler {
       def close = { closed  = true}
 
       def track(session:Session[Delivery], msgid: AsciiBuffer, size:Int, ack:(DeliveryResult, StoreUOW)=>Unit) = {
-        session_manager.delivered(session, size)
         if( closed ) {
           if( ack!=null ) {
             ack(Undelivered, null)
@@ -350,10 +349,10 @@ class StompProtocolHandler extends ProtocolHandler {
             // register on the connection since 1.0 acks may not include the subscription id
             connection_ack_handlers += ( msgid -> this )
           }
-          if( initial_credit_window.auto_credit ) {
+          if( initial_credit_window.auto_credit) {
             consumer_acks += msgid -> new TrackedAck(Some((session, size)), ack )
           } else {
-            session_manager.delivered(session, size)
+//            session_manager.delivered(session, size)
           }
         }
       }
@@ -379,7 +378,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
           for( (id, delivery) <- acked ) {
             for( credit <- delivery.credit ) {
-              session_manager.delivered(credit._1, credit._2)
+//              session_manager.delivered(credit._1, credit._2)
               credit_window_source.merge((1, credit._2))
               delivery.credit = None
             }
@@ -459,7 +458,7 @@ class StompProtocolHandler extends ProtocolHandler {
           if( initial_credit_window.auto_credit ) {
             consumer_acks += msgid -> new TrackedAck(Some((session, size)), ack)
           } else {
-            session_manager.delivered(session, size)
+//            session_manager.delivered(session, size)
           }
         }
       }
@@ -469,7 +468,7 @@ class StompProtocolHandler extends ProtocolHandler {
         if( initial_credit_window.auto_credit ) {
           for( delivery <- consumer_acks.get(msgid)) {
             for( credit <- delivery.credit ) {
-              session_manager.delivered(credit._1, credit._2)
+//              session_manager.delivered(credit._1, credit._2)
               credit_window_source.merge((1, credit._2))
               delivery.credit = None
             }
@@ -547,6 +546,7 @@ class StompProtocolHandler extends ProtocolHandler {
           ack_id
         }
 
+        session_manager.delivered(session, delivery.size)
         ack_handler.track(session, ack_id, delivery.size, delivery.ack)
 
         if( subscription_id != None ) {
@@ -603,7 +603,7 @@ class StompProtocolHandler extends ProtocolHandler {
         l += match_from_tail
       }
       if( selector!=null ) {
-        l += match_selector 
+        l += match_selector
       }
       l.toArray
     }
@@ -625,10 +625,10 @@ class StompProtocolHandler extends ProtocolHandler {
       val downstream = session_manager.open(producer.dispatch_queue)
 
       override def toString = {
-        "StompConsumerSession("+
-          "connection to: "+StompProtocolHandler.this.connection.transport.getRemoteAddress+", "
-          "closed: "+closed+", "
-          "downstream: "+downstream
+        "stomp consumer session("+
+          "connection: "+StompProtocolHandler.this.connection.id+", "+
+          "closed: "+closed+", "+
+          downstream+
         ")"
       }
 
@@ -1525,8 +1525,8 @@ class StompProtocolHandler extends ProtocolHandler {
     var exclusive = !browser && get(headers, EXCLUSIVE).map( _ == TRUE ).getOrElse(false)
     var include_seq = get(headers, INCLUDE_SEQ)
     val from_seq_opt = get(headers, FROM_SEQ)
-    
-    
+
+
     def is_multi_destination = if( addresses.length > 1 ) {
       true
     } else {
@@ -1644,7 +1644,7 @@ class StompProtocolHandler extends ProtocolHandler {
         } else {
           die("The subscription '%s' not found.".format(id))
         }
-        
+
       case Some(consumer)=>
         // consumer gets disposed after all producer stop sending to it...
         consumers -= id
