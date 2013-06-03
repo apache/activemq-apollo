@@ -253,7 +253,12 @@ abstract class DeliveryProducerRoute(router:Router) extends AbstractOverflowSink
       if( rc ) {
         debug("producer route detaching from consumer.")
         if( !dispatch_sessions.isEmpty ) {
-          dispatch_sessions = dispatch_sessions.filterNot( _ == x )
+          dispatch_sessions = dispatch_sessions.filterNot{ session =>
+            if( session == x ) {
+              dispatch_delivery.ack(Undelivered, null)
+            }
+            session == x
+          }
           if( dispatch_sessions.isEmpty ) {
             drainer.run
           }
