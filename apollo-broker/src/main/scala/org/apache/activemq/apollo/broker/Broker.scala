@@ -667,11 +667,11 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
 
   }
 
-  def web_admin_url = {
-    if( config.web_admins.isEmpty ) {
+  def web_admin_url:String = {
+    if( web_server == null ) {
       null
     } else {
-      config.web_admins.get(0).bind
+      web_server.uris().headOption.map(_.toString.stripSuffix("/")).getOrElse(null)
     }
   }
 

@@ -118,7 +118,7 @@
     <jersey-version>1.7</jersey-version>
     <snakeyaml-version>1.7</snakeyaml-version>
     <swagger-version>1.2.0</swagger-version>
-    <jolokia-version>1.0.6</jolokia-version>
+    <jolokia-version>1.1.1</jolokia-version>
 
     <selenium-version>2.33.0</selenium-version>
       

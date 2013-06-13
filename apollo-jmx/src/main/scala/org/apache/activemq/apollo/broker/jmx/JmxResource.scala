@@ -36,12 +36,25 @@ import org.fusesource.hawtdispatch._
  */
 
 @Path("/hawtio/jolokia")
-@Produces(Array(APPLICATION_JSON))
+@Produces(Array(APPLICATION_JSON, "text/json"))
 class JolokiaResource extends JmxResource
 
-@Path("/jmx")
-@Produces(Array(APPLICATION_JSON))
+@Path("/jmx/")
+@Produces(Array(APPLICATION_JSON, "text/json"))
 class JmxResource extends Resource {
+
+  @GET
+  def get(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
+  @POST
+  def post(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
+  @PUT
+  def put(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
+  @DELETE
+  def delete(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
+  @OPTIONS
+  def options(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
+  @HEAD
+  def head(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse) = invoke(ctx, req, resp, "")
 
   @GET @Path("{path:.*}")
   def get(@Context ctx:ServletContext, @Context req:HttpServletRequest, @Context resp:HttpServletResponse, @PathParam("path") path:String) = invoke(ctx, req, resp, path)

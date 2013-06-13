@@ -31,11 +31,20 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
   override def init(filterConfig: FilterConfig) {}
   override def destroy() = {}
 
-  override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) = {
+  override def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain):Unit = {
     response match {
       case response: HttpServletResponse =>
         val req = request.asInstanceOf[HttpServletRequest]
-        if( allow_any ) {
+        val origin = request.asInstanceOf[HttpServletRequest].getHeader("Origin")
+
+        if( allow_any || allowed.contains(origin) ) {
+
+          if( origin !=null ) {
+            response.addHeader("Access-Control-Allow-Origin", origin);
+          } else {
+            response.addHeader("Access-Control-Allow-Origin", "*");
+          }
+
           if ( req.getMethod == "OPTIONS" ) {
             response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
             req.getHeader("Access-Control-Request-Headers") match {
@@ -44,22 +53,8 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
             }
             response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
           }
-          response.addHeader("Access-Control-Allow-Origin", "*");
-        } else {
-          for( origin <- Option(request.asInstanceOf[HttpServletRequest].getHeader("Origin")) ) {
-            if ( allowed.contains(origin) ) {
-              if ( req.getMethod == "OPTIONS" ) {
-                response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
-                req.getHeader("Access-Control-Request-Headers") match {
-                  case headers:String=> response.addHeader("Access-Control-Allow-Headers", headers);
-                  case _ =>
-                }
-                response.addHeader("Access-Control-Max-Age", ""+DAYS.toSeconds(1));
-              }
-              response.addHeader("Access-Control-Allow-Origin", origin);
-            }
-          }
         }
+
       case _ =>
     }
     chain.doFilter(request, response)
