@@ -18,7 +18,7 @@ package org.apache.activemq.apollo.web
 
 import org.apache.activemq.apollo.util.ClassFinder
 import collection.immutable.TreeMap
-import collection.mutable.LinkedHashMap
+import scala.collection.mutable.{ListBuffer, LinkedHashMap}
 import resources._
 import org.fusesource.scalate.jersey._
 import com.wordnik.swagger.jaxrs.ApiHelpMessageBodyWriter
@@ -56,31 +56,34 @@ object DefaultWebModule extends WebModule {
 
   override def priority: Int = 100
 
-  override def web_resources = Set(
-    classOf[RootResource],
+  override def web_resources = {
+    var rc = ListBuffer[Class[_]]()
 
-    classOf[ApolloApiListing],
-    classOf[ApiHelpMessageBodyWriter],
+    // HTML is representation only available if Scalate is enabled in the webapp.
+    if( Boot.booted ) {
+      rc += classOf[BrokerResourceHTML]
+      rc += classOf[SessionResourceHTML]
+      rc += classOf[ConfigurationResourceHTML]
+      rc += classOf[ScalateTemplateProvider]
+      rc += classOf[ScalateTemplateProcessor]
+    }
+    rc += classOf[RootResource]
+    rc += classOf[ApolloApiListing]
+    rc += classOf[ApiHelpMessageBodyWriter]
+    rc += classOf[BrokerResourceJSON]
+    rc += classOf[BrokerResourceHelp]
+    rc += classOf[SessionResourceJSON]
+    rc += classOf[SessionResourceHelp]
+    rc += classOf[ConfigurationResourceJSON]
+    rc += classOf[ConfigurationResourceHelp]
+    rc += classOf[JacksonJsonProvider]
+    rc += classOf[JaxrsExceptionMapper]
+    rc.toSet
+  }
 
-    classOf[BrokerResourceHTML],
-    classOf[BrokerResourceJSON],
-    classOf[BrokerResourceHelp],
+  override def root_redirect: String = {
 
-    classOf[SessionResourceHTML],
-    classOf[SessionResourceJSON],
-    classOf[SessionResourceHelp],
-
-    classOf[ConfigurationResourceHTML],
-    classOf[ConfigurationResourceJSON],
-    classOf[ConfigurationResourceHelp],
-
-    classOf[JacksonJsonProvider],
-    classOf[JaxrsExceptionMapper],
-    classOf[ScalateTemplateProvider],
-    classOf[ScalateTemplateProcessor]
-
-  )
-
-  override def root_redirect: String = "console/index.html"
+    "console/index.html"
+  }
 
 }

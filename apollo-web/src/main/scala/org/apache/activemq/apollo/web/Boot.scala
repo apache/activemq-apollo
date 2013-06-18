@@ -19,12 +19,18 @@ package org.apache.activemq.apollo.web
 import org.fusesource.scalate.TemplateEngine
 import org.apache.activemq.apollo.broker.Broker
 
+object Boot {
+  @volatile
+  var booted = false
+}
+
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  *
  */
 class Boot(engine: TemplateEngine) {
-  
+
+
   // Put some references to the jersey classes in our code so that the osgi 
   // metadata creates the proper imports.
   val we_are_using = Array(
@@ -32,6 +38,7 @@ class Boot(engine: TemplateEngine) {
   )
   
   def run: Unit = {
+    Boot.booted = true
     engine.packagePrefix = "org.apache.activemq.apollo.web.templates"
   }
 }

@@ -17,7 +17,7 @@
 
 package org.apache.activemq.apollo.cli.osgi
 
-import org.apache.activemq.apollo.broker.Broker
+import org.apache.activemq.apollo.broker.{BrokerCreate, Broker}
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.dto.{XmlCodec, BrokerDTO}
 import org.osgi.framework._
@@ -26,7 +26,6 @@ import org.apache.activemq.apollo.util._
 import FileSupport._
 import java.util.{Hashtable, Dictionary, Properties}
 import org.osgi.service.cm.{Configuration, ConfigurationAdmin}
-import org.apache.activemq.apollo.cli.commands.Create
 import org.apache.felix.service.command.CommandSession
 import java.io._
 import java.lang.{UnsupportedOperationException, String}
@@ -64,8 +63,9 @@ object BrokerService extends Log {
         info("Initializing apollo instance directory: "+basedir)
 
         // Lets create a broker instance since it does not exist.
-        val create = new Create()
+        val create = new BrokerCreate()
         create.directory = basedir
+        create.home = null
 
         // Lets just reuse Karaf's Logging and Authentication configurations
         create.create_log_config = false
@@ -90,16 +90,7 @@ object BrokerService extends Log {
       <config allow="admin"/>
     </acl>
     """
-        create.execute(new CommandSession(){
-          def put(name: String, value: AnyRef) = throw new UnsupportedOperationException()
-          def getKeyboard: InputStream = throw new UnsupportedOperationException()
-          def get(name: String): AnyRef = throw new UnsupportedOperationException()
-          def format(target: AnyRef, level: Int): CharSequence = throw new UnsupportedOperationException()
-          def execute(commandline: CharSequence): AnyRef = throw new UnsupportedOperationException()
-          def convert(`type` : Class[_], instance: AnyRef): AnyRef = throw new UnsupportedOperationException()
-          def getConsole: PrintStream = new PrintStream(new ByteArrayOutputStream())
-          def close() {}
-        })
+        create.run()
       }
 
       // in case the config gets injected.

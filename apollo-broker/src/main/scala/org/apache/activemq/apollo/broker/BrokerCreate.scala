@@ -14,47 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.cli.commands
+package org.apache.activemq.apollo.broker
 
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.fusesource.jansi.Ansi.Color._
-import org.fusesource.jansi.Ansi.Attribute._
-import Helper._
 import java.io._
 import org.apache.activemq.apollo.util.FileSupport._
 import java.util.regex.{Pattern, Matcher}
-import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.Broker
+import scala.Predef._
 
-object Create {
-  val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
-}
+class BrokerCreate {
 
-/**
- * The apollo create command
- */
-@command(scope="apollo", name = "create", description = "creates a new broker instance")
-class Create extends Action {
-
-  import Create._
-
-  @argument(name = "directory", description = "The instance directory to hold the broker's configuration and data", index=0, required=true)
   var directory:File = _
-
-  @option(name = "--host", description = "The host name of the broker")
   var host:String = _
-
-  @option(name = "--force", description = "Overwrite configuration at destination directory")
   var force = false
-
-  @option(name = "--home", description = "Directory where apollo is installed")
-  val home: String = System.getProperty("apollo.home")
-
-  @option(name = "--with-ssl", description = "Generate an SSL enabled configuraiton")
-  val with_ssl = true
-
-  @option(name = "--encoding", description = "The encoding that text files should use")
-  val encoding = "UTF-8"
+  var base: String = _
+  var home: String = System.getProperty("apollo.home")
+  var with_ssl = true
+  var encoding = "UTF-8"
 
   var broker_security_config =
   """
@@ -73,9 +49,12 @@ class Create extends Action {
   var create_login_config = true
   var create_log_config = true
 
-  def execute(session: CommandSession) = {
+  var println = (value:Any)=>{}
 
-    def println(value:Any) = session.getConsole.println(value)
+
+  val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
+
+  def run() = {
 
     try {
       println("Creating apollo instance at: %s".format(directory))
@@ -88,7 +67,7 @@ class Create extends Action {
       etc.mkdirs
 
       if (create_log_config) {
-        write("etc/log4j.properties", etc/"log4j.properties", false, true)
+        write("etc/log4j.properties", etc/"log4j.properties", true, true)
       }
 
       if ( create_login_config ) {
@@ -190,8 +169,8 @@ class Create extends Action {
 
 
     } catch {
-      case x:Helper.Failure=>
-        println(ansi.a(INTENSITY_BOLD).fg(RED).a("ERROR: ").reset.a(x.getMessage))
+      case x:Exception =>
+        println("ERROR: "+x.getMessage)
     }
 
     null
@@ -204,7 +183,7 @@ class Create extends Action {
     if( filter || text ) {
 
       val out = new ByteArrayOutputStream()
-      using(getClass.getResourceAsStream(source)) { in=>
+      using(this.getClass.getResourceAsStream(source)) { in=>
         copy(in, out)
       }
 
@@ -227,6 +206,10 @@ class Create extends Action {
         replace("${java.home}", cp(System.getProperty("java.home")))
         replace("${store_config}", store_config)
 
+        if( base !=null ) {
+          replace("${apollo.base}", base)
+        }
+
         replace("${broker_security_config}", broker_security_config)
         replace("${host_security_config}", host_security_config)
       }
@@ -241,7 +224,7 @@ class Create extends Action {
 
     } else {
       using(new FileOutputStream(target)) { out=>
-        using(getClass.getResourceAsStream(source)) { in=>
+        using(this.getClass.getResourceAsStream(source)) { in=>
           copy(in, out)
         }
       }
@@ -250,7 +233,7 @@ class Create extends Action {
 
   def can_load(name:String) = {
     try {
-      getClass.getClassLoader.loadClass(name)
+      this.getClass.getClassLoader.loadClass(name)
       true
     } catch {
       case _:Throwable => false

@@ -58,7 +58,14 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
   def bind(location: String): TransportServer = {
     var uri: URI = new URI(location)
     uri.getScheme match {
-      case "ws" | "wss" => WsTransportServer(uri)
+      case "ws" | "wss" =>
+        try {
+          WsTransportServer(uri)
+        } catch {
+          // We might not have jetty on the class path.
+          case e:java.lang.NoClassDefFoundError =>
+            null
+        }
       case _ => null
     }
   }

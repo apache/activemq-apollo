@@ -59,7 +59,13 @@ object JettyWebServerFactory extends WebServerFactory {
     if( !enabled ) {
       return null
     }
-    new JettyWebServer(broker)
+
+    broker.container match {
+      case sc:ServletContext =>
+        null
+      case null =>
+        new JettyWebServer(broker)
+    }
   }
 
 }

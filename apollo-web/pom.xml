@@ -94,6 +94,12 @@
       <version>${josql-version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j-version}</version>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Scala Support -->
     <dependency>
@@ -157,38 +163,12 @@
       <version>${scalatest-version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j-version}</version>
-      <scope>test</scope>
-    </dependency>
-    
+
   </dependencies>
 
   <build>
     
     <plugins>
-
-      <!-- <plugin>
-        <groupId>org.fusesource.mvnplugins</groupId>
-        <artifactId>maven-fab-plugin</artifactId>
-        <version>1.26</version>
-        <configuration>
-          <descriptor>
-            <Name>web</Name>
-            <Long-Description></Long-Description>
-            <Extends>${project.groupId}:apollo-cli:${project.version}</Extends>
-          </descriptor>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin> -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -264,8 +244,9 @@
             </goals>
             <configuration>
               <outputDirectory>${basedir}/target/classes/META-INF/services/org.apache.activemq.apollo</outputDirectory>
-              <finalName>webapp-resources</finalName>
+              <finalName>webapp</finalName>
               <classesDirectory>${basedir}/src/main/webapp</classesDirectory>
+              <classifier>resources</classifier>
               <excludes>
                 <exclude>META-INF/**</exclude>
                 <exclude>**/*.scaml</exclude>
@@ -274,7 +255,23 @@
               </excludes>
             </configuration>
           </execution>
+
+          <!-- embed the wabapp resources in jar as resource -->
+          <execution>
+            <id>webapp.classes</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>classes</classifier>
+              <excludes>
+                <exclude>**/*.jar</exclude>
+              </excludes>
+            </configuration>
+          </execution>
         </executions>
+        
         <configuration>
           <archive>
             <manifestEntries>

@@ -47,7 +47,7 @@ class JMXSystemService(val broker: Broker, val config:JmxDTO) extends BaseServic
 
   protected def _start(on_completed: Task) = {
     if ( enabled && platform_mbean_server!=null ) {
-      platform_mbean_server.registerMBean(new JmxBroker(broker), broker_object_name)
+      platform_mbean_server.registerMBean(new JmxBroker(broker, config), broker_object_name)
       info("Registered Broker in JMX")
     }
     on_completed.run()
@@ -71,8 +71,8 @@ trait JmxBrokerMBean {
   def getWebAdminUrl:String
 }
 
-class JmxBroker(val broker: Broker) extends JmxBrokerMBean {
+class JmxBroker(val broker: Broker, val config:JmxDTO) extends JmxBrokerMBean {
   def getVersion = Broker.version
   def getState = broker.service_state.toString
-  def getWebAdminUrl = broker.web_admin_url
+  def getWebAdminUrl = Option(config.admin_url).getOrElse(broker.web_admin_url)
 }

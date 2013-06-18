@@ -186,6 +186,7 @@
     <module>apollo-openwire</module>
     <module>apollo-jmx</module>
     <module>apollo-distro</module>
+    <module>apollo-war</module>
   </modules>
 
   <scm>

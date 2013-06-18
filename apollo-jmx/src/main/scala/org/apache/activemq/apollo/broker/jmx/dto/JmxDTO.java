@@ -38,6 +38,12 @@ public class JmxDTO extends CustomServiceDTO {
     @XmlAttribute
     public Boolean enabled;
 
+    /**
+     * Administration URL for the broker service that gets advertised over JMX.  If
+     * not set, it will be automatically calculated.
+     */
+    @XmlAttribute(name = "admin_url")
+    public String admin_url;
 
     @Override
     public boolean equals(Object o) {
@@ -47,6 +53,8 @@ public class JmxDTO extends CustomServiceDTO {
 
         JmxDTO jmxDTO = (JmxDTO) o;
 
+        if (admin_url != null ? !admin_url.equals(jmxDTO.admin_url) : jmxDTO.admin_url != null)
+            return false;
         if (enabled != null ? !enabled.equals(jmxDTO.enabled) : jmxDTO.enabled != null)
             return false;
 
@@ -57,6 +65,7 @@ public class JmxDTO extends CustomServiceDTO {
     public int hashCode() {
         int result = super.hashCode();
         result = 31 * result + (enabled != null ? enabled.hashCode() : 0);
+        result = 31 * result + (admin_url != null ? admin_url.hashCode() : 0);
         return result;
     }
 }

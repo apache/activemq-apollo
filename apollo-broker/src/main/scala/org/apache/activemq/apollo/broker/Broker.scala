@@ -270,6 +270,12 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
   @BeanProperty
   var config: BrokerDTO = new BrokerDTO
 
+  /**
+   * A reference to a container that created the broker.
+   * This might something like an ServletContext or an OSGi service factory.
+   */
+  var container:AnyRef = _
+
   config.virtual_hosts.add({
     val rc = new VirtualHostDTO
     rc.id = "default"
