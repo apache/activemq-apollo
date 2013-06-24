@@ -29,6 +29,6 @@ public class DtoModule2 implements DtoModule {
 
     @Override
     public Class<?>[] extension_classes() {
-        return new Class<?>[0];
+        return new Class<?>[] {DtoModule1.class, DtoModule2.class, DtoModule3.class};
     }
 }

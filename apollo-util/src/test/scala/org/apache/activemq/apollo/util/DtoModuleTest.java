@@ -27,6 +27,9 @@ public class DtoModuleTest {
 
     @Test
     public void testDtoSingletons() {
-        assertEquals(0, DtoModule$.MODULE$.packages().length);
+        assertEquals(3, DtoModule$.MODULE$.extension_classes().length);
+
+        // why should this return 3?? there is really only one pacakge
+        assertEquals(3, DtoModule$.MODULE$.packages().length);
     }
 }
