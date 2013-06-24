@@ -39,7 +39,7 @@ class KeyStorage(val config:KeyStorageDTO) {
   }
 
   def create_key_store = {
-    if( trust_managers==null ) {
+    if( key_store == null ) {
       key_store = {
         val store = KeyStore.getInstance(opt(config.store_type).getOrElse("JKS"))
         store.load(new FileInputStream(config.file), opt(config.password).getOrElse("").toCharArray())
