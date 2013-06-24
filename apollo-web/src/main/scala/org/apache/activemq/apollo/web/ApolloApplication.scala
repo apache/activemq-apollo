@@ -57,87 +57,87 @@ class ApolloApplication extends Filter {
 
     if( !conf.exists ) {
       sys.error("Could not create the broker instance.");
-    }
-
-    val log4j_config = etc / "log4j.properties"
-    PropertyConfigurator.configure(log4j_config.getCanonicalPath)
-
-//    if( System.getProperty("java.security.auth.login.config")==null ) {
-//      val login_config = etc / "login.config"
-//      if( login_config.exists ) {
-//        System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
-//      }
-//    }
-
-    val tmp = base / "tmp"
-    tmp.mkdirs
-
-    // Load the configs and start the brokers up.
-    println("Loading configuration file '%s'.".format(conf))
-
-    // Use bouncycastle if it's installed.
-    try {
-      var loader = this.getClass.getClassLoader
-      var clazz = loader.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider")
-      val bouncycastle_provider = clazz.newInstance().asInstanceOf[Provider]
-      Security.insertProviderAt(bouncycastle_provider, 2)
-      Broker.info("Loaded the Bouncy Castle security provider.")
-    } catch {
-      case e:Throwable => // ignore, we can live without bouncycastle
-    }
-
-    broker = new Broker()
-    broker.container = sc;
-
-    val validation_messages = ListBuffer[String]()
-    try {
-      broker.config = ConfigStore.load(conf, validation_messages += _)
-    } finally {
-      if( !validation_messages.isEmpty && broker.config.validation != "hide") {
-        Broker.warn("")
-        Broker.warn("Broker configuration file failed the following validations:")
-        validation_messages.foreach{ v =>
-          Broker.warn("")
-          Broker.warn("  "+v)
-        }
-        Broker.warn("")
-      }
-    }
-
-    if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
-      Broker.error("Strict validation was configured, shutting down")
-      return
-    }
-
-    broker.tmp = tmp
-    ServiceControl.start(broker)
-
-    val broker_config_monitor = new FileMonitor(conf,broker.dispatch_queue {
-      broker.console_log.info("Reloading configuration file '%s'.".format(conf))
-      broker.update(ConfigStore.load(conf, x=> broker.console_log.info(x) ), ^{
-      })
-    })
-
-    val log4j_config_monitor = new FileMonitor(log4j_config, {
+    } else {
+      val log4j_config = etc / "log4j.properties"
       PropertyConfigurator.configure(log4j_config.getCanonicalPath)
-    })
-//
-//    var jul_config = etc / "jul.properties"
-//    val jul_config_monitor = if ( jul_config.exists()) {
-//      new FileMonitor(jul_config, {
-//        using(new FileInputStream(jul_config)) { is =>
-//          LogManager.getLogManager.readConfiguration(is)
-//        }
-//      })
-//    } else {
-//      null
-//    }
-//
-//    if(jul_config_monitor!=null) jul_config_monitor.start(NOOP)
 
-    log4j_config_monitor.start(NOOP)
-    broker_config_monitor.start(NOOP)
-    broker_services = List(log4j_config_monitor, broker_config_monitor, broker)
+  //    if( System.getProperty("java.security.auth.login.config")==null ) {
+  //      val login_config = etc / "login.config"
+  //      if( login_config.exists ) {
+  //        System.setProperty("java.security.auth.login.config", login_config.getCanonicalPath)
+  //      }
+  //    }
+
+      val tmp = base / "tmp"
+      tmp.mkdirs
+
+      // Load the configs and start the brokers up.
+      println("Loading configuration file '%s'.".format(conf))
+
+      // Use bouncycastle if it's installed.
+      try {
+        var loader = this.getClass.getClassLoader
+        var clazz = loader.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider")
+        val bouncycastle_provider = clazz.newInstance().asInstanceOf[Provider]
+        Security.insertProviderAt(bouncycastle_provider, 2)
+        Broker.info("Loaded the Bouncy Castle security provider.")
+      } catch {
+        case e:Throwable => // ignore, we can live without bouncycastle
+      }
+
+      broker = new Broker()
+      broker.container = sc;
+
+      val validation_messages = ListBuffer[String]()
+      try {
+        broker.config = ConfigStore.load(conf, validation_messages += _)
+      } finally {
+        if( !validation_messages.isEmpty && broker.config.validation != "hide") {
+          Broker.warn("")
+          Broker.warn("Broker configuration file failed the following validations:")
+          validation_messages.foreach{ v =>
+            Broker.warn("")
+            Broker.warn("  "+v)
+          }
+          Broker.warn("")
+        }
+      }
+
+      if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
+        Broker.error("Strict validation was configured, shutting down")
+        return
+      }
+
+      broker.tmp = tmp
+      ServiceControl.start(broker)
+
+      val broker_config_monitor = new FileMonitor(conf,broker.dispatch_queue {
+        broker.console_log.info("Reloading configuration file '%s'.".format(conf))
+        broker.update(ConfigStore.load(conf, x=> broker.console_log.info(x) ), ^{
+        })
+      })
+
+      val log4j_config_monitor = new FileMonitor(log4j_config, {
+        PropertyConfigurator.configure(log4j_config.getCanonicalPath)
+      })
+  //
+  //    var jul_config = etc / "jul.properties"
+  //    val jul_config_monitor = if ( jul_config.exists()) {
+  //      new FileMonitor(jul_config, {
+  //        using(new FileInputStream(jul_config)) { is =>
+  //          LogManager.getLogManager.readConfiguration(is)
+  //        }
+  //      })
+  //    } else {
+  //      null
+  //    }
+  //
+  //    if(jul_config_monitor!=null) jul_config_monitor.start(NOOP)
+
+      log4j_config_monitor.start(NOOP)
+      broker_config_monitor.start(NOOP)
+      broker_services = List(log4j_config_monitor, broker_config_monitor, broker)
+    }
   }
 
   def destroy():Unit = {
