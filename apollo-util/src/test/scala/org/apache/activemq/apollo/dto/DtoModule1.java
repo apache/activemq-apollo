@@ -14,21 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.apollo.util.test;
+package org.apache.activemq.apollo.dto;
 
 import org.apache.activemq.apollo.util.DtoModule;
 
 /**
  * @author <a href="http://www.christianposta.com/blog">Christian Posta</a>
  */
-public class DtoModule2 implements DtoModule {
+public class DtoModule1 implements DtoModule {
+
+
     @Override
     public String dto_package() {
-        return "org.apache.activemq.apollo.util.test";
+        return "org.apache.activemq.apollo.dto";
     }
 
     @Override
     public Class<?>[] extension_classes() {
-        return new Class<?>[] {DtoModule1.class, DtoModule2.class, DtoModule3.class};
+        return new Class<?>[]{DtoModule1.class, DtoModule2.class, DtoModule3.class};
     }
 }
