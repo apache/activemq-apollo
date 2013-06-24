@@ -1,0 +1,3 @@
+org.apache.activemq.apollo.util.test.DtoModule1
+org.apache.activemq.apollo.util.test.DtoModule2
+org.apache.activemq.apollo1.util.test.DtoModule3
