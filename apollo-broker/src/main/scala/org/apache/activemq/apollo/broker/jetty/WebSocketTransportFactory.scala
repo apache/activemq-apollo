@@ -80,7 +80,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     @BeanProperty
     var transportServerListener: TransportServerListener = _
     @BeanProperty
-    var binary_transfers = false
+    var binary_transfers = true
     @BeanProperty
     var cors_origin:String = null
 
@@ -247,6 +247,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def setDispatchQueue(queue: DispatchQueue) {
       dispatchQueue = queue
       drain_outbound_events.setTargetQueue(queue);
+      inbound_dispatch_queue.setTargetQueue(queue);
     }
 
     @BeanProperty
@@ -256,10 +257,6 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def getPeerX509Certificates = certificates
 
     var protocolCodec: ProtocolCodec = _
-
-    // Seems most browsers don't support binary transfers yet, so only enable it if
-    // the client is requesting them or the transport server was configured to use them.
-    var binary_transfers = Option(request.getHeader("binary_transfers")).map(_=="true").getOrElse(server.binary_transfers)
 
     def getProtocolCodec = protocolCodec
 
@@ -279,8 +276,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def stop(on_completed: Runnable):Unit = super.stop(new TaskWrapper(on_completed))
 
     protected def _start(on_completed: Task) = {
-      inbound_dispatch_queue = dispatchQueue.createQueue(null);
-      inbound_dispatch_queue.suspend();
+      inbound_dispatch_queue.setTargetQueue(dispatchQueue)
       drain_outbound_events.setTargetQueue(dispatchQueue)
       transportListener.onTransportConnected();
 
@@ -340,8 +336,15 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     // This section handles in the inbound flow of messages
     //
     /////////////////////////////////////////////////////////////////////////
+    var first_message = true
 
     def onMessage(str: String): Unit = {
+      if( first_message ) {
+        // If the first message the client sends us is a text message then
+        // we will use text message when responding to the client.
+        binary_transfers = false
+        first_message = false
+      }
       // Convert string messages to bytes messages..  our codecs just work with bytes..
       var buffer = new AsciiBuffer(str)
       onMessage(buffer.data, buffer.offset, buffer.length)
@@ -350,7 +353,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     var inbound_capacity_remaining = 0;
     val inbound = ListBuffer[Buffer]()
 
-    var inbound_dispatch_queue:DispatchQueue = _
+    val inbound_dispatch_queue:DispatchQueue = dispatchQueue.createQueue("inbound queue");
 
     def resumeRead() = {
       inbound_dispatch_queue.resume()
@@ -362,6 +365,12 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def suspendRead() = inbound_dispatch_queue.suspend()
 
     def onMessage(data: Array[Byte], offset: Int, length: Int): Unit = {
+      if( first_message ) {
+        // If the first message the client sends us is a binary message then
+        // we will use text message when responding to the client.
+        binary_transfers = true
+        first_message = false
+      }
       inbound.synchronized {
         // flow control check..
         while (inbound_capacity_remaining <= 0 && service_state.is_upward ) {
@@ -386,7 +395,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     def isOpen = inbound.isEmpty && closed != None
 
     def read(dest: ByteBuffer): Int = {
-      dispatch_queue.assertExecuting()
+      inbound_dispatch_queue.assertExecuting()
 
       if (inbound.isEmpty && closed != None) {
         return -1
@@ -437,7 +446,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
   
     protected def drain_inbound: Unit = {
-      inbound_dispatch_queue.assertExecuting()
+      dispatch_queue.assertExecuting()
       try {
         //        var initial = protocolCodec.getReadCounter
         //        while (codec.getReadCounter - initial < codec.getReadBufferSize << 2) {
@@ -451,7 +460,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
               transportListener.onTransportCommand(command)
             } catch {
               case e: Throwable => {
-                transportListener.onTransportFailure(new IOException("Transport listener failure."))
+                transportListener.onTransportFailure(new IOException("Transport listener failure: "+e))
               }
             }
           } else {
@@ -551,6 +560,8 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         }
       }
     }
+
+    var binary_transfers = false
 
     var write_failed = false
     def write(buf: ByteBuffer):Int = {
