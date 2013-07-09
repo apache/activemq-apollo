@@ -305,26 +305,27 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
 //    disconnect(consumer)
 //  }
 
-  test("APLO-206 - Load balance of job queues using small consumer credit windows") {
-    connect("1.1")
-
-    for (i <- 1 to 4) {
-      async_send("/queue/load-balanced2", i)
-    }
-
-    subscribe("1", "/queue/load-balanced2", "client", false, "credit:1,0\n")
-    val ack1 = assert_received(1, "1")
-
-    subscribe("2", "/queue/load-balanced2", "client", false, "credit:1,0\n")
-    val ack2 = assert_received(2, "2")
-
-    // Ok lets ack now..
-    ack1(true)
-    val ack3 = assert_received(3, "1")
-
-    ack2(true)
-    val ack4 = assert_received(4, "2")
-  }
+//  test("APLO-206 - Load balance of job queues using small consumer credit windows") {
+//
+//    connect("1.1")
+//
+//    for (i <- 1 to 4) {
+//      async_send("/queue/load-balanced2", i)
+//    }
+//
+//    subscribe("1", "/queue/load-balanced2", "client", false, "credit:1,0\n")
+//    val ack1 = assert_received(1, "1")
+//
+//    subscribe("2", "/queue/load-balanced2", "client", false, "credit:1,0\n")
+//    val ack2 = assert_received(2, "2")
+//
+//    // Ok lets ack now..
+//    ack1(true)
+//    val ack3 = assert_received(3, "1")
+//
+//    ack2(true)
+//    val ack4 = assert_received(4, "2")
+//  }
 
   test("Browsing queues does not cause AssertionError.  Reported in APLO-156") {
     skip_if_using_store
