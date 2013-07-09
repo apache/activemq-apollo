@@ -57,7 +57,7 @@ object StompWebSocketTests {
       var file = new File(getClass.getResource("websocket.html").getPath)
       file.copy_to(test_data_dir/"websocket.html")
       new File(file.getParentFile, "../../../../../../../../../apollo-website/src/scripts/jquery.js").getCanonicalFile.copy_to(test_data_dir/"jquery.js")
-      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir/"stomp.js")
+      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir/"stomp.js")
 
       var context = new WebAppContext
       context.setContextPath("/")
