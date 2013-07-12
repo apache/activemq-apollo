@@ -54,8 +54,8 @@ object SimpleCustomServiceFactory extends CustomServiceFactory with Log {
 
   def create(broker: Broker, dto: CustomServiceDTO): Service = dto match {
     case dto:SimpleCustomServiceDTO =>
-      if( dto.getClass != classOf[CustomServiceDTO] ) {
-        // don't process sub classes of CustomServiceDTO
+      if( dto.getClass != classOf[SimpleCustomServiceDTO] ) {
+        // don't process sub classes of SimpleCustomServiceDTO
         return null;
       }
 

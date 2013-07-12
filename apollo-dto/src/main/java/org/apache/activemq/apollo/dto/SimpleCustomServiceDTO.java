@@ -74,4 +74,12 @@ public class SimpleCustomServiceDTO extends CustomServiceDTO {
         result = 31 * result + (other != null ? other.hashCode() : 0);
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "SimpleCustomServiceDTO{" +
+                "id='" + id + '\'' +
+                ", kind='" + kind + '\'' +
+                '}';
+    }
 }
