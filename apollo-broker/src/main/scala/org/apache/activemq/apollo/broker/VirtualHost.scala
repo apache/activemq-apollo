@@ -148,25 +148,7 @@ class VirtualHost(val broker: Broker, val id:String) extends BaseService with Se
     audit_log = Option(log_category.audit).map(Log(_)).getOrElse(broker.audit_log)
     connection_log = Option(log_category.connection).map(Log(_)).getOrElse(broker.connection_log)
     console_log = Option(log_category.console).map(Log(_)).getOrElse(broker.console_log)
-
-    if (config.authentication != null) {
-      if (config.authentication.enabled.getOrElse(true)) {
-        // Virtual host has it's own settings.
-        authenticator = new JaasAuthenticator(config.authentication, security_log)
-      } else {
-        // Don't use security on this host.
-        authenticator = null
-      }
-    } else {
-      // use the broker's settings..
-      authenticator = broker.authenticator
-    }
-    if( authenticator!=null ) {
-      val rules = config.access_rules.toList ::: broker.config.access_rules.toList
-      authorizer = Authorizer(broker, this)
-    } else {
-      authorizer = Authorizer()
-    }
+    SecurityFactory.install(this)
   }
 
   override protected def _start(on_completed:Task):Unit = {

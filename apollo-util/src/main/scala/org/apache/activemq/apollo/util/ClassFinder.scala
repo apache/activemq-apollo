@@ -28,6 +28,7 @@ object ClassFinder extends Log {
 
   trait Loader {
     def discover[T](path:String, clazz: Class[T])( callback: List[T]=>Unit )
+    def load[T](name: String, clazz: Class[T]): T
   }
 
   case class ClassLoaderLoader(loaders: Seq[ClassLoader]) extends Loader {
@@ -53,6 +54,16 @@ object ClassFinder extends Log {
       }
       val singltons = classes.flatMap(x=> instantiate(clazz, x) ).distinct
       callback( singltons.toList )
+    }
+
+    def load[T](name: String, clazz: Class[T]): T = {
+      loaders.foreach { loader=>
+        instantiate(clazz, loader.loadClass(name)) match {
+          case Some(rc)=> return rc
+          case None =>
+        }
+      }
+      throw new ClassNotFoundException(name)
     }
   }
 

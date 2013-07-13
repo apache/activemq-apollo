@@ -114,6 +114,14 @@ public class BrokerDTO {
     @XmlAnyElement(lax=true)
     public List<Object> other = new ArrayList<Object>();
 
+    /**
+     * If you want use a custom authorization and authentication scheme,
+     * then set this to the name of a class that implements the
+     * SecurityFactory interface.
+     */
+    @XmlAttribute(name = "security_factory")
+    public String security_factory;
+
 
     @Override
     public boolean equals(Object o) {
@@ -128,25 +136,36 @@ public class BrokerDTO {
             return false;
         if (client_address != null ? !client_address.equals(brokerDTO.client_address) : brokerDTO.client_address != null)
             return false;
-        if (connectors != null ? !connectors.equals(brokerDTO.connectors) : brokerDTO.connectors != null) return false;
+        if (connectors != null ? !connectors.equals(brokerDTO.connectors) : brokerDTO.connectors != null)
+            return false;
+        if (id != null ? !id.equals(brokerDTO.id) : brokerDTO.id != null)
+            return false;
         if (key_storage != null ? !key_storage.equals(brokerDTO.key_storage) : brokerDTO.key_storage != null)
             return false;
         if (log_category != null ? !log_category.equals(brokerDTO.log_category) : brokerDTO.log_category != null)
             return false;
-        if (notes != null ? !notes.equals(brokerDTO.notes) : brokerDTO.notes != null) return false;
-        if (other != null ? !other.equals(brokerDTO.other) : brokerDTO.other != null) return false;
-        if (services != null ? !services.equals(brokerDTO.services) : brokerDTO.services != null) return false;
-        if (validation != null ? !validation.equals(brokerDTO.validation) : brokerDTO.validation != null) return false;
+        if (notes != null ? !notes.equals(brokerDTO.notes) : brokerDTO.notes != null)
+            return false;
+        if (other != null ? !other.equals(brokerDTO.other) : brokerDTO.other != null)
+            return false;
+        if (security_factory != null ? !security_factory.equals(brokerDTO.security_factory) : brokerDTO.security_factory != null)
+            return false;
+        if (services != null ? !services.equals(brokerDTO.services) : brokerDTO.services != null)
+            return false;
+        if (validation != null ? !validation.equals(brokerDTO.validation) : brokerDTO.validation != null)
+            return false;
         if (virtual_hosts != null ? !virtual_hosts.equals(brokerDTO.virtual_hosts) : brokerDTO.virtual_hosts != null)
             return false;
-        if (web_admins != null ? !web_admins.equals(brokerDTO.web_admins) : brokerDTO.web_admins != null) return false;
+        if (web_admins != null ? !web_admins.equals(brokerDTO.web_admins) : brokerDTO.web_admins != null)
+            return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = notes != null ? notes.hashCode() : 0;
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (notes != null ? notes.hashCode() : 0);
         result = 31 * result + (virtual_hosts != null ? virtual_hosts.hashCode() : 0);
         result = 31 * result + (connectors != null ? connectors.hashCode() : 0);
         result = 31 * result + (client_address != null ? client_address.hashCode() : 0);
@@ -158,7 +177,7 @@ public class BrokerDTO {
         result = 31 * result + (services != null ? services.hashCode() : 0);
         result = 31 * result + (validation != null ? validation.hashCode() : 0);
         result = 31 * result + (other != null ? other.hashCode() : 0);
+        result = 31 * result + (security_factory != null ? security_factory.hashCode() : 0);
         return result;
     }
-
 }

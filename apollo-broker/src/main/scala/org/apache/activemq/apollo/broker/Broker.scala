@@ -503,13 +503,7 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
       null
     }
 
-    if (config.authentication != null && config.authentication.enabled.getOrElse(true)) {
-      authenticator = new JaasAuthenticator(config.authentication, security_log)
-      authorizer=Authorizer(this)
-    } else {
-      authenticator = null
-      authorizer=Authorizer()
-    }
+    SecurityFactory.install(this)
 
     val host_config_by_id = HashMap[AsciiBuffer, VirtualHostDTO]()
     config.virtual_hosts.foreach{ value =>

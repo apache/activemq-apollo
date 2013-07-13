@@ -213,7 +213,7 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     super.afterAll()
   }
 
-  override def onTestFailure(e:Throwable) = {
+  override def onTestFailure(e:Throwable) = try {
     info("====== broker state dump start ======")
     val c = new CountDownLatch(1)
     broker.dispatch_queue {
@@ -256,6 +256,8 @@ class BrokerFunSuiteSupport extends FunSuiteSupport with Logging { // with Shoul
     }
     c.await()
     info("====== broker state dump emd ======")
+  } catch {
+    case x:Throwable =>
   }
 
   def connector_port(connector: String) = BrokerTestSupport.connector_port(broker, connector)

@@ -102,17 +102,18 @@ object Authorizer {
     def can(ctx: SecurityContext, action: String, resource: SecuredResource) = true
   }
 
-  def apply(broker:Broker, host:VirtualHost=null):Authorizer = {
+  def apply(broker:Broker):Authorizer = {
     import collection.JavaConversions._
+    val pk = broker.authenticator.acl_principal_kinds
+    val rules = broker.config.access_rules.toList.flatMap(parse(broker.console_log, _,pk))
+    new RulesAuthorizer(version_counter.incrementAndGet(), rules.toArray )
+  }
 
-    val rules = if( host==null ) {
-      val pk = broker.authenticator.acl_principal_kinds
-      broker.config.access_rules.toList.flatMap(parse(broker.console_log, _,pk))
-    } else {
-      val pk = host.authenticator.acl_principal_kinds
-      host.config.access_rules.toList.flatMap(parse(host.console_log, _,pk, host)) :::
-      broker.config.access_rules.toList.flatMap(parse(broker.console_log, _,pk))
-    }
+  def apply(host:VirtualHost=null):Authorizer = {
+    import collection.JavaConversions._
+    val pk = host.authenticator.acl_principal_kinds
+    val rules =  host.config.access_rules.toList.flatMap(parse(host.console_log, _,pk, host)) :::
+        host.broker.config.access_rules.toList.flatMap(parse(host.broker.console_log, _,pk))
     new RulesAuthorizer(version_counter.incrementAndGet(), rules.toArray )
   }
 
