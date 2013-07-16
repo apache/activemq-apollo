@@ -46,7 +46,7 @@ class AllowAnyOriginFilter(val allowed:Set[String]) extends javax.servlet.Filter
           }
 
           if ( req.getMethod == "OPTIONS" ) {
-            response.addHeader("Access-Control-Request-Method", "GET, POST, PUT, DELETE");
+            response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
             req.getHeader("Access-Control-Request-Headers") match {
               case headers:String=> response.addHeader("Access-Control-Allow-Headers", headers);
               case _ =>
