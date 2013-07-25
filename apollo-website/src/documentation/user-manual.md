@@ -273,7 +273,12 @@ the settings used on the socket:
 
 * `binary_transfers` : Should data be sent to the client as binary blobs. Currently
   not all browsers support binary WebSocket data.  Defaults to false.
-  
+* `cors_origin` : Specify cross-origin resource sharing limmitations, including `*` all or individual server
+  names
+* `max_text_message_size` : Specify the size of text messages that the websocket connector can handle
+* `max_binary_message_size` : Specify the size of binary messages that the websocket connector can handle
+* `max_idle_time` : timeout limitations of the underlying websocket socket
+
 Example configuraiton:
 
 {pygmentize:: xml}
