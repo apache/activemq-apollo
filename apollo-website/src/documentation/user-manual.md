@@ -267,7 +267,6 @@ to bind. For example:
 * `ws://[::]:61623` binds to all IPv4 and IPv6 interfaces on port 61623
 * `wss://127.0.0.1:0` binds to the loopback interface on a dynamic port
 
-<!-- 
 The WebSocket URI also supports the following query parameters to fine tune
 the settings used on the socket:
 
@@ -284,7 +283,6 @@ Example configuraiton:
 {pygmentize:: xml}
 <connector id="ws" bind="ws://0.0.0.0:61623?binary_transfers=false"/>
 {pygmentize}
--->
 
 One thing worth noting is that web sockets (just as Ajax) implements the same
 origin policy, so by default you can access only brokers running on the same host as
