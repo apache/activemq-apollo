@@ -2,7 +2,9 @@
 (function() {
   var Byte, Client, Frame, Stomp,
     __hasProp = {}.hasOwnProperty;
-
+  
+  var MAX_FRAME_SIZE=16*1024;;
+  
   Byte = {
     LF: '\x0A',
     NULL: '\x00'
@@ -111,7 +113,14 @@
       if (typeof this.debug === "function") {
         this.debug(">>> " + out);
       }
-      return this.ws.send(out);
+      while( true) {
+        if( out.length > MAX_FRAME_SIZE ) {
+          this.ws.send(out.substring(0, MAX_FRAME_SIZE));
+          out = out.substring(MAX_FRAME_SIZE);
+        } else {
+          return this.ws.send(out);
+        }
+      }
     };
 
     Client.prototype._setupHeartbeat = function(headers) {

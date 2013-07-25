@@ -35,7 +35,9 @@ import java.io.File
 object StompWebSocketTests {
 
   class ChromeStompWebSocketTest extends StompWebSocketTestBase with ChromeWebDriverTrait
+
   class FirefoxStompWebSocketTest extends StompWebSocketTestBase with FirefoxWebDriverTrait
+
   class SafariStompWebSocketTest extends StompWebSocketTestBase with SafariWebDriverTrait
 
   abstract class StompWebSocketTestBase extends StompTestSupport with WebDriverTrait {
@@ -44,7 +46,7 @@ object StompWebSocketTests {
 
     override def broker_config_uri = "xml:classpath:apollo-stomp-websocket.xml"
 
-    var jetty:Server = _
+    var jetty: Server = _
     var jetty_port = 0
 
     def start_jetty = {
@@ -55,9 +57,11 @@ object StompWebSocketTests {
       test_data_dir.mkdirs()
 
       var file = new File(getClass.getResource("websocket.html").getPath)
-      file.copy_to(test_data_dir/"websocket.html")
-      new File(file.getParentFile, "../../../../../../../../../apollo-website/src/scripts/jquery.js").getCanonicalFile.copy_to(test_data_dir/"jquery.js")
-      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir/"stomp.js")
+      file.copy_to(test_data_dir / "websocket.html")
+      file = new File(getClass.getResource("websocket-large.html").getPath)
+      file.copy_to(test_data_dir / "websocket-large.html")
+      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/jquery-1.7.2.min.js").getCanonicalFile.copy_to(test_data_dir / "jquery.js")
+      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir / "stomp.js")
 
       var context = new WebAppContext
       context.setContextPath("/")
@@ -73,7 +77,7 @@ object StompWebSocketTests {
     }
 
     def stop_jetty = {
-      if( jetty!=null ) {
+      if (jetty != null) {
         jetty.stop()
         jetty = null
       }
@@ -106,14 +110,14 @@ object StompWebSocketTests {
       }
     }
 
-    for( protocol <- Array("ws", "wss") ) {
-      test("websocket "+protocol) {
+    for (protocol <- Array("ws", "wss")) {
+      test("websocket " + protocol) {
 
-        val url = "http://localhost:"+jetty_port+"/websocket.html"
+        val url = "http://localhost:" + jetty_port + "/websocket.html"
         val ws_port: Int = connector_port(protocol).get
 
         System.out.println("url: " + url)
-        driver.get(url + "#"+protocol+"://127.0.0.1:" + ws_port);
+        driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
         val web_status = driver.findElement(By.id("status"));
         val web_received = driver.findElement(By.id("received"));
 
@@ -152,7 +156,68 @@ object StompWebSocketTests {
 
       }
     }
+
+    // broker sends client large message
+    for(protocol <- Array("ws", "wss")){
+      test("websockets large text messages to client: "  +protocol){
+        val url = "http://localhost:" + jetty_port + "/websocket.html"
+        val ws_port: Int = connector_port(protocol).get
+
+        System.out.println("url: " + url)
+        driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
+        val web_status = driver.findElement(By.id("status"));
+        val web_received = driver.findElement(By.id("received"));
+
+        while ("Loading" == web_status.getText) {
+          Thread.sleep(100)
+        }
+
+        if (web_status.getText != "No WebSockets") {
+          within(2, SECONDS) {
+            web_status.getText should be("Connected")
+          }
+
+          connect("1.1")
+          async_send("/queue/websocket", "x"*16385)
+          within(2, SECONDS){
+            web_received.getText should startWith("xxxxx")
+          }
+
+        }
+      }
     }
+
+    // client sends broker large message..
+    for(protocol <- Array( "ws")){
+      test("websockets large text messages from client: "  +protocol){
+        def generateLargeText(x:String, i:Int) = {
+          x * i
+        }
+        val url = "http://localhost:" + jetty_port + "/websocket-large.html"
+        val ws_port: Int = connector_port(protocol).get
+
+        System.out.println("url: " + url)
+
+        driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
+
+        val web_status = driver.findElement(By.id("status"));
+
+        while ("Message not sent" == web_status.getText) {
+          Thread.sleep(100)
+        }
+
+        if(web_status != "No WebSockets"){
+          connect("1.1")
+          subscribe("0", "/queue/websocket")
+
+          within(2000000, SECONDS){
+            assert_received("""x.*""".r, "0")
+          }
+        }
+
+      }
+    }
+  }
 
 }
 
