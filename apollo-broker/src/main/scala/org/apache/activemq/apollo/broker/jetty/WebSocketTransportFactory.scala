@@ -84,8 +84,17 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
     @BeanProperty
     var cors_origin:String = null
 
+    @BeanProperty
+    var max_text_message_size: Int = -1
+
+    @BeanProperty
+    var max_binary_message_size:Int = -1
+
+    @BeanProperty
+    var max_idle_time: Int = -1
+
     var broker: Broker = _
-    var blocking_executor: Executor = _
+
 
     def set_broker(value: Broker) = broker = value
 
@@ -206,6 +215,17 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
 
     def fire_accept = accept_dispatch_queue {
       val transport = pending_connects.poll()
+
+      if(max_text_message_size != -1){
+        transport.connection.setMaxTextMessageSize(max_text_message_size)
+      }
+      if(max_binary_message_size != -1){
+        transport.connection.setMaxBinaryMessageSize(max_binary_message_size)
+      }
+      if(max_idle_time != -1){
+        transport.connection.setMaxIdleTime(max_idle_time)
+      }
+
       if (transport != null) {
         if (service_state.is_started) {
           transportServerListener.onAccept(transport)
