@@ -55,7 +55,7 @@ object DefaultSecurityFactory extends SecurityFactory {
       // use the broker's settings..
       host.authenticator = broker.authenticator
     }
-    if( broker.authenticator !=null ) {
+    if( host.authenticator !=null ) {
       host.authorizer = Authorizer(host)
     } else {
       host.authorizer = Authorizer()
