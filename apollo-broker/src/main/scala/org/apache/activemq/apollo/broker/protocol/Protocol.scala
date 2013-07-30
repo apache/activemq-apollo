@@ -96,7 +96,7 @@ trait ProtocolHandler {
   def create_connection_status(debug:Boolean) = new ConnectionStatusDTO
 
   def on_transport_failure(error:IOException) = {
-    trace(error)
+    info(error)
     connection.stop(NOOP)
   }
 
