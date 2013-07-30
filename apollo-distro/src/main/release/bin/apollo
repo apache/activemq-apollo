@@ -110,6 +110,7 @@ fi
 
 # For Cygwin, switch paths to Windows format before running java
 if $cygwin; then
+  BOOTDIRS=`cygpath --path --windows "${APOLLO_BASE}/lib\:${APOLLO_HOME}/lib"`
   APOLLO_HOME=`cygpath --windows "$APOLLO_HOME"`
   if [ ! -z "$APOLLO_BASE" ] ; then
     APOLLO_BASE=`cygpath --windows "$APOLLO_BASE"`
