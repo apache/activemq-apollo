@@ -16,15 +16,8 @@
  */
 package org.apache.activemq.apollo.stomp.test
 
-import org.openqa.selenium.{By, WebDriver}
-import org.apache.activemq.apollo.util.FileSupport._
+import org.openqa.selenium.By
 import java.util.concurrent.TimeUnit._
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.util.thread.ExecutorThreadPool
-import org.apache.activemq.apollo.broker.Broker
-import org.eclipse.jetty.server.nio.SelectChannelConnector
-import org.eclipse.jetty.webapp.WebAppContext
-import java.io.File
 
 /**
  * <p>
@@ -40,75 +33,9 @@ object StompWebSocketTests {
 
   class SafariStompWebSocketTest extends StompWebSocketTestBase with SafariWebDriverTrait
 
-  abstract class StompWebSocketTestBase extends StompTestSupport with WebDriverTrait {
+  abstract class StompWebSocketTestBase extends WebSocketSupport{
 
-    var driver: WebDriver = _
 
-    override def broker_config_uri = "xml:classpath:apollo-stomp-websocket.xml"
-
-    var jetty: Server = _
-    var jetty_port = 0
-
-    def start_jetty = {
-      jetty = new Server
-      val connector = new SelectChannelConnector
-      connector.setPort(0)
-
-      test_data_dir.mkdirs()
-
-      var file = new File(getClass.getResource("websocket.html").getPath)
-      file.copy_to(test_data_dir / "websocket.html")
-      file = new File(getClass.getResource("websocket-large.html").getPath)
-      file.copy_to(test_data_dir / "websocket-large.html")
-      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/jquery-1.7.2.min.js").getCanonicalFile.copy_to(test_data_dir / "jquery.js")
-      new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir / "stomp.js")
-
-      var context = new WebAppContext
-      context.setContextPath("/")
-      context.setWar(test_data_dir.getCanonicalPath)
-      context.setClassLoader(Broker.class_loader)
-
-      jetty.setHandler(context)
-      jetty.setConnectors(Array(connector))
-      jetty.setThreadPool(new ExecutorThreadPool(Broker.BLOCKABLE_THREAD_POOL))
-      jetty.start
-
-      jetty_port = connector.getLocalPort
-    }
-
-    def stop_jetty = {
-      if (jetty != null) {
-        jetty.stop()
-        jetty = null
-      }
-    }
-
-    override def beforeAll() = {
-      try {
-        driver = create_web_driver(test_data_dir / "profile")
-        start_jetty
-        super.beforeAll()
-      } catch {
-        case ignore: Throwable =>
-          println("ignoring tests, could not create web driver: " + ignore)
-      }
-    }
-
-    override def afterAll() = {
-      stop_jetty
-      if (driver != null) {
-        driver.quit()
-        driver = null
-      }
-    }
-
-    override protected def test(testName: String, testTags: org.scalatest.Tag*)(testFun: => scala.Unit): Unit = {
-      super.test(testName, testTags: _*) {
-        if (driver != null) {
-          testFun
-        }
-      }
-    }
 
     for (protocol <- Array("ws", "wss")) {
       test("websocket " + protocol) {
