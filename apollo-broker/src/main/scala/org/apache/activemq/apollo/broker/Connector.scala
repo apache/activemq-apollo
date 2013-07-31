@@ -242,7 +242,8 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
 
     accepted.set(0)
     connected.set(0)
-    protocol = ProtocolFactory.get(config.protocol.getOrElse("any")).get
+    var protocol_name = config.protocol.getOrElse("any")
+    protocol = ProtocolFactory.get(protocol_name).getOrElse(throw new Exception("protocol named '"+protocol_name+"' does not exist"))
     transport_server = TransportFactory.bind( config.bind )
     transport_server.setDispatchQueue(dispatch_queue)
     transport_server.setBlockingExecutor(Broker.BLOCKABLE_THREAD_POOL);
