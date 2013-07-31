@@ -719,11 +719,16 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
     }
   }
 
-  def get_socket_address = {
-    first_accepting_connector.get.socket_address
-  }
-
+  def get_socket_address = first_accepting_connector.get.socket_address
   def first_accepting_connector = connectors.values.find(_.isInstanceOf[AcceptingConnector]).map(_.asInstanceOf[AcceptingConnector])
+
+  def get_socket_address(id:String) = accepting_connector(id).get.socket_address
+  def accepting_connector(id:String) = {
+    connectors.values.find( _ match {
+      case connector:AcceptingConnector => connector.id == id
+      case _ => false
+    }).map(_.asInstanceOf[AcceptingConnector])
+  }
 
   def ssl_context(protocol:String) = {
     val rc = SSLContext.getInstance(protocol);
