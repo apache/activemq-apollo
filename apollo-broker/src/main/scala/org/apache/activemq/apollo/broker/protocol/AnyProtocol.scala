@@ -138,7 +138,10 @@ class AnyProtocolHandler extends ProtocolHandler {
   def session_id = null
   var config:DetectDTO = _
 
+  def async_die(client_message:String) = connection.stop(NOOP)
+
   override def on_transport_command(command: AnyRef) = {
+  def async_die(client_message:String) = connection.stop(NOOP)
 
     if (!command.isInstanceOf[ProtocolDetected]) {
       throw new ProtocolException("Expected a ProtocolDetected object");

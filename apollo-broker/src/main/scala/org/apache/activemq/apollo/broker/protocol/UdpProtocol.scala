@@ -126,6 +126,7 @@ abstract class UdpProtocolHandler extends ProtocolHandler {
   def protocol = "udp"
   var session_id:String = null
 
+  def async_die(client_message:String) = null
 
   var buffer_size = 640*1024
   var connection_log:Log = _

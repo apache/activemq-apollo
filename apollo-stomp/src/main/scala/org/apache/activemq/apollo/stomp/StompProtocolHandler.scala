@@ -834,7 +834,9 @@ class StompProtocolHandler extends ProtocolHandler {
   class ProtocolException(msg:String) extends RuntimeException(msg)
   class Break extends RuntimeException
 
-  private def async_die(msg:String, e:Throwable=null) = try {
+  def async_die(msg:String) = async_die(msg, null)
+
+  private def async_die(msg:String, e:Throwable) = try {
     die(msg, e)
   } catch {
     case x:Break=>

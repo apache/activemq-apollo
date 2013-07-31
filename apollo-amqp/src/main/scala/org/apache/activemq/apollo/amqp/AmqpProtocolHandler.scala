@@ -145,6 +145,8 @@ class AmqpProtocolHandler extends ProtocolHandler {
     case x: Break =>
   }
 
+  def async_die(client_message:String) = async_die("system-error", client_message)
+
   private def die[T](error_code: String, msg: String, e: Throwable = null): T = {
     if (e != null) {
       connection_log.info(e, "AMQP connection '%s' error: %s", security_context.remote_address, msg, e)

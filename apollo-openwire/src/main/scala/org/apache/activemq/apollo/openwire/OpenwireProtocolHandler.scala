@@ -375,11 +375,14 @@ class OpenwireProtocolHandler extends ProtocolHandler {
     }
   }
 
-  def async_die(msg: String, actual:Command=null):Unit = try {
+  def async_die(msg: String) = async_die(msg, null)
+
+  def async_die(msg: String, actual:Command):Unit = try {
     die(msg, actual)
   } catch {
     case x:Break=>
   }
+
 
   /**
    * A protocol error that cannot be recovered from. It results in the connections being terminated.

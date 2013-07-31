@@ -85,6 +85,8 @@ trait ProtocolHandler {
 
   def protocol:String
 
+  def async_die(client_message:String)
+
   def session_id: String
 
   var connection:BrokerConnection = null;
