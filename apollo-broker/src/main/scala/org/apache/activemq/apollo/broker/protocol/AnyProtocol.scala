@@ -62,7 +62,7 @@ object AnyProtocol extends BaseProtocol {
 
 }
 
-case class ProtocolDetected(id:String, codec:ProtocolCodec)
+case class ProtocolDetected(id:String)
 
 class AnyProtocolCodec(val connector:Connector) extends ProtocolCodec {
 
@@ -82,18 +82,15 @@ class AnyProtocolCodec(val connector:Connector) extends ProtocolCodec {
 
 
   def read: AnyRef = {
-    if (next != null) {
-      throw new IllegalStateException
+    if (next!=null) {
+      return next.read()
     }
 
     channel.read(buffer)
     val buff = new Buffer(buffer.array(), 0, buffer.position())
     protocols.foreach {protocol =>
       if (protocol.matchesIdentification(buff)) {
-        next = protocol.createProtocolCodec(connector)
-        AnyProtocol.change_protocol_codec(transport, next)
-        next.unread(buff.toByteArray)
-        return ProtocolDetected(protocol.id, next)
+        return ProtocolDetected(protocol.id)
       }
     }
     if (buffer.position() == buffer.capacity) {
@@ -141,27 +138,32 @@ class AnyProtocolHandler extends ProtocolHandler {
   def async_die(client_message:String) = connection.stop(NOOP)
 
   override def on_transport_command(command: AnyRef) = {
-  def async_die(client_message:String) = connection.stop(NOOP)
-
-    if (!command.isInstanceOf[ProtocolDetected]) {
-      throw new ProtocolException("Expected a ProtocolDetected object");
+    if( discriminated ) {
+      throw new ProtocolException("Protocol already discriminated");
     }
 
-    discriminated = true
+    command match {
+      case detected:ProtocolDetected =>
+        discriminated = true
+        val protocol = ProtocolFactory.get(detected.id).getOrElse(throw new ProtocolException("No protocol handler available for protocol: " + detected.id))
+        val protocol_handler = protocol.createProtocolHandler(connection.connector)
 
-    var protocol: ProtocolDetected = command.asInstanceOf[ProtocolDetected];
-    val protocol_handler = ProtocolFactory.get(protocol.id) match {
-      case Some(x) => x.createProtocolHandler(connection.connector)
-      case None =>
-        throw new ProtocolException("No protocol handler available for protocol: " + protocol.id);
+        // Swap out the protocol codec
+        val any_codec = connection.protocol_codec(classOf[AnyProtocolCodec])
+        val next = protocol.createProtocolCodec(connection.connector)
+        AnyProtocol.change_protocol_codec(connection.transport, next)
+        val buff = new Buffer(any_codec.buffer.array(), 0, any_codec.buffer.position())
+        next.unread(buff.toByteArray)
+
+        // Swap out the protocol handler.
+        connection.protocol_handler = protocol_handler
+        connection.transport.suspendRead
+        protocol_handler.set_connection(connection);
+        connection.transport.getTransportListener.onTransportConnected()
+
+      case _ =>
+        throw new ProtocolException("Expected a ProtocolDetected object");
     }
-
-     // replace the current handler with the new one.
-    connection.protocol_handler = protocol_handler
-    connection.transport.suspendRead
-
-    protocol_handler.set_connection(connection);
-    connection.transport.getTransportListener.onTransportConnected()
   }
 
   override def on_transport_connected = {

@@ -402,10 +402,7 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
         return new UnitFn1<Object>() {
             @Override
             public void call(Object o) {
-                if (o instanceof MQTTProtocolCodec) {
-                    // this is passed on to us by the protocol discriminator
-                    // so we know which wire format is being used.
-                } else if (o instanceof MQTTFrame) {
+                if (o instanceof MQTTFrame) {
                     MQTTFrame command = (MQTTFrame) o;
                     try {
                         if (command.messageType() == CONNECT.TYPE) {

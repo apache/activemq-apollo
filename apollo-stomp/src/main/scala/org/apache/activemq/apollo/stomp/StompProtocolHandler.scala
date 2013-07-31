@@ -989,9 +989,6 @@ class StompProtocolHandler extends ProtocolHandler {
     }
     try {
       command match {
-        case s:StompCodec =>
-          // this is passed on to us by the protocol discriminator
-          // so we know which wire format is being used.
         case f:StompFrame=>
 
           trace("received frame: %s", f)

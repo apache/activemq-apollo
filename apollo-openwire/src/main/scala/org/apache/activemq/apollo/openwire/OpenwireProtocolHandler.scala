@@ -284,9 +284,6 @@ class OpenwireProtocolHandler extends ProtocolHandler {
       trace("received: %s", command)
       if (wire_format == null) {
         command match {
-          case codec: OpenwireCodec =>
-            // this is passed on to us by the protocol discriminator
-            // so we know which wire format is being used.
           case command: WireFormatInfo =>
             on_wire_format_info(command)
           case _ =>
