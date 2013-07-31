@@ -88,5 +88,5 @@ class SslProtocol extends Protocol {
     rc
   }
 
-  def createProtocolHandler = new AnyProtocolHandler
+  def createProtocolHandler(connector:Connector) = new AnyProtocolHandler
 }

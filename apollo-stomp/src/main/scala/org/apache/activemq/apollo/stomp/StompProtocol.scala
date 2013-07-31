@@ -53,7 +53,7 @@ class StompProtocolCodecFactory extends ProtocolCodecFactory.Provider {
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object StompProtocol extends StompProtocolCodecFactory with Protocol {
-  def createProtocolHandler = new StompProtocolHandler
+  def createProtocolHandler(connector:Connector) = new StompProtocolHandler
 }
 
 object StompMessageCodecFactory extends MessageCodecFactory.Provider {

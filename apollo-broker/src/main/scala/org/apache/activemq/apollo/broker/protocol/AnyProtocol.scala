@@ -40,7 +40,7 @@ object AnyProtocol extends BaseProtocol {
 
   def createProtocolCodec(connector:Connector) = new AnyProtocolCodec(connector)
 
-  def createProtocolHandler = new AnyProtocolHandler
+  def createProtocolHandler(connector:Connector) = new AnyProtocolHandler
 
   def change_protocol_codec(transport:Transport, codec:ProtocolCodec) = {
     var current = transport.getProtocolCodec
@@ -148,7 +148,7 @@ class AnyProtocolHandler extends ProtocolHandler {
 
     var protocol: ProtocolDetected = command.asInstanceOf[ProtocolDetected];
     val protocol_handler = ProtocolFactory.get(protocol.id) match {
-      case Some(x) => x.createProtocolHandler
+      case Some(x) => x.createProtocolHandler(connection.connector)
       case None =>
         throw new ProtocolException("No protocol handler available for protocol: " + protocol.id);
     }

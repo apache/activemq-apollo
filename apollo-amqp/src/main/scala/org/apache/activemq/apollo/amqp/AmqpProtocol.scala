@@ -44,7 +44,7 @@ object AmqpProtocol extends Protocol {
     }
   }
 
-  def createProtocolHandler = new AmqpProtocolHandler
+  def createProtocolHandler(connector:Connector) = new AmqpProtocolHandler
 }
 
 //object AmqpMessageCodecFactory extends MessageCodecFactory.Provider {

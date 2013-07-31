@@ -31,7 +31,7 @@ import org.apache.activemq.apollo.util.Log
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 object OpenwireProtocol extends OpenwireProtocolCodecFactory with Protocol with Log {
-  def createProtocolHandler = new OpenwireProtocolHandler
+  def createProtocolHandler(connector:Connector) = new OpenwireProtocolHandler
 }
 
 object OpenwireMessageCodecFactory extends MessageCodecFactory.Provider {

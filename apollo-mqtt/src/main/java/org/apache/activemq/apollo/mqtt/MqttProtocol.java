@@ -16,6 +16,7 @@
  */
 package org.apache.activemq.apollo.mqtt;
 
+import org.apache.activemq.apollo.broker.Connector;
 import org.apache.activemq.apollo.broker.DestinationParser;
 import org.apache.activemq.apollo.broker.protocol.Protocol;
 import org.apache.activemq.apollo.broker.protocol.ProtocolHandler;
@@ -45,7 +46,7 @@ public class MqttProtocol extends MqttProtocolCodecFactory implements Protocol {
 
 
     @Override
-    public ProtocolHandler createProtocolHandler() {
+    public ProtocolHandler createProtocolHandler(Connector connector) {
         return new MqttProtocolHandler();
     }
 }

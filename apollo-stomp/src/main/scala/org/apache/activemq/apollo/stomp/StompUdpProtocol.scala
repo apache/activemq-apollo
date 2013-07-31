@@ -33,7 +33,7 @@ class StompUdpProtocol extends UdpProtocol {
 
   override def id = "stomp-udp"
 
-  override def createProtocolHandler = new UdpProtocolHandler {
+  override def createProtocolHandler(connector:Connector) = new UdpProtocolHandler {
 
     type ConfigTypeDTO = StompDTO
     def configClass = classOf[ConfigTypeDTO]

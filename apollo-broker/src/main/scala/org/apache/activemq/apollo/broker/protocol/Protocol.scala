@@ -20,13 +20,14 @@ import java.io.IOException
 import org.apache.activemq.apollo.broker.store.MessageRecord
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{Log, ClassFinder}
-import org.apache.activemq.apollo.broker.{Broker, Message, BrokerConnection}
+import org.apache.activemq.apollo.broker.{Connector, Broker, Message, BrokerConnection}
 import org.apache.activemq.apollo.dto.{SimpleProtocolFilterDTO, ProtocolFilterDTO, ConnectionStatusDTO}
 import org.fusesource.hawtbuf.Buffer
 import scala.collection.mutable.ListBuffer
+import org.fusesource.hawtdispatch.transport.ProtocolCodec
 
 trait Protocol extends ProtocolCodecFactory.Provider {
-  def createProtocolHandler:ProtocolHandler
+  def createProtocolHandler(connector: Connector):ProtocolHandler
 }
 
 abstract class BaseProtocol extends Protocol {

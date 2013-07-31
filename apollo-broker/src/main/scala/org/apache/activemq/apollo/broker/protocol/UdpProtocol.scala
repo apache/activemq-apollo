@@ -294,7 +294,7 @@ class UdpProtocol extends BaseProtocol {
   def id = "udp"
   def createProtocolCodec(connector:Connector):ProtocolCodec = new UdpProtocolCodec()
 
-  def createProtocolHandler:ProtocolHandler = new UdpProtocolHandler {
+  def createProtocolHandler(connector:Connector):ProtocolHandler = new UdpProtocolHandler {
     type ConfigTypeDTO = UdpDTO
     def configClass = classOf[ConfigTypeDTO]
 

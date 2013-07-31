@@ -184,7 +184,7 @@ class AcceptingConnector(val broker:Broker, val id:String) extends Connector {
       connected.incrementAndGet()
       var connection = new BrokerConnection(AcceptingConnector.this, broker.connection_id_counter.incrementAndGet)
       connection.dispatch_queue.setLabel("connection %d to %s".format(connection.id, transport.getRemoteAddress))
-      connection.protocol_handler = protocol.createProtocolHandler
+      connection.protocol_handler = protocol.createProtocolHandler(AcceptingConnector.this)
       connection.transport = transport
 
       broker.connections.put(connection.id, connection)
