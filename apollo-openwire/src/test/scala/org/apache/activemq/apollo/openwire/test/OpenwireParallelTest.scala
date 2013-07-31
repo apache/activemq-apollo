@@ -18,6 +18,7 @@ package org.apache.activemq.apollo.openwire.test
 
 import javax.jms._
 import org.apache.activemq.apollo.broker.BrokerParallelTestExecution
+import org.apache.activemq.{ActiveMQConnection, RedeliveryPolicy}
 
 class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestExecution {
 
@@ -747,4 +748,39 @@ class OpenwireParallelTest extends OpenwireTestSupport with BrokerParallelTestEx
     receive_text(localConsumer) should equal("1")
     receive_text(localConsumer) should equal("3")
  }
+
+  test("Rollback moves messages to DLQ"){
+    connect()
+    val redelivery_policy = new RedeliveryPolicy
+    redelivery_policy.setMaximumRedeliveries(1)
+    default_connection.asInstanceOf[ActiveMQConnection].setRedeliveryPolicy(redelivery_policy)
+
+    // send our message
+    val producerSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val destination = producerSession.createQueue("nacker.test")
+    val producer = producerSession.createProducer(destination)
+    producer.send(producerSession.createTextMessage("yo"))
+    producerSession.close()
+
+    // consume and rollback
+    val consumerSession = default_connection.createSession(true, Session.SESSION_TRANSACTED)
+    val destination2 = consumerSession.createQueue("nacker.test")
+    val consumer = consumerSession.createConsumer(destination2)
+
+    var msg = consumer.receive(1000)
+    msg should not be null
+    consumerSession.rollback()
+
+    msg = consumer.receive(1500)
+    msg should not be null
+    consumerSession.rollback()
+
+    consumerSession.close()
+
+    val dlqSession = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val dlq = dlqSession.createQueue("dlq.nacker.test")
+    val dlqConsumer = dlqSession.createConsumer(dlq)
+    val dlqMsg = dlqConsumer.receive(1000)
+    dlqMsg should not be null
+  }
 }
