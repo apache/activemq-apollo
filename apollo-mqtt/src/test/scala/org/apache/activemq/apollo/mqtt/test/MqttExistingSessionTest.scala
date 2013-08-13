@@ -39,4 +39,11 @@ class MqttExistingSessionTest extends MqttTestSupport {
     publish("existing/sub", "1", EXACTLY_ONCE)
     should_receive("1", "existing/sub")
   }
+
+  test("Subscribe") {
+    connect()
+    subscribe("foo/#")
+    publish("foo/A", "1", EXACTLY_ONCE)
+    should_receive("1", "foo/A")
+  }
 }
