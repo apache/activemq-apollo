@@ -41,9 +41,16 @@ class MqttExistingSessionTest extends MqttTestSupport {
   }
 
   test("Subscribe") {
+
     connect()
-    subscribe("foo/#")
-    publish("foo/A", "1", EXACTLY_ONCE)
-    should_receive("1", "foo/A")
+
+    var client2 = create_client
+    client2.setCleanSession(false);
+    client2.setClientId("another")
+    connect(c = client2)
+
+    subscribe(topic = "1/#", c = client2)
+    publish("1/data/apps/crm/Opportunity/60", "2", EXACTLY_ONCE)
+    should_receive(body = "2", topic = "1/data/apps/crm/Opportunity/60", c = client2)
   }
 }
