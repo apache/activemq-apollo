@@ -24,7 +24,7 @@ h1 Apollo #{project_version}
 
 [ActiveMQ Apollo](http://activemq.apache.org/apollo/) is a faster, more
 reliable, easier to maintain messaging broker built from the foundations of
-the original [ActiveMQ]((http://activemq.apache.org). It accomplishes this
+the original [ActiveMQ](http://activemq.apache.org). It accomplishes this
 using a radically different threading and message dispatching 
 [architecture](documentation/architecture.html).  Like ActiveMQ, Apollo is a 
 multi-protocol broker and supports STOMP, AMQP, MQTT, Openwire, SSL, and WebSockets.
