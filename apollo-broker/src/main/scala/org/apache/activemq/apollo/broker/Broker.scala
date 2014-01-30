@@ -433,7 +433,7 @@ class Broker() extends BaseService with SecuredResource with PluginStateSupport 
   }
 
   def roll_current_period = {
-    stats_of_5min.add(current_period)
+    stats_of_5min += current_period
     current_period = new PeriodStat
     current_period.max_connections = connections.size
     max_connections_in_5min = PeriodStat(stats_of_5min).max_connections
