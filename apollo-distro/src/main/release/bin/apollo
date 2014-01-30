@@ -124,7 +124,7 @@ if $cygwin; then
 fi
 
 if [ -z "$JVM_FLAGS" ] ; then
-  JVM_FLAGS="-server -Xmx1G -XX:-UseBiasedLocking"
+  JVM_FLAGS="-server -Xmx1G -XX:+HeapDumpOnOutOfMemoryError -XX:-UseBiasedLocking"
 fi
 
 if [ "$APOLLO_ASSERTIONS" != "false" ] ; then
