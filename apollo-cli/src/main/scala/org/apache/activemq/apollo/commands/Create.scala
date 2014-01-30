@@ -38,9 +38,9 @@ class Create extends Action {
   var force = false
 
   @option(name = "--home", description = "Directory where apollo is installed")
-  var home: String = _
+  var home: File = _
 
-  @option(name = "--with-ssl", description = "Generate an SSL enabled configuraiton")
+  @option(name = "--with-ssl", description = "Generate an SSL enabled configuration")
   var with_ssl = true
 
   @option(name = "--encoding", description = "The encoding that text files should use")

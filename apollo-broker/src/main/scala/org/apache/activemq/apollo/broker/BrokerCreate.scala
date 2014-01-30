@@ -27,8 +27,8 @@ class BrokerCreate {
   var directory:File = _
   var host:String = _
   var force = false
-  var base: String = _
-  var home: String = System.getProperty("apollo.home")
+  var base: File = _
+  var home: File = new File(System.getProperty("apollo.home"))
   var with_ssl = true
   var encoding = "UTF-8"
 
@@ -53,10 +53,12 @@ class BrokerCreate {
 
 
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
+  val IS_CYGWIN = IS_WINDOWS && System.getenv("OSTYPE") == "cygwin";
 
   def run() = {
 
     try {
+
       println("Creating apollo instance at: %s".format(directory))
 
       if( host == null ) {
@@ -92,7 +94,7 @@ class BrokerCreate {
           "-dname", "cn=%s".format(host),
           "-validity", "3650"))==0
         if(!rc) {
-          println("WARNNIG: Could not generate the keystore, make sure the keytool command is in your PATH")
+          println("WARNING: Could not generate the keystore, make sure the keytool command is in your PATH")
         }
         rc
       }
@@ -122,23 +124,25 @@ class BrokerCreate {
           write("bin/apollo-broker.cmd", bin/"apollo-broker.cmd", true)
           write("bin/apollo-broker-service.exe", bin/"apollo-broker-service.exe")
           write("bin/apollo-broker-service.xml", bin/"apollo-broker-service.xml", true)
-        } else {
-          write("bin/apollo-broker", bin/"apollo-broker", true)
+        }
+
+        if( !IS_WINDOWS || IS_CYGWIN ) {
+          write("bin/apollo-broker", bin/"apollo-broker", true, false, true)
           setExecutable(bin/"apollo-broker")
 
-          write("bin/apollo-broker-service", bin/"apollo-broker-service", true)
+          write("bin/apollo-broker-service", bin/"apollo-broker-service", true, false, true)
           setExecutable(bin/"apollo-broker-service")
         }
 
         println("")
         println("You can now start the broker by executing:  ")
         println("")
-        println("   \"%s\" run".format((bin/"apollo-broker").getCanonicalPath))
+        println("   \"%s\" run".format(cp(bin/"apollo-broker", true)))
 
         val service = bin / "apollo-broker-service"
         println("")
 
-        if( !IS_WINDOWS ) {
+        if( !IS_WINDOWS || IS_CYGWIN ) {
 
           // Does it look like we are on a System V init system?
           if( new File("/etc/init.d/").isDirectory ) {
@@ -147,24 +151,26 @@ class BrokerCreate {
             println("")
             println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
             println("   /etc/init.d/apollo-broker-service start")
+            println("")
 
           } else {
 
             println("Or you can run the broker in the background using:")
             println("")
-            println("   \"%s\" start".format(service.getCanonicalPath))
-
+            println("   \"%s\" start".format(cp(service,true)))
+            println("")
           }
 
-        } else {
+        }
+        if ( IS_WINDOWS ) {
 
-          println("Or you can setup the broker as system service and run it in the background:")
+          println("Or you can setup the broker as Windows service and run it in the background:")
           println("")
-          println("   \"%s\" install".format(service.getCanonicalPath))
-          println("   \"%s\" start".format(service.getCanonicalPath))
+          println("   \"%s\" install".format(cp(service,true)))
+          println("   \"%s\" start".format(cp(service,true)))
+          println("")
 
         }
-        println("")
       }
 
 
@@ -176,7 +182,17 @@ class BrokerCreate {
     null
   }
 
-  def write(source:String, target:File, filter:Boolean=false, text:Boolean=false) = {
+  def cp(value:String, unixPaths:Boolean):String = cp(new File(value), unixPaths)
+  def cp(value:File, unixPaths:Boolean):String = {
+    if( unixPaths && IS_CYGWIN ) {
+      import scala.sys.process._
+      Seq("cygpath", value.getCanonicalPath).!!.trim
+    } else {
+      value.getCanonicalPath
+    }
+  }
+
+  def write(source:String, target:File, filter:Boolean=false, text:Boolean=false, unixTarget:Boolean=false) = {
     if( target.exists && !force ) {
       error("The file '%s' already exists.  Use --force to overwrite.".format(target))
     }
@@ -194,20 +210,19 @@ class BrokerCreate {
         def replace(key:String, value:String) = {
           content = content.replaceAll(Pattern.quote(key), Matcher.quoteReplacement(value))
         }
-        def cp(value:String) = new File(value).getCanonicalPath
 
         replace("${user}", System.getProperty("user.name",""))
         replace("${host}", host)
         replace("${version}", Broker.version)
         if( home !=null ) {
-          replace("${home}", cp(home))
+          replace("${home}", cp(home, unixTarget))
         }
-        replace("${base}", directory.getCanonicalPath)
-        replace("${java.home}", cp(System.getProperty("java.home")))
+        replace("${base}", cp(directory, unixTarget))
+        replace("${java.home}", cp(System.getProperty("java.home"), unixTarget))
         replace("${store_config}", store_config)
 
         if( base !=null ) {
-          replace("${apollo.base}", base)
+          replace("${apollo.base}", cp(base, unixTarget))
         }
 
         replace("${broker_security_config}", broker_security_config)
@@ -216,7 +231,12 @@ class BrokerCreate {
 
       // and then writing out in the new target encoding..  Let's also replace \n with the values
       // that is correct for the current platform.
-      val in = new ByteArrayInputStream(content.replaceAll("""\r?\n""",  Matcher.quoteReplacement(System.getProperty("line.separator"))).getBytes(encoding))
+      var separator = if ( unixTarget && IS_CYGWIN ) {
+        "\n"
+      } else {
+        System.getProperty("line.separator")
+      }
+      val in = new ByteArrayInputStream(content.replaceAll("""\r?\n""",  Matcher.quoteReplacement(separator)).getBytes(encoding))
 
       using(new FileOutputStream(target)) { out=>
         copy(in, out)

@@ -33,19 +33,7 @@
       </excludes>
       <lineEnding>unix</lineEnding>
     </fileSet>
-    
-    <!-- Copy the unix scripts .. chmod 755 and exclude the windows bits-->
-    <fileSet>
-      <directory>src/main/release/bin</directory>
-      <outputDirectory>/bin</outputDirectory>
-      <lineEnding>unix</lineEnding>
-      <fileMode>0755</fileMode>
-      <excludes>
-        <exclude>*.bat</exclude>
-        <exclude>*.cmd</exclude>
-      </excludes>
-    </fileSet>
-    
+        
     <!-- filtered files --> 
     <fileSet>
       <directory>src/main/release</directory>

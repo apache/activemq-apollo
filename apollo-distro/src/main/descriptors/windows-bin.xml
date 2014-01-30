@@ -33,17 +33,6 @@
       <lineEnding>dos</lineEnding>
     </fileSet>
     
-    <!-- Copy the windows scripts .. exclude the unix bits-->
-    <fileSet>
-      <directory>src/main/release/bin</directory>
-      <outputDirectory>/bin</outputDirectory>
-      <lineEnding>dos</lineEnding>
-      <includes>
-        <include>*.bat</include>
-        <include>*.cmd</include>
-      </includes>
-    </fileSet>
-
     <!-- filtered files --> 
     <fileSet>
       <directory>src/main/release</directory>

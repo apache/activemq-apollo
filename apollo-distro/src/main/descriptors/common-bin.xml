@@ -117,6 +117,27 @@
   </dependencySets>
 
   <fileSets>
+    
+    <!-- Copy the unix scripts .. chmod 755 and exclude the windows bits-->
+    <fileSet>
+      <directory>src/main/release/bin</directory>
+      <outputDirectory>/bin</outputDirectory>
+      <lineEnding>unix</lineEnding>
+      <fileMode>0755</fileMode>
+      <excludes>
+        <exclude>*.cmd</exclude>
+      </excludes>
+    </fileSet>
+
+    <!-- Copy the windows scripts .. exclude the unix bits-->
+    <fileSet>
+      <directory>src/main/release/bin</directory>
+      <outputDirectory>/bin</outputDirectory>
+      <lineEnding>dos</lineEnding>
+      <includes>
+        <include>*.cmd</include>
+      </includes>
+    </fileSet>
 
     <!-- copy the website docs -->
     <fileSet>
