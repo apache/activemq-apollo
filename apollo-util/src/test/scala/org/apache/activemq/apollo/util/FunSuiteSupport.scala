@@ -28,6 +28,9 @@ import scala.Some
 import org.apache.activemq.apollo.util.FunSuiteSupport._
 import java.util.concurrent.locks.{ReentrantReadWriteLock, Lock, ReadWriteLock}
 import java.util.concurrent.atomic.AtomicLong
+import java.lang.management.ManagementFactory
+import javax.management.ObjectName
+import javax.management.openmbean.CompositeData
 
 object FunSuiteSupport {
   class SkipTestException extends RuntimeException
@@ -58,6 +61,11 @@ abstract class FunSuiteSupport extends FunSuite with Logging with ParallelBefore
 
   def skip(check:Boolean=true):Unit = if(check) throw new SkipTestException()
 
+  def getJVMHeapUsage = {
+    val mbean_server = ManagementFactory.getPlatformMBeanServer()
+    val data = mbean_server.getAttribute(new ObjectName("java.lang:type=Memory"), "HeapMemoryUsage").asInstanceOf[CompositeData]
+    data.get("used").asInstanceOf[java.lang.Long].longValue()
+  }
 
   var _log:Log = null
   override protected def log: Log = {

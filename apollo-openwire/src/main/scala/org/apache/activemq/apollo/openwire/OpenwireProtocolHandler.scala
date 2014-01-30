@@ -587,11 +587,13 @@ class OpenwireProtocolHandler extends ProtocolHandler {
 
       case TransactionInfo.COMMIT_ONE_PHASE =>
         get_tx_ctx(id).commit {
+          remove_tx_ctx(id)
           ack(info)
         }
 
       case TransactionInfo.ROLLBACK =>
         get_tx_ctx(id).rollback
+        remove_tx_ctx(id)
         ack(info)
 
       case TransactionInfo.FORGET =>

@@ -128,4 +128,32 @@ class OpenwireLevelDBTransactionTest extends TransactionTest {
 //    disconnect() }
   }
 
+  ignore("APLO-342: Test memory usage"){
+    connect()
+    val dest = queue(next_id("example"))
+    val message_count = 1000000
+    val producer_session = default_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val producer = producer_session.createProducer(dest)
+    producer.setDeliveryMode(DeliveryMode.PERSISTENT)
+
+    val consumer_session = default_connection.createSession(true, Session.SESSION_TRANSACTED)
+    val consumer = consumer_session.createConsumer(dest)
+
+    for( i <- 1 to message_count) {
+      if( (i % (message_count/100)) == 0) {
+        println("On message: %d, jvm heap: %.2f".format(i, getJVMHeapUsage/(1024*1024.0)))
+      }
+      val x = producer_session.createTextMessage("x" * (1024*64))
+      x.setIntProperty("i", i)
+      producer.send(x)
+
+      val m = consumer.receive(1000).asInstanceOf[TextMessage]
+      m should not be (null)
+      m.getIntProperty("i") should be (i)
+      consumer_session.commit()
+    }
+  }
+
+
 }
+
