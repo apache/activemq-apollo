@@ -101,6 +101,16 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- -->
+    <dependency>
+      <groupId>com.sun.winsw</groupId>
+      <artifactId>winsw</artifactId>
+      <version>1.9</version>
+      <classifier>bin</classifier>
+      <type>exe</type>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Scala Support -->
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -187,6 +197,33 @@
         </executions>
       </plugin>
 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.2</version>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.sun.winsw</groupId>
+                  <artifactId>winsw</artifactId>
+                  <version>1.9</version>
+                  <classifier>bin</classifier>
+                  <type>exe</type>
+                  <outputDirectory>${basedir}/target/classes/org/apache/activemq/apollo/broker/bin</outputDirectory>
+                  <destFileName>apollo-broker-service.exe</destFileName>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
