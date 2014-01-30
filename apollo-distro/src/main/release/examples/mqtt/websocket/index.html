@@ -101,6 +101,8 @@
     <script src="js/mqttws31.js"></script>
     <script>//<![CDATA[
 $(document).ready(function(){
+
+  $("#connect_clientId").val("example-"+(Math.floor(Math.random() * 100000)));
   if( !window.WebSocket) {
     $("#connect").html("\
         <h1>Get a new Web Browser!</h1>\
