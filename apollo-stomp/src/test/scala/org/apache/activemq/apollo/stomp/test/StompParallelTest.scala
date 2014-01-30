@@ -1023,6 +1023,44 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     get("3")
   }
 
+  test("Messages Expire Using TTL") {
+    connect("1.1")
+
+    def put(msg: String, ttl: Option[Long] = None) = {
+      val ttl_header = ttl.map(t => "ttl:" + t + "\n").getOrElse("")
+      client.write(
+        "SEND\n" +
+                ttl_header +
+                "destination:/queue/exp2\n" +
+                "\n" +
+                "message:" + msg + "\n")
+    }
+
+    put("1")
+    put("2", Some(1000L))
+    put("3")
+
+    Thread.sleep(2000)
+
+    client.write(
+      "SUBSCRIBE\n" +
+              "destination:/queue/exp2\n" +
+              "id:1\n" +
+              "receipt:0\n" +
+              "\n")
+    wait_for_receipt("0")
+
+
+    def get(dest: String) = {
+      val frame = client.receive()
+      frame should startWith("MESSAGE\n")
+      frame should endWith("\n\nmessage:%s\n".format(dest))
+    }
+
+    get("1")
+    get("3")
+  }
+
   test("Expired message sent to DLQ") {
     connect("1.1")
 

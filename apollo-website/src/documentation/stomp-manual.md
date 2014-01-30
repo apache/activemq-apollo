@@ -217,9 +217,12 @@ redelivered to another subscribed client.
 ### Message Expiration
 
 ${project_name} supports expiring old messages.  Unconsumed expired messages 
-are automatically removed from the queue.  You just need to specify when
-the message expires by setting the `expires` message header.  The expiration
-time must be specified as the number of milliseconds since the Unix epoch.
+are automatically removed from the queue.  There's two way to specify
+when the message will be expired.  Y
+
+The first way to configure the expiration is by setting the `expires` message 
+header.  The expiration time must be specified as the number of milliseconds 
+since the Unix epoch.
 
 Example:
 
@@ -228,6 +231,20 @@ Example:
     expires:1308690148000
 
     this message will expire on Tue Jun 21 17:02:28 EDT 2011
+    ^@
+    
+The first way to configure the expiration is by setting the `ttl` message 
+header.  The ttl will be intereted to mean the number of milliseconds from
+when the server receives the message.  The broker will add an `expires`
+header to the message on your behalf.
+
+Example:
+
+    SEND
+    destination:/queue/a
+    ttl:2000
+
+    This message will expire in 2 seconds.
     ^@
 
 ### Subscription Flow Control

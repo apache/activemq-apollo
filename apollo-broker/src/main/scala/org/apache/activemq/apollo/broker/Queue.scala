@@ -1173,7 +1173,9 @@ class Queue(val router: LocalRouter, val store_id:Long, var binding:Binding) ext
           expired(actual, entry.entry) {
             entry.ack(actual)
           }
-          actual.release
+          if( actual!=null ){
+            actual.release
+          }
         case Delivered =>
           entry.increment_nack
           entry.entry.redelivered

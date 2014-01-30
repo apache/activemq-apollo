@@ -394,6 +394,7 @@ object Stomp {
   val CORRELATION_ID = ascii("correlation-id")
   val REPLY_TO = ascii("reply-to")
   val EXPIRES = ascii("expires")
+  val TTL = ascii("ttl")
   val PRIORITY = ascii("priority")
   val TYPE = ascii("type")
   val PERSISTENT = ascii("persistent")

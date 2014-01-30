@@ -950,7 +950,7 @@ class StompProtocolHandler extends ProtocolHandler {
       })
       trace("stomp protocol resources released")
 
-      val route_values = producer_routes.values().toArray;
+      val route_values = producer_routes.values().toSeq.toArray;
       waiting_on = ()=> {
         val routes = route_values.flatMap { route =>
           if( route.routing_items > 0 ) {
@@ -1410,6 +1410,14 @@ class StompProtocolHandler extends ProtocolHandler {
         } catch {
           case _:Throwable=> // the translation is a best effort thing.
         }
+      }
+    }
+
+    // Do we need to add an expires header?
+    for( ttl <- get( headers, TTL) ) {
+      if( get( headers, EXPIRES)==None ) {
+        val expiration = Broker.now + java.lang.Long.parseLong(ttl.toString)
+        rc ::= (EXPIRES -> ascii(expiration.toString))
       }
     }
 
