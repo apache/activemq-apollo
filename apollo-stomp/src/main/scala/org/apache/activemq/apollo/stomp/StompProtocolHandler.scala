@@ -950,18 +950,7 @@ class StompProtocolHandler extends ProtocolHandler {
       })
       trace("stomp protocol resources released")
 
-      val route_values = producer_routes.values().toSeq.toArray;
-      waiting_on = ()=> {
-        val routes = route_values.flatMap { route =>
-          if( route.routing_items > 0 ) {
-            Some(route.dest+"("+route.routing_items+")")
-          } else {
-            None
-          }
-        }.mkString(", ")
-        "Delivery competition to: "+routes
-      }
-
+      waiting_on = ()=> { "Producer delivery competition" }
       on_routing_empty {
         producer_routes.values().foreach{ route=>
           host.dispatch_queue {
