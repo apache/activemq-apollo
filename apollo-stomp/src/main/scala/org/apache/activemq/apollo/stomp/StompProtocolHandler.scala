@@ -1759,8 +1759,10 @@ class StompProtocolHandler extends ProtocolHandler {
     val txid = require_transaction_header(headers)
     val tx = transactions.get(txid).getOrElse(die("transaction not active: %d".format(txid)))
     tx.commit {
-      remove_tx_queue(txid)
-      send_receipt(headers)
+      queue {
+        remove_tx_queue(txid)
+        send_receipt(headers)
+      }
     }
   }
 
@@ -1837,7 +1839,7 @@ class StompProtocolHandler extends ProtocolHandler {
 
   def create_tx_queue(txid:AsciiBuffer):TransactionQueue = {
     if ( transactions.contains(txid) ) {
-      die("transaction allready started")
+      die("transaction already started")
     } else {
       val queue = new TransactionQueue
       transactions.put(txid, queue)
@@ -1850,7 +1852,7 @@ class StompProtocolHandler extends ProtocolHandler {
   }
 
   def remove_tx_queue(txid:AsciiBuffer):TransactionQueue = {
-    transactions.remove(txid).getOrElse(die("transaction not active: %d".format(txid)))
+    transactions.remove(txid).getOrElse(die("transaction not active: %s".format(txid)))
   }
 
 }
