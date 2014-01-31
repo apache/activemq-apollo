@@ -24,6 +24,8 @@
   <fileSets>
     <!-- Copy over everything that needs to get dos line endings -->
     <fileSet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <directory>src/main/release</directory>
       <outputDirectory>/</outputDirectory>
       <excludes>
@@ -35,6 +37,8 @@
     
     <!-- filtered files --> 
     <fileSet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <directory>src/main/release</directory>
       <outputDirectory>/</outputDirectory>
       <includes>

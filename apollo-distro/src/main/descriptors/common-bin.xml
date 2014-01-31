@@ -19,6 +19,8 @@
 
   <dependencySets>
     <dependencySet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <outputDirectory>/lib</outputDirectory>
       <unpack>false</unpack>
       <useTransitiveDependencies>true</useTransitiveDependencies>
@@ -105,6 +107,8 @@
     </dependencySet>
     
     <dependencySet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <outputDirectory>/lib</outputDirectory>
       <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
       <unpack>false</unpack>
@@ -123,6 +127,7 @@
       <directory>src/main/release/bin</directory>
       <outputDirectory>/bin</outputDirectory>
       <lineEnding>unix</lineEnding>
+      <directoryMode>755</directoryMode>
       <fileMode>0755</fileMode>
       <excludes>
         <exclude>*.cmd</exclude>
@@ -131,6 +136,8 @@
 
     <!-- Copy the windows scripts .. exclude the unix bits-->
     <fileSet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <directory>src/main/release/bin</directory>
       <outputDirectory>/bin</outputDirectory>
       <lineEnding>dos</lineEnding>
@@ -141,6 +148,8 @@
 
     <!-- copy the website docs -->
     <fileSet>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
       <directory>${basedir}/../apollo-website/target/sitegen/</directory>
       <outputDirectory>/docs/site</outputDirectory>
     </fileSet>
