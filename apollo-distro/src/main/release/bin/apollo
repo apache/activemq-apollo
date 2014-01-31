@@ -157,12 +157,38 @@ if [ ! -z "$APOLLO_BASE" ] ; then
 fi
 
 # Attempt to bump up the ulimit 
-target=100000
-limit=`ulimit -n 2>/dev/null`
-case $limit in
-    unlimited) ;;
-    [0-9]*) [ $limit -lt 10000 ] && ulimit -n $target >/dev/null 2>/dev/null ;;
-    *) ulimit -n $target >/dev/null 2>/dev/null ;;
+if [ -z "$APOLLO_ULIMIT" ] ; then
+  APOLLO_ULIMIT=100000
+fi
+
+# Does a binary search of the max ulimit we can set.
+search_ulimit () {
+  low=$2; mid=$3; hi=$4
+  if [[ $mid -ne $hi && $mid -ne $low ]] ; then
+    ulimit $1 $mid >/dev/null 2>/dev/null
+    if [ $? -eq 0 ] ; then
+      # max ulimit is higher...
+      search_ulimit $1 $mid `expr \( \( $hi - $mid \) / 2 \) + $mid` $hi
+    else
+      # max ulimit is lower...
+      search_ulimit $1 $low `expr \( \( $mid - $low \) / 2 \) + $low` $mid
+    fi
+  fi
+}
+
+set_ulimit () {
+  ulimit $1 $2 >/dev/null 2>/dev/null
+  if [ $? -ne 0 ] ; then
+    search_ulimit $1 0 `expr  $2 / 2` $2
+  fi
+}
+
+case $APOLLO_ULIMIT in
+  [0-9]*)  
+    set_ulimit -n $APOLLO_ULIMIT # sets the file descriptor limit
+    set_ulimit -u $APOLLO_ULIMIT # sets the process limit to help us run lots of threads.
+  ;;
+  *) ;;
 esac
 
 ${EXEC} "$JAVACMD" ${JVM_FLAGS} ${SYSTEM_PROPS} -classpath "${CLASSPATH}" org.apache.activemq.apollo.boot.Apollo ${BOOTDIRS} org.apache.activemq.apollo.cli.Apollo $@
