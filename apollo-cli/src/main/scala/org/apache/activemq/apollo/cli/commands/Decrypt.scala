@@ -16,33 +16,34 @@ package org.apache.activemq.apollo.cli.commands
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import org.apache.activemq.apollo.util.Logging
 import org.apache.activemq.apollo.broker.security.EncryptionSupport
-import org.apache.felix.service.command.CommandSession
+import io.airlift.command.{Arguments, Command}
+import java.io.{PrintStream, InputStream}
 
 /**
  * The apollo encrypt command
  */
-@command(scope="apollo", name = "decrypt", description = "decrypts a value")
-class Decrypt extends Action with Logging {
+@Command(name = "decrypt", description = "decrypts a value")
+class Decrypt extends BaseAction with Logging {
 
-  @argument(name = "value", description = "The value to decrypt", index=0, required=true)
+  @Arguments(description = "The value to decrypt", required=true)
   var value:String = _
 
-  def execute(session: CommandSession):AnyRef = {
+  def execute(in:InputStream, out:PrintStream, err:PrintStream) = {
+    init_logging
     try {
       val unwrapped = if ( value.startsWith("ENC(") && value.endsWith(")") ) {
         value.stripPrefix("ENC(").stripSuffix(")")
       } else {
         value
       }
-      session.getConsole.println(EncryptionSupport.encryptor.decrypt(unwrapped));
+      out.println(EncryptionSupport.encryptor.decrypt(unwrapped));
+      0
     } catch {
-      case x:Helper.Failure=> error(x.getMessage)
+      case x:Helper.Failure=>
+        error(x.getMessage)
+        2
     }
-    null
   }
-
-
 }

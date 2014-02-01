@@ -16,9 +16,8 @@ package org.apache.activemq.apollo.cli.commands
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
-import org.apache.felix.service.command.CommandSession
-import java.io.{RandomAccessFile, File}
+import io.airlift.command.{Arguments, Command, Option}
+import java.io.{PrintStream, InputStream, RandomAccessFile, File}
 import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
 import management.ManagementFactory
@@ -113,33 +112,33 @@ object DiskBenchmark {
 /**
  * The apollo encrypt command
  */
-@command(scope="apollo", name = "disk-benchmark", description = "Benchmarks your disk's speed")
-class DiskBenchmark extends Action {
+@Command(name = "disk-benchmark", description = "Benchmarks your disk's speed")
+class DiskBenchmark extends BaseAction {
   import DiskBenchmark._
   
   
-  @option(name = "--verbose", description = "Enable verbose output")
+  @Option(name = Array("--verbose"), description = "Enable verbose output")
   var verbose: Boolean = false
-  @option(name = "--sample-interval", description = "The number of milliseconds to spend mesuring perfomance.")
+  @Option(name = Array("--sample-interval"), description = "The number of milliseconds to spend mesuring perfomance.")
   var sampleInterval: Long = 30 * 1000
 
-  @option(name = "--block-size", description = "The size of each IO operation.")
+  @Option(name = Array("--block-size"), description = "The size of each IO operation.")
   var block_size_txt = "4k"
   def block_size = parse(block_size_txt).toInt
 
-  @option(name = "--file-size", description = "The size of the data file to use, this should be big enough to flush the OS write cache.")
+  @Option(name = Array("--file-size"), description = "The size of the data file to use, this should be big enough to flush the OS write cache.")
   var file_size_txt = PHYSICAL_MEM_SIZE
   def file_size = parse(file_size_txt)
 
-  @option(name = "--warm-up-size", description = "The amount of data we should initial write before measuring performance samples (used to flush the OS write cache).")
+  @Option(name = Array("--warm-up-size"), description = "The amount of data we should initial write before measuring performance samples (used to flush the OS write cache).")
   var warm_up_size_txt = format(parse("500M").min(parse(PHYSICAL_MEM_SIZE)/2))
   def warm_up_size = parse(warm_up_size_txt)
 
-  @argument(name="file", description="The file that will be used to benchmark your disk (must NOT exist)")
+  @Arguments(description="The file that will be used to benchmark your disk (must NOT exist)")
   var file = new File("disk-benchmark.dat")
 
-  def execute(session: CommandSession):AnyRef = {
-    def out = session.getConsole
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
+    init_logging
     try {
       if (file.exists) {
         out.println("File " + file + " allready exists, will not benchmark.")
@@ -219,17 +218,20 @@ class DiskBenchmark extends Action {
         file.delete
         out.println(report)
       }
+      0
     } catch {
-      case x:Helper.Failure=> sys.error(x.getMessage)
+      case x:Helper.Failure=>
+        sys.error(x.getMessage)
+        1
       case e: Throwable =>
         if (verbose) {
-          out.println("ERROR:")
+          err.println("ERROR:")
           e.printStackTrace(System.out)
         } else {
-          out.println("ERROR: " + e)
+          err.println("ERROR: " + e)
         }
+      1
     }
-    null
   }
   
   var filled = false

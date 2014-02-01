@@ -16,28 +16,24 @@
  */
 package org.apache.activemq.apollo.cli.commands
 
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
+import io.airlift.command.Command
 import org.apache.activemq.apollo.broker.{Broker, ConfigStore}
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.cli.Apollo
-import org.apache.felix.service.command.CommandSession
 import org.fusesource.hawtdispatch._
 import org.apache.activemq.apollo.util.{FileMonitor, ServiceControl}
 import org.apache.log4j.PropertyConfigurator
-import java.io.{FileInputStream, File}
+import java.io.{PrintStream, InputStream, FileInputStream, File}
 import java.util.logging.LogManager
-import org.apache.activemq.apollo.dto.BrokerDTO
 import scala.collection.mutable.ListBuffer
 import java.lang.Thread.UncaughtExceptionHandler
-import java.lang.Throwable
 import java.security.{Security, Provider}
 import scala._
-import scala.AnyRef
 
 /**
  * The apollo run command
  */
-@command(scope="apollo", name = "run", description = "runs the broker instance")
+@Command(name = "run", description = "runs the broker instance")
 class Run extends Action {
 
   def system_dir(name:String) = {
@@ -52,8 +48,7 @@ class Run extends Action {
     file
   }
 
-  def execute(session: CommandSession):AnyRef = {
-
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
     try {
 
       // 
@@ -88,12 +83,10 @@ class Run extends Action {
       val tmp = base / "tmp"
       tmp.mkdirs
 
-      Apollo.print_banner(session.getConsole)
-
-      def println(value:String) = session.getConsole.println(value)
+      Apollo.print_banner(out)
 
       // Load the configs and start the brokers up.
-      println("Loading configuration file '%s'.".format(conf))
+      out.println("Loading configuration file '%s'.".format(conf))
 
       // Use bouncycastle if it's installed.
       try {
@@ -125,7 +118,7 @@ class Run extends Action {
       
       if( broker.config.validation == "strict" && !validation_messages.isEmpty) {
         Broker.error("Strict validation was configured, shutting down")
-        return null
+        return 1
       }
 
       broker.tmp = tmp
@@ -168,12 +161,15 @@ class Run extends Action {
       this.synchronized {
         this.wait
       }
-
+      0
     } catch {
       case x:Helper.Failure=>
-        sys.error(x.getMessage)
+        err.print("Startup failed: "+x.getMessage)
+        1
+      case x:Throwable=>
+        err.print("Startup failed: "+x)
+        1
     }
-    null
   }
 
 }

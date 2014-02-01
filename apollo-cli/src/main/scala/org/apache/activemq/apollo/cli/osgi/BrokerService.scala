@@ -24,11 +24,10 @@ import org.osgi.framework._
 import collection.JavaConversions._
 import org.apache.activemq.apollo.util._
 import FileSupport._
-import java.util.{Hashtable, Dictionary, Properties}
+import java.util.Properties
 import org.osgi.service.cm.{Configuration, ConfigurationAdmin}
-import org.apache.felix.service.command.CommandSession
 import java.io._
-import java.lang.{UnsupportedOperationException, String}
+import java.lang.String
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -90,7 +89,7 @@ object BrokerService extends Log {
       <config allow="admin"/>
     </acl>
     """
-        create.run()
+        create.run(System.out, System.err)
       }
 
       // in case the config gets injected.

@@ -32,13 +32,13 @@
 
   <command-bundle xmlns="http://karaf.apache.org/xmlns/shell/v1.0.0">
     <command name="apollo/encrypt">
-        <action class="org.apache.activemq.apollo.commands.Encrypt"/>
+        <action class="org.apache.activemq.apollo.cli.commands.Encrypt"/>
     </command>
     <command name="apollo/decrypt">
-        <action class="org.apache.activemq.apollo.commands.Decrypt"/>
+        <action class="org.apache.activemq.apollo.cli.commands.Decrypt"/>
     </command>
     <command name="apollo/version">
-        <action class="org.apache.activemq.apollo.commands.Version"/>
+        <action class="org.apache.activemq.apollo.cli.commands.Version"/>
     </command>
   </command-bundle>
 

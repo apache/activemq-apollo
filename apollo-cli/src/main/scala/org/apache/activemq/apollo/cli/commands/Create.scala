@@ -16,37 +16,37 @@
  */
 package org.apache.activemq.apollo.cli.commands
 
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
 import java.io._
-import org.apache.felix.service.command.CommandSession
 import scala.Predef._
 import org.apache.activemq.apollo.broker.BrokerCreate
+import io.airlift.command.{Arguments, Command, Option}
 
 /**
  * The apollo create command
  */
-@command(scope = "apollo", name = "create", description = "creates a new broker instance")
-class Create extends Action {
+@Command(name = "create", description = "creates a new broker instance")
+class Create extends BaseAction {
 
-  @argument(name = "directory", description = "The instance directory to hold the broker's configuration and data", index=0, required=true)
+  @Arguments(description = "The instance directory to hold the broker's configuration and data", required=true)
   var directory:File = _
 
-  @option(name = "--host", description = "The host name of the broker")
+  @Option(name = Array("--host"), description = "The host name of the broker")
   var host:String = _
 
-  @option(name = "--force", description = "Overwrite configuration at destination directory")
+  @Option(name = Array("--force"), description = "Overwrite configuration at destination directory")
   var force = false
 
-  @option(name = "--home", description = "Directory where apollo is installed")
+  @Option(name = Array("--home"), description = "Directory where apollo is installed")
   var home: File = _
 
-  @option(name = "--with-ssl", description = "Generate an SSL enabled configuration")
+  @Option(name = Array("--with-ssl"), description = "Generate an SSL enabled configuration")
   var with_ssl = true
 
-  @option(name = "--encoding", description = "The encoding that text files should use")
+  @Option(name = Array("--encoding"), description = "The encoding that text files should use")
   var encoding:String = _
 
-  def execute(session: CommandSession) = {
+  def execute(in:InputStream, out:PrintStream, err:PrintStream) = {
+    init_logging
     val create = new BrokerCreate
     if( directory!=null ) create.directory = directory
     if( host!=null ) create.host = host
@@ -54,9 +54,7 @@ class Create extends Action {
     if( home!=null ) create.home = home
     create.with_ssl = with_ssl
     if( encoding!=null ) create.encoding = encoding
-    create.println = { value =>
-      session.getConsole.println(value)
-    }
-    create.run()
+    create.run(out, err)
+    0
   }
 }

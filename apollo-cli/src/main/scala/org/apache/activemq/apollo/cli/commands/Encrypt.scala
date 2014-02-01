@@ -16,28 +16,30 @@ package org.apache.activemq.apollo.cli.commands
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
+import io.airlift.command.{Arguments, Command}
 import org.apache.activemq.apollo.util.Logging
 import org.apache.activemq.apollo.broker.security.EncryptionSupport
-import org.apache.felix.service.command.CommandSession
+import java.io.{PrintStream, InputStream}
 
 /**
  * The apollo encrypt command
  */
-@command(scope="apollo", name = "encrypt", description = "encrypts a value")
-class Encrypt extends Action with Logging {
+@Command(name = "encrypt", description = "encrypts a value")
+class Encrypt extends BaseAction with Logging {
 
-  @argument(name = "value", description = "The value to encrypt", index=0, required=true)
+  @Arguments(description = "The value to encrypt", required=true)
   var value:String = _
 
-  def execute(session: CommandSession):AnyRef = {
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
+    init_logging
     try {
-      session.getConsole.println("ENC("+EncryptionSupport.encryptor.encrypt(value)+")");
+      out.println("ENC("+EncryptionSupport.encryptor.encrypt(value)+")");
+      0
     } catch {
-      case x:Helper.Failure=> x.printStackTrace; error(x.getMessage)
+      case x:Helper.Failure=>
+        error(x.getMessage)
+        1
     }
-    null
   }
-
 
 }

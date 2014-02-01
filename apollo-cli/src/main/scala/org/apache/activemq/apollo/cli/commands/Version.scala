@@ -16,18 +16,19 @@
  */
 package org.apache.activemq.apollo.cli.commands
 
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
+import io.airlift.command.Command
 import org.apache.activemq.apollo.broker.Broker
-import org.apache.felix.service.command.CommandSession
+import java.io.{PrintStream, InputStream}
+
 /**
  * The apollo run command
  */
-@command(scope="apollo", name = "--version", description = "Displays the broker version")
+@Command(name = "version", description = "Displays the broker version")
 class Version extends Action {
-  
-  def execute(session: CommandSession):AnyRef = {
-    session.getConsole.println(Broker.version)
-    null
+
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
+    out.println(Broker.version)
+    0
   }
 
 }

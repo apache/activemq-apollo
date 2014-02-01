@@ -65,7 +65,7 @@ object ApolloIDERunner  {
     println("Press Enter To Shutdown")
     println("=======================")
 
-    new Apollo().run(Array("run"))
+    new Apollo().run(System.in, System.out, System.err, Array("run"))
     System.in.read
     println("=============")
     println("Shutting down")

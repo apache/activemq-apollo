@@ -14,9 +14,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
-org.apache.activemq.apollo.cli.commands.Exit
 org.apache.activemq.apollo.cli.commands.Create
-org.apache.activemq.apollo.cli.commands.Help
-org.apache.activemq.apollo.cli.commands.DashHelp
-org.apache.activemq.apollo.cli.commands.Version
 org.apache.activemq.apollo.cli.commands.DiskBenchmark
+org.apache.activemq.apollo.cli.commands.Version
+org.apache.activemq.apollo.cli.commands.HelpAction

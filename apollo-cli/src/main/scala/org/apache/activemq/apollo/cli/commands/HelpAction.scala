@@ -16,12 +16,14 @@
  */
 package org.apache.activemq.apollo.cli.commands
 
-import org.apache.felix.gogo.commands.{Option => option, Argument => argument, Command => command}
-import org.apache.karaf.shell.console.HelpAction
+import io.airlift.command.{Command, Help}
+import java.io.{PrintStream, InputStream}
 
 /**
- * Provides help for the current shell or an individual command
  */
-@command(scope="apollo", name = "--help", description = "Displays this help or help about a command")
-class DashHelp extends HelpAction {
+class HelpAction extends Help with Action {
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
+    super.run()
+    0
+  }
 }

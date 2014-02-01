@@ -49,17 +49,14 @@ class BrokerCreate {
   var create_login_config = true
   var create_log_config = true
 
-  var println = (value:Any)=>{}
-
 
   val IS_WINDOWS = System.getProperty("os.name").toLowerCase().trim().startsWith("win");
   val IS_CYGWIN = IS_WINDOWS && System.getenv("OSTYPE") == "cygwin";
 
-  def run() = {
+  def run(out:PrintStream, err:PrintStream) = {
 
     try {
-
-      println("Creating apollo instance at: %s".format(directory))
+      out.println("Creating apollo instance at: %s".format(directory))
 
       if( host == null ) {
         host = directory.getName
@@ -81,7 +78,7 @@ class BrokerCreate {
 
       // Generate a keystore with a new key
       val ssl = with_ssl && {
-        println("Generating ssl keystore...")
+        out.println("Generating ssl keystore...")
         val rc = system(etc, Array(
           "keytool", "-genkey",
           "-storetype", "JKS",
@@ -94,7 +91,7 @@ class BrokerCreate {
           "-dname", "cn=%s".format(host),
           "-validity", "3650"))==0
         if(!rc) {
-          println("WARNING: Could not generate the keystore, make sure the keytool command is in your PATH")
+          out.println("WARNING: Could not generate the keystore, make sure the keytool command is in your PATH")
         }
         rc
       }
@@ -134,52 +131,50 @@ class BrokerCreate {
           setExecutable(bin/"apollo-broker-service")
         }
 
-        println("")
-        println("You can now start the broker by executing:  ")
-        println("")
-        println("   \"%s\" run".format(cp(bin/"apollo-broker", true)))
+        out.println("")
+        out.println("You can now start the broker by executing:  ")
+        out.println("")
+        out.println("   \"%s\" run".format(cp(bin/"apollo-broker", true)))
 
         val service = bin / "apollo-broker-service"
-        println("")
+        out.println("")
 
         if( !IS_WINDOWS || IS_CYGWIN ) {
 
           // Does it look like we are on a System V init system?
           if( new File("/etc/init.d/").isDirectory ) {
 
-            println("Or you can setup the broker as system service and run it in the background:")
-            println("")
-            println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
-            println("   /etc/init.d/apollo-broker-service start")
-            println("")
+            out.println("Or you can setup the broker as system service and run it in the background:")
+            out.println("")
+            out.println("   sudo ln -s \"%s\" /etc/init.d/".format(service.getCanonicalPath))
+            out.println("   /etc/init.d/apollo-broker-service start")
+            out.println("")
 
           } else {
 
-            println("Or you can run the broker in the background using:")
-            println("")
-            println("   \"%s\" start".format(cp(service,true)))
-            println("")
+            out.println("Or you can run the broker in the background using:")
+            out.println("")
+            out.println("   \"%s\" start".format(cp(service,true)))
+            out.println("")
           }
 
         }
         if ( IS_WINDOWS ) {
 
-          println("Or you can setup the broker as Windows service and run it in the background:")
-          println("")
-          println("   \"%s\" install".format(cp(service,true)))
-          println("   \"%s\" start".format(cp(service,true)))
-          println("")
+          out.println("Or you can setup the broker as Windows service and run it in the background:")
+          out.println("")
+          out.println("   \"%s\" install".format(cp(service,true)))
+          out.println("   \"%s\" start".format(cp(service,true)))
+          out.println("")
 
         }
       }
-
-
+      0
     } catch {
       case x:Exception =>
-        println("ERROR: "+x.getMessage)
+        err.println("ERROR: "+x.getMessage)
+        1
     }
-
-    null
   }
 
   def cp(value:String, unixPaths:Boolean):String = cp(new File(value), unixPaths)

@@ -16,35 +16,35 @@ package org.apache.activemq.apollo.cli.commands
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.apache.felix.gogo.commands.{Action, Option => option, Argument => argument, Command => command}
+import io.airlift.command.{Command, Option, Arguments}
 import org.apache.activemq.apollo.util.FileSupport._
 import org.apache.activemq.apollo.dto.VirtualHostDTO
 import org.apache.activemq.apollo.util._
-import org.apache.felix.service.command.CommandSession
 import org.apache.activemq.apollo.broker.ConfigStore
-import java.io._
 import org.apache.activemq.apollo.broker.store.StoreFactory
+import java.io._
+import org.apache.activemq.apollo.util.Failure
+
 
 /**
  * The apollo stop command
  */
-@command(scope="apollo", name = "store-export", description = "exports the contents of a broker message store")
-class StoreExport extends Action {
+@Command(name = "store-import", description = "imports a previously exported message store")
+class StoreImport extends BaseAction {
 
-  object StoreExport extends Log
+  object StoreImport extends Log
 
-  @option(name = "--conf", description = "The Apollo configuration file.")
+  @Option(name = Array("--conf"), description = "The Apollo configuration file.")
   var conf: File = _
 
-  @option(name = "--virtual-host", description = "The id of the virtual host to export, if not specified, the default virtual host is selected.")
+  @Option(name = Array("--virtual-host"), description = "The id of the virtual host to import into, if not specified, the default virtual host is selected.")
   var host: String = _
 
-  @argument(name = "file", description = "The compressed tar file to hold the exported data", index=0, required=true)
+  @Arguments(description = "The compressed tar file the contains that data for the import", required=true)
   var file:File = _
 
-  def execute(session: CommandSession):AnyRef = {
-    import Helper._
-
+  def execute(in: InputStream, out: PrintStream, err: PrintStream): Int = {
+    init_logging
     try {
 
       val base = system_dir("apollo.base")
@@ -57,10 +57,10 @@ class StoreExport extends Action {
         error("Configuration file'%s' does not exist.\n\nTry creating a broker instance using the 'apollo create' command.".format(conf));
       }
 
-      val config = ConfigStore.load(conf, session.getConsole.println _)
+      val config = ConfigStore.load(conf, out.println _)
 
       val hosts = collection.JavaConversions.collectionAsScalaIterable(config.virtual_hosts).toArray
-      val vho:Option[VirtualHostDTO] = if( host==null ) {
+      val vho:scala.Option[VirtualHostDTO] = if( host==null ) {
         hosts.headOption
       } else {
         hosts.filter( _.id == host ).headOption
@@ -76,23 +76,24 @@ class StoreExport extends Action {
         error("Could not create the store.")
       }
 
-      session.getConsole.println("Starting store: "+store)
+      out.println("Starting store: "+store)
       ServiceControl.start(store, "store startup")
 
-      session.getConsole.println("Exporting... (this might take a while)")
-      using( new BufferedOutputStream(new FileOutputStream(file)) ) { os=>
-        sync_cb[Option[String]] { cb =>
-          store.export_data(os, cb)
+      out.println("Importing: "+file)
+      using( new BufferedInputStream(new FileInputStream(file)) ) { is =>
+        sync_cb[scala.Option[String]] { cb =>
+          store.import_data(is, cb)
         }.foreach(error _)
       }
-      ServiceControl.stop(store, "store stop");
-      session.getConsole.println("Done. Export located at: "+file)
 
+      ServiceControl.stop(store, "store stop");
+      out.println("Done.")
+      0
     } catch {
-      case x:Failure=>
+      case x:Helper.Failure=>
         error(x.getMessage)
+        1
     }
-    null
   }
 
 

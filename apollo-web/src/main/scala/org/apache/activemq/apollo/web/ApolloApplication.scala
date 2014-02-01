@@ -52,7 +52,7 @@ class ApolloApplication extends Filter {
       create.host_security_config = ""
       create.home = null
       println("Generating broker instance directory at: "+create.base)
-      create.run()
+      create.run(System.out, System.err)
     }
 
     if( !conf.exists ) {
