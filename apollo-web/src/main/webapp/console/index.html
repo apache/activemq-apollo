@@ -92,7 +92,7 @@
     {{#unless App.LoginController.is_logged_in}}
     <div class="login-form span4 offset4 well">
       <h2>Login</h2>
-      <form action="">
+      <form action="" autocomplete="off">
         <fieldset>
           <div class="clearfix">
             {{view Ember.TextField placeholder="Username" valueBinding="App.LoginController.username"}}
