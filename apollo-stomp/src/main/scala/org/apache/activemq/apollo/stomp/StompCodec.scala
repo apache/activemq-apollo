@@ -27,10 +27,10 @@ import org.fusesource.hawtdispatch.transport._
 import _root_.org.fusesource.hawtbuf._
 import org.apache.activemq.apollo.util._
 import org.apache.activemq.apollo.broker.store.{DirectBuffer, MessageRecord}
-import java.lang.ThreadLocal
-import java.util.ArrayList
-import collection.mutable.{ListBuffer, HashMap}
-import org.fusesource.hawtdispatch.util.BufferPools
+import java.lang.String
+import collection.mutable.ListBuffer
+
+class StompProtocolException(message:String) extends IOException(message)
 
 object StompCodec extends Log {
 
@@ -95,7 +95,7 @@ object StompCodec extends Log {
     def read_line = {
       val pos = buffer.indexOf('\n'.toByte)
       if( pos<0 ) {
-        throw new IOException("expected a new line")
+        throw new StompProtocolException("expected a new line")
       } else {
         val rc = buffer.slice(0, pos).ascii
         buffer.offset += (pos+1)
@@ -115,7 +115,7 @@ object StompCodec extends Log {
       try {
           val seperatorIndex = line.indexOf(COLON)
           if( seperatorIndex<0 ) {
-              throw new IOException("Header line missing seperator.")
+              throw new StompProtocolException("Header line missing separator.")
           }
           var name = line.slice(0, seperatorIndex)
           var value = line.slice(seperatorIndex + 1, line.length)
@@ -125,7 +125,7 @@ object StompCodec extends Log {
           }
       } catch {
           case e:Exception=>
-            throw new IOException("Unable to parse header line [" + Log.escape(line) + "]")
+            throw new StompProtocolException("Unable to parse header line [" + Log.escape(line) + "]")
       }
       line = read_line
     }
@@ -136,16 +136,16 @@ object StompCodec extends Log {
           contentLength.toString.toInt
         } catch {
           case e: NumberFormatException =>
-            throw new IOException("Specified content-length is not a valid integer")
+            throw new StompProtocolException("Specified content-length is not a valid integer")
         }
         if( length > buffer.length ) {
-          throw new IOException("Frame did not contain enough bytes to satisfy the content-length")
+          throw new StompProtocolException("Frame did not contain enough bytes to satisfy the content-length")
         }
         length
       } else {
         val pos = buffer.indexOf(0.toByte)
         if( pos < 0 ) {
-          throw new IOException("Frame is not null terminated")
+          throw new StompProtocolException("Frame is not null terminated")
         }
         pos
       }
@@ -264,16 +264,19 @@ class StompCodec extends AbstractProtocolCodec {
 
         if (line.length > 0) {
           if (max_headers != -1 && headers.size > max_headers) {
-            throw new IOException("The maximum number of headers was exceeded")
+            throw new StompProtocolException("The maximum number of headers was exceeded")
           }
           try {
             var seperatorIndex: Int = line.indexOf(COLON)
             if (seperatorIndex < 0) {
-              throw new IOException("Header line missing seperator [" +  Log.escape(line.ascii) + "]")
+              throw new StompProtocolException("Header line missing separator [" +  Log.escape(line.ascii) + "]")
             }
             var name: Buffer = line.slice(0, seperatorIndex)
             if (trim) {
               name = name.trim
+            }
+            if( name.length() == 0 ) {
+              throw new StompProtocolException("Header line header name is empty: [" +  Log.escape(line.ascii) + "]")
             }
             var value: Buffer = line.slice(seperatorIndex + 1, line.length)
             if (trim) {
@@ -286,7 +289,7 @@ class StompCodec extends AbstractProtocolCodec {
             headers.add(entry)
           } catch {
             case e: Exception => {
-              throw new IOException("Unable to parser header line [" +  Log.escape(line.ascii) + "]")
+              throw new StompProtocolException("Unable to parser header line [" +  Log.escape(line.ascii) + "]")
             }
           }
         } else {
@@ -296,10 +299,10 @@ class StompCodec extends AbstractProtocolCodec {
               contentLength.toString.toInt
             } catch {
               case e: NumberFormatException =>
-                throw new IOException("Specified content-length is not a valid integer")
+                throw new StompProtocolException("Specified content-length is not a valid integer")
             }
             if (max_data_length != -1 && length > max_data_length) {
-              throw new IOException("The maximum data length was exceeded")
+              throw new StompProtocolException("The maximum data length was exceeded")
             }
             nextDecodeAction = read_binary_body(command, h, length, contiguous)
           } else {
@@ -318,7 +321,7 @@ class StompCodec extends AbstractProtocolCodec {
         var content = readBytes(contentLength + 1)
         if (content != null) {
           if (content.get(contentLength) != 0) {
-            throw new IOException("Expected null termintor after " + contentLength + " content bytes")
+            throw new StompProtocolException("Expected null terminator after " + contentLength + " content bytes")
           }
           nextDecodeAction = read_action
           content.moveTail(-1)

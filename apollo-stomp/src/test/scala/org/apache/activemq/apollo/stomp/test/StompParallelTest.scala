@@ -1836,5 +1836,17 @@ class StompParallelTest extends StompTestSupport with BrokerParallelTestExecutio
     drainer.await
   }
 
+  test("APLO-349: Empty STOMP Header Name") {
+    connect("1.1")
+    client.write(
+      "SUBSCRIBE\n" +
+              "destination:/queue/APLO-349\n" +
+              "id:0\n" +
+              ":invalid header\n" +
+              "\n")
 
+    var frame = client.receive()
+    frame should startWith("ERROR\n")
+    frame should include("message:Unable to parser header line")
+  }
 }
