@@ -32,3 +32,7 @@ class Version extends Action {
   }
 
 }
+
+@Command(name = "--version", description = "Displays the broker version", hidden = true)
+class DashVersion extends Version {
+}

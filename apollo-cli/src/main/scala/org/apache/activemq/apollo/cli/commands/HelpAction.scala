@@ -27,3 +27,8 @@ class HelpAction extends Help with Action {
     0
   }
 }
+
+@Command(name = "--help", description = "Display help information", hidden = true)
+class DashHelpAction extends HelpAction {
+
+}
