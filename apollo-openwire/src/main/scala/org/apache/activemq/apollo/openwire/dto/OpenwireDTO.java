@@ -48,6 +48,8 @@ public class OpenwireDTO extends ProtocolDTO {
     public Long max_frame_size;
     @XmlAttribute(name="buffer_size")
     public String buffer_size;
+    @XmlAttribute(name="add_jmsxuserid")
+    public Boolean add_jmsxuserid;
 
 
     @Override
@@ -58,24 +60,28 @@ public class OpenwireDTO extends ProtocolDTO {
 
         OpenwireDTO that = (OpenwireDTO) o;
 
+        if (buffer_size != null ? !buffer_size.equals(that.buffer_size) : that.buffer_size != null)
+            return false;
         if (cache != null ? !cache.equals(that.cache) : that.cache != null)
             return false;
-        if (cache_size != null ? !cache_size.equals(that.cache_size) : that.cache_size != null) return false;
+        if (cache_size != null ? !cache_size.equals(that.cache_size) : that.cache_size != null)
+            return false;
+        if (add_jmsxuserid != null ? !add_jmsxuserid.equals(that.add_jmsxuserid) : that.add_jmsxuserid != null)
+            return false;
         if (max_frame_size != null ? !max_frame_size.equals(that.max_frame_size) : that.max_frame_size != null)
             return false;
         if (max_inactivity_duration != null ? !max_inactivity_duration.equals(that.max_inactivity_duration) : that.max_inactivity_duration != null)
             return false;
         if (max_inactivity_duration_initial_delay != null ? !max_inactivity_duration_initial_delay.equals(that.max_inactivity_duration_initial_delay) : that.max_inactivity_duration_initial_delay != null)
             return false;
-        if (tcp_no_delay != null ? !tcp_no_delay.equals(that.tcp_no_delay) : that.tcp_no_delay != null)
-            return false;
         if (stack_trace != null ? !stack_trace.equals(that.stack_trace) : that.stack_trace != null)
+            return false;
+        if (tcp_no_delay != null ? !tcp_no_delay.equals(that.tcp_no_delay) : that.tcp_no_delay != null)
             return false;
         if (tight_encoding != null ? !tight_encoding.equals(that.tight_encoding) : that.tight_encoding != null)
             return false;
-        if (buffer_size != null ? !buffer_size.equals(that.buffer_size) : that.buffer_size != null)
+        if (version != null ? !version.equals(that.version) : that.version != null)
             return false;
-        if (version != null ? !version.equals(that.version) : that.version != null) return false;
 
         return true;
     }
@@ -93,6 +99,7 @@ public class OpenwireDTO extends ProtocolDTO {
         result = 31 * result + (max_inactivity_duration_initial_delay != null ? max_inactivity_duration_initial_delay.hashCode() : 0);
         result = 31 * result + (max_frame_size != null ? max_frame_size.hashCode() : 0);
         result = 31 * result + (buffer_size != null ? buffer_size.hashCode() : 0);
+        result = 31 * result + (add_jmsxuserid != null ? add_jmsxuserid.hashCode() : 0);
         return result;
     }
 }

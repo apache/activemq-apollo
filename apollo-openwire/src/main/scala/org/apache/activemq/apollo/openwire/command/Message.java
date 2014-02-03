@@ -560,6 +560,7 @@ public abstract class Message extends BaseCommand implements MarshallAware {
     }
 
     public void setUserID(UTF8Buffer jmsxUserID) {
+        cachedEncoding = null;
         this.userID = jmsxUserID;
     }
 

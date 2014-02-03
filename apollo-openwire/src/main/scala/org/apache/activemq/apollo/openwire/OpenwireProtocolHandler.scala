@@ -714,6 +714,18 @@ class OpenwireProtocolHandler extends ProtocolHandler {
   def send_via_route(route:OpenwireDeliveryProducerRoute, message:ActiveMQMessage, uow:StoreUOW) = {
     // We may need to add some headers..
     val delivery = new Delivery
+
+    if( host.authenticator!=null ) {
+      if( OptionSupport(config.add_jmsxuserid).getOrElse(true) ) {
+        for( name <- host.authenticator.user_name(security_context) ) {
+          var userid = utf8(name)
+          if( userid != message.getUserID ) {
+            message.setUserID(userid)
+          }
+        }
+      }
+    }
+
     delivery.message = new OpenwireMessage(message)
     delivery.expiration = message.getExpiration
     delivery.persistent = message.isPersistent

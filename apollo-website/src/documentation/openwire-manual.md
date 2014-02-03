@@ -46,6 +46,7 @@ be closed. Default is `30000`
 * `max_inactivity_duration_initial_delay` : Amount of time to delay between determining the socket should be closed
 and actually closing it. Default is `30000`
 * `max_frame_size` : Size in bytes of the largest frame that can be sent to the broker. Default is `100MB`
+* `add_jmsxuserid` : If set to `false`, disables setting the JMSXUserID header on received messages.  Default is `true`.
 
 An example of configuring the OpenWire protocol
 

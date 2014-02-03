@@ -156,4 +156,29 @@ class SecurityTest extends OpenwireTestSupport with BrokerParallelTestExecution 
       consumer.receive();
     }
   }
+
+  test("APLO-213: The JMSXUserID is set to be the authenticated user") {
+
+    val dest = queue(next_id("JMSXUserID"));
+
+    val producer_connection = connect(user="can_send_create_queue", password="can_send_create_queue")
+
+    val producer_session = producer_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val producer = producer_session.createProducer(dest)
+    try {
+      producer.send(producer_session.createTextMessage("Test Message"))
+    } catch {
+      case e:Throwable => fail("Should not have thrown an exception")
+    }
+
+    val consumer_connection = connect(user="can_consume_queue", password="can_consume_queue")
+    val consumer_session = consumer_connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val consumer = consumer_session.createConsumer(dest)
+
+    val msg = consumer.receive(receive_timeout)
+    msg.getStringProperty("JMSXUserID") should equal("can_send_create_queue")
+
+  }
+
+
 }
