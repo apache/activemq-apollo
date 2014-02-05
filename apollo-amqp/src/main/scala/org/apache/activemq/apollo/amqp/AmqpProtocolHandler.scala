@@ -459,11 +459,11 @@ class AmqpProtocolHandler extends ProtocolHandler {
         case route: AmqpProducerRoute =>
           // Lets disconnect the route.
           set_attachment(receiver, null)
+          producers -= route.id
           host.dispatch_queue {
             host.router.disconnect(route.addresses, route)
             queue {
               receiver.close()
-              producers -= route.id
               route.release
               onComplete.run()
             }
