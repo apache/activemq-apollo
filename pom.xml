@@ -192,9 +192,10 @@
   </modules>
 
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-apollo/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/activemq-apollo/trunk/</url>
+    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/activemq-apollo.git</connection>
+    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/activemq-apollo.git</developerConnection>
+    <url>https://github.com/apache/activemq-apollo/tree/trunk</url>
+    <tag>HEAD</tag>
   </scm>
 
   <dependencyManagement>
