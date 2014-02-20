@@ -426,9 +426,15 @@ public class MqttProtocolHandler extends AbstractProtocolHandler {
 
         final CONNACK connack = new CONNACK();
 
-        if (connect_message.version() != 3) {
-            connack.code(CONNACK.Code.CONNECTION_REFUSED_UNACCEPTED_PROTOCOL_VERSION);
-            die(connack, "Unsupported protocol version: " + connect_message.version());
+        switch(connect_message.version()) {
+            case 3:case 4: break;
+            default:
+                connack.code(CONNACK.Code.CONNECTION_REFUSED_UNACCEPTED_PROTOCOL_VERSION);
+                die(connack, "Unsupported protocol version: " + connect_message.version());
+        }
+
+        if( (connect_message.clientId() == null || connect_message.clientId().length==0) && !connect_message.cleanSession() ) {
+            die(connack, "A clean session must be requested when no client id is provided.");
         }
 
         UTF8Buffer client_id = connect_message.clientId();

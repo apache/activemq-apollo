@@ -39,7 +39,8 @@ public class MqttProtocolCodecFactory implements ProtocolCodecFactory.Provider {
     //
     static final String id = "mqtt";
     static final Buffer HEAD_MAGIC = new Buffer(new byte []{ 0x10 });
-    static final Buffer TAIL_MAGIC = new Buffer(new byte []{ 0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p'});
+    static final Buffer MQTT31_TAIL_MAGIC = new Buffer(new byte []{ 0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p'});
+    static final Buffer MQTT311_TAIL_MAGIC = new Buffer(new byte []{ 0x00, 0x04, 'M', 'Q', 'T', 'T'});
 
     @Override
     public String id() {
@@ -68,7 +69,10 @@ public class MqttProtocolCodecFactory implements ProtocolCodecFactory.Provider {
         if (header.length < 10) {
           return false;
         } else {
-          return header.startsWith(HEAD_MAGIC) && header.indexOf(TAIL_MAGIC, 2) < 6;
+          return header.startsWith(HEAD_MAGIC) && (
+              header.indexOf(MQTT31_TAIL_MAGIC, 2) < 6 ||
+              header.indexOf(MQTT311_TAIL_MAGIC, 2) < 6
+          );
         }
     }
 
