@@ -73,6 +73,13 @@ class GeneratorTask extends Task {
   @BeanProperty
   var targetDir = new File("./src/main/scala")
 
+  @BeanProperty
+  var commandPackage:String = null
+
+  @BeanProperty
+  var packagePrefix:String = null
+
+
   override def execute: Unit = {
     try {
 
@@ -92,6 +99,12 @@ class GeneratorTask extends Task {
         script.setJam(jam)
         script.setTargetDir(targetDir.getCanonicalPath)
         script.setOpenwireVersion(i)
+        if( getPackagePrefix()!=null ) {
+          script.setPackagePrefix(getPackagePrefix())
+        }
+        if( getCommandPackage()!=null ) {
+          script.setCommandPackage(getCommandPackage())
+        }
         script.run
       }
 

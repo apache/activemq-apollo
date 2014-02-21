@@ -31,6 +31,7 @@ import org.apache.tools.ant.Project
 import org.apache.tools.ant.taskdefs.FixCRLF
 import org.apache.tools.ant.taskdefs.FixCRLF.CrLf
 import org.codehaus.jam._
+import scala.beans.BeanProperty
 
 /**
  * <p>
@@ -39,9 +40,24 @@ import org.codehaus.jam._
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 class ApolloMarshallingGenerator extends MultiSourceGenerator {
+
+  protected var concreteClasses: List[JClass] = new ArrayList[JClass]
+  protected var factoryFile: File = null
+  protected var factoryFileName: String = "MarshallerFactory"
+  protected var indent: String = "    "
+  protected var targetDir: String = "src/main/java"
+
+  @BeanProperty
+  var commandPackage = "org.apache.activemq.apollo.openwire.command"
+
+  @BeanProperty
+  var packagePrefix = "org.apache.activemq.apollo.openwire.codec"
+
+  def packagePrefixPath = packagePrefix.replace('.', '/');
+
   override def run: AnyRef = {
     if (destDir == null) {
-      destDir = new File(targetDir + "/org/apache/activemq/apollo/openwire/codec/v" + getOpenwireVersion)
+      destDir = new File(targetDir + "/"+packagePrefixPath+"/v"+getOpenwireVersion)
     }
     var answer: AnyRef = super.run
     processFactory
@@ -81,14 +97,14 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
   protected def generateFile(out: PrintWriter): Unit = {
     generateLicence(out)
     out.println("")
-    out.println("package org.apache.activemq.apollo.openwire.codec.v" + getOpenwireVersion + ";")
+    out.println("package "+packagePrefix +".v"+ getOpenwireVersion + ";")
     out.println("")
     out.println("import org.fusesource.hawtbuf.DataByteArrayInputStream;")
     out.println("import org.fusesource.hawtbuf.DataByteArrayOutputStream;")
     out.println("import java.io.IOException;")
     out.println("")
-    out.println("import org.apache.activemq.apollo.openwire.codec.*;")
-    out.println("import org.apache.activemq.apollo.openwire.command.*;")
+    out.println("import "+packagePrefix+".*;")
+    out.println("import "+commandPackage+".*;")
 
     out.println("")
     out.println("")
@@ -669,7 +685,7 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
   override def isMarshallAware(j: JClass): Boolean = {
     if (filePostFix.endsWith("java")) {
       j.getInterfaces.foreach { x=>
-        if (x.getQualifiedName == "org.apache.activemq.apollo.openwire.command.MarshallAware") {
+        if (x.getQualifiedName == commandPackage+".MarshallAware") {
           return true
         }
       }
@@ -735,10 +751,6 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
     this.targetDir = sourceDir
   }
 
-  protected var concreteClasses: List[JClass] = new ArrayList[JClass]
-  protected var factoryFile: File = null
-  protected var factoryFileName: String = "MarshallerFactory"
-  protected var indent: String = "    "
-  protected var targetDir: String = "src/main/java"
+
 }
 
