@@ -298,10 +298,10 @@ class ApolloMarshallingGenerator extends MultiSourceGenerator {
   protected def generateFactory(out: PrintWriter): Unit = {
     generateLicence(out)
     out.println("")
-    out.println("package org.apache.activemq.apollo.openwire.codec.v" + getOpenwireVersion + ";")
+    out.println("package "+packagePrefix+".v" + getOpenwireVersion + ";")
     out.println("")
-    out.println("import org.apache.activemq.apollo.openwire.codec.DataStreamMarshaller;")
-    out.println("import org.apache.activemq.apollo.openwire.codec.OpenWireFormat;")
+    out.println("import "+packagePrefix+".DataStreamMarshaller;")
+    out.println("import "+packagePrefix+".OpenWireFormat;")
     out.println("")
     out.println("/**")
     out.println(" * MarshallerFactory for Open Wire Format.")
