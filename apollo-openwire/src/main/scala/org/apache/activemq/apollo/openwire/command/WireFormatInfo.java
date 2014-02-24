@@ -29,6 +29,7 @@ import org.apache.activemq.apollo.openwire.support.MarshallingSupport;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayInputStream;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
  * @openwire:marshaller code="1"
@@ -331,5 +332,13 @@ public class WireFormatInfo implements Command, MarshallAware {
 
     public boolean isShutdownInfo() {
         return false;
+    }
+
+    public String getHost() throws IOException {
+        return (String) getProperty("Host");
+    }
+
+    public void setHost(String hostname) throws IOException {
+        setProperty("Host", hostname);
     }
 }
