@@ -34,10 +34,11 @@ object Website {
   val project_forums_url= "http://activemq.2283324.n4.nabble.com/ActiveMQ-Dev-f2368404.html"
   val project_wiki_url= "https://cwiki.apache.org/confluence/display/ACTIVEMQ/Index"
   val project_logo= "/images/project-logo.png"
-  val project_version= "1.6"
+  val project_version= "1.7"
   val project_snapshot_version= "99-trunk-SNAPSHOT"
   val project_versions = List(
         project_version,
+		"1.6"
         "1.5",
         "1.4",
         "1.3",
