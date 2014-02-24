@@ -49,6 +49,12 @@ object GeneratorTask {
     if (args.length > 2) {
       generator.targetDir = new File(args(2))
     }
+    if (args.length > 3) {
+      generator.packagePrefix = args(3)
+    }
+    if (args.length > 4) {
+      generator.commandPackage = args(4)
+    }
     generator.execute
   }
 }
