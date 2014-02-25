@@ -38,7 +38,7 @@ object Website {
   val project_snapshot_version= "99-trunk-SNAPSHOT"
   val project_versions = List(
         project_version,
-		"1.6"
+        "1.6",
         "1.5",
         "1.4",
         "1.3",
