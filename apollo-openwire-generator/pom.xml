@@ -20,13 +20,13 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.7</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-openwire-generator</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>1.7</version>
 
   <name>${project.artifactId}</name>
 

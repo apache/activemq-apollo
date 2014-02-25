@@ -20,13 +20,13 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>1.7</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-cli</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>1.7</version>
   <packaging>jar</packaging>
 
   <name>${project.artifactId}</name>
@@ -49,7 +49,7 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <optional>true</optional>
     </dependency>
 
@@ -129,32 +129,32 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-openwire</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-mqtt</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-amqp</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-leveldb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -167,19 +167,19 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-jmx</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>1.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
