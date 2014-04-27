@@ -127,6 +127,7 @@ object StompWebSocketTests {
 
         driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
 
+        Thread.sleep(100)
         val web_status = driver.findElement(By.id("status"));
 
         while ("Message not sent" == web_status.getText) {
@@ -144,6 +145,73 @@ object StompWebSocketTests {
 
       }
     }
+
+    // broker sends client utf-8 message..
+    for (protocol <- Array("ws", "wss")) {
+      test("websockets utf-8 messages to client: " + protocol) {
+
+        val url = "http://localhost:" + jetty_port + "/websocket.html"
+        val ws_port: Int = connector_port(protocol).get
+
+        System.out.println("url: " + url)
+        driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
+        val web_status = driver.findElement(By.id("status"));
+        val web_received = driver.findElement(By.id("received"));
+
+        while ("Loading" == web_status.getText) {
+          Thread.sleep(100)
+        }
+
+        // Skip test if browser does not support websockets..
+        if (web_status.getText != "No WebSockets") {
+
+          // Wait for it to get connected..
+          within(2, SECONDS) {
+            web_status.getText should be("Connected")
+          }
+
+          // Send a message via normal TCP stomp..
+          connect("1.1")
+          async_send("/queue/websocket", "你好")
+          within(2, SECONDS) {
+            // it should get received by the websocket client.
+            web_received.getText should be("你好")
+          }
+
+        }
+
+      }
+    }
+
+    // client sends broker utf-8 message..
+    for(protocol <- Array( "ws")){
+      test("websockets utf-8 messages from client: "  +protocol){
+        val url = "http://localhost:" + jetty_port + "/websocket-utf-8.html"
+        val ws_port: Int = connector_port(protocol).get
+
+        System.out.println("url: " + url)
+
+        driver.get(url + "#" + protocol + "://127.0.0.1:" + ws_port);
+
+        Thread.sleep(100)
+        val web_status = driver.findElement(By.id("status"));
+
+        while ("Message not sent" == web_status.getText) {
+          Thread.sleep(100)
+        }
+
+        if(web_status != "No WebSockets"){
+          connect("1.1")
+          subscribe("0", "/queue/websocket")
+
+          within(5, SECONDS){
+            assert_received("你好", "0")
+          }
+        }
+
+      }
+    }
+
   }
 
 }

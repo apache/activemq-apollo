@@ -51,6 +51,8 @@ abstract class WebSocketSupport extends StompTestSupport with WebDriverTrait{
     file.copy_to(test_data_dir / "websocket.html")
     file = new File(getClass.getResource("websocket-large.html").getPath)
     file.copy_to(test_data_dir / "websocket-large.html")
+    file = new File(getClass.getResource("websocket-utf-8.html").getPath)
+    file.copy_to(test_data_dir / "websocket-utf-8.html")
     new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/jquery-1.7.2.min.js").getCanonicalFile.copy_to(test_data_dir / "jquery.js")
     new File(file.getParentFile, "../../../../../../../../../apollo-distro/src/main/release/examples/stomp/websocket/js/stomp.js").getCanonicalFile.copy_to(test_data_dir / "stomp.js")
 
