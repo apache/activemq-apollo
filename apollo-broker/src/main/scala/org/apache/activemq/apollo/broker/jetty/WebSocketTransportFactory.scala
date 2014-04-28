@@ -36,7 +36,7 @@ import java.nio.channels._
 import scala.collection.mutable.ListBuffer
 import java.util.concurrent.{ExecutorService, Executor, ArrayBlockingQueue}
 import org.fusesource.hawtdispatch.transport.ProtocolCodec.BufferState
-import org.fusesource.hawtbuf.{AsciiBuffer, Buffer}
+import org.fusesource.hawtbuf.{UTF8Buffer, AsciiBuffer, Buffer}
 import java.io.{EOFException, IOException}
 import java.security.cert.X509Certificate
 import org.apache.activemq.apollo.broker.web.AllowAnyOriginFilter
@@ -366,7 +366,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
         first_message = false
       }
       // Convert string messages to bytes messages..  our codecs just work with bytes..
-      var buffer = new AsciiBuffer(str)
+      var buffer = new UTF8Buffer(str)
       onMessage(buffer.data, buffer.offset, buffer.length)
     }
 
@@ -597,7 +597,7 @@ object WebSocketTransportFactory extends TransportFactory.Provider with Log {
           if( service_state.is_starting_or_started || !write_failed) {
             try {
               if (!binary_transfers) {
-                connection.sendMessage(buffer.ascii().toString)
+                connection.sendMessage(buffer.utf8().toString)
               } else {
                 connection.sendMessage(buffer.data, buffer.offset, buffer.length)
               }
