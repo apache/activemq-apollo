@@ -84,9 +84,9 @@
     <slf4j-version>1.6.1</slf4j-version>
     <mqtt-client-version>1.9</mqtt-client-version>
 
-    <jaxb-api-version>2.1</jaxb-api-version>
-    <jaxb-version>2.1.6</jaxb-version>
-    <xjc-version>2.1.10.1</xjc-version>
+    <jaxb-api-version>2.2.7</jaxb-api-version>
+    <jaxb-version>2.2.7</jaxb-version>
+    <xjc-version>2.2.7</xjc-version>
     <stax-api-version>1.0.1</stax-api-version>
     <stax-version>1.2.0</stax-version>
 

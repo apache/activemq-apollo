@@ -105,13 +105,12 @@
         <version>1.7</version>
         <executions>
           <execution>
-            <phase>generate-resources</phase>
+            <phase>process-classes</phase>
             <configuration>
               <tasks>
-                <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask">
-                  <classpath refid="maven.compile.classpath" />
-                </taskdef>
+                <taskdef name="schemagen" classname="com.sun.tools.jxc.SchemaGenTask"/>
                 <mkdir dir="${project.build.directory}/schema/org/apache/activemq/apollo/dto" />
+                <echo message="Generating XSD to: ${project.build.directory}/schema/org/apache/activemq/apollo/dto"/>
                 <schemagen srcdir="${basedir}/.." destdir="${project.build.directory}/schema/org/apache/activemq/apollo/dto" includeantruntime="false">
                   <schema namespace="http://activemq.apache.org/schema/activemq/apollo" file="apollo.xsd" />
                   <classpath refid="maven.compile.classpath" />
@@ -127,6 +126,9 @@
                 <replace token="&lt;/xs:sequence&gt;" value="&lt;/xs:choice&gt;&lt;/xs:choice&gt;" dir="${basedir}/target/schema/org/apache/activemq/apollo/dto">
                   <include name="**/*.xsd" />
                 </replace>
+                <copy todir="${project.build.directory}/classes">
+                  <fileset dir="${project.build.directory}/schema"/>
+                </copy>
               </tasks>
             </configuration>
             <goals>
@@ -147,7 +149,7 @@
            </dependency>
            <dependency>
               <groupId>com.sun.xml.bind</groupId>
-              <artifactId>jaxb-xjc</artifactId>
+              <artifactId>jaxb-jxc</artifactId>
               <version>${jaxb-version}</version>
            </dependency>
         </dependencies>      
