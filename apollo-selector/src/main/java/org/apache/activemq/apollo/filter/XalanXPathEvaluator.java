@@ -25,11 +25,16 @@ import org.xml.sax.InputSource;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 
 public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
-
+    public static final String DOCUMENT_BUILDER_FACTORY_FEATURE = "org.apache.activemq.apollo.documentBuilderFactory.feature";
     private final String xpath;
 
     public XalanXPathEvaluator(String xpath) {
@@ -51,7 +56,13 @@ public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
     protected boolean evaluate(InputSource inputSource) {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            setupFeatures(factory);
             factory.setNamespaceAware(true);
+            factory.setIgnoringElementContentWhitespace(true);
+            factory.setIgnoringComments(true);
             DocumentBuilder dbuilder = factory.newDocumentBuilder();
             Document doc = dbuilder.parse(inputSource);
 
@@ -72,5 +83,34 @@ public class XalanXPathEvaluator implements XPathExpression.XPathEvaluator {
         } catch (Throwable e) {
             return false;
         }
+    }
+
+    protected void setupFeatures(DocumentBuilderFactory factory) {
+        Properties properties = System.getProperties();
+        List<String> features = new ArrayList<String>();
+        for (Map.Entry<Object, Object> prop : properties.entrySet()) {
+            String key = (String) prop.getKey();
+            if (key.startsWith(DOCUMENT_BUILDER_FACTORY_FEATURE)) {
+                String uri = key.split(DOCUMENT_BUILDER_FACTORY_FEATURE + ":")[1];
+                Boolean value = Boolean.valueOf((String)prop.getValue());
+                try {
+                    factory.setFeature(uri, value);
+                    features.add("feature " + uri + " value " + value);
+                } catch (ParserConfigurationException e) {
+                    throw new RuntimeException("DocumentBuilderFactory doesn't support the feature " + uri + " with value " + value + ", due to " + e);
+                }
+            }
+        }
+        if (features.size() > 0) {
+            StringBuffer featureString = new StringBuffer();
+            // just log the configured feature
+            for (String feature : features) {
+                if (featureString.length() != 0) {
+                    featureString.append(", ");
+                }
+                featureString.append(feature);
+            }
+        }
+
     }
 }
