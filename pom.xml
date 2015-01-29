@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>9</version>
+    <version>16</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -127,6 +127,7 @@
     <scala-plugin-version>3.1.0</scala-plugin-version>
     <maven-surefire-plugin-version>2.12</maven-surefire-plugin-version>
     <jetty-plugin-version>7.0.1.v20091125</jetty-plugin-version>
+    <maven-release-plugin-version>2.4.1</maven-release-plugin-version>
     
     <!-- disable unique version timestamps in snapshots -->
     <uniqueVersion>false</uniqueVersion>
@@ -247,6 +248,7 @@
 
   <build>
   
+    <!--
     <extensions>
       <extension>
         <groupId>com.google.code.maven-svn-wagon</groupId>
@@ -254,6 +256,7 @@
         <version>1.4</version>
       </extension>
     </extensions>
+    -->
     
     <!-- to allow the eclipse profile to use a different target directory -->
     <outputDirectory>${basedir}/${target-dir}/classes</outputDirectory>
@@ -362,15 +365,28 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.1</version>
+          <version>${maven-release-plugin-version}</version>
           <configuration>
-            <useReleaseProfile>false</useReleaseProfile>
-            <goals>deploy</goals>
-            <arguments>-Papache-release</arguments>
             <autoVersionSubmodules>true</autoVersionSubmodules>
+            <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+            <preparationGoals>clean install</preparationGoals>
+            <goals>deploy</goals>
+            <remoteTagging>false</remoteTagging>
+            <suppressCommitBeforeTag>false</suppressCommitBeforeTag>
           </configuration>
+          <dependencies>
+            <dependency>
+             <groupId>org.apache.maven.scm</groupId>
+             <artifactId>maven-scm-api</artifactId>
+             <version>1.8.1</version>
+            </dependency>
+          <dependency>
+             <groupId>org.apache.maven.scm</groupId>
+             <artifactId>maven-scm-provider-gitexe</artifactId>
+             <version>1.8.1</version>
+           </dependency>
+         </dependencies>
         </plugin>
-        
       </plugins>
     </pluginManagement>
     <plugins>
