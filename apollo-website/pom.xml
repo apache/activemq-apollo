@@ -290,18 +290,12 @@
     
     <profile>
       <id>deploy-website</id>
-      <activation>
-        <property>
-          <name>java.vm.name</name>
-        </property>
-      </activation>
       <build>
         <plugins>
           <plugin>
             <groupId>org.fusesource.scalate</groupId>
             <artifactId>maven-scalate-plugin_2.10</artifactId>
             <version>${scalate-version}</version>
-        
             <executions>
               <execution>
                 <id>deploy</id>
