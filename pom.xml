@@ -373,6 +373,7 @@
             <goals>deploy</goals>
             <remoteTagging>false</remoteTagging>
             <suppressCommitBeforeTag>false</suppressCommitBeforeTag>
+            <pushChanges>false</pushChanges>
           </configuration>
           <dependencies>
             <dependency>
