@@ -25,7 +25,7 @@
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-project</artifactId>
-  <version>1.7.1</version>
+  <version>99-trunk-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Apache ActiveMQ Apollo Project</name>
@@ -196,7 +196,7 @@
     <connection>scm:git:http://git-wip-us.apache.org/repos/asf/activemq-apollo.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/activemq-apollo.git</developerConnection>
     <url>https://github.com/apache/activemq-apollo/tree/trunk</url>
-    <tag>apollo-project-1.7.1</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <dependencyManagement>
