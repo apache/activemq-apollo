@@ -21,14 +21,14 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>apollo-project-1.7.1</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-war</artifactId>
   <packaging>war</packaging>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>apollo-project-1.7.1</version>
 
   <name>${project.artifactId}</name>
   <description>Packages Apollo so it be be run in a Web container.</description>
@@ -50,18 +50,18 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-cli</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-leveldb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.xerial.snappy</groupId>
@@ -79,40 +79,40 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-stomp</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-openwire</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency> 
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-mqtt</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-amqp</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
     
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <classifier>classes</classifier>
     </dependency>
     
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-jmx</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
 
     <dependency>

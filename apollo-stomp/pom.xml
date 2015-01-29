@@ -22,13 +22,13 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-scala</artifactId>
-    <version>99-trunk-SNAPSHOT</version>
+    <version>apollo-project-1.7.1</version>
     <relativePath>../apollo-scala</relativePath>
   </parent>
 
   <groupId>org.apache.activemq</groupId>
   <artifactId>apollo-stomp</artifactId>
-  <version>99-trunk-SNAPSHOT</version>
+  <version>apollo-project-1.7.1</version>
   <!-- <packaging>bundle</packaging> -->
 
   <name>${project.artifactId}</name>
@@ -42,13 +42,13 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-web</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <optional>true</optional>
     </dependency>
     <dependency>
@@ -70,14 +70,14 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-broker</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-util</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -85,13 +85,13 @@
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-bdb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>apollo-leveldb</artifactId>
-      <version>99-trunk-SNAPSHOT</version>
+      <version>apollo-project-1.7.1</version>
       <scope>test</scope>
     </dependency>
 
