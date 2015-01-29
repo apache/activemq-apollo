@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>apollo-project</artifactId>
-    <version>1.7.1</version>
+    <version>99-trunk-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   
