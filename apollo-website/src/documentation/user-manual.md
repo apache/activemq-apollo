@@ -84,7 +84,7 @@ unix script.
 ### Understanding the `apollo.xml` File
 
 There are many XSD aware XML editors which make editing XML configuration
-files less error prone.  If your using one of these editors, you can
+files less error prone.  If you're using one of these editors, you can
 configure it to use this [apollo.xsd](schema/apollo.xsd) file.
 
 The simplest valid `apollo.xml` defines a single virtual host and a
@@ -184,7 +184,7 @@ use the following configuration:
 </connector>
 {pygmentize}
 
-If your using the `any` protocol then actual protocol being used will be
+If you're using the `any` protocol then actual protocol being used will be
 detected by examining the client's initial request. You can use the
 `detect` element within a `connector` element to configure the protocol
 detection settings.  The `detect` element supports the following 
@@ -289,7 +289,7 @@ origin policy, so by default you can access only brokers running on the same hos
 where the web page originated from.
 
 If you want to allow cross origin resource sharing (CORS) of the WebSocket connector,
-by different hosts then your should add `cors_origin` query parameter to the bind URI with 
+by different hosts then you should add `cors_origin` query parameter to the bind URI with 
 a common seperated list of domains that are allowed to access the WebSocket
 connector.  Use `*` to allow access from any domain.  Example:
 
@@ -353,11 +353,11 @@ The supported protocols that can be used with the udp transport are:
 #### Virtual Hosts
 
 A virtual hosts allows ${project_name} to support multi tenant style
-configurations. Each virtual host is highly isolated each with it's own
+configurations. Each virtual host is highly isolated each with its own
 persistence, security, and runtime constraints configuration.
 
 Protocols like STOMP 1.1, inform the broker of which host the client is
-attempting to connect with. The broker will search it's list of virtual hosts
+attempting to connect with. The broker will search its list of virtual hosts
 to find the first host who has a configured `host_name` that matches.
 Protocols which do NOT support virtual hosts, will just connect to the first
 virtual host defined in the configuration file.
@@ -383,7 +383,7 @@ configuration element to enable message persistence on the virtual host.
 
 ##### Queues
 
-When a new queue is first created in the broker, it's configuration will be
+When a new queue is first created in the broker, its configuration will be
 determined by the first `queue` element which matches the queue being
 created. The attributes matched against are:
 
@@ -406,7 +406,7 @@ A `queue` element may be configured with the following attributes:
   freshly enqueued message.  Defaults to `640k`.
 
 * `persistent` : If set to false, then the queue will not persistently
-  store it's message.  Defaults to true.
+  store its message.  Defaults to true.
 
 * `message_group_graceful_handoff` : When set to true, the queue
   will drain message group consumers of messages before
@@ -480,7 +480,7 @@ A `queue` element may be configured with the following attributes:
   
   If the queue is persistent then it is considered full when the max
   quota size is reached.  If the queue is not persistent then
-  the queue is considered full once it's `tail_buffer` fills up.
+  the queue is considered full once its `tail_buffer` fills up.
   Defaults to 'block' if not specified.
 
 Example configuraiton:
@@ -498,7 +498,7 @@ Example configuraiton:
 
 ##### Topics
 
-When a new topic is first created in the broker, it's configuration will be
+When a new topic is first created in the broker, its configuration will be
 determined by the first `topic` element which matches the topic being
 created. The attributes matched against are:
 
@@ -543,7 +543,7 @@ attributes of the `queue` element: `tail_buffer`, `persistent`, `swap`
 
 ##### Durable Subscriptions
 
-When a new durable subscription is first created in the broker, it's
+When a new durable subscription is first created in the broker, its
 configuration will be determined by the first `dsub` element
 which matches the durable subscription being created. The attributes matched
 against are:
@@ -567,7 +567,7 @@ to the queue to a topic of the same name and conversely
 the queue will receive a copy of all messages sent to the topic.
 
 Mirrored queues can be used to mix queue and topic 
-behavior on one logical destination.  For example, lets assumed `foo` 
+behavior on one logical destination.  For example, let's assumed `foo` 
 is configured as a mirrored destination and you have 2 subscribers
 on queue `foo` and 2 subscribers on topic `foo`.  On the producer side,
 publishers can send either the queue or topic and get the same results.
@@ -621,7 +621,7 @@ It is enabled when your `virtual_host` element contains a `leveldb_store` elemen
 
 A `leveldb_store` element may be configured with the following attributes:
 
-* `directory` : The directory which the store will use to hold it's data
+* `directory` : The directory which the store will use to hold its data
   files. The store will create the directory if it does not already
   exist.
 * `flush_delay` : The flush delay is the amount of time in milliseconds
@@ -669,12 +669,12 @@ but falls back to an experimental pure Java driver on other platforms.
 The supported Windows versions are Vista, Server 2008 and later that have the 
 MS VC++ 2010 Redistributable package installed:
 
-* If your running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
-* If your running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
+* If you're running a 32 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x86)](http://www.microsoft.com/en-us/download/details.aspx?id=5555)
+* If you're running a 64 bit JVM, install: [Microsoft Visual C++ 2010 Redistributable Package (x64)](http://www.microsoft.com/en-us/download/details.aspx?id=14632)
 
 ###### BDB Store
 
-Apache cannot redistribute the BDB library due to the terms of it's
+Apache cannot redistribute the BDB library due to the terms of its
 license, but you can easily get a free copy directly from Oracle. Before
 you can start using the BDB Store you must first download it from Oracle
 at [je-5.0.34.jar](http://download.oracle.com/maven/com/sleepycat/je/5.0.34/je-5.0.34.jar)
@@ -699,7 +699,7 @@ inside your `virtual_host`.  Example:
 
 A `bdb_store` element may be configured with the following attributes:
 
-* `directory` : The directory which the store will use to hold it's data
+* `directory` : The directory which the store will use to hold its data
   files. The store will create the directory if it does not already
   exist.
 * `flush_delay` : The flush delay is the amount of time in milliseconds
@@ -722,7 +722,7 @@ to Apollo's lib directory and restart your broker.
 #### The SSL/TLS Transport
 
 ${project_name} supports SSL/TLS for transport level security to avoid 3rd
-parties listening in on the communications between the broker and it's
+parties listening in on the communications between the broker and its
 clients. To enable it, you just need to add a connector which binds using
 on of the secure transports such as `ssl://`.  It also requires having a 
 `key_storage` configuration element under the `broker` to configure the where 
@@ -899,8 +899,8 @@ an authorization check:
   Defaults to `*`.
 
 * `id`: The identifier of the resource that will match this rule. You can use
-  `*` to match all resources. If the `kind` is set to `queue` or `topic` the
-  your can use a destination wild card to match against the destination id.
+  `*` to match all resources. If the `kind` is set to `queue` or `topic` then
+  you can use a destination wild card to match against the destination id.
   Defaults to `*`
 
 * `id_regex`: A regular expression to be applied against the id of the
@@ -914,7 +914,7 @@ If no access rules match an authorization check then access is denied.
 ##### Ordering
 
 The order in which rules are defined are significant. The first entry that
-matches determines if he will have access. For example, lets say a user is
+matches determines if he will have access. For example, let's say a user is
 groups 'blue' and 'red', and you are matching against the following 
 rules:
 
@@ -976,7 +976,7 @@ defined there. Any of the properties values in the
 `etc/apollo.xml.properties` can be replaced with encrypted versions by
 using the `apollo encrypt` command.
 
-Lets say you your current `key_storage` contains plain text passwords that
+Let's say you your current `key_storage` contains plain text passwords that
 need to be replaced with encrypted versions:
 
 {pygmentize:: xml}
@@ -988,7 +988,7 @@ need to be replaced with encrypted versions:
   ...
 {pygmentize}
 
-Lets first find out what the encrypted versions of the passwords would be.
+Let's first find out what the encrypted versions of the passwords would be.
 ${project_name} encrypts and decrypts values using the password stored in
 the `APOLLO_ENCRYPTION_PASSWORD` environment variable.
 
@@ -1057,7 +1057,7 @@ A `web_admin` element may be configured with the following attributes:
 * `bind` : The address and port to bind the web interface on in URL syntax.
 
 If you want to allow cross origin resource sharing (CORS) of the web admin APIs,
-then your should add `cors_origin` query parameter to the bind URI with 
+then you should add `cors_origin` query parameter to the bind URI with 
 a common seperated list of domains that are allowed to access the web 
 admin APIs.  Use `*` to allow access from any domain.  Example:
 
@@ -1074,7 +1074,7 @@ admin APIs.  Use `*` to allow access from any domain.  Example:
 
 The rest of this section's example assume that you have created a broker 
 instance under the `/var/lib/mybroker` directory or `c:\mybroker` directory
-if your on windows.
+if you're on Windows.
 
 ### Running a Broker Instance in the Foreground
 
@@ -1159,7 +1159,7 @@ service are stored under `log\apollo-broker-service.*`.
 ### Viewing Broker State
 
 ${project_name} provides a web based interface for administrators to inspect
-the runtime state of the Broker.  If your running the broker on your local
+the runtime state of the Broker.  If you're running the broker on your local
 machine, just open your web browser to [`http://localhost:61680`](http://localhost:61680)
 or [`https://localhost:61681`](httsp://localhost:61681).
 
