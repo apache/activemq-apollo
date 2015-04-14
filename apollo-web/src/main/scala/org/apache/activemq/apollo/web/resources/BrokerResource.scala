@@ -760,7 +760,7 @@ class BrokerResource() extends Resource {
     rc.entry = entry
 
     if( max_body > 0 ) {
-      val body = delivery.message.getBodyAs(classOf[Buffer])
+      val body = new Buffer(delivery.message.getBodyAs(classOf[Buffer]))
       if( body.length > max_body) {
         body.length = max_body
         rc.body_truncated = true
