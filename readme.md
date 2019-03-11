@@ -1,4 +1,9 @@
-# The Apollo Project
+# The Apollo Project - DEPRECATED
+
+This project has died, and is now Deprecated, we strongly recommend you to use ActiveMQ 5.x or ActiveMQ Artemis.
+
+
+
 
 ## Synopsis
 
