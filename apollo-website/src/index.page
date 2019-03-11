@@ -22,6 +22,12 @@ h1 Apollo #{project_version}
 
 --- name:content pipeline:markdown 
 
+## THIS PROJECT IS NOW DEPRECATED
+
+This project has died, and is now Deprecated, we strongly recommend you to use ActiveMQ 5.x or ActiveMQ Artemis.
+
+
+
 [ActiveMQ Apollo](http://activemq.apache.org/apollo/) is a faster, more
 reliable, easier to maintain messaging broker built from the foundations of
 the original [ActiveMQ](http://activemq.apache.org). It accomplishes this
